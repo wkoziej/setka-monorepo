@@ -18,9 +18,12 @@ class TestSourceCapabilitiesDetection:
 
     def setup_method(self):
         """Reset module state before each test."""
+        import sys
         import src.core.metadata
 
-        importlib.reload(src.core.metadata)
+        # Only reload if module is already in sys.modules
+        if 'src.core.metadata' in sys.modules:
+            importlib.reload(src.core.metadata)
 
     def test_determine_source_capabilities_audio_only(self):
         """Test detection of audio-only source."""
@@ -95,9 +98,12 @@ class TestMetadataWithCapabilities:
 
     def setup_method(self):
         """Reset module state before each test."""
+        import sys
         import src.core.metadata
 
-        importlib.reload(src.core.metadata)
+        # Only reload if module is already in sys.modules
+        if 'src.core.metadata' in sys.modules:
+            importlib.reload(src.core.metadata)
 
     def test_metadata_has_audio_video_flags(self):
         """Test that metadata contains has_audio and has_video fields."""
@@ -297,9 +303,12 @@ class TestMetadataIntegration:
 
     def setup_method(self):
         """Reset module state before each test."""
+        import sys
         import src.core.metadata
 
-        importlib.reload(src.core.metadata)
+        # Only reload if module is already in sys.modules
+        if 'src.core.metadata' in sys.modules:
+            importlib.reload(src.core.metadata)
 
     def test_metadata_json_serialization(self):
         """Test that metadata can be serialized to JSON."""

@@ -55,7 +55,7 @@ class BlenderProjectManager:
             ValueError: If recording structure is invalid
             RuntimeError: If Blender execution fails
         """
-        from setka_common.file_structure.specialized import RecordingStructureManager as FileStructureManager
+        from setka_common.file_structure.specialized import RecordingStructureManager
         from .audio_validator import AudioValidator
 
         logger.info(f"Creating Blender VSE project for: {recording_path}")
@@ -65,7 +65,7 @@ class BlenderProjectManager:
         self._validate_beat_division(beat_division)
 
         # 1. Validate recording structure
-        structure = FileStructureManager.find_recording_structure(recording_path)
+        structure = RecordingStructureManager.find_recording_structure(recording_path)
         if not structure:
             raise ValueError(f"Invalid recording structure in: {recording_path}")
 
@@ -83,7 +83,7 @@ class BlenderProjectManager:
         logger.info(f"Found {len(video_files)} video files")
 
         # 4. Ensure blender directory exists
-        blender_dir = FileStructureManager.ensure_blender_dir(recording_path)
+        blender_dir = RecordingStructureManager.ensure_blender_dir(recording_path)
 
         # 5. Create output paths
         project_name = recording_path.name
@@ -97,7 +97,7 @@ class BlenderProjectManager:
         analysis_file_path = None
         if animation_mode != "none":
             # Build analysis file path based on audio file name
-            analysis_dir = FileStructureManager.ensure_analysis_dir(recording_path)
+            analysis_dir = RecordingStructureManager.ensure_analysis_dir(recording_path)
             analysis_filename = f"{main_audio.stem}_analysis.json"
             analysis_file_path = analysis_dir / analysis_filename
 

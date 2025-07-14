@@ -8,7 +8,7 @@ import subprocess
 from typing import List, Optional, Dict, Any
 from pathlib import Path
 
-from setka_common.file_structure.specialized import FileStructureManager
+from setka_common.file_structure.specialized import RecordingStructureManager
 
 
 class ExtractionResult:
@@ -270,7 +270,7 @@ def extract_sources(
         output_dir_path = Path(output_dir)
     else:
         # Use FileStructureManager to determine output directory
-        output_dir_path = FileStructureManager.get_extracted_dir(video_path)
+        output_dir_path = RecordingStructureManager.get_extracted_dir(video_path)
 
     try:
         output_dir_path.mkdir(exist_ok=True, parents=True)

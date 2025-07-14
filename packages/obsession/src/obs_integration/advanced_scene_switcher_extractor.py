@@ -15,7 +15,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 try:
-    from setka_common.file_structure.specialized import FileStructureManager
+    from setka_common.file_structure.specialized import RecordingStructureManager
 except ImportError:
     # Fallback if import fails
     class FileStructureManager:
@@ -81,10 +81,10 @@ def find_latest_recording():
 
                     # Use FileStructureManager to find valid recording structure
                     try:
-                        structure = FileStructureManager.find_recording_structure(item)
+                        structure = RecordingStructureManager.find_recording_structure(item)
                         if structure:
                             log_message(
-                                f"    Found valid recording structure: {structure.video_file}"
+                                f"    Found valid recording structure: {structure.media_file}"
                             )
                             all_structures.append(structure)
                         else:
@@ -102,19 +102,19 @@ def find_latest_recording():
         return None
 
     # Find the newest recording file
-    latest_structure = max(all_structures, key=lambda s: os.path.getmtime(s.video_file))
+    latest_structure = max(all_structures, key=lambda s: os.path.getmtime(s.media_file))
 
     # Check if file was created in the last 30 seconds (fresh recording)
-    file_age = time.time() - os.path.getmtime(latest_structure.video_file)
+    file_age = time.time() - os.path.getmtime(latest_structure.media_file)
 
-    log_message(f"Latest recording: {latest_structure.video_file}")
+    log_message(f"Latest recording: {latest_structure.media_file}")
     log_message(f"File age: {file_age:.1f} seconds")
 
     if file_age > 30:
         log_message("File too old, probably not the recording we want")
         return None
 
-    return str(latest_structure.video_file)
+    return str(latest_structure.media_file)
 
 
 def run_extraction(recording_file):

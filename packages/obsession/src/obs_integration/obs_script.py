@@ -48,7 +48,7 @@ core_dir = Path(__file__).parent.parent / "core"
 if str(core_dir) not in sys.path:
     sys.path.insert(0, str(core_dir))
 
-from file_structure import FileStructureManager
+from setka_common.file_structure.specialized import RecordingStructureManager
 
 
 # Global variables for script state
@@ -459,14 +459,14 @@ def reorganize_files_after_recording(recording_path, metadata_path):
             shutil.move(recording_path, target_recording_path)
 
             # Użyj FileStructureManager do utworzenia struktury
-        structure = FileStructureManager.create_structure(target_recording_path)
+        structure = RecordingStructureManager.create_structure(target_recording_path)
 
         # Przenieś plik metadanych do właściwego miejsca
         if not structure.metadata_file.exists():
             shutil.move(metadata_path, structure.metadata_file)
 
-        print(f"[Canvas Recorder] Files reorganized to: {structure.recording_dir}")
-        return str(structure.recording_dir)
+        print(f"[Canvas Recorder] Files reorganized to: {structure.project_dir}")
+        return str(structure.project_dir)
 
     except Exception as e:
         print(f"[Canvas Recorder] Error reorganizing files: {e}")

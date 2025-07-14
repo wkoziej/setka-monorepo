@@ -12,7 +12,8 @@ from pathlib import Path
 
 from ..core.blender_project import BlenderProjectManager
 from ..core.audio_validator import AudioValidationError
-from ..core.file_structure import FileStructureManager
+from setka_common.file_structure.specialized import RecordingStructureManager
+from setka_common.utils.files import find_files_by_type, MediaType
 from .analyze_audio import analyze_audio_command
 
 
@@ -179,11 +180,11 @@ def find_main_audio_file(recording_dir: Path) -> Path:
     Raises:
         ValueError: If no audio file found
     """
-    structure = FileStructureManager.find_recording_structure(recording_dir)
+    structure = RecordingStructureManager.find_recording_structure(recording_dir)
     if not structure:
         raise ValueError(f"Invalid recording structure in: {recording_dir}")
 
-    audio_files = FileStructureManager.find_audio_files(structure.extracted_dir)
+    audio_files = find_files_by_type(structure.extracted_dir, MediaType.AUDIO)
     if not audio_files:
         raise ValueError(f"No audio files found in: {structure.extracted_dir}")
 
@@ -210,7 +211,7 @@ def _has_existing_audio_analysis(recording_dir: Path, main_audio: str = None) ->
             main_audio_file = recording_dir / "extracted" / main_audio
 
         # Check if analysis file exists using correct API
-        analysis_file = FileStructureManager.find_audio_analysis(main_audio_file)
+        analysis_file = RecordingStructureManager.find_audio_analysis(main_audio_file)
         return analysis_file is not None
 
     except Exception:
@@ -234,7 +235,7 @@ def perform_audio_analysis(recording_dir: Path, main_audio: Path) -> Path:
     """
     try:
         # Ensure analysis directory exists
-        analysis_dir = FileStructureManager.ensure_analysis_dir(recording_dir)
+        analysis_dir = RecordingStructureManager.ensure_analysis_dir(recording_dir)
 
         # Perform analysis
         analysis_file = analyze_audio_command(main_audio, analysis_dir)

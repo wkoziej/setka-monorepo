@@ -26,13 +26,15 @@ class TestOBSScript:
 
     def setup_method(self):
         """Reset module state before each test."""
+        import sys
         import src.obs_integration.obs_script
-
-        importlib.reload(src.obs_integration.obs_script)
-        # Also reset any other modules that might have global state
         import src.core.metadata
 
-        importlib.reload(src.core.metadata)
+        # Only reload if modules are already in sys.modules
+        if 'src.obs_integration.obs_script' in sys.modules:
+            importlib.reload(src.obs_integration.obs_script)
+        if 'src.core.metadata' in sys.modules:
+            importlib.reload(src.core.metadata)
 
     def test_script_description(self):
         """Test script description returns proper HTML."""

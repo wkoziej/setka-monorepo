@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import List, Optional
 
 from core.extractor import extract_sources
-from setka_common.file_structure.specialized import FileStructureManager
+from setka_common.file_structure.specialized import RecordingStructureManager
 
 
 def parse_args(args: Optional[List[str]] = None) -> argparse.Namespace:
@@ -129,7 +129,7 @@ def find_metadata_file(video_path: Path) -> Optional[Path]:
     # First, try to find metadata file using FileStructureManager
     # This handles the new structure where metadata.json is in the same directory as video
     try:
-        structure = FileStructureManager.find_recording_structure(video_path.parent)
+        structure = RecordingStructureManager.find_recording_structure(video_path.parent)
         if structure and structure.metadata_file.exists():
             print(
                 f"Found metadata file using FileStructureManager: {structure.metadata_file}"
