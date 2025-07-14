@@ -1,0 +1,302 @@
+{
+  "youtube_api": {
+    "successful_upload": {
+      "id": "test_video_123",
+      "snippet": {
+        "title": "Test Video Title",
+        "description": "Test video description",
+        "publishedAt": "2024-01-15T10:00:00Z",
+        "channelId": "UC_test_channel_id",
+        "channelTitle": "Test Channel"
+      },
+      "status": {
+        "uploadStatus": "uploaded",
+        "privacyStatus": "unlisted",
+        "license": "youtube",
+        "embeddable": true,
+        "publicStatsViewable": true
+      },
+      "contentDetails": {
+        "duration": "PT2M30S",
+        "definition": "hd",
+        "caption": "false"
+      }
+    },
+    "upload_in_progress": {
+      "id": "test_video_processing",
+      "snippet": {
+        "title": "Processing Video",
+        "description": "Video being processed"
+      },
+      "status": {
+        "uploadStatus": "processing",
+        "privacyStatus": "unlisted"
+      }
+    },
+    "auth_error": {
+      "error": {
+        "code": 401,
+        "message": "Request had invalid authentication credentials.",
+        "errors": [
+          {
+            "message": "Invalid Credentials",
+            "domain": "global",
+            "reason": "authError"
+          }
+        ]
+      }
+    },
+    "quota_exceeded": {
+      "error": {
+        "code": 403,
+        "message": "The request cannot be completed because you have exceeded your quota.",
+        "errors": [
+          {
+            "message": "Daily Limit Exceeded",
+            "domain": "youtube.quota",
+            "reason": "dailyLimitExceeded"
+          }
+        ]
+      }
+    },
+    "file_too_large": {
+      "error": {
+        "code": 400,
+        "message": "The video file is too large.",
+        "errors": [
+          {
+            "message": "File too large",
+            "domain": "youtube.upload",
+            "reason": "fileTooLarge"
+          }
+        ]
+      }
+    },
+    "rate_limited": {
+      "error": {
+        "code": 429,
+        "message": "Rate limit exceeded. Please try again later.",
+        "errors": [
+          {
+            "message": "Rate Limit Exceeded",
+            "domain": "global",
+            "reason": "rateLimitExceeded"
+          }
+        ]
+      }
+    }
+  },
+  "facebook_api": {
+    "successful_post": {
+      "id": "1234567890_987654321",
+      "created_time": "2024-01-15T10:00:00+0000"
+    },
+    "page_info": {
+      "id": "1234567890",
+      "name": "Test Page",
+      "category": "Website",
+      "access_token": "page_access_token_123"
+    },
+    "auth_error": {
+      "error": {
+        "message": "Invalid OAuth access token.",
+        "type": "OAuthException",
+        "code": 190,
+        "fbtrace_id": "test_trace_id"
+      }
+    },
+    "permission_error": {
+      "error": {
+        "message": "Insufficient permissions to perform this action.",
+        "type": "OAuthException",
+        "code": 200,
+        "fbtrace_id": "test_trace_id"
+      }
+    },
+    "rate_limited": {
+      "error": {
+        "message": "Application request limit reached",
+        "type": "OAuthException",
+        "code": 4,
+        "fbtrace_id": "test_trace_id"
+      }
+    },
+    "content_policy_violation": {
+      "error": {
+        "message": "This content violates our community standards.",
+        "type": "FacebookApiException",
+        "code": 368,
+        "fbtrace_id": "test_trace_id"
+      }
+    }
+  },
+  "vimeo_api": {
+    "successful_upload": {
+      "uri": "/videos/123456789",
+      "name": "Test Video",
+      "description": "Test video description",
+      "link": "https://vimeo.com/123456789",
+      "duration": 150,
+      "width": 1920,
+      "height": 1080,
+      "language": "en",
+      "status": "available",
+      "upload": {
+        "status": "complete",
+        "upload_link": "https://upload.vimeo.com/upload_123",
+        "complete_uri": "/videos/123456789/upload/complete"
+      },
+      "privacy": {
+        "view": "anybody",
+        "embed": "public",
+        "download": false,
+        "add": true,
+        "comments": "anybody"
+      },
+      "created_time": "2024-01-15T10:00:00+00:00",
+      "modified_time": "2024-01-15T10:05:00+00:00"
+    },
+    "upload_ticket": {
+      "uri": "/videos/123456789",
+      "ticket_id": "upload_ticket_123",
+      "upload_link": "https://upload.vimeo.com/upload_123",
+      "complete_uri": "/videos/123456789/upload/complete",
+      "user": {
+        "uri": "/users/test_user"
+      },
+      "type": "streaming"
+    },
+    "auth_error": {
+      "error": "You must provide a valid access token.",
+      "link": "https://developer.vimeo.com/api/authentication",
+      "developer_message": "The access token provided is invalid or has expired.",
+      "error_code": 8003
+    },
+    "quota_exceeded": {
+      "error": "You have exceeded your upload quota.",
+      "link": "https://vimeo.com/upgrade",
+      "developer_message": "The user has exceeded their weekly upload quota.",
+      "error_code": 4005
+    },
+    "file_too_large": {
+      "error": "The file you are trying to upload is too large.",
+      "developer_message": "The file exceeds the maximum allowed size for this account type.",
+      "error_code": 4001
+    }
+  },
+  "network_errors": {
+    "connection_timeout": {
+      "error_type": "ConnectionTimeout",
+      "message": "Connection timed out after 30 seconds"
+    },
+    "connection_error": {
+      "error_type": "ConnectionError",
+      "message": "Failed to establish connection to the server"
+    },
+    "dns_error": {
+      "error_type": "DNSError",
+      "message": "Failed to resolve hostname"
+    },
+    "ssl_error": {
+      "error_type": "SSLError",
+      "message": "SSL certificate verification failed"
+    },
+    "server_error": {
+      "status_code": 500,
+      "message": "Internal Server Error",
+      "headers": {
+        "content-type": "application/json",
+        "retry-after": "300"
+      }
+    },
+    "bad_gateway": {
+      "status_code": 502,
+      "message": "Bad Gateway",
+      "headers": {
+        "content-type": "text/html"
+      }
+    },
+    "service_unavailable": {
+      "status_code": 503,
+      "message": "Service Temporarily Unavailable",
+      "headers": {
+        "content-type": "application/json",
+        "retry-after": "600"
+      }
+    }
+  },
+  "task_status_responses": {
+    "pending": {
+      "status": "pending",
+      "task_id": "medusa_task_12345",
+      "created_at": "2024-01-15T10:00:00Z",
+      "platforms": ["youtube", "facebook"]
+    },
+    "in_progress_youtube": {
+      "status": "in_progress",
+      "task_id": "medusa_task_12345",
+      "created_at": "2024-01-15T10:00:00Z",
+      "updated_at": "2024-01-15T10:02:30Z",
+      "platforms": ["youtube", "facebook"],
+      "current_platform": "youtube",
+      "progress": 0.3,
+      "message": "Uploading to YouTube... 30% complete"
+    },
+    "in_progress_facebook": {
+      "status": "in_progress",
+      "task_id": "medusa_task_12345",
+      "created_at": "2024-01-15T10:00:00Z",
+      "updated_at": "2024-01-15T10:05:00Z",
+      "platforms": ["youtube", "facebook"],
+      "current_platform": "facebook",
+      "progress": 0.8,
+      "message": "Publishing to Facebook..."
+    },
+    "completed": {
+      "status": "completed",
+      "task_id": "medusa_task_12345",
+      "created_at": "2024-01-15T10:00:00Z",
+      "updated_at": "2024-01-15T10:06:00Z",
+      "platforms": ["youtube", "facebook"],
+      "results": {
+        "youtube_url": "https://youtube.com/watch?v=test_video_123",
+        "facebook_post_id": "1234567890_987654321"
+      },
+      "metadata": {
+        "total_duration": 360.5,
+        "file_size": 52428800,
+        "processed_platforms": 2
+      }
+    },
+    "failed_youtube": {
+      "status": "failed",
+      "task_id": "medusa_task_failed",
+      "created_at": "2024-01-15T10:00:00Z",
+      "updated_at": "2024-01-15T10:03:00Z",
+      "platforms": ["youtube", "facebook"],
+      "error": "YouTube API error: Video file too large (max 128GB)",
+      "failed_platform": "youtube",
+      "metadata": {
+        "failure_reason": "file_too_large",
+        "attempted_platforms": ["youtube"]
+      }
+    },
+    "failed_facebook": {
+      "status": "failed",
+      "task_id": "medusa_task_failed_fb",
+      "created_at": "2024-01-15T10:00:00Z",
+      "updated_at": "2024-01-15T10:05:30Z",
+      "platforms": ["youtube", "facebook"],
+      "error": "Facebook API error: Invalid access token",
+      "failed_platform": "facebook",
+      "results": {
+        "youtube_url": "https://youtube.com/watch?v=test_video_123"
+      },
+      "metadata": {
+        "failure_reason": "auth_error",
+        "attempted_platforms": ["youtube", "facebook"],
+        "partial_success": true
+      }
+    }
+  }
+} 

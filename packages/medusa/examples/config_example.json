@@ -1,0 +1,19 @@
+{
+    "youtube": {
+        "client_secrets_file": "secrets/youtube_client_secrets.json",
+        "credentials_file": "secrets/youtube_credentials.json"
+    },
+    "facebook": {
+        "page_id": "your_facebook_page_id",
+        "access_token": "your_facebook_access_token"
+    },
+    "vimeo": {
+        "access_token": "your_vimeo_access_token"
+    },
+    "twitter": {
+        "api_key": "your_twitter_api_key",
+        "api_secret": "your_twitter_api_secret",
+        "access_token": "your_twitter_access_token",
+        "access_token_secret": "your_twitter_access_token_secret"
+    }
+}

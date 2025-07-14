@@ -1,0 +1,164 @@
+{
+  "youtube_metadata": {
+    "basic": {
+      "title": "Test Video Title",
+      "description": "Test video description",
+      "privacy": "unlisted",
+      "tags": ["test", "demo", "medusa"]
+    },
+    "full": {
+      "title": "Complete Test Video",
+      "description": "This is a comprehensive test video with all metadata fields populated. It includes multiple paragraphs of description to test length handling.",
+      "privacy": "public",
+      "tags": ["test", "complete", "metadata", "youtube", "upload"],
+      "category": "22",
+      "language": "en",
+      "thumbnail": "path/to/thumbnail.jpg"
+    },
+    "minimal": {
+      "title": "Minimal Video",
+      "privacy": "private"
+    },
+    "long_title": {
+      "title": "This is a very long video title that exceeds the normal length limits and should be tested for proper truncation or validation handling in the system",
+      "description": "Test description",
+      "privacy": "unlisted"
+    }
+  },
+  "facebook_metadata": {
+    "basic": {
+      "message": "Check out my new video!"
+    },
+    "with_link": {
+      "message": "Just uploaded a new video: {youtube_url}"
+    },
+    "with_hashtags": {
+      "message": "New video is live! #video #content #youtube {youtube_url}"
+    },
+    "long_message": {
+      "message": "This is a very long Facebook post message that contains multiple sentences and should test the character limit handling. It includes various elements like hashtags #test #long and mentions of platforms. The message continues with more content to ensure we test boundary conditions properly."
+    }
+  },
+  "vimeo_metadata": {
+    "basic": {
+      "title": "Vimeo Test Video",
+      "description": "Test description for Vimeo",
+      "privacy": "private"
+    },
+    "full": {
+      "title": "Complete Vimeo Upload",
+      "description": "Full description with all Vimeo-specific features",
+      "privacy": "public",
+      "tags": ["vimeo", "test", "upload"],
+      "category": "art"
+    }
+  },
+  "media_files": {
+    "small_video": {
+      "filename": "small_test.mp4",
+      "file_size": 1048576,
+      "duration": 30.5,
+      "format": "mp4",
+      "resolution": "1280x720",
+      "bitrate": 2500,
+      "codec": "h264"
+    },
+    "large_video": {
+      "filename": "large_test.mp4",
+      "file_size": 1073741824,
+      "duration": 1800.0,
+      "format": "mp4",
+      "resolution": "1920x1080",
+      "bitrate": 8000,
+      "codec": "h264"
+    },
+    "4k_video": {
+      "filename": "4k_test.mp4",
+      "file_size": 5368709120,
+      "duration": 600.0,
+      "format": "mp4",
+      "resolution": "3840x2160",
+      "bitrate": 25000,
+      "codec": "h265"
+    },
+    "unsupported_format": {
+      "filename": "test.avi",
+      "file_size": 524288000,
+      "duration": 120.0,
+      "format": "avi",
+      "resolution": "1920x1080",
+      "bitrate": 5000,
+      "codec": "xvid"
+    }
+  },
+  "task_scenarios": {
+    "single_platform": {
+      "platforms": ["youtube"],
+      "metadata": {
+        "youtube": {
+          "title": "Single Platform Test",
+          "description": "Testing single platform upload",
+          "privacy": "unlisted"
+        }
+      }
+    },
+    "multi_platform": {
+      "platforms": ["youtube", "facebook"],
+      "metadata": {
+        "youtube": {
+          "title": "Multi Platform Test",
+          "description": "Testing multi-platform workflow",
+          "privacy": "public"
+        },
+        "facebook": {
+          "message": "New video uploaded: {youtube_url} #multiplatform"
+        }
+      }
+    },
+    "dependency_chain": {
+      "platforms": ["youtube", "vimeo", "facebook"],
+      "metadata": {
+        "youtube": {
+          "title": "Dependency Chain Test",
+          "description": "Testing platform dependencies",
+          "privacy": "public"
+        },
+        "vimeo": {
+          "title": "Dependency Chain Test - Vimeo",
+          "description": "Same video on Vimeo",
+          "privacy": "public"
+        },
+        "facebook": {
+          "message": "Video available on multiple platforms: YouTube {youtube_url} and Vimeo {vimeo_url}"
+        }
+      }
+    }
+  },
+  "error_scenarios": {
+    "file_too_large": {
+      "filename": "huge_file.mp4",
+      "file_size": 137438953472,
+      "error_type": "file_size_exceeded"
+    },
+    "invalid_format": {
+      "filename": "invalid.xyz",
+      "file_size": 1048576,
+      "error_type": "unsupported_format"
+    },
+    "missing_metadata": {
+      "platforms": ["youtube"],
+      "metadata": {},
+      "error_type": "missing_required_metadata"
+    },
+    "invalid_privacy": {
+      "platforms": ["youtube"],
+      "metadata": {
+        "youtube": {
+          "title": "Test Video",
+          "privacy": "invalid_privacy_setting"
+        }
+      },
+      "error_type": "invalid_privacy_setting"
+    }
+  }
+} 

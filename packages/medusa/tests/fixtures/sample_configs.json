@@ -1,0 +1,60 @@
+{
+  "valid_full_config": {
+    "youtube": {
+      "client_secrets_file": "secrets/youtube_client_secrets.json",
+      "credentials_file": "secrets/youtube_credentials.json"
+    },
+    "facebook": {
+      "page_id": "1234567890",
+      "access_token": "test_facebook_access_token"
+    },
+    "vimeo": {
+      "access_token": "test_vimeo_access_token"
+    },
+    "twitter": {
+      "api_key": "test_twitter_api_key",
+      "api_secret": "test_twitter_api_secret",
+      "access_token": "test_twitter_access_token",
+      "access_token_secret": "test_twitter_access_token_secret"
+    }
+  },
+  "minimal_config": {
+    "youtube": {
+      "client_secrets_file": "secrets/youtube_client_secrets.json",
+      "credentials_file": "secrets/youtube_credentials.json"
+    }
+  },
+  "invalid_config_missing_fields": {
+    "youtube": {
+      "client_secrets_file": "secrets/youtube_client_secrets.json"
+    },
+    "facebook": {
+      "page_id": "1234567890"
+    }
+  },
+  "invalid_config_wrong_types": {
+    "youtube": {
+      "client_secrets_file": 123,
+      "credentials_file": true
+    },
+    "facebook": {
+      "page_id": 1234567890,
+      "access_token": null
+    }
+  },
+  "config_with_extra_fields": {
+    "youtube": {
+      "client_secrets_file": "secrets/youtube_client_secrets.json",
+      "credentials_file": "secrets/youtube_credentials.json",
+      "extra_field": "should_be_ignored"
+    },
+    "facebook": {
+      "page_id": "1234567890",
+      "access_token": "test_facebook_access_token",
+      "extra_setting": true
+    },
+    "unknown_platform": {
+      "some_config": "value"
+    }
+  }
+} 
