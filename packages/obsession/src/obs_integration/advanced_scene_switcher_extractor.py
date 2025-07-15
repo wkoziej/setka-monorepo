@@ -129,7 +129,13 @@ def run_extraction(recording_file):
     log_message(f"Starting extraction for: {recording_file}")
 
     # Path to OBSession CLI
-    cli_path = Path("/home/wojtas/dev/obsession/src/cli/extract.py")
+    # Try to find CLI relative to this script
+    script_path = Path(__file__).resolve()
+    cli_path = script_path.parent.parent / "cli" / "extract.py"
+    
+    # Fallback to absolute path if not found
+    if not cli_path.exists():
+        cli_path = Path("/home/wojtas/dev/setka-monorepo/packages/obsession/src/cli/extract.py")
 
     if not cli_path.exists():
         log_message(f"ERROR: CLI not found at {cli_path}")
@@ -154,7 +160,7 @@ def run_extraction(recording_file):
         # Run extraction
         result = subprocess.run(
             cmd,
-            cwd="/home/wojtas/dev/obsession",
+            cwd=str(cli_path.parent.parent.parent),  # packages/obsession dir
             capture_output=True,
             text=True,
             timeout=1800,  # 30 minutes max
