@@ -11,17 +11,22 @@ import subprocess
 import time
 from pathlib import Path
 
-# Add src directory to path for imports
-sys.path.insert(0, str(Path(__file__).parent.parent))
+# Add project directories to path for imports
+project_root = Path(__file__).parent.parent.parent.parent  # Go up to monorepo root
+sys.path.insert(0, str(project_root / "common" / "src"))  # Add common/src
+sys.path.insert(0, str(Path(__file__).parent.parent))  # Add obsession/src
 
 try:
     from setka_common.file_structure.specialized import RecordingStructureManager
-except ImportError:
-    # Fallback if import fails
-    class FileStructureManager:
+except ImportError as e:
+    print(f"[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Import error: {e}")
+    print(f"[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] sys.path: {sys.path[:3]}...")
+    # Fallback implementation
+    class RecordingStructureManager:
         @staticmethod
         def find_recording_structure(base_path):
             """Fallback implementation."""
+            base_path = Path(base_path)
             metadata_file = base_path / "metadata.json"
             if metadata_file.exists():
                 # Find video file in the same directory
@@ -43,9 +48,9 @@ except ImportError:
                             "Structure",
                             (),
                             {
-                                "video_file": file_path,
+                                "media_file": file_path,
                                 "metadata_file": metadata_file,
-                                "recording_dir": base_path,
+                                "project_dir": base_path,
                             },
                         )()
             return None
