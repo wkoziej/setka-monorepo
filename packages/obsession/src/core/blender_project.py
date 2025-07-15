@@ -11,6 +11,9 @@ from pathlib import Path
 from typing import List, Optional
 import logging
 
+from setka_common.file_structure.types import MediaType
+from setka_common.utils.files import find_files_by_type
+
 logger = logging.getLogger(__name__)
 
 
@@ -259,16 +262,7 @@ class BlenderProjectManager:
         Returns:
             List[Path]: List of video file paths
         """
-        video_extensions = [".mp4", ".mkv", ".avi", ".mov", ".flv", ".wmv", ".webm"]
-        video_files = []
-
-        for file_path in extracted_dir.iterdir():
-            if file_path.is_file() and file_path.suffix.lower() in video_extensions:
-                video_files.append(file_path)
-
-        # Sort for consistent ordering
-        video_files.sort(key=lambda x: x.name)
-        return video_files
+        return find_files_by_type(extracted_dir, MediaType.VIDEO)
 
     def _prepare_environment_variables_with_analysis(
         self,

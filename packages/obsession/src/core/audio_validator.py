@@ -9,6 +9,9 @@ from pathlib import Path
 from typing import List, Optional
 import logging
 
+from setka_common.file_structure.types import FileExtensions, MediaType
+from setka_common.utils.files import find_files_by_type
+
 logger = logging.getLogger(__name__)
 
 
@@ -40,15 +43,7 @@ class AudioValidator:
 
     def __init__(self):
         """Initialize AudioValidator."""
-        self.audio_extensions = [
-            ".mp3",
-            ".wav",
-            ".flac",
-            ".aac",
-            ".m4a",
-            ".ogg",
-            ".wma",
-        ]
+        pass
 
     def detect_main_audio(
         self, extracted_dir: Path, specified_audio: Optional[str] = None
@@ -99,17 +94,7 @@ class AudioValidator:
             logger.warning(f"Extracted directory does not exist: {extracted_dir}")
             return []
 
-        audio_files = []
-
-        for file_path in extracted_dir.iterdir():
-            if (
-                file_path.is_file()
-                and file_path.suffix.lower() in self.audio_extensions
-            ):
-                audio_files.append(file_path)
-
-        # Sort for consistent ordering
-        audio_files.sort(key=lambda x: x.name)
+        audio_files = find_files_by_type(extracted_dir, MediaType.AUDIO)
         logger.debug(f"Found {len(audio_files)} audio files in {extracted_dir}")
         return audio_files
 
@@ -137,10 +122,10 @@ class AudioValidator:
         if not audio_path.is_file():
             raise ValueError(f"Specified audio path is not a file: {specified_audio}")
 
-        if audio_path.suffix.lower() not in self.audio_extensions:
+        if audio_path.suffix.lower() not in FileExtensions.AUDIO:
             raise ValueError(
                 f"Specified file is not a valid audio file: {specified_audio}. "
-                f"Supported formats: {', '.join(self.audio_extensions)}"
+                f"Supported formats: {', '.join(FileExtensions.AUDIO)}"
             )
 
         logger.info(f"Validated specified audio file: {specified_audio}")

@@ -18,6 +18,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))  # Add obsession/src
 
 try:
     from setka_common.file_structure.specialized import RecordingStructureManager
+    from setka_common.file_structure.types import FileExtensions
 except ImportError as e:
     print(f"[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Import error: {e}")
     print(f"[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] sys.path: {sys.path[:3]}...")
@@ -30,19 +31,10 @@ except ImportError as e:
             metadata_file = base_path / "metadata.json"
             if metadata_file.exists():
                 # Find video file in the same directory
-                video_extensions = [
-                    ".mkv",
-                    ".mp4",
-                    ".avi",
-                    ".mov",
-                    ".flv",
-                    ".wmv",
-                    ".webm",
-                ]
                 for file_path in base_path.iterdir():
                     if (
                         file_path.is_file()
-                        and file_path.suffix.lower() in video_extensions
+                        and file_path.suffix.lower() in FileExtensions.VIDEO
                     ):
                         return type(
                             "Structure",

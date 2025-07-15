@@ -409,11 +409,11 @@ def find_latest_recording_file(output_dir):
 
     try:
         # Szukaj plików wideo w katalogu
-        video_extensions = [".mp4", ".mkv", ".flv", ".mov", ".avi"]
+        from setka_common.file_structure.types import FileExtensions
         video_files = []
 
         for file in os.listdir(output_dir):
-            if any(file.lower().endswith(ext) for ext in video_extensions):
+            if any(file.lower().endswith(ext) for ext in FileExtensions.VIDEO):
                 file_path = os.path.join(output_dir, file)
                 if os.path.isfile(file_path):
                     # Sprawdź czy plik jest świeży (utworzony w ciągu ostatnich 30 sekund)
