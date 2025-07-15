@@ -10,11 +10,10 @@ import logging
 import sys
 from pathlib import Path
 
-from ..core.blender_project import BlenderProjectManager
-from ..core.audio_validator import AudioValidationError
+from ..project_manager import BlenderProjectManager
+from setka_common.audio import AudioValidationError, analyze_audio_command
 from setka_common.file_structure.specialized import RecordingStructureManager
 from setka_common.utils.files import find_files_by_type, MediaType
-from .analyze_audio import analyze_audio_command
 
 
 def setup_logging(verbose: bool = False) -> None:

@@ -55,13 +55,13 @@ class TestImportVerification:
         """Test that metadata module can be imported without session-wide mocks."""
         # Remove any cached imports
         modules_to_remove = [
-            name for name in sys.modules.keys() if "src.core.metadata" in name
+            name for name in sys.modules.keys() if "metadata" in name
         ]
         for module_name in modules_to_remove:
             del sys.modules[module_name]
 
         # Import should work (obspython will be None due to ImportError, which is expected)
-        from src.core.metadata import determine_source_capabilities
+        from core.metadata import determine_source_capabilities
 
         # Function should exist and be callable
         assert callable(determine_source_capabilities)
@@ -71,10 +71,10 @@ class TestImportVerification:
         # Simulate obspython not being available
         with patch.dict("sys.modules", {"obspython": None}):
             # Force reload
-            if "src.core.metadata" in sys.modules:
-                del sys.modules["src.core.metadata"]
+            if "metadata" in sys.modules:
+                del sys.modules["metadata"]
 
-            from src.core.metadata import determine_source_capabilities
+            from core.metadata import determine_source_capabilities
 
             # Should return False for both when obs is None
             result = determine_source_capabilities(Mock())
@@ -186,14 +186,14 @@ class TestRealImportBehavior:
         modules_to_remove = [
             name
             for name in sys.modules.keys()
-            if any(part in name for part in ["src.core.metadata", "obspython"])
+            if any(part in name for part in ["metadata", "obspython"])
         ]
         for module_name in modules_to_remove:
             if module_name != "obspython":  # Don't remove session mock
                 del sys.modules[module_name]
 
         # Import fresh
-        from src.core.metadata import determine_source_capabilities
+        from core.metadata import determine_source_capabilities
 
         # Test with None source (should always work)
         result = determine_source_capabilities(None)
@@ -207,10 +207,10 @@ class TestRealImportBehavior:
 
         with patch.dict("sys.modules", {"obspython": mock_obs}):
             # Force reload
-            if "src.core.metadata" in sys.modules:
-                del sys.modules["src.core.metadata"]
+            if "metadata" in sys.modules:
+                del sys.modules["metadata"]
 
-            from src.core.metadata import determine_source_capabilities
+            from core.metadata import determine_source_capabilities
 
             # Test with mock source
             mock_source = Mock()
@@ -241,10 +241,10 @@ class TestRealImportBehavior:
         )
 
         with patch.dict("sys.modules", {"obspython": mock_obs_proper}):
-            if "src.core.metadata" in sys.modules:
-                del sys.modules["src.core.metadata"]
+            if "metadata" in sys.modules:
+                del sys.modules["metadata"]
 
-            from src.core.metadata import determine_source_capabilities
+            from core.metadata import determine_source_capabilities
 
             result_proper = determine_source_capabilities(mock_source)
             assert result_proper["has_audio"] is True
@@ -253,10 +253,10 @@ class TestRealImportBehavior:
         # Now simulate the bug scenario where obs is None (wrong import)
         # In the original bug, 'import obs' would fail or return None
         with patch.dict("sys.modules", {"obspython": None}):
-            if "src.core.metadata" in sys.modules:
-                del sys.modules["src.core.metadata"]
+            if "metadata" in sys.modules:
+                del sys.modules["metadata"]
 
-            from src.core.metadata import determine_source_capabilities
+            from core.metadata import determine_source_capabilities
 
             # In the bug scenario, this would always return False
             result_bug = determine_source_capabilities(mock_source)

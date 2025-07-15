@@ -3,8 +3,13 @@ ABOUTME: BlenderProjectSetup class - handles Blender VSE project creation and co
 ABOUTME: Extracted from BlenderVSEConfigurator to centralize project setup logic.
 """
 
-import bpy
 from typing import Dict
+
+try:
+    import bpy
+except ImportError:
+    # Running outside Blender - provide mock for testing
+    bpy = None
 
 
 class BlenderProjectSetup:

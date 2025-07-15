@@ -12,7 +12,7 @@ from pprint import pprint
 # Add src to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from src.core.audio_analyzer import AudioAnalyzer
+from setka_common.audio import AudioAnalyzer
 
 
 def format_time_list(times, max_items=5):

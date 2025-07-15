@@ -33,21 +33,21 @@ from typing import List, Optional, Tuple, Dict
 
 # Import refactored modules
 try:
-    from .blender_vse.config import BlenderVSEConfig
-    from .blender_vse.constants import AnimationConstants
-    from .blender_vse.keyframe_helper import KeyframeHelper
-    from .blender_vse.layout_manager import BlenderLayoutManager
-    from .blender_vse.blender_animation_engine import BlenderAnimationEngine
-    from .blender_vse.project_setup import BlenderProjectSetup
+    from .vse.config import BlenderVSEConfig
+    from .vse.constants import AnimationConstants
+    from .vse.keyframe_helper import KeyframeHelper
+    from .vse.layout_manager import BlenderLayoutManager
+    from .vse.animation_engine import BlenderAnimationEngine
+    from .vse.project_setup import BlenderProjectSetup
 except ImportError:
     # Fallback for when script is run standalone in Blender
     sys.path.append(str(Path(__file__).parent))
-    from blender_vse.config import BlenderVSEConfig
-    from blender_vse.constants import AnimationConstants
-    from blender_vse.keyframe_helper import KeyframeHelper
-    from blender_vse.layout_manager import BlenderLayoutManager
-    from blender_vse.blender_animation_engine import BlenderAnimationEngine
-    from blender_vse.project_setup import BlenderProjectSetup
+    from vse.config import BlenderVSEConfig
+    from vse.constants import AnimationConstants
+    from vse.keyframe_helper import KeyframeHelper
+    from vse.layout_manager import BlenderLayoutManager
+    from vse.animation_engine import BlenderAnimationEngine
+    from vse.project_setup import BlenderProjectSetup
 
 
 class BlenderVSEConfigurator:

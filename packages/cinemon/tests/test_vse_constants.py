@@ -9,7 +9,7 @@ import sys
 # Add src to path for testing
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-from core.blender_vse.constants import BlenderConstants, AnimationConstants
+from blender.vse.constants import BlenderConstants, AnimationConstants
 
 
 class TestBlenderConstants:

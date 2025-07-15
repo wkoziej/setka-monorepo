@@ -9,7 +9,7 @@ from pathlib import Path
 from unittest.mock import Mock, patch
 import subprocess
 
-from src.core.blender_project import BlenderProjectManager
+from blender.project_manager import BlenderProjectManager
 
 
 class TestBlenderProjectManager:

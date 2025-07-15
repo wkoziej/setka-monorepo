@@ -9,8 +9,8 @@ import sys
 # Add src to path for testing
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-from core.blender_vse.layout_manager import BlenderLayoutManager
-from core.blender_vse.constants import AnimationConstants
+from blender.vse.layout_manager import BlenderLayoutManager
+from blender.vse.constants import AnimationConstants
 
 
 class TestBlenderLayoutManagerBasic:

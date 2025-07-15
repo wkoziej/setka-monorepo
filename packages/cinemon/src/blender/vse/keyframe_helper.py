@@ -3,8 +3,13 @@ ABOUTME: Keyframe helper module for Blender VSE - eliminates code duplication in
 ABOUTME: Provides centralized utilities for common keyframe patterns used in animations.
 """
 
-import bpy
 from typing import Union
+
+try:
+    import bpy
+except ImportError:
+    # Running outside Blender - provide mock for testing
+    bpy = None
 
 
 class KeyframeHelper:

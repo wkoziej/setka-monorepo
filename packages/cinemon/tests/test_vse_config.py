@@ -11,7 +11,7 @@ from unittest.mock import patch
 # Add src to path for testing
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-from core.blender_vse.config import BlenderVSEConfig
+from blender.vse.config import BlenderVSEConfig
 
 
 class TestBlenderVSEConfigBasic:

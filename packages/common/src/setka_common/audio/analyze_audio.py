@@ -12,7 +12,7 @@ import sys
 import logging
 from pathlib import Path
 
-from ..core.audio_analyzer import AudioAnalyzer
+from .audio_analyzer import AudioAnalyzer
 
 logger = logging.getLogger(__name__)
 

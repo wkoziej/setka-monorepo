@@ -11,10 +11,10 @@ from unittest.mock import Mock
 # Add src to path for testing
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-from core.blender_vse.blender_animation_engine import BlenderAnimationEngine
-from core.blender_vse.animators.beat_switch_animator import BeatSwitchAnimator
-from core.blender_vse.animators.energy_pulse_animator import EnergyPulseAnimator
-from core.blender_vse.animators.multi_pip_animator import MultiPipAnimator
+from blender.vse.animation_engine import BlenderAnimationEngine
+from blender.vse.animators.beat_switch_animator import BeatSwitchAnimator
+from blender.vse.animators.energy_pulse_animator import EnergyPulseAnimator
+from blender.vse.animators.multi_pip_animator import MultiPipAnimator
 
 
 class TestBlenderAnimationEngineBasic:
@@ -406,7 +406,7 @@ class TestBlenderAnimationEngineCompatibility:
                 "multi-pip",
                 {
                     "animation_events": {
-                        "sections": [{"start": 0.0, "end": 30.0}],
+                        "sections": [{"start": 0.0, "end": 30.0, "label": "section_1"}],
                         "beats": [1.0],
                     }
                 },
@@ -436,7 +436,7 @@ class TestBlenderAnimationEngineIntegration:
                 "multi-pip",
                 {
                     "animation_events": {
-                        "sections": [{"start": 0.0, "end": 30.0}],
+                        "sections": [{"start": 0.0, "end": 30.0, "label": "section_1"}],
                         "beats": [1.0],
                     }
                 },

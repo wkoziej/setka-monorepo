@@ -4,7 +4,7 @@ Tests for source extraction functionality.
 
 import tempfile
 from unittest.mock import patch
-from src.core.extractor import (
+from core.extractor import (
     ExtractionResult,
     calculate_crop_params,
     sanitize_filename,
@@ -237,7 +237,7 @@ class TestExtractorWithCapabilities:
             test_video.touch()
 
             # Mock FFmpeg command
-            with patch("src.core.extractor.subprocess.run") as mock_run:
+            with patch("extractor.subprocess.run") as mock_run:
                 mock_run.return_value = None
 
                 result = extract_sources(str(test_video), sample_metadata)
@@ -255,7 +255,7 @@ class TestExtractorWithCapabilities:
             test_video.touch()
 
             # Mock FFmpeg command
-            with patch("src.core.extractor.subprocess.run") as mock_run:
+            with patch("extractor.subprocess.run") as mock_run:
                 mock_run.return_value = None
 
                 extract_sources(str(test_video), sample_metadata)
@@ -318,7 +318,7 @@ class TestExtractorWithCapabilities:
             test_video.touch()
 
             # Mock FFmpeg command
-            with patch("src.core.extractor.subprocess.run") as mock_run:
+            with patch("extractor.subprocess.run") as mock_run:
                 mock_run.return_value = None
 
                 result = extract_sources(str(test_video), metadata)
@@ -350,7 +350,7 @@ class TestExtractorWithCapabilities:
             test_video.touch()
 
             # Mock FFmpeg command
-            with patch("src.core.extractor.subprocess.run") as mock_run:
+            with patch("extractor.subprocess.run") as mock_run:
                 mock_run.return_value = None
 
                 result = extract_sources(str(test_video), metadata)
@@ -386,7 +386,7 @@ class TestExtractorWithCapabilities:
             metadata_file.touch()
 
             # Mock FFmpeg command
-            with patch("src.core.extractor.subprocess.run") as mock_run:
+            with patch("extractor.subprocess.run") as mock_run:
                 mock_run.return_value = None
 
                 result = extract_sources(str(test_video), metadata)
@@ -419,7 +419,7 @@ class TestExtractorWithCapabilities:
             test_video.touch()
 
             # Mock FFmpeg command
-            with patch("src.core.extractor.subprocess.run") as mock_run:
+            with patch("extractor.subprocess.run") as mock_run:
                 mock_run.return_value = None
 
                 result = extract_sources(str(test_video), metadata)

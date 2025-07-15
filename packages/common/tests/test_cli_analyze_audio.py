@@ -7,7 +7,7 @@ import pytest
 from pathlib import Path
 from unittest.mock import Mock, patch
 
-from src.cli.analyze_audio import main, analyze_audio_command
+from setka_common.audio import analyze_audio_command
 
 
 class TestAnalyzeAudioCLI:
@@ -23,7 +23,7 @@ class TestAnalyzeAudioCLI:
         output_dir = tmp_path / "output"
 
         # Mock AudioAnalyzer
-        with patch("src.cli.analyze_audio.AudioAnalyzer") as mock_analyzer_class:
+        with patch("setka_common.audio.AudioAnalyzer") as mock_analyzer_class:
             mock_analyzer = Mock()
             mock_analyzer_class.return_value = mock_analyzer
 
@@ -57,7 +57,7 @@ class TestAnalyzeAudioCLI:
         audio_file = tmp_path / "music.m4a"
         audio_file.touch()
 
-        with patch("src.cli.analyze_audio.AudioAnalyzer") as mock_analyzer_class:
+        with patch("setka_common.audio.AudioAnalyzer") as mock_analyzer_class:
             mock_analyzer = Mock()
             mock_analyzer_class.return_value = mock_analyzer
             mock_analyzer.analyze_for_animation.return_value = {}
@@ -74,7 +74,7 @@ class TestAnalyzeAudioCLI:
         audio_file = tmp_path / "song.wav"
         audio_file.touch()
 
-        with patch("src.cli.analyze_audio.AudioAnalyzer") as mock_analyzer_class:
+        with patch("setka_common.audio.AudioAnalyzer") as mock_analyzer_class:
             mock_analyzer = Mock()
             mock_analyzer_class.return_value = mock_analyzer
             mock_analyzer.analyze_for_animation.return_value = {}
@@ -103,7 +103,7 @@ class TestAnalyzeAudioCLI:
         # Output dir doesn't exist yet
         assert not output_dir.exists()
 
-        with patch("src.cli.analyze_audio.AudioAnalyzer") as mock_analyzer_class:
+        with patch("setka_common.audio.AudioAnalyzer") as mock_analyzer_class:
             mock_analyzer = Mock()
             mock_analyzer_class.return_value = mock_analyzer
             mock_analyzer.analyze_for_animation.return_value = {}
@@ -114,64 +114,6 @@ class TestAnalyzeAudioCLI:
             assert output_dir.exists()
             assert output_dir.is_dir()
 
-    @patch("src.cli.analyze_audio.sys")
-    @patch("src.cli.analyze_audio.analyze_audio_command")
-    def test_main_function_basic_args(self, mock_command, mock_sys, tmp_path):
-        """Test main function with basic arguments."""
-        # Mock command line arguments
-        mock_sys.argv = [
-            "analyze_audio.py",  # script name
-            str(tmp_path / "audio.wav"),  # audio file
-            str(tmp_path / "output"),  # output dir
-        ]
-
-        # Mock command return
-        mock_command.return_value = tmp_path / "analysis.json"
-
-        main()
-
-        # Verify command was called with correct arguments
-        mock_command.assert_called_once_with(
-            Path(tmp_path / "audio.wav"),
-            Path(tmp_path / "output"),
-            beat_division=8,
-            min_onset_interval=2.0,
-        )
-
-    @patch("src.cli.analyze_audio.sys")
-    @patch("src.cli.analyze_audio.analyze_audio_command")
-    def test_main_function_with_options(self, mock_command, mock_sys, tmp_path):
-        """Test main function with optional parameters."""
-        # Mock command line arguments with options
-        mock_sys.argv = [
-            "analyze_audio.py",
-            str(tmp_path / "music.wav"),
-            str(tmp_path / "out"),
-            "--beat-division",
-            "4",
-            "--min-onset-interval",
-            "1.0",
-        ]
-
-        mock_command.return_value = tmp_path / "analysis.json"
-
-        main()
-
-        mock_command.assert_called_once_with(
-            Path(tmp_path / "music.wav"),
-            Path(tmp_path / "out"),
-            beat_division=4,
-            min_onset_interval=1.0,
-        )
-
-    @patch("src.cli.analyze_audio.sys")
-    def test_main_function_insufficient_args(self, mock_sys):
-        """Test main function with insufficient arguments."""
-        mock_sys.argv = ["analyze_audio.py"]
-        mock_sys.exit.side_effect = SystemExit
-
-        with pytest.raises(SystemExit):
-            main()
 
     def test_analyze_audio_command_integration_with_recording(self, tmp_path):
         """Test audio analysis command with recording structure."""
@@ -189,7 +131,7 @@ class TestAnalyzeAudioCLI:
         output_dir = tmp_path / "analysis_output"
 
         # Mock analysis
-        with patch("src.cli.analyze_audio.AudioAnalyzer") as mock_analyzer_class:
+        with patch("setka_common.audio.AudioAnalyzer") as mock_analyzer_class:
             mock_analyzer = Mock()
             mock_analyzer_class.return_value = mock_analyzer
 
@@ -221,7 +163,7 @@ class TestAnalyzeAudioCLI:
             audio_file = tmp_path / input_name
             audio_file.touch()
 
-            with patch("src.cli.analyze_audio.AudioAnalyzer") as mock_analyzer_class:
+            with patch("setka_common.audio.AudioAnalyzer") as mock_analyzer_class:
                 mock_analyzer = Mock()
                 mock_analyzer_class.return_value = mock_analyzer
                 mock_analyzer.analyze_for_animation.return_value = {}

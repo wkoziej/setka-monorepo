@@ -10,10 +10,10 @@ from unittest.mock import Mock, patch
 # Add src to path for testing
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-from core.blender_vse.animators.multi_pip_animator import MultiPipAnimator
-from core.blender_vse.keyframe_helper import KeyframeHelper
-from core.blender_vse.layout_manager import BlenderLayoutManager
-from core.blender_vse.constants import AnimationConstants
+from blender.vse.animators.multi_pip_animator import MultiPipAnimator
+from blender.vse.keyframe_helper import KeyframeHelper
+from blender.vse.layout_manager import BlenderLayoutManager
+from blender.vse.constants import AnimationConstants
 
 
 class TestMultiPipAnimatorBasic:
@@ -131,7 +131,7 @@ class TestMultiPipAnimatorValidation:
 class TestMultiPipAnimatorSectionLogic:
     """Test section-based main camera switching logic."""
 
-    @patch("core.blender_vse.keyframe_helper.bpy")
+    @patch("blender.vse.keyframe_helper.bpy")
     def test_animate_section_switching(self, mock_bpy):
         """Should switch main camera on section boundaries."""
         animator = MultiPipAnimator()
@@ -161,7 +161,7 @@ class TestMultiPipAnimatorSectionLogic:
         result = animator.animate(strips, animation_data, fps)
         assert result is True
 
-    @patch("core.blender_vse.keyframe_helper.bpy")
+    @patch("blender.vse.keyframe_helper.bpy")
     def test_animate_section_frame_calculation(self, mock_bpy):
         """Should calculate frame numbers correctly from section boundaries."""
         animator = MultiPipAnimator()
@@ -217,15 +217,14 @@ class TestMultiPipAnimatorSectionLogic:
                 "animation_events": {"sections": sections, "beats": [1.0, 2.0]}
             }
 
-            with patch("core.blender_vse.keyframe_helper.bpy"):
-                result = animator.animate(strips, animation_data, 30)
-                assert result is True
+            result = animator.animate(strips, animation_data, 30)
+            assert result is True
 
 
 class TestMultiPipAnimatorPipLogic:
     """Test PiP (Picture-in-Picture) corner effects logic."""
 
-    @patch("core.blender_vse.keyframe_helper.bpy")
+    @patch("blender.vse.keyframe_helper.bpy")
     def test_animate_pip_positioning(self, mock_bpy):
         """Should position PiP strips in corners correctly."""
         animator = MultiPipAnimator()
@@ -262,7 +261,7 @@ class TestMultiPipAnimatorPipLogic:
         # Should have called layout manager for corner positions
         mock_layout.get_corner_positions.assert_called()
 
-    @patch("core.blender_vse.keyframe_helper.bpy")
+    @patch("blender.vse.keyframe_helper.bpy")
     def test_animate_pip_scaling(self, mock_bpy):
         """Should scale PiP strips using AnimationConstants."""
         animator = MultiPipAnimator()
@@ -292,7 +291,7 @@ class TestMultiPipAnimatorPipLogic:
         expected_scale = AnimationConstants.PIP_SCALE_FACTOR
         assert expected_scale == 0.3  # From constants
 
-    @patch("core.blender_vse.keyframe_helper.bpy")
+    @patch("blender.vse.keyframe_helper.bpy")
     def test_animate_pip_beat_effects(self, mock_bpy):
         """Should apply beat effects to PiP strips."""
         animator = MultiPipAnimator()
@@ -323,7 +322,7 @@ class TestMultiPipAnimatorPipLogic:
 class TestMultiPipAnimatorKeyframeIntegration:
     """Test integration with KeyframeHelper for complex animations."""
 
-    @patch("core.blender_vse.keyframe_helper.bpy")
+    @patch("blender.vse.keyframe_helper.bpy")
     def test_animate_uses_keyframe_helper(self, mock_bpy):
         """Should use KeyframeHelper for all keyframe insertions."""
         animator = MultiPipAnimator()
@@ -354,7 +353,7 @@ class TestMultiPipAnimatorKeyframeIntegration:
         assert mock_keyframe_helper.insert_blend_alpha_keyframe.call_count >= 0
         assert mock_keyframe_helper.insert_transform_scale_keyframes.call_count >= 0
 
-    @patch("core.blender_vse.keyframe_helper.bpy")
+    @patch("blender.vse.keyframe_helper.bpy")
     def test_animate_keyframe_timing(self, mock_bpy):
         """Should insert keyframes at correct frame timings."""
         animator = MultiPipAnimator()
@@ -387,7 +386,7 @@ class TestMultiPipAnimatorKeyframeIntegration:
 class TestMultiPipAnimatorLayoutIntegration:
     """Test integration with BlenderLayoutManager."""
 
-    @patch("core.blender_vse.keyframe_helper.bpy")
+    @patch("blender.vse.keyframe_helper.bpy")
     def test_animate_uses_layout_manager(self, mock_bpy):
         """Should use BlenderLayoutManager for positioning calculations."""
         animator = MultiPipAnimator()
@@ -443,7 +442,7 @@ class TestMultiPipAnimatorConstants:
         assert pip_scale == 0.3  # Small for PiP
         assert pip_margin == 160  # Corner margin
 
-    @patch("core.blender_vse.keyframe_helper.bpy")
+    @patch("blender.vse.keyframe_helper.bpy")
     def test_animate_uses_pip_constants(self, mock_bpy):
         """Should use PIP constants for scaling and positioning."""
         animator = MultiPipAnimator()
@@ -494,7 +493,7 @@ class TestMultiPipAnimatorCompatibility:
         result = animator.animate(video_strips, animation_data, fps)
         assert isinstance(result, bool)
 
-    @patch("core.blender_vse.keyframe_helper.bpy")
+    @patch("blender.vse.keyframe_helper.bpy")
     def test_animate_behavior_compatibility(self, mock_bpy):
         """Should produce same animation behavior as original method."""
         animator = MultiPipAnimator()
@@ -536,7 +535,7 @@ class TestMultiPipAnimatorCompatibility:
 class TestMultiPipAnimatorComplexScenarios:
     """Test complex multi-pip animation scenarios."""
 
-    @patch("core.blender_vse.keyframe_helper.bpy")
+    @patch("blender.vse.keyframe_helper.bpy")
     def test_animate_four_strip_scenario(self, mock_bpy):
         """Should handle typical 4-strip multi-pip scenario correctly."""
         animator = MultiPipAnimator()
@@ -601,6 +600,5 @@ class TestMultiPipAnimatorComplexScenarios:
 
         for events in edge_cases:
             animation_data = {"animation_events": events}
-            with patch("core.blender_vse.keyframe_helper.bpy"):
-                result = animator.animate(strips, animation_data, fps)
-                assert result is True  # Should handle gracefully
+            result = animator.animate(strips, animation_data, fps)
+            assert result is True  # Should handle gracefully

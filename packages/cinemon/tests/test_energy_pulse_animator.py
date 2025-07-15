@@ -10,9 +10,9 @@ from unittest.mock import Mock, patch
 # Add src to path for testing
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-from core.blender_vse.animators.energy_pulse_animator import EnergyPulseAnimator
-from core.blender_vse.keyframe_helper import KeyframeHelper
-from core.blender_vse.constants import AnimationConstants
+from blender.vse.animators.energy_pulse_animator import EnergyPulseAnimator
+from blender.vse.keyframe_helper import KeyframeHelper
+from blender.vse.constants import AnimationConstants
 
 
 class TestEnergyPulseAnimatorBasic:
@@ -102,7 +102,7 @@ class TestEnergyPulseAnimatorValidation:
 class TestEnergyPulseAnimatorLogic:
     """Test core energy pulse animation logic."""
 
-    @patch("core.blender_vse.keyframe_helper.bpy")
+    @patch("blender.vse.keyframe_helper.bpy")
     def test_animate_initial_scale_setup(self, mock_bpy):
         """Should set initial scale to normal (1.0) for all strips."""
         animator = EnergyPulseAnimator()
@@ -131,7 +131,7 @@ class TestEnergyPulseAnimatorLogic:
         assert strip2.transform.scale_x == 1.0
         assert strip2.transform.scale_y == 1.0
 
-    @patch("core.blender_vse.keyframe_helper.bpy")
+    @patch("blender.vse.keyframe_helper.bpy")
     def test_animate_energy_scaling_logic(self, mock_bpy):
         """Should scale strips on energy peaks using AnimationConstants."""
         animator = EnergyPulseAnimator()
@@ -152,7 +152,7 @@ class TestEnergyPulseAnimatorLogic:
         # Note: Implementation should scale up then back down using ENERGY_SCALE_FACTOR
         # Final state should be back to normal after peak + 1 frame
 
-    @patch("core.blender_vse.keyframe_helper.bpy")
+    @patch("blender.vse.keyframe_helper.bpy")
     def test_animate_frame_calculation(self, mock_bpy):
         """Should calculate frame numbers correctly from energy peak times."""
         animator = EnergyPulseAnimator()
@@ -187,7 +187,7 @@ class TestEnergyPulseAnimatorLogic:
             result = animator.animate(video_strips, animation_data, fps)
             assert result is True
 
-    @patch("core.blender_vse.keyframe_helper.bpy")
+    @patch("blender.vse.keyframe_helper.bpy")
     def test_animate_peak_and_return_pattern(self, mock_bpy):
         """Should scale up on energy peak and back down on next frame."""
         animator = EnergyPulseAnimator()
@@ -231,15 +231,14 @@ class TestEnergyPulseAnimatorLogic:
         energy_peaks = [1.0, 2.5, 4.2, 6.8]
         animation_data = {"animation_events": {"energy_peaks": energy_peaks}}
 
-        with patch("core.blender_vse.keyframe_helper.bpy"):
-            result = animator.animate(video_strips, animation_data, 30)
-            assert result is True
+        result = animator.animate(video_strips, animation_data, 30)
+        assert result is True
 
 
 class TestEnergyPulseAnimatorKeyframeIntegration:
     """Test integration with KeyframeHelper."""
 
-    @patch("core.blender_vse.keyframe_helper.bpy")
+    @patch("blender.vse.keyframe_helper.bpy")
     def test_animate_uses_keyframe_helper(self, mock_bpy):
         """Should use KeyframeHelper for all keyframe insertions."""
         animator = EnergyPulseAnimator()
@@ -265,7 +264,7 @@ class TestEnergyPulseAnimatorKeyframeIntegration:
         assert mock_keyframe_helper.insert_transform_scale_keyframes.call_count > 0
         assert mock_keyframe_helper.insert_blend_alpha_keyframe.call_count == 0
 
-    @patch("core.blender_vse.keyframe_helper.bpy")
+    @patch("blender.vse.keyframe_helper.bpy")
     def test_animate_keyframe_parameters(self, mock_bpy):
         """Should pass correct parameters to KeyframeHelper."""
         animator = EnergyPulseAnimator()
@@ -303,7 +302,7 @@ class TestEnergyPulseAnimatorKeyframeIntegration:
 class TestEnergyPulseAnimatorConstants:
     """Test usage of AnimationConstants."""
 
-    @patch("core.blender_vse.keyframe_helper.bpy")
+    @patch("blender.vse.keyframe_helper.bpy")
     def test_animate_uses_energy_scale_factor(self, mock_bpy):
         """Should use AnimationConstants.ENERGY_SCALE_FACTOR for scaling."""
         animator = EnergyPulseAnimator()
@@ -353,7 +352,7 @@ class TestEnergyPulseAnimatorCompatibility:
         result = animator.animate(video_strips, animation_data, fps)
         assert isinstance(result, bool)
 
-    @patch("core.blender_vse.keyframe_helper.bpy")
+    @patch("blender.vse.keyframe_helper.bpy")
     def test_animate_behavior_compatibility(self, mock_bpy):
         """Should produce same animation behavior as original method."""
         animator = EnergyPulseAnimator()

@@ -8,13 +8,13 @@ import pytest
 from pathlib import Path
 from unittest.mock import patch, Mock
 
-from src.cli.blend_setup import (
+from blender.cli.blend_setup import (
     parse_args,
     validate_recording_directory,
     main,
     setup_logging,
 )
-from src.core.audio_validator import MultipleAudioFilesError
+from setka_common.audio import MultipleAudioFilesError
 
 
 class TestParseArgs:
@@ -397,7 +397,7 @@ class TestBlendSetupAudioIntegration:
 
     def test_validate_animation_parameters_valid(self):
         """Test validation of valid animation parameters."""
-        from src.cli.blend_setup import validate_animation_parameters
+        from blender.cli.blend_setup import validate_animation_parameters
 
         # Valid combinations
         validate_animation_parameters("none", 8)
@@ -406,7 +406,7 @@ class TestBlendSetupAudioIntegration:
 
     def test_validate_animation_parameters_invalid(self):
         """Test validation of invalid animation parameters."""
-        from src.cli.blend_setup import validate_animation_parameters
+        from blender.cli.blend_setup import validate_animation_parameters
 
         # Invalid animation mode
         with pytest.raises(ValueError, match="Invalid animation mode"):

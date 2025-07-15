@@ -33,7 +33,7 @@ class BlenderProjectManager:
             blender_executable: Path or command to Blender executable
         """
         self.blender_executable = blender_executable
-        self.script_path = Path(__file__).parent / "blender_vse_script.py"
+        self.script_path = Path(__file__).parent / "vse_script.py"
 
     def create_vse_project(
         self,
@@ -59,7 +59,7 @@ class BlenderProjectManager:
             RuntimeError: If Blender execution fails
         """
         from setka_common.file_structure.specialized import RecordingStructureManager
-        from .audio_validator import AudioValidator
+        from setka_common.audio import AudioValidator
 
         logger.info(f"Creating Blender VSE project for: {recording_path}")
 

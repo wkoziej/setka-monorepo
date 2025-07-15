@@ -28,13 +28,13 @@ class TestOBSScript:
         """Reset module state before each test."""
         import sys
         import src.obs_integration.obs_script
-        import src.core.metadata
+        import metadata
 
         # Only reload if modules are already in sys.modules
         if 'src.obs_integration.obs_script' in sys.modules:
             importlib.reload(src.obs_integration.obs_script)
-        if 'src.core.metadata' in sys.modules:
-            importlib.reload(src.core.metadata)
+        if 'metadata' in sys.modules:
+            importlib.reload(metadata)
 
     def test_script_description(self):
         """Test script description returns proper HTML."""
