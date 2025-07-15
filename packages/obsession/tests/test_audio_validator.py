@@ -19,15 +19,9 @@ class TestAudioValidator:
     def test_init(self):
         """Test AudioValidator initialization."""
         validator = AudioValidator()
-        assert validator.audio_extensions == [
-            ".mp3",
-            ".wav",
-            ".flac",
-            ".aac",
-            ".m4a",
-            ".ogg",
-            ".wma",
-        ]
+        # AudioValidator no longer stores audio_extensions after migration to setka-common
+        # Test that it initializes without errors
+        assert validator is not None
 
     def test_find_audio_files_empty_directory(self, tmp_path):
         """Test find_audio_files with empty directory."""
