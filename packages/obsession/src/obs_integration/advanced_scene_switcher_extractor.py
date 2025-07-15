@@ -133,10 +133,6 @@ def run_extraction(recording_file):
     script_path = Path(__file__).resolve()
     cli_path = script_path.parent.parent / "cli" / "extract.py"
     
-    # Fallback to absolute path if not found
-    if not cli_path.exists():
-        cli_path = Path("/home/wojtas/dev/setka-monorepo/packages/obsession/src/cli/extract.py")
-
     if not cli_path.exists():
         log_message(f"ERROR: CLI not found at {cli_path}")
         return False
