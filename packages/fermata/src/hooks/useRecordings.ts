@@ -1,20 +1,20 @@
 import { useState, useCallback, useEffect } from 'react';
 import { Recording, RecordingListState } from '../types';
+import { invoke } from '@tauri-apps/api/core';
 
 // Tauri API wrapper with fallback for development
 const invokeCommand = async (command: string, args?: any): Promise<any> => {
-  // Check if we're in Tauri environment
-  if (typeof window !== 'undefined' && (window as any).__TAURI__) {
-    try {
-      const { invoke } = (window as any).__TAURI__.tauri;
-      return await invoke(command, args);
-    } catch (error) {
-      throw new Error(`Tauri command failed: ${error}`);
-    }
+  try {
+    // Use modern Tauri 2.0 API
+    console.log(`Invoking Tauri command: ${command}`, args);
+    const result = await invoke(command, args);
+    console.log(`Tauri command ${command} result:`, result);
+    return result;
+  } catch (error) {
+    console.error(`Tauri command ${command} failed:`, error);
+    console.warn('Falling back to mock data');
+    throw new Error(`Tauri command failed: ${error}`);
   }
-  
-  // Fallback for development without Tauri
-  throw new Error('Tauri not available - running in browser mode');
 };
 
 // Mock data for initial development

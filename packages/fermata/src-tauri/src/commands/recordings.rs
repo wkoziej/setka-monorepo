@@ -18,18 +18,35 @@ pub struct CliPaths {
 
 impl Default for AppConfig {
     fn default() -> Self {
+        // Debug all environment variables
+        log::info!("=== Environment Variables Debug ===");
+        for (key, value) in std::env::vars() {
+            if key.starts_with("FERMATA_") {
+                log::info!("ENV: {} = {}", key, value);
+            }
+        }
+        
+        let recordings_path_str = std::env::var("FERMATA_RECORDINGS_PATH")
+            .unwrap_or_else(|e| {
+                log::warn!("FERMATA_RECORDINGS_PATH not found: {}", e);
+                std::env::var("HOME").unwrap_or_else(|_| "/tmp".to_string()) + "/Videos/obs-recordings"
+            });
+        
+        let workspace_root_str = std::env::var("FERMATA_WORKSPACE_ROOT")
+            .unwrap_or_else(|e| {
+                log::warn!("FERMATA_WORKSPACE_ROOT not found: {}", e);
+                std::env::current_dir().unwrap_or_default().to_string_lossy().to_string()
+            });
+        
+        log::info!("Final config - recordings_path: {}", recordings_path_str);
+        log::info!("Final config - workspace_root: {}", workspace_root_str);
+        
         // Default configuration - can be overridden by user settings
         AppConfig {
-            recordings_path: PathBuf::from(
-                std::env::var("FERMATA_RECORDINGS_PATH")
-                    .unwrap_or_else(|_| std::env::var("HOME").unwrap_or_else(|_| "/tmp".to_string()) + "/recordings")
-            ),
+            recordings_path: PathBuf::from(recordings_path_str),
             cli_paths: CliPaths {
                 uv_path: "uv".to_string(),
-                workspace_root: PathBuf::from(
-                    std::env::var("FERMATA_WORKSPACE_ROOT")
-                        .unwrap_or_else(|_| std::env::current_dir().unwrap_or_default().to_string_lossy().to_string())
-                ),
+                workspace_root: PathBuf::from(workspace_root_str),
             },
         }
     }
