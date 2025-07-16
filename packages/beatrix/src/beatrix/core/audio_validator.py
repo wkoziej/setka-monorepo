@@ -11,26 +11,9 @@ import logging
 
 from setka_common.file_structure.types import FileExtensions, MediaType
 from setka_common.utils.files import find_files_by_type
+from ..exceptions import AudioValidationError, NoAudioFileError, MultipleAudioFilesError
 
 logger = logging.getLogger(__name__)
-
-
-class AudioValidationError(Exception):
-    """Base exception for audio validation errors."""
-
-    pass
-
-
-class NoAudioFileError(AudioValidationError):
-    """Raised when no audio files are found in extracted directory."""
-
-    pass
-
-
-class MultipleAudioFilesError(AudioValidationError):
-    """Raised when multiple audio files are found without specification."""
-
-    pass
 
 
 class AudioValidator:

@@ -8,7 +8,7 @@ import pytest
 from pathlib import Path
 import numpy as np
 
-from setka_common.audio import AudioAnalyzer
+from beatrix import AudioAnalyzer
 
 
 @pytest.mark.audio

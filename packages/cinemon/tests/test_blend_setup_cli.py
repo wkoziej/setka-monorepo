@@ -14,7 +14,7 @@ from blender.cli.blend_setup import (
     main,
     setup_logging,
 )
-from setka_common.audio import MultipleAudioFilesError
+from beatrix import MultipleAudioFilesError
 
 
 class TestParseArgs:

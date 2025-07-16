@@ -9,7 +9,7 @@ from pathlib import Path
 from unittest.mock import Mock, patch
 import numpy as np
 
-from setka_common.audio import AudioAnalyzer
+from beatrix import AudioAnalyzer
 
 
 class TestAudioAnalyzerInit:

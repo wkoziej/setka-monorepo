@@ -59,7 +59,7 @@ class BlenderProjectManager:
             RuntimeError: If Blender execution fails
         """
         from setka_common.file_structure.specialized import RecordingStructureManager
-        from setka_common.audio import AudioValidator
+        from beatrix import AudioValidator
 
         logger.info(f"Creating Blender VSE project for: {recording_path}")
 

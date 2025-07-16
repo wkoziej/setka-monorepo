@@ -3,9 +3,9 @@ requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "setka-common"
+name = "beatrix"
 version = "0.1.0"
-description = "Shared utilities for Setka media processing projects"
+description = "Audio analysis for Setka media processing pipeline"
 authors = [
     {name = "Setka Team"}
 ]
@@ -21,20 +21,25 @@ classifiers = [
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Topic :: Software Development :: Libraries",
+    "Topic :: Multimedia :: Sound/Audio :: Analysis",
 ]
 
 dependencies = [
-    "pathlib-extensions>=0.1.0",
+    "setka-common",
+    "librosa>=0.10.0",
+    "numpy>=1.21.0",
+    "scipy>=1.7.0",
 ]
 
-[project.optional-dependencies]
+[dependency-groups]
 dev = [
-    "pytest>=7.0.0",
-    "pytest-cov>=4.0.0",
-    "black>=23.0.0",
-    "flake8>=6.0.0",
-    "mypy>=1.0.0",
+    "pytest>=8.4.1",
+    "pytest-cov>=6.2.1",
+    "pytest-xdist>=3.8.0",
 ]
+
+[project.scripts]
+beatrix = "beatrix.cli.analyze_audio:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
@@ -50,30 +55,16 @@ python_functions = ["test_*"]
 addopts = [
     "--strict-markers",
     "--strict-config",
-    "--cov=src",
+    "--cov=src/beatrix",
     "--cov-report=term-missing",
     "--cov-report=html",
-    "--cov-fail-under=80",
+    "--cov-fail-under=85",
 ]
 markers = [
     "unit: Unit tests",
     "integration: Integration tests",
+    "audio: Audio processing tests",
 ]
 
-[tool.black]
-line-length = 88
-target-version = ["py39"]
-include = '\.pyi?$'
-
-[tool.mypy]
-python_version = "3.9"
-warn_return_any = true
-warn_unused_configs = true
-disallow_untyped_defs = true
-
-[dependency-groups]
-dev = [
-    "pytest>=8.4.1",
-    "pytest-cov>=6.2.1", 
-    "pytest-xdist>=3.8.0",
-]
+[tool.hatch.metadata]
+allow-direct-references = true

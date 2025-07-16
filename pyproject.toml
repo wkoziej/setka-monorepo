@@ -2,7 +2,13 @@
 package = false
 
 [tool.uv.workspace]
-members = ["packages/*"]
+members = [
+    "packages/common",
+    "packages/obsession",
+    "packages/cinemon",
+    "packages/medusa",
+    "packages/beatrix",
+]
 
 [project]
 name = "setka-workspace"
@@ -14,4 +20,6 @@ requires-python = ">=3.10"
 [tool.uv.sources]
 setka-common = { workspace = true }
 obsession = { workspace = true }
+cinemon = { workspace = true }
 medusa = { workspace = true }
+beatrix = { workspace = true }

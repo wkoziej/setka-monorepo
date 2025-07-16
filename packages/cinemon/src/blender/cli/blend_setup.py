@@ -11,7 +11,7 @@ import sys
 from pathlib import Path
 
 from ..project_manager import BlenderProjectManager
-from setka_common.audio import AudioValidationError, analyze_audio_command
+from beatrix import AudioValidationError, analyze_audio_command
 from setka_common.file_structure.specialized import RecordingStructureManager
 from setka_common.utils.files import find_files_by_type, MediaType
 

@@ -6,7 +6,7 @@ This module contains unit tests for the AudioValidator class.
 
 import pytest
 
-from setka_common.audio import (
+from beatrix import (
     AudioValidator,
     NoAudioFileError,
     MultipleAudioFilesError,

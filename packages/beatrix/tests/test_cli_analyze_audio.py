@@ -7,7 +7,7 @@ import pytest
 from pathlib import Path
 from unittest.mock import Mock, patch
 
-from setka_common.audio import analyze_audio_command
+from beatrix import analyze_audio_command
 
 
 class TestAnalyzeAudioCLI:
@@ -23,7 +23,7 @@ class TestAnalyzeAudioCLI:
         output_dir = tmp_path / "output"
 
         # Mock AudioAnalyzer
-        with patch("setka_common.audio.AudioAnalyzer") as mock_analyzer_class:
+        with patch("beatrix.core.audio_analyzer.AudioAnalyzer") as mock_analyzer_class:
             mock_analyzer = Mock()
             mock_analyzer_class.return_value = mock_analyzer
 
@@ -57,7 +57,7 @@ class TestAnalyzeAudioCLI:
         audio_file = tmp_path / "music.m4a"
         audio_file.touch()
 
-        with patch("setka_common.audio.AudioAnalyzer") as mock_analyzer_class:
+        with patch("beatrix.core.audio_analyzer.AudioAnalyzer") as mock_analyzer_class:
             mock_analyzer = Mock()
             mock_analyzer_class.return_value = mock_analyzer
             mock_analyzer.analyze_for_animation.return_value = {}
@@ -74,7 +74,7 @@ class TestAnalyzeAudioCLI:
         audio_file = tmp_path / "song.wav"
         audio_file.touch()
 
-        with patch("setka_common.audio.AudioAnalyzer") as mock_analyzer_class:
+        with patch("beatrix.core.audio_analyzer.AudioAnalyzer") as mock_analyzer_class:
             mock_analyzer = Mock()
             mock_analyzer_class.return_value = mock_analyzer
             mock_analyzer.analyze_for_animation.return_value = {}
@@ -103,7 +103,7 @@ class TestAnalyzeAudioCLI:
         # Output dir doesn't exist yet
         assert not output_dir.exists()
 
-        with patch("setka_common.audio.AudioAnalyzer") as mock_analyzer_class:
+        with patch("beatrix.core.audio_analyzer.AudioAnalyzer") as mock_analyzer_class:
             mock_analyzer = Mock()
             mock_analyzer_class.return_value = mock_analyzer
             mock_analyzer.analyze_for_animation.return_value = {}
@@ -131,7 +131,7 @@ class TestAnalyzeAudioCLI:
         output_dir = tmp_path / "analysis_output"
 
         # Mock analysis
-        with patch("setka_common.audio.AudioAnalyzer") as mock_analyzer_class:
+        with patch("beatrix.core.audio_analyzer.AudioAnalyzer") as mock_analyzer_class:
             mock_analyzer = Mock()
             mock_analyzer_class.return_value = mock_analyzer
 
@@ -163,7 +163,7 @@ class TestAnalyzeAudioCLI:
             audio_file = tmp_path / input_name
             audio_file.touch()
 
-            with patch("setka_common.audio.AudioAnalyzer") as mock_analyzer_class:
+            with patch("beatrix.core.audio_analyzer.AudioAnalyzer") as mock_analyzer_class:
                 mock_analyzer = Mock()
                 mock_analyzer_class.return_value = mock_analyzer
                 mock_analyzer.analyze_for_animation.return_value = {}
