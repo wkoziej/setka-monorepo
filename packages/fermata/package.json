@@ -8,6 +8,7 @@
     "build": "tsc && vite build",
     "preview": "vite preview",
     "tauri": "tauri",
+    "start": "./start-tauri.sh",
     "test": "vitest",
     "test:coverage": "vitest --coverage"
   },
