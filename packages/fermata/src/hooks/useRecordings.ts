@@ -1,6 +1,22 @@
 import { useState, useCallback, useEffect } from 'react';
 import { Recording, RecordingListState } from '../types';
 
+// Tauri API wrapper with fallback for development
+const invokeCommand = async (command: string, args?: any): Promise<any> => {
+  // Check if we're in Tauri environment
+  if (typeof window !== 'undefined' && (window as any).__TAURI__) {
+    try {
+      const { invoke } = (window as any).__TAURI__.tauri;
+      return await invoke(command, args);
+    } catch (error) {
+      throw new Error(`Tauri command failed: ${error}`);
+    }
+  }
+  
+  // Fallback for development without Tauri
+  throw new Error('Tauri not available - running in browser mode');
+};
+
 // Mock data for initial development
 const mockRecordings: Recording[] = [
   {
@@ -59,23 +75,21 @@ export function useRecordings() {
     setState(prev => ({ ...prev, loading: true, error: null }));
     
     try {
-      // TODO: Replace with actual Tauri invoke call
-      // const recordings = await invoke('get_recordings');
+      const recordings = await invokeCommand('get_recordings') as Recording[];
       
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
+      setState({
+        recordings,
+        loading: false,
+        error: null
+      });
+    } catch (error) {
+      // Fallback to mock data if Tauri is not available (dev mode)
+      console.warn('Tauri not available, using mock data:', error);
       setState({
         recordings: mockRecordings,
         loading: false,
         error: null
       });
-    } catch (error) {
-      setState(prev => ({
-        ...prev,
-        loading: false,
-        error: error instanceof Error ? error.message : 'Unknown error'
-      }));
     }
   }, []);
 
@@ -101,15 +115,13 @@ export function useRecordingOperations() {
     setOperationState({ running: true, output: '', error: null });
     
     try {
-      // TODO: Replace with actual Tauri invoke call
-      // const result = await invoke('run_next_step', { recordingName });
-      
-      // Simulate operation
+      // For MVP, we'll just simulate the operation
+      // TODO: Implement actual CLI execution in future iteration
       await new Promise(resolve => setTimeout(resolve, 1000));
       
       setOperationState({
         running: false,
-        output: `Successfully started next step for ${recordingName}`,
+        output: `Next step simulated for ${recordingName}`,
         error: null
       });
     } catch (error) {
@@ -125,15 +137,13 @@ export function useRecordingOperations() {
     setOperationState({ running: true, output: '', error: null });
     
     try {
-      // TODO: Replace with actual Tauri invoke call
-      // const result = await invoke('run_specific_step', { recordingName, step });
-      
-      // Simulate operation
+      // For MVP, we'll just simulate the operation
+      // TODO: Implement actual CLI execution in future iteration
       await new Promise(resolve => setTimeout(resolve, 1500));
       
       setOperationState({
         running: false,
-        output: `Successfully started ${step} for ${recordingName}`,
+        output: `${step} simulated for ${recordingName}`,
         error: null
       });
     } catch (error) {

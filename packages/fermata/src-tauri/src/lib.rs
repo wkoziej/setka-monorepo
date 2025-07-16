@@ -1,6 +1,24 @@
+mod models;
+mod services;
+mod commands;
+
+use commands::recordings::{
+    AppConfig, get_recordings, get_recording_details, get_recordings_by_status,
+    get_recordings_needing_attention, update_recordings_path, get_app_config
+};
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
   tauri::Builder::default()
+    .manage(AppConfig::default())
+    .invoke_handler(tauri::generate_handler![
+      get_recordings,
+      get_recording_details,
+      get_recordings_by_status,
+      get_recordings_needing_attention,
+      update_recordings_path,
+      get_app_config
+    ])
     .setup(|app| {
       if cfg!(debug_assertions) {
         app.handle().plugin(
