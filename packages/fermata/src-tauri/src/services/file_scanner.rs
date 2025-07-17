@@ -1,6 +1,6 @@
 use crate::models::Recording;
 use crate::services::{StatusDetector, update_recording_status};
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 pub struct FileScanner;
 
@@ -104,6 +104,7 @@ impl FileScanner {
 mod tests {
     use super::*;
     use std::fs;
+    use std::path::PathBuf;
     use tempfile::TempDir;
 
     fn create_test_recordings_structure() -> TempDir {
@@ -119,8 +120,8 @@ mod tests {
             let recording_path = root_path.join(name);
             fs::create_dir_all(&recording_path).unwrap();
             
-            // Create main .mkv file
-            fs::write(recording_path.join(format!("{}.mkv", name)), b"dummy content").unwrap();
+            // Create main video file (test with .mp4 like real OBS recordings)
+            fs::write(recording_path.join(format!("{}.mp4", name)), b"dummy content").unwrap();
             
             if has_extracted {
                 fs::create_dir_all(recording_path.join("extracted")).unwrap();

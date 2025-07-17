@@ -6,6 +6,7 @@ use commands::recordings::{
     AppConfig, get_recordings, get_recording_details, get_recordings_by_status,
     get_recordings_needing_attention, update_recordings_path, get_app_config
 };
+use commands::operations::{run_next_step, run_specific_step};
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -17,7 +18,9 @@ pub fn run() {
       get_recordings_by_status,
       get_recordings_needing_attention,
       update_recordings_path,
-      get_app_config
+      get_app_config,
+      run_next_step,
+      run_specific_step
     ])
     .setup(|app| {
       if cfg!(debug_assertions) {

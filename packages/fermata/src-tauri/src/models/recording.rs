@@ -8,7 +8,7 @@ pub struct Recording {
     pub name: String,
     pub path: PathBuf,
     pub status: RecordingStatus,
-    pub last_updated: SystemTime,
+    pub last_updated: u64, // Unix timestamp in seconds
     pub file_sizes: HashMap<String, u64>,
 }
 
@@ -39,7 +39,7 @@ impl Recording {
             name,
             path: path.clone(),
             status: RecordingStatus::Recorded, // Will be updated by status detection
-            last_updated,
+            last_updated: last_updated.duration_since(SystemTime::UNIX_EPOCH)?.as_secs(),
             file_sizes: HashMap::new(), // Will be populated by file scanner
         })
     }
@@ -106,6 +106,18 @@ pub enum NextStep {
     Retry,
 }
 
+impl NextStep {
+    pub fn to_string(&self) -> String {
+        match self {
+            NextStep::Extract => "Extract".to_string(),
+            NextStep::Analyze => "Analyze".to_string(),
+            NextStep::Render => "Render".to_string(),
+            NextStep::Upload => "Upload".to_string(),
+            NextStep::Retry => "Retry".to_string(),
+        }
+    }
+}
+
 impl std::fmt::Display for NextStep {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -148,7 +160,7 @@ mod tests {
             name: "test".to_string(),
             path: PathBuf::from("/test"),
             status: RecordingStatus::Recorded,
-            last_updated: SystemTime::now(),
+            last_updated: SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap().as_secs(),
             file_sizes: HashMap::new(),
         };
 
@@ -179,7 +191,7 @@ mod tests {
             name: "test".to_string(),
             path: PathBuf::from("/test"),
             status: RecordingStatus::Extracted,
-            last_updated: SystemTime::now(),
+            last_updated: SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap().as_secs(),
             file_sizes: HashMap::new(),
         };
 
@@ -202,7 +214,7 @@ mod tests {
             name: "test".to_string(),
             path: PathBuf::from("/test"),
             status: RecordingStatus::Analyzed,
-            last_updated: SystemTime::now(),
+            last_updated: SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap().as_secs(),
             file_sizes: HashMap::new(),
         };
 

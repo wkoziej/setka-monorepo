@@ -38,8 +38,8 @@ impl StatusDetector {
         let mut file_sizes = HashMap::new();
 
         // Check for main recording file
-        if let Some(mkv_size) = Self::get_mkv_file_size(recording_path) {
-            file_sizes.insert("recording.mkv".to_string(), mkv_size);
+        if let Some(video_size) = Self::get_video_file_size(recording_path) {
+            file_sizes.insert("recording.video".to_string(), video_size);
         }
 
         // Check extracted directory
@@ -70,12 +70,12 @@ impl StatusDetector {
             return Err(format!("Recording path is not a directory: {}", path.display()));
         }
 
-        // Check if it looks like a recording directory (has .mkv file or extracted content)
-        let has_mkv = Self::get_mkv_file_size(path).is_some();
+        // Check if it looks like a recording directory (has video file or extracted content)
+        let has_video = Self::get_video_file_size(path).is_some();
         let has_extracted = path.join("extracted").exists();
 
-        if !has_mkv && !has_extracted {
-            return Err("Directory does not appear to be a recording (no .mkv file or extracted directory)".to_string());
+        if !has_video && !has_extracted {
+            return Err("Directory does not appear to be a recording (no video file or extracted directory)".to_string());
         }
 
         Ok(())
@@ -107,21 +107,36 @@ impl StatusDetector {
     }
 
     fn has_render_output(path: &Path) -> bool {
-        let render_path = path.join("blender/render");
-        if !render_path.exists() || !render_path.is_dir() {
+        let blender_path = path.join("blender");
+        if !blender_path.exists() || !blender_path.is_dir() {
             return false;
         }
 
-        // Check for video files in render directory
-        if let Ok(entries) = std::fs::read_dir(&render_path) {
+        // Check for .blend file in blender directory (setup complete)
+        if let Ok(entries) = std::fs::read_dir(&blender_path) {
             for entry in entries.flatten() {
                 if let Some(extension) = entry.path().extension() {
-                    if matches!(extension.to_str(), Some("mp4") | Some("mkv") | Some("avi")) {
+                    if extension == "blend" {
                         return true;
                     }
                 }
             }
         }
+
+        // Also check for actual video files in render directory (fully rendered)
+        let render_path = blender_path.join("render");
+        if render_path.exists() && render_path.is_dir() {
+            if let Ok(entries) = std::fs::read_dir(&render_path) {
+                for entry in entries.flatten() {
+                    if let Some(extension) = entry.path().extension() {
+                        if matches!(extension.to_str(), Some("mp4") | Some("mkv") | Some("avi")) {
+                            return true;
+                        }
+                    }
+                }
+            }
+        }
+        
         false
     }
 
@@ -158,11 +173,12 @@ impl StatusDetector {
         None
     }
 
-    fn get_mkv_file_size(path: &Path) -> Option<u64> {
+    fn get_video_file_size(path: &Path) -> Option<u64> {
         if let Ok(entries) = std::fs::read_dir(path) {
             for entry in entries.flatten() {
                 if let Some(extension) = entry.path().extension() {
-                    if extension == "mkv" {
+                    // Support both .mkv and .mp4 files for OBS recordings
+                    if matches!(extension.to_str(), Some("mkv") | Some("mp4")) {
                         if let Ok(metadata) = entry.metadata() {
                             return Some(metadata.len());
                         }
@@ -212,8 +228,8 @@ mod tests {
         let recording_path = temp_dir.path().join("test_recording");
         fs::create_dir_all(&recording_path).unwrap();
         
-        // Create a dummy .mkv file
-        fs::write(recording_path.join("test_recording.mkv"), b"dummy mkv content").unwrap();
+        // Create a dummy video file (test with .mp4 like real OBS recordings)
+        fs::write(recording_path.join("test_recording.mp4"), b"dummy mp4 content").unwrap();
         
         temp_dir
     }
@@ -310,8 +326,8 @@ mod tests {
         
         let file_info = StatusDetector::get_file_info(&recording_path);
         
-        assert!(file_info.contains_key("recording.mkv"));
-        assert!(file_info["recording.mkv"] > 0); // Should have size from dummy content
+        assert!(file_info.contains_key("recording.video"));
+        assert!(file_info["recording.video"] > 0); // Should have size from dummy content
     }
 
     #[test]
@@ -342,7 +358,7 @@ mod tests {
             name: "test_recording".to_string(),
             path: recording_path,
             status: RecordingStatus::Failed("old error".to_string()),
-            last_updated: std::time::SystemTime::now(),
+            last_updated: std::time::SystemTime::now().duration_since(std::time::SystemTime::UNIX_EPOCH).unwrap().as_secs(),
             file_sizes: HashMap::new(),
         };
         

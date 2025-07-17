@@ -112,19 +112,22 @@ export function useRecordingOperations() {
   });
 
   const runNextStep = useCallback(async (recordingName: string) => {
+    console.log(`🚀 Starting runNextStep for: ${recordingName}`);
     setOperationState({ running: true, output: '', error: null });
     
     try {
-      // For MVP, we'll just simulate the operation
-      // TODO: Implement actual CLI execution in future iteration
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Always try to use Tauri command first
+      console.log(`📞 Invoking run_next_step for: ${recordingName}`);
+      const result = await invokeCommand('run_next_step', { recordingName });
+      console.log(`✅ runNextStep result:`, result);
       
       setOperationState({
         running: false,
-        output: `Next step simulated for ${recordingName}`,
+        output: result as string,
         error: null
       });
     } catch (error) {
+      console.error(`❌ runNextStep failed:`, error);
       setOperationState({
         running: false,
         output: '',
@@ -134,19 +137,22 @@ export function useRecordingOperations() {
   }, []);
 
   const runSpecificStep = useCallback(async (recordingName: string, step: string) => {
+    console.log(`🚀 Starting runSpecificStep for: ${recordingName}, step: ${step}`);
     setOperationState({ running: true, output: '', error: null });
     
     try {
-      // For MVP, we'll just simulate the operation
-      // TODO: Implement actual CLI execution in future iteration
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      // Always try to use Tauri command first
+      console.log(`📞 Invoking run_specific_step for: ${recordingName}, step: ${step}`);
+      const result = await invokeCommand('run_specific_step', { recordingName, step });
+      console.log(`✅ runSpecificStep result:`, result);
       
       setOperationState({
         running: false,
-        output: `${step} simulated for ${recordingName}`,
+        output: result as string,
         error: null
       });
     } catch (error) {
+      console.error(`❌ runSpecificStep failed:`, error);
       setOperationState({
         running: false,
         output: '',

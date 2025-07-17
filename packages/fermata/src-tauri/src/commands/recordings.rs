@@ -8,6 +8,7 @@ use tauri::State;
 pub struct AppConfig {
     pub recordings_path: PathBuf,
     pub cli_paths: CliPaths,
+    pub main_audio_file: String,
 }
 
 #[derive(Debug)]
@@ -38,8 +39,12 @@ impl Default for AppConfig {
                 std::env::current_dir().unwrap_or_default().to_string_lossy().to_string()
             });
         
+        let main_audio_file = std::env::var("FERMATA_MAIN_AUDIO")
+            .unwrap_or_else(|_| "Przechwytywanie wejścia dźwięku (PulseAudio).m4a".to_string());
+        
         log::info!("Final config - recordings_path: {}", recordings_path_str);
         log::info!("Final config - workspace_root: {}", workspace_root_str);
+        log::info!("Final config - main_audio_file: {}", main_audio_file);
         
         // Default configuration - can be overridden by user settings
         AppConfig {
@@ -48,6 +53,7 @@ impl Default for AppConfig {
                 uv_path: "uv".to_string(),
                 workspace_root: PathBuf::from(workspace_root_str),
             },
+            main_audio_file,
         }
     }
 }
@@ -107,7 +113,7 @@ pub fn get_recordings_needing_attention(config: State<AppConfig>) -> Result<Vec<
 
 /// Update the recordings path configuration
 #[tauri::command]
-pub fn update_recordings_path(new_path: String, config: State<AppConfig>) -> Result<String, String> {
+pub fn update_recordings_path(new_path: String, _config: State<AppConfig>) -> Result<String, String> {
     // Note: In a real app, this would persist the configuration
     // For MVP, we'll just validate the path
     let path = PathBuf::from(&new_path);
@@ -133,6 +139,7 @@ pub fn get_app_config(config: State<AppConfig>) -> Result<AppConfigDto, String> 
             uv_path: config.cli_paths.uv_path.clone(),
             workspace_root: config.cli_paths.workspace_root.to_string_lossy().to_string(),
         },
+        main_audio_file: config.main_audio_file.clone(),
     })
 }
 
@@ -141,6 +148,7 @@ pub fn get_app_config(config: State<AppConfig>) -> Result<AppConfigDto, String> 
 pub struct AppConfigDto {
     pub recordings_path: String,
     pub cli_paths: CliPathsDto,
+    pub main_audio_file: String,
 }
 
 #[derive(serde::Serialize)]
@@ -163,6 +171,7 @@ mod tests {
                 uv_path: "uv".to_string(),
                 workspace_root: PathBuf::from("/tmp"),
             },
+            main_audio_file: "".to_string(), // Initialize with empty string
         }
     }
 
@@ -174,7 +183,7 @@ mod tests {
         for name in ["recording_001", "recording_002"] {
             let recording_path = root_path.join(name);
             fs::create_dir_all(&recording_path).unwrap();
-            fs::write(recording_path.join(format!("{}.mkv", name)), b"dummy").unwrap();
+            fs::write(recording_path.join(format!("{}.mp4", name)), b"dummy").unwrap();
         }
 
         temp_dir
@@ -264,5 +273,6 @@ mod tests {
         assert!(!config_dto.recordings_path.is_empty());
         assert!(!config_dto.cli_paths.uv_path.is_empty());
         assert!(!config_dto.cli_paths.workspace_root.is_empty());
+        assert!(config_dto.main_audio_file.is_empty());
     }
 } 

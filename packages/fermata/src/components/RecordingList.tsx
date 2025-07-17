@@ -10,7 +10,9 @@ function formatFileSize(bytes: number): string {
 
 function formatLastUpdated(timestamp: number): string {
   const now = Date.now();
-  const diff = now - timestamp;
+  // Convert timestamp from seconds to milliseconds if it looks like Unix seconds
+  const timestampMs = timestamp < 10000000000 ? timestamp * 1000 : timestamp;
+  const diff = now - timestampMs;
   const minutes = Math.floor(diff / 60000);
   const hours = Math.floor(diff / 3600000);
   const days = Math.floor(diff / 86400000);
@@ -136,14 +138,19 @@ function RecordingRow({ recording, onAction }: {
   );
 }
 
-export function RecordingList() {
+interface RecordingListProps {
+  onSelectRecording?: (recordingName: string) => void;
+}
+
+export function RecordingList({ onSelectRecording }: RecordingListProps) {
   const { recordings, loading, error, refreshRecordings } = useRecordings();
   const { runNextStep, runSpecificStep, running, output } = useRecordingOperations();
 
   const handleAction = async (recordingName: string, action: string) => {
     if (action === 'View') {
-      // TODO: Implement recording details view
-      console.log('View recording:', recordingName);
+      if (onSelectRecording) {
+        onSelectRecording(recordingName);
+      }
       return;
     }
 
