@@ -17,8 +17,12 @@ impl StatusDetector {
             return RecordingStatus::Uploaded;
         }
         
-        if Self::has_render_output(recording_path) {
+        if Self::has_rendered_video(recording_path) {
             return RecordingStatus::Rendered;
+        }
+        
+        if Self::has_render_setup(recording_path) {
+            return RecordingStatus::SetupRendered;
         }
         
         if Self::has_analysis_files(recording_path) {
@@ -106,7 +110,7 @@ impl StatusDetector {
         false
     }
 
-    fn has_render_output(path: &Path) -> bool {
+    fn has_render_setup(path: &Path) -> bool {
         let blender_path = path.join("blender");
         if !blender_path.exists() || !blender_path.is_dir() {
             return false;
@@ -122,16 +126,22 @@ impl StatusDetector {
                 }
             }
         }
+        
+        false
+    }
 
-        // Also check for actual video files in render directory (fully rendered)
-        let render_path = blender_path.join("render");
-        if render_path.exists() && render_path.is_dir() {
-            if let Ok(entries) = std::fs::read_dir(&render_path) {
-                for entry in entries.flatten() {
-                    if let Some(extension) = entry.path().extension() {
-                        if matches!(extension.to_str(), Some("mp4") | Some("mkv") | Some("avi")) {
-                            return true;
-                        }
+    fn has_rendered_video(path: &Path) -> bool {
+        let render_path = path.join("blender").join("render");
+        if !render_path.exists() || !render_path.is_dir() {
+            return false;
+        }
+
+        // Check for actual video files in render directory (fully rendered)
+        if let Ok(entries) = std::fs::read_dir(&render_path) {
+            for entry in entries.flatten() {
+                if let Some(extension) = entry.path().extension() {
+                    if matches!(extension.to_str(), Some("mp4") | Some("mkv") | Some("avi")) {
+                        return true;
                     }
                 }
             }
@@ -270,14 +280,32 @@ mod tests {
     }
 
     #[test]
+    fn test_detect_status_setup_rendered() {
+        let temp_dir = create_test_recording_structure();
+        let recording_path = temp_dir.path().join("test_recording");
+        
+        // Create pipeline up to setup rendered (blend file exists)
+        fs::create_dir_all(recording_path.join("extracted")).unwrap();
+        fs::create_dir_all(recording_path.join("analysis")).unwrap();
+        fs::write(recording_path.join("analysis/audio_analysis.json"), b"{}").unwrap();
+        fs::create_dir_all(recording_path.join("blender")).unwrap();
+        fs::write(recording_path.join("blender/project.blend"), b"dummy blend").unwrap();
+        
+        let status = StatusDetector::detect_status(&recording_path);
+        assert_eq!(status, RecordingStatus::SetupRendered);
+    }
+
+    #[test]
     fn test_detect_status_rendered() {
         let temp_dir = create_test_recording_structure();
         let recording_path = temp_dir.path().join("test_recording");
         
-        // Create full pipeline up to render
+        // Create full pipeline up to render (video file exists)
         fs::create_dir_all(recording_path.join("extracted")).unwrap();
         fs::create_dir_all(recording_path.join("analysis")).unwrap();
         fs::write(recording_path.join("analysis/audio_analysis.json"), b"{}").unwrap();
+        fs::create_dir_all(recording_path.join("blender")).unwrap();
+        fs::write(recording_path.join("blender/project.blend"), b"dummy blend").unwrap();
         fs::create_dir_all(recording_path.join("blender/render")).unwrap();
         fs::write(recording_path.join("blender/render/output.mp4"), b"dummy video").unwrap();
         

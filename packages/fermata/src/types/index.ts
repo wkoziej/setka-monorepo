@@ -11,6 +11,7 @@ export type RecordingStatus =
   | 'Recorded'
   | 'Extracted' 
   | 'Analyzed'
+  | 'SetupRendered'
   | 'Rendered'
   | 'Uploaded'
   | { Failed: string };

@@ -65,6 +65,7 @@ pub async fn run_specific_step(
     // Parse step to NextStep enum
     let next_step = match step.to_lowercase().as_str() {
         "analyze" => NextStep::Analyze,
+        "setup_render" | "setup-render" => NextStep::SetupRender,
         "render" => NextStep::Render,
         "upload" => NextStep::Upload,
         "retry" => {
@@ -72,8 +73,12 @@ pub async fn run_specific_step(
             match recording.status {
                 RecordingStatus::Failed(_) => {
                     // Try to determine what step failed and retry it
-                    if recording.path.join("analysis").exists() {
+                    if recording.path.join("blender").join("render").exists() {
                         NextStep::Render
+                    } else if recording.path.join("blender").exists() {
+                        NextStep::SetupRender
+                    } else if recording.path.join("analysis").exists() {
+                        NextStep::SetupRender
                     } else if recording.path.join("extracted").exists() {
                         NextStep::Analyze
                     } else {
@@ -158,7 +163,7 @@ async fn execute_step(
             log::info!("🎯 Using audio file: {}", audio_file);
             runner.run_beatrix_analyze(&recording.path, audio_file).await
         }
-        NextStep::Render => {
+        NextStep::SetupRender => {
             // Check if analysis exists
             if !recording.path.join("analysis").exists() {
                 return Err("Analysis directory not found - run analyze step first".to_string());
@@ -180,7 +185,7 @@ async fn execute_step(
                     })
                     .collect();
 
-                log::info!("🎵 Found {} audio files for render: {:?}", audio_files.len(), audio_files);
+                log::info!("🎵 Found {} audio files for setup render: {:?}", audio_files.len(), audio_files);
 
                 if audio_files.len() > 1 {
                     // Use configured main audio file if available
@@ -199,6 +204,35 @@ async fn execute_step(
                 // No extracted directory, use basic render
                 runner.run_cinemon_render(&recording.path, "beat-switch").await
             }
+        }
+        NextStep::Render => {
+            // Check if blender project exists
+            let blender_dir = recording.path.join("blender");
+            if !blender_dir.exists() {
+                return Err("Blender project not found - run setup render step first".to_string());
+            }
+
+            // Find .blend file
+            let blend_files: Vec<_> = std::fs::read_dir(&blender_dir)
+                .map_err(|e| format!("Failed to read blender directory: {}", e))?
+                .filter_map(|entry| {
+                    let entry = entry.ok()?;
+                    let path = entry.path();
+                    if path.extension()?.to_str()? == "blend" {
+                        Some(path)
+                    } else {
+                        None
+                    }
+                })
+                .collect();
+
+            if blend_files.is_empty() {
+                return Err("No .blend file found in blender directory".to_string());
+            }
+
+            // For now, return error asking user to render manually
+            // TODO: Implement automatic Blender rendering
+            return Err("Manual Blender rendering required. Open the .blend file and render manually, or implement automatic rendering.".to_string());
         }
         NextStep::Upload => {
             // Check if render output exists

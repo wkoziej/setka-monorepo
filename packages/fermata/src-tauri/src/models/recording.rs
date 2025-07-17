@@ -14,11 +14,12 @@ pub struct Recording {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum RecordingStatus {
-    Recorded,    // .mkv exists
-    Extracted,   // extracted/ exists
-    Analyzed,    // analysis/ exists  
-    Rendered,    // blender/render/ exists
-    Uploaded,    // uploads/ exists
+    Recorded,       // .mkv exists
+    Extracted,      // extracted/ exists
+    Analyzed,       // analysis/ exists  
+    SetupRendered,  // blender/*.blend exists (cinemon done)
+    Rendered,       // blender/render/*.mp4 exists (blender rendering done)
+    Uploaded,       // uploads/ exists
     Failed(String),
 }
 
@@ -49,7 +50,8 @@ impl Recording {
         match &self.status {
             RecordingStatus::Recorded => Some(NextStep::Extract),
             RecordingStatus::Extracted => Some(NextStep::Analyze),
-            RecordingStatus::Analyzed => Some(NextStep::Render),
+            RecordingStatus::Analyzed => Some(NextStep::SetupRender),
+            RecordingStatus::SetupRendered => Some(NextStep::Render),
             RecordingStatus::Rendered => Some(NextStep::Upload),
             RecordingStatus::Uploaded => None,
             RecordingStatus::Failed(_) => Some(NextStep::Retry),
@@ -61,7 +63,8 @@ impl Recording {
         match step.to_lowercase().as_str() {
             "extract" => matches!(self.status, RecordingStatus::Recorded | RecordingStatus::Failed(_)),
             "analyze" => matches!(self.status, RecordingStatus::Extracted | RecordingStatus::Failed(_)),
-            "render" => matches!(self.status, RecordingStatus::Analyzed | RecordingStatus::Failed(_)),
+            "setup_render" | "setup-render" => matches!(self.status, RecordingStatus::Analyzed | RecordingStatus::Failed(_)),
+            "render" => matches!(self.status, RecordingStatus::SetupRendered | RecordingStatus::Failed(_)),
             "upload" => matches!(self.status, RecordingStatus::Rendered | RecordingStatus::Failed(_)),
             "retry" => matches!(self.status, RecordingStatus::Failed(_)),
             _ => false,
@@ -101,6 +104,7 @@ impl Recording {
 pub enum NextStep {
     Extract,
     Analyze,
+    SetupRender,
     Render,
     Upload,
     Retry,
@@ -111,6 +115,7 @@ impl NextStep {
         match self {
             NextStep::Extract => "Extract".to_string(),
             NextStep::Analyze => "Analyze".to_string(),
+            NextStep::SetupRender => "Setup Render".to_string(),
             NextStep::Render => "Render".to_string(),
             NextStep::Upload => "Upload".to_string(),
             NextStep::Retry => "Retry".to_string(),
@@ -123,6 +128,7 @@ impl std::fmt::Display for NextStep {
         match self {
             NextStep::Extract => write!(f, "extract"),
             NextStep::Analyze => write!(f, "analyze"),
+            NextStep::SetupRender => write!(f, "setup_render"),
             NextStep::Render => write!(f, "render"),
             NextStep::Upload => write!(f, "upload"),
             NextStep::Retry => write!(f, "retry"),
@@ -173,6 +179,9 @@ mod tests {
         assert_eq!(recording.get_next_step(), Some(NextStep::Analyze));
 
         recording.status = RecordingStatus::Analyzed;
+        assert_eq!(recording.get_next_step(), Some(NextStep::SetupRender));
+
+        recording.status = RecordingStatus::SetupRendered;
         assert_eq!(recording.get_next_step(), Some(NextStep::Render));
 
         recording.status = RecordingStatus::Rendered;
@@ -237,10 +246,11 @@ mod tests {
 
     #[test]
     fn test_next_step_display() {
-        assert_eq!(NextStep::Extract.to_string(), "extract");
-        assert_eq!(NextStep::Analyze.to_string(), "analyze");
-        assert_eq!(NextStep::Render.to_string(), "render");
-        assert_eq!(NextStep::Upload.to_string(), "upload");
-        assert_eq!(NextStep::Retry.to_string(), "retry");
+        assert_eq!(NextStep::Extract.to_string(), "Extract");
+        assert_eq!(NextStep::Analyze.to_string(), "Analyze");
+        assert_eq!(NextStep::SetupRender.to_string(), "Setup Render");
+        assert_eq!(NextStep::Render.to_string(), "Render");
+        assert_eq!(NextStep::Upload.to_string(), "Upload");
+        assert_eq!(NextStep::Retry.to_string(), "Retry");
     }
 } 

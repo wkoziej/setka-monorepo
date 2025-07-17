@@ -35,6 +35,8 @@ function getStatusDisplay(status: RecordingStatus): { text: string; emoji: strin
       return { text: 'Extracted', emoji: '📁', color: '#2563eb' };
     case 'Analyzed':
       return { text: 'Analyzed', emoji: '📊', color: '#059669' };
+    case 'SetupRendered':
+      return { text: 'Setup', emoji: '🎬', color: '#0891b2' };
     case 'Rendered':
       return { text: 'Rendered', emoji: '✅', color: '#16a34a' };
     case 'Uploaded':
@@ -55,6 +57,8 @@ function getNextAction(status: RecordingStatus): string | null {
     case 'Extracted':
       return 'Analyze';
     case 'Analyzed':
+      return 'Setup';
+    case 'SetupRendered':
       return 'Render';
     case 'Rendered':
       return 'Upload';
@@ -157,7 +161,17 @@ export function RecordingList({ onSelectRecording }: RecordingListProps) {
     if (action === 'Retry') {
       await runNextStep(recordingName);
     } else {
-      await runSpecificStep(recordingName, action.toLowerCase());
+      // Map frontend action names to backend step names
+      const stepMap: Record<string, string> = {
+        'Extract': 'extract',
+        'Analyze': 'analyze', 
+        'Setup': 'setup_render',
+        'Render': 'render',
+        'Upload': 'upload'
+      };
+      
+      const step = stepMap[action] || action.toLowerCase();
+      await runSpecificStep(recordingName, step);
     }
     
     // Refresh recordings after operation

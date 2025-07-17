@@ -71,7 +71,10 @@ recording_dir/
 ├── *.mkv           → recorded (obsession done)
 ├── extracted/      → extracted  
 ├── analysis/       → analyzed (beatrix done)
-├── blender/render/ → rendered (cinemon done)
+├── blender/        → setup_rendered (cinemon created .blend project)
+│   ├── *.blend
+│   └── render/
+│       └── *.mp4   → rendered (blender rendering complete)
 └── uploads/        → uploaded (medusa done)
 ```
 
@@ -80,8 +83,11 @@ recording_dir/
 # Beatrix analyze
 uv run --package beatrix analyze recording_dir/extracted/audio.m4a
 
-# Cinemon render  
+# Cinemon setup (creates .blend project)  
 uv run --package cinemon cinemon-blend-setup recording_dir --animation-mode beat-switch
+
+# Manual Blender render (user runs this manually or via script)
+blender -b recording_dir/blender/project.blend -o recording_dir/blender/render/frame_#### -f 1
 
 # Medusa upload
 uv run --package medusa upload recording_dir/blender/render/final.mp4 --config config.json
@@ -99,7 +105,7 @@ uv run --package medusa upload recording_dir/blender/render/final.mp4 --config c
 │ stream_20240115_120000│ ✅ Rendered │ 2 hours ago  │ [Upload]│
 │ stream_20240115_140000│ 🔄 Analyzing│ 30 min ago   │ [View]  │
 │ stream_20240115_160000│ ❌ Failed   │ 1 hour ago   │ [Retry] │
-│ stream_20240115_180000│ 📁 Extracted│ 10 min ago   │ [Analyze]│
+│ stream_20240115_180000│ 🎬 Setup    │ 10 min ago   │ [Render]│
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -109,16 +115,16 @@ uv run --package medusa upload recording_dir/blender/render/final.mp4 --config c
 │ stream_20240115_120000                              [< Back] │
 ├─────────────────────────────────────────────────────────────┤
 │ Pipeline Status:                                            │
-│ ✅ Recorded    → ✅ Extracted → ✅ Analyzed → ✅ Rendered → ⏳ Upload │
+│ ✅ Recorded → ✅ Extracted → ✅ Analyzed → 🎬 Setup → ⏳ Render → Upload │
 ├─────────────────────────────────────────────────────────────┤
 │ Files:                                                      │
 │ 📹 recording.mkv (2.3GB)    📁 extracted/ (5 files)        │
-│ 📊 analysis/ (1 file)       🎬 blender/render/ (1 file)     │
+│ 📊 analysis/ (1 file)       🎬 blender/ (.blend project)    │
 ├─────────────────────────────────────────────────────────────┤
-│ Actions: [Upload to YouTube] [Re-render] [View Logs]        │
+│ Actions: [Render in Blender] [Re-setup] [View Logs]         │
 ├─────────────────────────────────────────────────────────────┤
 │ Recent Logs:                                                │
-│ [14:30] cinemon: Rendering completed successfully           │
+│ [14:30] cinemon: Blender project created successfully       │
 │ [14:25] cinemon: Processing beat-switch animations...       │
 │ [14:20] cinemon: Loading audio analysis data               │
 └─────────────────────────────────────────────────────────────┘
