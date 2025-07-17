@@ -24,23 +24,8 @@ export function RecordingDetails({ recordingName, onBack }: RecordingDetailsProp
     setError(null);
     
     try {
-      if (typeof window !== 'undefined' && (window as any).__TAURI__) {
-        const result = await invoke('get_recording_details', { name: recordingName });
-        setRecording(result as Recording);
-      } else {
-        // Mock data for browser development
-        setRecording({
-          name: recordingName,
-          path: `/mock/path/${recordingName}`,
-          status: 'Analyzed',
-          last_updated: Date.now(),
-          file_sizes: {
-            'recording.mkv': 2300000000,
-            'extracted/audio.m4a': 45000000,
-            'analysis/analysis.json': 5000
-          }
-        });
-      }
+      const result = await invoke('get_recording_details', { name: recordingName });
+      setRecording(result as Recording);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load recording details');
     } finally {
@@ -70,7 +55,8 @@ export function RecordingDetails({ recordingName, onBack }: RecordingDetailsProp
       case 'Recorded': return '📹';
       case 'Extracted': return '📁';
       case 'Analyzed': return '📊';
-      case 'Rendered': return '🎬';
+      case 'SetupRendered': return '🎬';
+      case 'Rendered': return '🎥';
       case 'Uploaded': return '🚀';
       default: return '❓';
     }
@@ -81,6 +67,7 @@ export function RecordingDetails({ recordingName, onBack }: RecordingDetailsProp
       { name: 'Recorded', status: 'completed' },
       { name: 'Extracted', status: 'pending' },
       { name: 'Analyzed', status: 'pending' },
+      { name: 'Setup', status: 'pending' },
       { name: 'Rendered', status: 'pending' },
       { name: 'Uploaded', status: 'pending' }
     ];
@@ -95,8 +82,9 @@ export function RecordingDetails({ recordingName, onBack }: RecordingDetailsProp
       const path = recording.path;
       if (path.includes('extracted')) currentIndex = 1;
       if (path.includes('analysis')) currentIndex = 2;
-      if (path.includes('render')) currentIndex = 3;
-      if (path.includes('uploads')) currentIndex = 4;
+      if (path.includes('blender') && !path.includes('render')) currentIndex = 3;
+      if (path.includes('render')) currentIndex = 4;
+      if (path.includes('uploads')) currentIndex = 5;
       
       steps[currentIndex].status = 'failed';
     } else {
@@ -104,8 +92,9 @@ export function RecordingDetails({ recordingName, onBack }: RecordingDetailsProp
         case 'Recorded': currentIndex = 0; break;
         case 'Extracted': currentIndex = 1; break;
         case 'Analyzed': currentIndex = 2; break;
-        case 'Rendered': currentIndex = 3; break;
-        case 'Uploaded': currentIndex = 4; break;
+        case 'SetupRendered': currentIndex = 3; break;
+        case 'Rendered': currentIndex = 4; break;
+        case 'Uploaded': currentIndex = 5; break;
       }
 
       // Mark completed steps
@@ -151,10 +140,13 @@ export function RecordingDetails({ recordingName, onBack }: RecordingDetailsProp
         actions.push('Analyze');
         break;
       case 'Analyzed':
-        actions.push('Analyze', 'Render');
+        actions.push('Analyze', 'Setup');
+        break;
+      case 'SetupRendered':
+        actions.push('Analyze', 'Setup', 'Render');
         break;
       case 'Rendered':
-        actions.push('Analyze', 'Render', 'Upload');
+        actions.push('Analyze', 'Setup', 'Render', 'Upload');
         break;
       case 'Uploaded':
         actions.push('Re-render', 'Re-upload');

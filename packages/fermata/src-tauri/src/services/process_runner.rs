@@ -26,10 +26,14 @@ impl ProcessRunner {
     /// Run beatrix analyze command
     pub async fn run_beatrix_analyze(&self, recording_path: &Path, audio_file: &str) -> anyhow::Result<ProcessResult> {
         let audio_path = recording_path.join("extracted").join(audio_file);
+        let analysis_dir = recording_path.join("analysis");
+        
+        log::info!("🎵 Running beatrix analyze: audio={}, output={}", audio_path.display(), analysis_dir.display());
         
         let mut cmd = AsyncCommand::new(&self.uv_path);
-        cmd.args(&["run", "--package", "beatrix", "analyze"])
+        cmd.args(&["run", "--package", "beatrix", "beatrix"])
             .arg(&audio_path)
+            .arg(&analysis_dir)
             .current_dir(&self.workspace_root);
 
         self.execute_command(cmd).await

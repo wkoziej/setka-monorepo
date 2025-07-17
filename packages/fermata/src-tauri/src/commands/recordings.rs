@@ -75,16 +75,25 @@ pub fn get_recording_details(name: String, config: State<AppConfig>) -> Result<R
     log::info!("Getting details for recording: {}", name);
     
     let recording_path = config.recordings_path.join(&name);
+    log::info!("Looking for recording at path: {}", recording_path.display());
     
     if !recording_path.exists() {
+        log::error!("Recording path does not exist: {}", recording_path.display());
         return Err(format!("Recording '{}' not found", name));
     }
     
     let mut recording = Recording::from_path(recording_path)
         .map_err(|e| format!("Failed to load recording '{}': {}", name, e))?;
     
+    log::info!("Created recording with {} file_sizes entries", recording.file_sizes.len());
+    
     // Update with current status
     crate::services::update_recording_status(&mut recording);
+    
+    log::info!("After status update: {} file_sizes entries", recording.file_sizes.len());
+    for (path, size) in &recording.file_sizes {
+        log::info!("File: {} -> {} bytes", path, size);
+    }
     
     Ok(recording)
 }

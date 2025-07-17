@@ -41,24 +41,19 @@ impl StatusDetector {
     pub fn get_file_info(recording_path: &Path) -> HashMap<String, u64> {
         let mut file_sizes = HashMap::new();
 
-        // Check for main recording file
-        if let Some(video_size) = Self::get_video_file_size(recording_path) {
-            file_sizes.insert("recording.video".to_string(), video_size);
-        }
-
-        // Check extracted directory
-        if let Some(extracted_size) = Self::get_directory_size(&recording_path.join("extracted")) {
-            file_sizes.insert("extracted".to_string(), extracted_size);
-        }
-
-        // Check analysis directory
-        if let Some(analysis_size) = Self::get_directory_size(&recording_path.join("analysis")) {
-            file_sizes.insert("analysis".to_string(), analysis_size);
-        }
-
-        // Check render directory
-        if let Some(render_size) = Self::get_directory_size(&recording_path.join("blender/render")) {
-            file_sizes.insert("render".to_string(), render_size);
+        // Recursively scan all files in the recording directory
+        if let Ok(entries) = walkdir::WalkDir::new(recording_path).into_iter().collect::<Result<Vec<_>, _>>() {
+            for entry in entries {
+                if entry.file_type().is_file() {
+                    if let Ok(metadata) = entry.metadata() {
+                        // Get relative path from recording directory
+                        if let Ok(relative_path) = entry.path().strip_prefix(recording_path) {
+                            let path_str = relative_path.to_string_lossy().to_string();
+                            file_sizes.insert(path_str, metadata.len());
+                        }
+                    }
+                }
+            }
         }
 
         file_sizes
