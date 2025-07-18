@@ -240,7 +240,8 @@ mod tests {
         assert_eq!(recordings.len(), 3);
         
         for recording in &recordings {
-            assert!(recording.last_updated.elapsed().is_ok());
+            // last_updated is Unix timestamp in seconds, should be reasonable
+            assert!(recording.last_updated > 1000000000); // After year 2001
         }
     }
 } 

@@ -7,6 +7,7 @@ use commands::recordings::{
     get_recordings_needing_attention, update_recordings_path, get_app_config, delete_recording
 };
 use commands::operations::{run_next_step, run_specific_step};
+use commands::rename::rename_recording;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -21,7 +22,8 @@ pub fn run() {
       get_app_config,
       delete_recording,
       run_next_step,
-      run_specific_step
+      run_specific_step,
+      rename_recording
     ])
     .setup(|app| {
       if cfg!(debug_assertions) {

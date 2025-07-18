@@ -1,19 +1,22 @@
 import { useState, useEffect } from 'react';
-import { ArrowLeft, Play, RotateCcw, Eye } from 'lucide-react';
+import { ArrowLeft, Play, RotateCcw, Eye, Edit } from 'lucide-react';
 import { Recording, RecordingStatus } from '../types';
-import { useRecordingOperations } from '../hooks/useRecordings';
+import { useRecordingOperations, useRenameRecording } from '../hooks/useRecordings';
 import { invoke } from '@tauri-apps/api/core';
+import { RenameRecordingDialog } from './RenameRecordingDialog';
 
 interface RecordingDetailsProps {
   recordingName: string;
   onBack: () => void;
+  onRecordingRenamed?: (oldName: string, newName: string) => void;
 }
 
-export function RecordingDetails({ recordingName, onBack }: RecordingDetailsProps) {
+export function RecordingDetails({ recordingName, onBack, onRecordingRenamed }: RecordingDetailsProps) {
   const [recording, setRecording] = useState<Recording | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { runNextStep, runSpecificStep, running, output, error: operationError } = useRecordingOperations();
+  const { renameState, showRenameDialog, hideRenameDialog, renameRecording } = useRenameRecording();
 
   useEffect(() => {
     loadRecordingDetails();
@@ -44,6 +47,29 @@ export function RecordingDetails({ recordingName, onBack }: RecordingDetailsProp
     setTimeout(() => {
       loadRecordingDetails();
     }, 2000);
+  };
+
+  const handleRename = async (newName: string) => {
+    try {
+      await renameRecording(newName);
+      
+      // Notify parent about rename
+      if (onRecordingRenamed) {
+        onRecordingRenamed(recordingName, newName);
+      } else {
+        // Fallback: go back to list if no callback provided
+        onBack();
+      }
+    } catch (error) {
+      console.error('Rename failed:', error);
+      // Error is handled by the hook and dialog
+    }
+  };
+
+  const handleRenameClick = () => {
+    if (recording) {
+      showRenameDialog(recording);
+    }
   };
 
   const getStatusIcon = (status: RecordingStatus) => {
@@ -274,6 +300,63 @@ export function RecordingDetails({ recordingName, onBack }: RecordingDetailsProp
         </div>
       </div>
 
+      {/* Actions */}
+      <div style={{ 
+        border: '1px solid #e5e7eb', 
+        borderRadius: '8px', 
+        padding: '20px', 
+        marginBottom: '30px' 
+      }}>
+        <h2 style={{ margin: '0 0 15px 0', fontSize: '18px' }}>Actions</h2>
+        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+          {/* Rename button - always available */}
+          <button
+            onClick={handleRenameClick}
+            disabled={!!running[recording.name] || renameState.isRenaming}
+            style={{
+              padding: '10px 16px',
+              backgroundColor: '#6b7280',
+              color: 'white',
+              border: 'none',
+              borderRadius: '6px',
+              cursor: (running[recording.name] || renameState.isRenaming) ? 'not-allowed' : 'pointer',
+              opacity: (running[recording.name] || renameState.isRenaming) ? 0.6 : 1,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px'
+            }}
+          >
+            <Edit size={16} />
+            Rename
+          </button>
+
+          {availableActions.map((action) => (
+            <button
+              key={action}
+              onClick={() => handleRunAction(action)}
+              disabled={!!running[recording.name]}
+              style={{
+                padding: '10px 16px',
+                backgroundColor: action === 'Next Step' ? '#3b82f6' : '#6b7280',
+                color: 'white',
+                border: 'none',
+                borderRadius: '6px',
+                cursor: running ? 'not-allowed' : 'pointer',
+                opacity: running ? 0.6 : 1,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
+              }}
+            >
+              {action === 'Next Step' && <Play size={16} />}
+              {action === 'Retry' && <RotateCcw size={16} />}
+              {action === 'View Logs' && <Eye size={16} />}
+              {action}
+            </button>
+          ))}
+        </div>
+      </div>
+
       {/* Pipeline Status */}
       <div style={{ 
         border: '1px solid #e5e7eb', 
@@ -341,42 +424,6 @@ export function RecordingDetails({ recordingName, onBack }: RecordingDetailsProp
         </div>
       </div>
 
-      {/* Actions */}
-      <div style={{ 
-        border: '1px solid #e5e7eb', 
-        borderRadius: '8px', 
-        padding: '20px', 
-        marginBottom: '30px' 
-      }}>
-        <h2 style={{ margin: '0 0 15px 0', fontSize: '18px' }}>Actions</h2>
-        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-          {availableActions.map((action) => (
-            <button
-              key={action}
-              onClick={() => handleRunAction(action)}
-              disabled={!!running[recording.name]}
-              style={{
-                padding: '10px 16px',
-                backgroundColor: action === 'Next Step' ? '#3b82f6' : '#6b7280',
-                color: 'white',
-                border: 'none',
-                borderRadius: '6px',
-                cursor: running ? 'not-allowed' : 'pointer',
-                opacity: running ? 0.6 : 1,
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px'
-              }}
-            >
-              {action === 'Next Step' && <Play size={16} />}
-              {action === 'Retry' && <RotateCcw size={16} />}
-              {action === 'View Logs' && <Eye size={16} />}
-              {action}
-            </button>
-          ))}
-        </div>
-      </div>
-
       {/* Operation Output */}
       {(Object.values(running).some(Boolean) || output || operationError) && (
         <div style={{ 
@@ -419,6 +466,15 @@ export function RecordingDetails({ recordingName, onBack }: RecordingDetailsProp
           )}
         </div>
       )}
+
+      {/* Rename Dialog */}
+      <RenameRecordingDialog
+        isOpen={renameState.isOpen}
+        recording={renameState.recording}
+        onRename={handleRename}
+        onCancel={hideRenameDialog}
+        isRenaming={renameState.isRenaming}
+      />
     </div>
   );
 } 

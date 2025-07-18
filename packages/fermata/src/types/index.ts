@@ -59,4 +59,11 @@ export interface DeletionConfirmationState {
   isOpen: boolean;
   recording?: Recording;
   isDeleting: boolean;
+}
+
+// Rename types
+export interface RenameConfirmationState {
+  isOpen: boolean;
+  recording?: Recording;
+  isRenaming: boolean;
 } 

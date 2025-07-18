@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
-import { Recording, RecordingListState, DeletionConfirmationState } from '../types';
+import { Recording, RecordingListState, DeletionConfirmationState, RenameConfirmationState } from '../types';
 import { invoke } from '@tauri-apps/api/core';
 
 // Tauri API wrapper with fallback for development
@@ -206,5 +206,66 @@ export function useRecordingOperations() {
     ...operationState,
     runNextStep,
     runSpecificStep
+  };
+}
+
+// Hook for rename recording functionality
+export function useRenameRecording() {
+  const [renameState, setRenameState] = useState<RenameConfirmationState>({
+    isOpen: false,
+    recording: undefined,
+    isRenaming: false,
+  });
+
+  const showRenameDialog = useCallback((recording: Recording) => {
+    setRenameState({
+      isOpen: true,
+      recording,
+      isRenaming: false,
+    });
+  }, []);
+
+  const hideRenameDialog = useCallback(() => {
+    setRenameState({
+      isOpen: false,
+      recording: undefined,
+      isRenaming: false,
+    });
+  }, []);
+
+  const renameRecording = useCallback(async (newName: string) => {
+    const { recording } = renameState;
+    if (!recording) return;
+
+    console.log(`🔄 Starting rename operation: '${recording.name}' -> '${newName}'`);
+    setRenameState(prev => ({ ...prev, isRenaming: true }));
+
+    try {
+      await invokeCommand('rename_recording', { 
+        oldName: recording.name, 
+        newName: newName 
+      });
+      
+      console.log(`✅ Successfully renamed recording to '${newName}'`);
+      
+      // Close dialog
+      hideRenameDialog();
+      
+      // Note: Caller should refresh recordings list
+      return true;
+    } catch (error) {
+      console.error(`❌ Failed to rename recording:`, error);
+      setRenameState(prev => ({ ...prev, isRenaming: false }));
+      
+      // Re-throw error so caller can handle it
+      throw error;
+    }
+  }, [renameState, hideRenameDialog]);
+
+  return {
+    renameState,
+    showRenameDialog,
+    hideRenameDialog,
+    renameRecording,
   };
 } 
