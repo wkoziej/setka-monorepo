@@ -261,7 +261,7 @@ export function RecordingList({ onSelectRecording }: RecordingListProps) {
         </div>
       </div>
 
-      {running && (
+      {Object.values(running).some(Boolean) && (
         <div style={{ 
           marginBottom: '20px', 
           padding: '12px', 
