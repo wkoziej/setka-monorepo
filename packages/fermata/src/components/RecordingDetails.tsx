@@ -354,7 +354,7 @@ export function RecordingDetails({ recordingName, onBack }: RecordingDetailsProp
             <button
               key={action}
               onClick={() => handleRunAction(action)}
-              disabled={running}
+              disabled={!!running[recording.name]}
               style={{
                 padding: '10px 16px',
                 backgroundColor: action === 'Next Step' ? '#3b82f6' : '#6b7280',
@@ -378,7 +378,7 @@ export function RecordingDetails({ recordingName, onBack }: RecordingDetailsProp
       </div>
 
       {/* Operation Output */}
-      {(running || output || operationError) && (
+      {(Object.values(running).some(Boolean) || output || operationError) && (
         <div style={{ 
           border: '1px solid #e5e7eb', 
           borderRadius: '8px', 
@@ -387,7 +387,7 @@ export function RecordingDetails({ recordingName, onBack }: RecordingDetailsProp
         }}>
           <h2 style={{ margin: '0 0 15px 0', fontSize: '18px' }}>Operation Status</h2>
           
-          {running && (
+          {Object.values(running).some(Boolean) && (
             <div style={{ color: '#f59e0b', marginBottom: '10px' }}>
               🔄 Operation in progress...
             </div>

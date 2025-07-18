@@ -21,11 +21,20 @@ uv sync
 
 ### CLI
 ```bash
-# Analyze audio file
-beatrix analyze path/to/audio.m4a
+# Show help
+beatrix --help
 
-# Analyze with custom output directory
-beatrix analyze path/to/audio.m4a --output-dir ./analysis/
+# Analyze audio file with default settings
+beatrix analyze path/to/audio.m4a output_dir/
+
+# Analyze with custom beat division
+beatrix analyze path/to/audio.m4a output_dir/ --beat-division 4
+
+# Analyze with custom onset interval
+beatrix analyze path/to/audio.m4a output_dir/ --min-onset-interval 1.5
+
+# Enable verbose output
+beatrix --verbose analyze path/to/audio.m4a output_dir/
 ```
 
 ### Python API
@@ -43,7 +52,7 @@ result = analyzer.analyze_audio("path/to/audio.m4a")
 uv run --package beatrix --group dev pytest
 
 # With coverage
-uv run --package beatrix --group dev pytest --cov=src/beatrix
+uv run --package beatrix --group dev pytest --cov=beatrix
 ```
 
 ## Integration with Setka Packages
@@ -57,3 +66,4 @@ uv run --package beatrix --group dev pytest --cov=src/beatrix
 - `numpy>=1.21.0` - Numerical computations
 - `scipy>=1.7.0` - Signal processing and peak detection
 - `setka-common` - Shared utilities for file management
+- `click>=8.2.1` - Modernized CLI framework

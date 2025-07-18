@@ -4,7 +4,7 @@ mod commands;
 
 use commands::recordings::{
     AppConfig, get_recordings, get_recording_details, get_recordings_by_status,
-    get_recordings_needing_attention, update_recordings_path, get_app_config
+    get_recordings_needing_attention, update_recordings_path, get_app_config, delete_recording
 };
 use commands::operations::{run_next_step, run_specific_step};
 
@@ -19,6 +19,7 @@ pub fn run() {
       get_recordings_needing_attention,
       update_recordings_path,
       get_app_config,
+      delete_recording,
       run_next_step,
       run_specific_step
     ])

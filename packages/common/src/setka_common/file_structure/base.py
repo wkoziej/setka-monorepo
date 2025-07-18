@@ -9,6 +9,8 @@ from typing import Optional, List
 import json
 import logging
 
+from ..exceptions import InvalidPathError, DirectoryCreationError
+
 logger = logging.getLogger(__name__)
 
 
@@ -55,8 +57,26 @@ class StructureManager:
     
     @staticmethod
     def get_structure(media_path: Path, structure_type: str = "generic") -> MediaStructure:
-        """Get structure for media file."""
+        """Get structure for media file.
+        
+        Args:
+            media_path: Path to the media file
+            structure_type: Type of structure (for future use)
+            
+        Returns:
+            MediaStructure instance
+            
+        Raises:
+            InvalidPathError: When media_path is invalid
+        """
+        if not media_path:
+            raise InvalidPathError("Media path cannot be empty")
+        
         media_path = Path(media_path)
+        
+        if not media_path.name:
+            raise InvalidPathError(f"Invalid media path: {media_path}")
+        
         project_dir = media_path.parent
         
         metadata_file = project_dir / StructureManager.METADATA_FILENAME
@@ -71,17 +91,65 @@ class StructureManager:
     
     @staticmethod
     def create_structure(media_path: Path) -> MediaStructure:
-        """Create structure in filesystem."""
+        """Create structure in filesystem.
+        
+        Args:
+            media_path: Path to the media file
+            
+        Returns:
+            MediaStructure instance with created directories
+            
+        Raises:
+            InvalidPathError: When media_path is invalid
+            DirectoryCreationError: When directory creation fails
+        """
         structure = StructureManager.get_structure(media_path)
         
-        structure.processed_dir.mkdir(parents=True, exist_ok=True)
-        logger.info(f"Created structure: {structure.project_dir}")
+        try:
+            structure.processed_dir.mkdir(parents=True, exist_ok=True)
+            logger.info(f"Created structure: {structure.project_dir}")
+        except (OSError, PermissionError) as e:
+            raise DirectoryCreationError(
+                f"Failed to create structure at {structure.project_dir}: {e}"
+            )
         
         return structure
     
     @staticmethod
     def ensure_directory(base_path: Path, dirname: str) -> Path:
-        """Ensure directory exists."""
+        """Ensure directory exists.
+        
+        Args:
+            base_path: Base directory path
+            dirname: Name of directory to create
+            
+        Returns:
+            Path to the created directory
+            
+        Raises:
+            InvalidPathError: When base_path is invalid
+            DirectoryCreationError: When directory creation fails
+        """
+        if not base_path:
+            raise InvalidPathError("Base path cannot be empty")
+        
+        if not dirname:
+            raise InvalidPathError("Directory name cannot be empty")
+        
+        base_path = Path(base_path)
+        
+        if not base_path.exists():
+            raise InvalidPathError(f"Base path does not exist: {base_path}")
+        
+        if not base_path.is_dir():
+            raise InvalidPathError(f"Base path is not a directory: {base_path}")
+        
         dir_path = base_path / dirname
-        dir_path.mkdir(parents=True, exist_ok=True)
-        return dir_path
+        
+        try:
+            dir_path.mkdir(parents=True, exist_ok=True)
+            return dir_path
+        except (OSError, PermissionError) as e:
+            raise DirectoryCreationError(
+                f"Failed to create directory {dir_path}: {e}"
+            )

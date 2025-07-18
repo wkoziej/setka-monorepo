@@ -52,4 +52,11 @@ export interface OperationState {
   running: boolean;
   output: string;
   error: string | null;
+}
+
+// Deletion types
+export interface DeletionConfirmationState {
+  isOpen: boolean;
+  recording?: Recording;
+  isDeleting: boolean;
 } 

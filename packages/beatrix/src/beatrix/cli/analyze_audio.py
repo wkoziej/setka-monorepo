@@ -8,7 +8,6 @@ This module provides a command-line interface for analyzing audio files
 and generating JSON data suitable for Blender VSE animations.
 """
 
-import sys
 import logging
 from pathlib import Path
 
@@ -79,62 +78,11 @@ def analyze_audio_command(
 def main() -> None:
     """
     Main CLI entry point for audio analysis.
-
-    Usage:
-        python -m cli.analyze_audio <audio_file> <output_dir> [options]
-
-    Options:
-        --beat-division <int>         Beat division for events (default: 8)
-        --min-onset-interval <float>  Minimum onset interval (default: 2.0)
+    
+    This function now delegates to the modernized click-based CLI.
     """
-    # Configure logging
-    logging.basicConfig(
-        level=logging.INFO,
-        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-    )
-
-    # Parse command line arguments
-    args = sys.argv[1:]
-
-    if len(args) < 2:
-        print("Usage: python -m cli.analyze_audio <audio_file> <output_dir> [options]")
-        print("Options:")
-        print("  --beat-division <int>         Beat division for events (default: 8)")
-        print("  --min-onset-interval <float>  Minimum onset interval (default: 2.0)")
-        sys.exit(1)
-
-    # Required arguments
-    audio_file = Path(args[0])
-    output_dir = Path(args[1])
-
-    # Optional arguments
-    beat_division = 8
-    min_onset_interval = 2.0
-
-    # Parse optional arguments
-    i = 2
-    while i < len(args):
-        if args[i] == "--beat-division" and i + 1 < len(args):
-            beat_division = int(args[i + 1])
-            i += 2
-        elif args[i] == "--min-onset-interval" and i + 1 < len(args):
-            min_onset_interval = float(args[i + 1])
-            i += 2
-        else:
-            print(f"Unknown option: {args[i]}")
-            sys.exit(1)
-
-    try:
-        result_path = analyze_audio_command(
-            audio_file,
-            output_dir,
-            beat_division=beat_division,
-            min_onset_interval=min_onset_interval,
-        )
-        print(f"Analysis complete: {result_path}")
-    except Exception as e:
-        print(f"Error: {e}")
-        sys.exit(1)
+    from .click_cli import main as click_main
+    click_main()
 
 
 if __name__ == "__main__":
