@@ -69,9 +69,10 @@ function getNextAction(status: RecordingStatus): string | null {
   }
 }
 
-function RecordingRow({ recording, onAction }: { 
+function RecordingRow({ recording, onAction, isOperationRunning }: { 
   recording: Recording; 
   onAction: (name: string, action: string) => void;
+  isOperationRunning: boolean;
 }) {
   const statusDisplay = getStatusDisplay(recording.status);
   const nextAction = getNextAction(recording.status);
@@ -136,6 +137,21 @@ function RecordingRow({ recording, onAction }: {
           >
             View
           </button>
+          <button
+            onClick={() => onAction(recording.name, 'Delete')}
+            disabled={isOperationRunning}
+            style={{
+              padding: '6px 12px',
+              fontSize: '0.875rem',
+              backgroundColor: isOperationRunning ? '#f3f4f6' : 'transparent',
+              color: isOperationRunning ? '#9ca3af' : '#dc2626',
+              border: `1px solid ${isOperationRunning ? '#d1d5db' : '#dc2626'}`,
+              borderRadius: '6px',
+              cursor: isOperationRunning ? 'not-allowed' : 'pointer'
+            }}
+          >
+            🗑️ Usuń
+          </button>
         </div>
       </td>
     </tr>
@@ -147,13 +163,21 @@ interface RecordingListProps {
 }
 
 export function RecordingList({ onSelectRecording }: RecordingListProps) {
-  const { recordings, loading, error, refreshRecordings } = useRecordings();
+  const { recordings, loading, error, refreshRecordings, showDeletionDialog } = useRecordings();
   const { runNextStep, runSpecificStep, running, output } = useRecordingOperations();
 
   const handleAction = async (recordingName: string, action: string) => {
     if (action === 'View') {
       if (onSelectRecording) {
         onSelectRecording(recordingName);
+      }
+      return;
+    }
+
+    if (action === 'Delete') {
+      const recording = recordings.find(r => r.name === recordingName);
+      if (recording) {
+        showDeletionDialog(recording);
       }
       return;
     }
@@ -291,6 +315,7 @@ export function RecordingList({ onSelectRecording }: RecordingListProps) {
                 key={recording.name}
                 recording={recording}
                 onAction={handleAction}
+                isOperationRunning={!!running[recording.name]}
               />
             ))}
           </tbody>

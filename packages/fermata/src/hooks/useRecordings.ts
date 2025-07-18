@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
-import { Recording, RecordingListState } from '../types';
+import { Recording, RecordingListState, DeletionConfirmationState } from '../types';
 import { invoke } from '@tauri-apps/api/core';
 
 // Tauri API wrapper with fallback for development
@@ -98,22 +98,54 @@ export function useRecordings() {
     refreshRecordings();
   }, [refreshRecordings]);
 
+  const [deletionState, setDeletionState] = useState<DeletionConfirmationState>({
+    isOpen: false,
+    recording: undefined,
+    isDeleting: false
+  });
+
+  const deleteRecording = useCallback(async (recordingName: string) => {
+    setDeletionState(prev => ({ ...prev, isDeleting: true }));
+    try {
+      await invokeCommand('delete_recording', { recordingName });
+      setDeletionState({ isOpen: false, recording: undefined, isDeleting: false });
+      refreshRecordings(); // Odśwież listę
+    } catch (error) {
+      setDeletionState(prev => ({ ...prev, isDeleting: false }));
+      // TODO: Pokaż error toast
+      console.error('Delete failed:', error);
+    }
+  }, []);
+
   return {
     ...state,
-    refreshRecordings
+    refreshRecordings,
+    deletionState,
+    deleteRecording,
+    showDeletionDialog: (recording: Recording) => {
+      setDeletionState({ isOpen: true, recording, isDeleting: false });
+    },
+    hideDeletionDialog: () => {
+      setDeletionState({ isOpen: false, recording: undefined, isDeleting: false });
+    }
   };
 }
 
 export function useRecordingOperations() {
   const [operationState, setOperationState] = useState({
-    running: false,
+    running: {} as Record<string, boolean>,
     output: '',
     error: null as string | null
   });
 
   const runNextStep = useCallback(async (recordingName: string) => {
     console.log(`🚀 Starting runNextStep for: ${recordingName}`);
-    setOperationState({ running: true, output: '', error: null });
+    setOperationState(prev => ({ 
+      ...prev, 
+      running: { ...prev.running, [recordingName]: true }, 
+      output: '', 
+      error: null 
+    }));
     
     try {
       // Always try to use Tauri command first
@@ -121,24 +153,31 @@ export function useRecordingOperations() {
       const result = await invokeCommand('run_next_step', { recordingName });
       console.log(`✅ runNextStep result:`, result);
       
-      setOperationState({
-        running: false,
+      setOperationState(prev => ({
+        ...prev,
+        running: { ...prev.running, [recordingName]: false },
         output: result as string,
         error: null
-      });
+      }));
     } catch (error) {
       console.error(`❌ runNextStep failed:`, error);
-      setOperationState({
-        running: false,
+      setOperationState(prev => ({
+        ...prev,
+        running: { ...prev.running, [recordingName]: false },
         output: '',
         error: error instanceof Error ? error.message : 'Unknown error'
-      });
+      }));
     }
   }, []);
 
   const runSpecificStep = useCallback(async (recordingName: string, step: string) => {
     console.log(`🚀 Starting runSpecificStep for: ${recordingName}, step: ${step}`);
-    setOperationState({ running: true, output: '', error: null });
+    setOperationState(prev => ({ 
+      ...prev, 
+      running: { ...prev.running, [recordingName]: true }, 
+      output: '', 
+      error: null 
+    }));
     
     try {
       // Always try to use Tauri command first
@@ -146,18 +185,20 @@ export function useRecordingOperations() {
       const result = await invokeCommand('run_specific_step', { recordingName, step });
       console.log(`✅ runSpecificStep result:`, result);
       
-      setOperationState({
-        running: false,
+      setOperationState(prev => ({
+        ...prev,
+        running: { ...prev.running, [recordingName]: false },
         output: result as string,
         error: null
-      });
+      }));
     } catch (error) {
       console.error(`❌ runSpecificStep failed:`, error);
-      setOperationState({
-        running: false,
+      setOperationState(prev => ({
+        ...prev,
+        running: { ...prev.running, [recordingName]: false },
         output: '',
         error: error instanceof Error ? error.message : 'Unknown error'
-      });
+      }));
     }
   }, []);
 
