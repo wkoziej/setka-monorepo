@@ -11,6 +11,7 @@ import sys
 from pathlib import Path
 
 from ..project_manager import BlenderProjectManager
+from ..config import CinemonConfigGenerator
 from beatrix import AudioValidationError, analyze_audio_command
 from setka_common.file_structure.specialized import RecordingStructureManager
 from setka_common.utils.files import find_files_by_type, MediaType
@@ -98,10 +99,19 @@ Przykłady użycia:
         help="Podział beatów dla animacji (default: 8)",
     )
 
-    parser.add_argument(
+    # Mutually exclusive group for config sources
+    config_group = parser.add_mutually_exclusive_group()
+    
+    config_group.add_argument(
         "--config",
         type=Path,
         help="Ścieżka do pliku konfiguracji YAML",
+    )
+    
+    config_group.add_argument(
+        "--preset",
+        type=str,
+        help="Nazwa presetu konfiguracji (vintage, music-video, minimal, beat-switch)",
     )
 
     return parser.parse_args()
@@ -293,8 +303,45 @@ def main() -> int:
     logger = logging.getLogger(__name__)
 
     try:
+        # Handle preset configuration if provided
+        if args.preset:
+            logger.info(f"Generating configuration from preset: {args.preset}")
+            
+            # Prepare preset overrides from CLI arguments
+            preset_overrides = {}
+            if args.main_audio:
+                preset_overrides["main_audio"] = args.main_audio
+            if args.beat_division != 8:  # Only if not default
+                preset_overrides["beat_division"] = args.beat_division
+            
+            # Generate configuration from preset
+            generator = CinemonConfigGenerator()
+            config_path = generator.generate_preset(
+                args.recording_dir, 
+                args.preset, 
+                **preset_overrides
+            )
+            
+            logger.info(f"Generated configuration: {config_path}")
+            
+            # Create Blender project manager
+            manager = BlenderProjectManager()
+            
+            # Load generated YAML config
+            yaml_config = load_yaml_config(config_path)
+            
+            # Create VSE project with generated config
+            logger.info("Creating Blender VSE project with preset configuration...")
+            project_path = manager.create_vse_project_with_config(
+                args.recording_dir,
+                yaml_config
+            )
+            
+            print(f"✅ Projekt Blender VSE utworzony z presetu {args.preset}: {project_path}")
+            return 0
+            
         # Handle YAML configuration if provided
-        if args.config:
+        elif args.config:
             logger.info(f"Loading YAML configuration: {args.config}")
             yaml_config = load_yaml_config(args.config)
             

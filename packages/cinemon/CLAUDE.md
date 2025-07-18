@@ -14,6 +14,10 @@ Cinemon is a **Blender VSE (Video Sequence Editor) automation package** within t
 - **vse_script.py**: Parametric Blender script executed inside Blender (Polish comments)
 - **animation_engine.py**: Delegation pattern routing to specialized animator classes
 - **CLI (blend_setup.py)**: Command-line interface with auto-detection of audio analysis needs
+- **config/**: YAML configuration system with preset management and auto-discovery
+  - **CinemonConfigGenerator**: High-level API for generating YAML configurations
+  - **MediaDiscovery**: Auto-discovery of video/audio files in recording directories
+  - **PresetManager**: Built-in and custom preset management
 
 ### Animation System
 
@@ -26,7 +30,7 @@ Uses **delegation pattern** with three specialized animators:
 
 - **setka-common**: Uses `RecordingStructureManager` for standardized file organization
 - **beatrix**: Consumes audio analysis JSON for animation timing data
-- **Blender 4.3+**: Executes via `snap run blender` with environment variables
+- **Blender 4.3+**: Executes via `snap run blender` with YAML configuration system
 
 ## Common Development Commands
 
@@ -43,30 +47,68 @@ uv run pytest tests/test_animation_engine.py -v
 # Run linting
 uv run ruff check src/
 
-# Create VSE project from CLI
+# Create VSE project from CLI with preset
+cinemon-blend-setup ./recording_dir --preset vintage
+
+# Create VSE project with legacy mode
 cinemon-blend-setup ./recording_dir --animation-mode beat-switch
 
-# Create project with Python API
+# Generate YAML config with Python API
 uv run python -c "
-from blender import BlenderProjectManager
-manager = BlenderProjectManager()
-manager.create_vse_project(Path('./recording_dir'), animation_mode='energy-pulse')
+from blender.config import CinemonConfigGenerator
+generator = CinemonConfigGenerator()
+config_path = generator.generate_preset('./recording_dir', 'vintage')
+print(f'Generated: {config_path}')
 "
 ```
 
 ## Key Technical Patterns
 
-### Parametric Blender Execution
+### YAML Configuration System
 
-Cinemon uses **environment variables** to pass parameters to Blender:
+Cinemon uses **YAML configuration files** for parametric Blender execution:
+
+```yaml
+project:
+  video_files: [Camera1.mp4, Camera2.mp4]
+  main_audio: "main_audio.m4a"
+  fps: 30
+  resolution: {width: 1920, height: 1080}
+
+layout:
+  type: random
+  config:
+    overlap_allowed: false
+    seed: 42
+    margin: 0.1
+
+animations:
+  - type: scale
+    trigger: bass
+    intensity: 0.3
+    target_strips: [Camera1, Camera2]
+  - type: vintage_color
+    trigger: one_time
+    sepia_amount: 0.4
+    target_strips: []
+```
+
+### Configuration Generation
 
 ```python
-env_vars = {
-    'BLENDER_VSE_VIDEO_FILES': 'video1.mp4,video2.mp4',
-    'BLENDER_VSE_MAIN_AUDIO': '/path/to/audio.m4a',
-    'BLENDER_VSE_ANIMATION_MODE': 'beat-switch',
-    'BLENDER_VSE_AUDIO_ANALYSIS_FILE': '/path/to/analysis.json'
-}
+from blender.config import CinemonConfigGenerator
+
+generator = CinemonConfigGenerator()
+
+# Generate from preset
+config_path = generator.generate_preset("./recording", "vintage")
+
+# Generate custom configuration
+config_path = generator.generate_config(
+    "./recording",
+    layout={"type": "random", "config": {"seed": 42}},
+    animations=[{"type": "scale", "trigger": "bass", "intensity": 0.5}]
+)
 ```
 
 ### Blender Mock System
@@ -79,6 +121,13 @@ def mock_bpy(monkeypatch):
     """Mock bpy module for tests running outside Blender."""
 ```
 
+### Media Discovery and Auto-Detection
+
+- **Auto-discovery**: `MediaDiscovery` class automatically finds video/audio files in recording directories
+- **Validation**: Validates recording structure before processing
+- **Main audio detection**: Automatically detects main audio file or prompts for selection with multiple files
+- **Polish filename support**: Full UTF-8 support for Polish characters in filenames
+
 ### Audio Analysis Integration
 
 - **Auto-detection**: CLI checks for existing analysis files before creating new ones
@@ -90,13 +139,16 @@ def mock_bpy(monkeypatch):
 Expected recording structure (managed by setka-common):
 ```
 recording_name/
-├── metadata.json           # OBS metadata
-├── extracted/              # Video/audio files
+├── metadata.json                    # OBS metadata
+├── extracted/                       # Video/audio files
 │   ├── Camera1.mp4        
-│   └── Microphone.m4a     
-├── analysis/              # Audio analysis JSON
+│   ├── Camera2.mp4
+│   └── main_audio.m4a     
+├── analysis/                        # Audio analysis JSON
 │   └── audio_analysis.json
-└── blender/               # VSE projects (created by cinemon)
+├── animation_config_vintage.yaml    # Generated YAML config (preset-based)
+├── animation_config.yaml            # Generated YAML config (custom)
+└── blender/                         # VSE projects (created by cinemon)
     ├── project.blend
     └── render/
         └── final.mp4
@@ -121,29 +173,77 @@ recording_name/
 - **Data**: Uses `sections`, `beats`, and `energy_peaks` arrays
 - **Layout**: Main cameras (strips 0-1) switch on sections, corner PiPs (strips 2+) pulse on energy
 
-### New Compositional Animation System
+### YAML Configuration System with Presets
 
-#### compositional
-- **Purpose**: Combines custom layouts with multiple independent animations
-- **Architecture**: Uses `AnimationCompositor` with `RandomLayout` and modular animations
-- **Configuration**: Environment variables control layout and animation parameters
-- **Animations**: `ScaleAnimation`, `ShakeAnimation`, `RotationWobbleAnimation`
+#### Built-in Presets
 
-**Environment Variables:**
-```bash
-export BLENDER_VSE_ANIMATION_MODE="compositional"
-export BLENDER_VSE_LAYOUT_TYPE="random"
-export BLENDER_VSE_LAYOUT_CONFIG="overlap_allowed=false,seed=42,margin=0.05"
-export BLENDER_VSE_ANIMATION_CONFIG="scale:bass:0.3:2,shake:beat:10.0:2,rotation:beat:1.0:3"
+**vintage** - Classic film effects:
+```yaml
+layout:
+  type: random
+  config: {margin: 0.1, seed: 1950}
+animations:
+  - {type: shake, trigger: beat, intensity: 2.0}
+  - {type: jitter, trigger: continuous, intensity: 1.0}
+  - {type: brightness_flicker, trigger: beat, intensity: 0.1}
+  - {type: black_white, trigger: one_time, intensity: 0.6}
+  - {type: film_grain, trigger: one_time, intensity: 0.15}
+  - {type: vintage_color, trigger: one_time, sepia_amount: 0.4}
 ```
 
-**Supported Layouts:**
-- `random`: Random positioning with collision detection
+**music-video** - High-energy effects:
+```yaml
+layout:
+  type: random
+  config: {margin: 0.05, seed: 100, min_scale: 0.4, max_scale: 0.9}
+animations:
+  - {type: scale, trigger: bass, intensity: 0.5, duration_frames: 3}
+  - {type: shake, trigger: beat, intensity: 12.0}
+  - {type: rotation, trigger: energy_peaks, degrees: 2.0}
+```
 
-**Supported Animations:**
-- `scale:trigger:intensity:duration` - Scale animation on events
-- `shake:trigger:intensity:frames` - Position shake animation
-- `rotation:trigger:degrees:frames` - Rotation wobble animation
+**minimal** - Basic effects:
+```yaml
+animations:
+  - {type: scale, trigger: bass, intensity: 0.2, duration_frames: 3}
+```
+
+**beat-switch** - Legacy compatibility:
+```yaml
+animations:
+  - {type: scale, trigger: beat, intensity: 0.2}
+```
+
+#### Selective Strip Targeting
+
+All animations support `target_strips` for selective application:
+
+```yaml
+animations:
+  - type: scale
+    trigger: bass
+    intensity: 0.5
+    target_strips: [Camera1, Camera2]  # Only these strips
+    
+  - type: vintage_color
+    trigger: one_time
+    sepia_amount: 0.4
+    target_strips: []  # All strips (default)
+```
+
+#### Supported Animation Types
+
+**Transform Animations:**
+- `scale` - Scale changes on audio events
+- `shake` - Position shake effects  
+- `rotation` - Rotation wobble effects
+- `jitter` - Continuous random position changes
+
+**Visual Effects:**
+- `brightness_flicker` - Brightness modulation
+- `vintage_color` - Sepia tint and contrast boost
+- `black_white` - Desaturation effects
+- `film_grain` - Grain overlay effects
 
 ## Testing Considerations
 
@@ -169,43 +269,61 @@ def test_something(mock_bpy):
 
 ## CLI Usage Patterns
 
-### Basic Project Creation
+### Preset-Based Project Creation
 ```bash
-cinemon-blend-setup ./recording_dir
+# Basic preset usage
+cinemon-blend-setup ./recording_dir --preset vintage
+
+# Preset with custom overrides
+cinemon-blend-setup ./recording_dir --preset music-video \
+  --main-audio "main_audio.m4a" \
+  --beat-division 8
+
+# Available presets: vintage, music-video, minimal, beat-switch
+cinemon-blend-setup ./recording_dir --preset minimal
 ```
 
-### With Audio Analysis
+### YAML Configuration File Usage
 ```bash
-# Auto-runs beatrix if no analysis exists
+# Generate YAML config first, then use it
+cinemon-blend-setup ./recording_dir --config ./animation_config.yaml
+
+# Config takes precedence over other parameters
+cinemon-blend-setup ./recording_dir --config ./custom_config.yaml
+```
+
+### Legacy Animation Modes (Deprecated)
+```bash
+# Still supported for backwards compatibility
 cinemon-blend-setup ./recording_dir --animation-mode beat-switch
+cinemon-blend-setup ./recording_dir --animation-mode energy-pulse
 
-# Force new analysis
-cinemon-blend-setup ./recording_dir --analyze-audio --animation-mode energy-pulse
+# Auto-runs beatrix if no analysis exists
+cinemon-blend-setup ./recording_dir --analyze-audio --animation-mode multi-pip
 ```
 
-### Complex Multi-Camera Setups
+### Advanced Configuration Generation
 ```bash
-# Requires --main-audio when multiple audio files exist
-cinemon-blend-setup ./recording_dir \
-  --animation-mode multi-pip \
-  --main-audio "Main Audio.m4a" \
-  --beat-division 4
-```
+# Using Python API for custom configurations
+uv run python -c "
+from blender.config import CinemonConfigGenerator
+generator = CinemonConfigGenerator()
 
-### New Compositional Animation System
-```bash
-# Random layout with multiple animations
-export BLENDER_VSE_ANIMATION_MODE="compositional"
-export BLENDER_VSE_LAYOUT_TYPE="random"
-export BLENDER_VSE_LAYOUT_CONFIG="overlap_allowed=false,seed=42"
-export BLENDER_VSE_ANIMATION_CONFIG="scale:bass:0.3:2,shake:beat:5.0:2"
-cinemon-blend-setup ./recording_dir
+# Generate from preset with overrides
+config_path = generator.generate_preset(
+    './recording', 'vintage', 
+    seed=42, fps=60, main_audio='audio.m4a'
+)
 
-# Controlled random layout with multiple effects
-export BLENDER_VSE_LAYOUT_CONFIG="margin=0.1,min_scale=0.4,max_scale=0.8"
-export BLENDER_VSE_ANIMATION_CONFIG="scale:bass:0.5,rotation:beat:2.0:4"
-cinemon-blend-setup ./recording_dir --animation-mode compositional
-```
+# Generate completely custom configuration  
+layout = {'type': 'random', 'config': {'seed': 123}}
+animations = [
+    {'type': 'scale', 'trigger': 'bass', 'intensity': 0.8, 'target_strips': ['Camera1']},
+    {'type': 'vintage_color', 'trigger': 'one_time', 'sepia_amount': 0.6}
+]
+config_path = generator.generate_config('./recording', layout, animations)
+print(f'Generated: {config_path}')
+"
 
 ## Integration with Broader Pipeline
 
@@ -215,13 +333,44 @@ Cinemon operates as step 3 in the Setka pipeline:
 3. **cinemon**: Creates animated Blender projects ← YOU ARE HERE
 4. **medusa**: Uploads finished videos to social media
 
+## Configuration Management
+
+### Built-in Presets
+- **vintage**: Classic film effects with grain, jitter, and sepia tones
+- **music-video**: High-energy effects with scale, shake, and rotation
+- **minimal**: Basic scale animation for subtle effects
+- **beat-switch**: Legacy compatibility mode
+
+### Media Discovery
+```python
+from blender.config import MediaDiscovery
+
+discovery = MediaDiscovery(Path("./recording"))
+video_files = discovery.discover_video_files()  # Auto-find video files
+audio_files = discovery.discover_audio_files()  # Auto-find audio files
+main_audio = discovery.detect_main_audio()     # Auto-detect main audio
+validation = discovery.validate_structure()    # Validate directory structure
+```
+
+### Preset Customization
+```python
+from blender.config import PresetManager
+
+manager = PresetManager()
+presets = manager.list_presets()              # List all available presets
+vintage = manager.get_preset("vintage")       # Get specific preset
+manager.create_custom_preset("my-style", {...})  # Create custom preset
+```
+
 ## Error Handling
 
 Common issues and solutions:
 - **Missing analysis file**: CLI auto-detects and runs beatrix
 - **Blender not found**: Uses `snap run blender` by default
-- **No video files**: Validates extracted directory before processing
-- **Invalid animation mode**: Validates against supported modes list
+- **No video files**: `MediaDiscovery` validates directory structure before processing
+- **Multiple audio files**: Prompts for `--main-audio` parameter selection
+- **Invalid preset**: Validates against available preset list
+- **Invalid configuration**: YAML validation with clear error messages
 
 ## Environment Requirements
 
