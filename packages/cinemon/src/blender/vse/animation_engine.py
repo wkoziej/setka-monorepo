@@ -8,6 +8,7 @@ from typing import List, Dict
 from .animators.beat_switch_animator import BeatSwitchAnimator
 from .animators.energy_pulse_animator import EnergyPulseAnimator
 from .animators.multi_pip_animator import MultiPipAnimator
+from .animators.compositional_animator import CompositionalAnimator
 
 
 class BlenderAnimationEngine:
@@ -24,6 +25,7 @@ class BlenderAnimationEngine:
             BeatSwitchAnimator(),
             EnergyPulseAnimator(),
             MultiPipAnimator(),
+            CompositionalAnimator(),
         ]
 
     def get_available_modes(self) -> List[str]:

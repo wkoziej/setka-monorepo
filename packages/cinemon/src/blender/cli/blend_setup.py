@@ -84,6 +84,7 @@ Przykłady użycia:
             "energy-pulse",
             "section-transition",
             "multi-pip",
+            "compositional",
         ],
         help="Tryb animacji dla VSE (default: none)",
     )
@@ -150,6 +151,7 @@ def validate_animation_parameters(animation_mode: str, beat_division: int) -> No
         "energy-pulse",
         "section-transition",
         "multi-pip",
+        "compositional",
     }
     valid_divisions = {1, 2, 4, 8, 16}
 

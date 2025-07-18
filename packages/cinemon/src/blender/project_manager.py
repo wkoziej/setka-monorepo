@@ -349,6 +349,7 @@ class BlenderProjectManager:
             "energy-pulse",
             "section-transition",
             "multi-pip",
+            "compositional",
         }
 
         if mode not in valid_modes:
