@@ -14,6 +14,7 @@ from ..project_manager import BlenderProjectManager
 from beatrix import AudioValidationError, analyze_audio_command
 from setka_common.file_structure.specialized import RecordingStructureManager
 from setka_common.utils.files import find_files_by_type, MediaType
+from setka_common.config import BlenderYAMLConfig, YAMLConfigLoader
 
 
 def setup_logging(verbose: bool = False) -> None:
@@ -95,6 +96,12 @@ Przykłady użycia:
         default=8,
         choices=[1, 2, 4, 8, 16],
         help="Podział beatów dla animacji (default: 8)",
+    )
+
+    parser.add_argument(
+        "--config",
+        type=Path,
+        help="Ścieżka do pliku konfiguracji YAML",
     )
 
     return parser.parse_args()
@@ -220,6 +227,31 @@ def _has_existing_audio_analysis(recording_dir: Path, main_audio: str = None) ->
         return False
 
 
+def load_yaml_config(config_path: Path) -> BlenderYAMLConfig:
+    """
+    Load and validate YAML configuration.
+
+    Args:
+        config_path: Path to YAML configuration file
+
+    Returns:
+        BlenderYAMLConfig: Loaded configuration
+
+    Raises:
+        FileNotFoundError: If config file not found
+        ValueError: If config validation fails
+    """
+    if not config_path.exists():
+        raise FileNotFoundError(f"Configuration file not found: {config_path}")
+
+    try:
+        loader = YAMLConfigLoader()
+        config = loader.load_config(config_path)
+        return config
+    except Exception as e:
+        raise ValueError(f"Failed to load YAML configuration: {e}")
+
+
 def perform_audio_analysis(recording_dir: Path, main_audio: Path) -> Path:
     """
     Perform audio analysis on main audio file.
@@ -261,6 +293,25 @@ def main() -> int:
     logger = logging.getLogger(__name__)
 
     try:
+        # Handle YAML configuration if provided
+        if args.config:
+            logger.info(f"Loading YAML configuration: {args.config}")
+            yaml_config = load_yaml_config(args.config)
+            
+            # Create Blender project manager
+            manager = BlenderProjectManager()
+            
+            # Create VSE project with YAML config
+            logger.info("Creating Blender VSE project with YAML configuration...")
+            project_path = manager.create_vse_project_with_config(
+                args.recording_dir,
+                yaml_config
+            )
+            
+            print(f"✅ Projekt Blender VSE utworzony z YAML config: {project_path}")
+            return 0
+
+        # Legacy CLI argument handling
         # Validate recording directory
         logger.info(f"Validating recording directory: {args.recording_dir}")
         validate_recording_directory(args.recording_dir)

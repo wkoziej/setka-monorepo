@@ -13,6 +13,7 @@ import logging
 
 from setka_common.file_structure.types import MediaType
 from setka_common.utils.files import find_files_by_type
+from setka_common.config import BlenderYAMLConfig, YAMLConfigLoader
 
 logger = logging.getLogger(__name__)
 
@@ -132,6 +133,91 @@ class BlenderProjectManager:
             return output_blend
         except Exception as e:
             logger.error(f"Failed to create Blender project: {e}")
+            raise RuntimeError(f"Blender execution failed: {e}")
+
+    def create_vse_project_with_config(
+        self,
+        recording_path: Path,
+        yaml_config: BlenderYAMLConfig,
+    ) -> Path:
+        """
+        Create a Blender VSE project using YAML configuration.
+
+        Args:
+            recording_path: Path to the recording directory
+            yaml_config: YAML configuration object
+
+        Returns:
+            Path: Path to the created .blend file
+
+        Raises:
+            ValueError: If configuration is invalid
+            RuntimeError: If Blender execution fails
+        """
+        from setka_common.file_structure.specialized import RecordingStructureManager
+
+        logger.info(f"Creating Blender VSE project with YAML config for: {recording_path}")
+
+        # 1. Validate recording structure
+        structure = RecordingStructureManager.find_recording_structure(recording_path)
+        if not structure:
+            raise ValueError(f"Invalid recording structure in: {recording_path}")
+
+        # 2. Ensure blender directory exists
+        blender_dir = RecordingStructureManager.ensure_blender_dir(recording_path)
+
+        # 3. Resolve paths relative to recording directory
+        video_files = []
+        for video_file in yaml_config.project.video_files:
+            video_path = structure.extracted_dir / video_file
+            if not video_path.exists():
+                raise ValueError(f"Video file not found: {video_path}")
+            video_files.append(video_path)
+        
+        main_audio_path = None
+        if yaml_config.project.main_audio:
+            main_audio_path = structure.extracted_dir / yaml_config.project.main_audio
+            if not main_audio_path.exists():
+                raise ValueError(f"Main audio file not found: {main_audio_path}")
+
+        # 4. Create output paths (use config values or defaults)
+        project_name = recording_path.name
+        if yaml_config.project.output_blend:
+            output_blend = recording_path / yaml_config.project.output_blend
+        else:
+            output_blend = blender_dir / f"{project_name}.blend"
+        
+        if yaml_config.project.render_output:
+            render_output = recording_path / yaml_config.project.render_output
+        else:
+            render_output = blender_dir / "render" / f"{project_name}_final.mp4"
+
+        # 5. Convert YAML config to environment variables
+        loader = YAMLConfigLoader()
+        env_vars = loader.convert_to_env_vars(yaml_config)
+        
+        # 6. Override paths with resolved absolute paths
+        env_vars["BLENDER_VSE_VIDEO_FILES"] = ",".join(str(vf.resolve()) for vf in video_files)
+        if main_audio_path:
+            env_vars["BLENDER_VSE_MAIN_AUDIO"] = str(main_audio_path.resolve())
+        env_vars["BLENDER_VSE_OUTPUT_BLEND"] = str(output_blend.resolve())
+        env_vars["BLENDER_VSE_RENDER_OUTPUT"] = str(render_output.resolve())
+
+        # 7. Ensure render output directory exists
+        render_output.parent.mkdir(parents=True, exist_ok=True)
+
+        logger.info(f"Video files: {[vf.name for vf in video_files]}")
+        if main_audio_path:
+            logger.info(f"Main audio: {main_audio_path.name}")
+        logger.info(f"Animation mode: {env_vars.get('BLENDER_VSE_ANIMATION_MODE', 'none')}")
+
+        # 8. Execute Blender with the parametric script
+        try:
+            self._execute_blender_with_params(env_vars)
+            logger.info(f"Blender project created successfully with YAML config: {output_blend}")
+            return output_blend
+        except Exception as e:
+            logger.error(f"Failed to create Blender project with YAML config: {e}")
             raise RuntimeError(f"Blender execution failed: {e}")
 
     def _prepare_environment_variables(
