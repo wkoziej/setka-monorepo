@@ -33,6 +33,8 @@ Examples:
   %(prog)s recording.mp4 metadata.json --verbose
   %(prog)s recording.mp4 --auto --verbose
   %(prog)s recording.mp4 --auto --delay 5
+  %(prog)s recording.mp4 metadata.json --skip-audio-pattern "RPI.*"
+  %(prog)s recording.mp4 --auto --skip-audio-pattern "^(RPI|Camera).*"
         """,
     )
 
@@ -64,6 +66,13 @@ Examples:
         type=int,
         default=3,
         help="Delay in seconds before processing (default: 3)",
+    )
+
+    parser.add_argument(
+        "--skip-audio-pattern",
+        type=str,
+        default="RPI.*",
+        help="Skip audio extraction for sources matching regex pattern (default: 'RPI.*')",
     )
 
     return parser.parse_args(args)
@@ -195,6 +204,53 @@ def find_metadata_file(video_path: Path) -> Optional[Path]:
     return None
 
 
+def apply_audio_pattern_filter(metadata: dict, pattern: str) -> dict:
+    """
+    Apply audio filtering based on source name pattern.
+    
+    Args:
+        metadata: The loaded metadata dictionary
+        pattern: Regex pattern to match source names
+        
+    Returns:
+        Modified metadata dictionary with has_audio=False for matching sources
+    """
+    import re
+    
+    if not pattern:
+        return metadata
+        
+    try:
+        regex = re.compile(pattern, re.IGNORECASE)
+    except re.error as e:
+        print(f"Error: Invalid regex pattern '{pattern}': {e}", file=sys.stderr)
+        return metadata
+    
+    modified_count = 0
+    
+    # Create a copy to avoid modifying original
+    new_metadata = metadata.copy()
+    new_sources = {}
+    
+    for source_name, source_info in metadata.get("sources", {}).items():
+        source_copy = source_info.copy()
+        
+        if regex.match(source_name):
+            if source_copy.get("has_audio", False):
+                print(f"Skipping audio extraction for source matching pattern: {source_name}")
+                source_copy["has_audio"] = False
+                modified_count += 1
+        
+        new_sources[source_name] = source_copy
+    
+    new_metadata["sources"] = new_sources
+    
+    if modified_count > 0:
+        print(f"Applied audio filtering to {modified_count} source(s)")
+    
+    return new_metadata
+
+
 def main() -> int:
     """
     Main CLI entry point.
@@ -273,6 +329,10 @@ def main() -> int:
         except Exception as e:
             print(f"Error: Failed to read metadata file: {e}", file=sys.stderr)
             return 1
+
+        # Apply audio pattern filter if specified
+        if args.skip_audio_pattern:
+            metadata = apply_audio_pattern_filter(metadata, args.skip_audio_pattern)
 
         # Print verbose info if requested
         if args.verbose:
