@@ -362,7 +362,7 @@ export function RecordingDetails({ recordingName, onBack }: RecordingDetailsProp
             <button
               key={action}
               onClick={() => handleRunAction(action)}
-              disabled={running}
+              disabled={!!running[recording.name]}
               style={{
                 padding: '10px 16px',
                 backgroundColor: action === 'Next Step' ? '#3b82f6' : '#6b7280',

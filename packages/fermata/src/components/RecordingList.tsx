@@ -1,5 +1,6 @@
 import { Recording, RecordingStatus } from '../types';
 import { useRecordings, useRecordingOperations } from '../hooks/useRecordings';
+import { DeletionConfirmDialog } from './DeletionConfirmDialog';
 
 function formatFileSize(bytes: number): string {
   const sizes = ['B', 'KB', 'MB', 'GB'];
@@ -163,7 +164,7 @@ interface RecordingListProps {
 }
 
 export function RecordingList({ onSelectRecording }: RecordingListProps) {
-  const { recordings, loading, error, refreshRecordings, showDeletionDialog } = useRecordings();
+  const { recordings, loading, error, refreshRecordings, showDeletionDialog, deletionState, deleteRecording, hideDeletionDialog } = useRecordings();
   const { runNextStep, runSpecificStep, running, output } = useRecordingOperations();
 
   const handleAction = async (recordingName: string, action: string) => {
@@ -202,6 +203,12 @@ export function RecordingList({ onSelectRecording }: RecordingListProps) {
     setTimeout(() => {
       refreshRecordings();
     }, 2000);
+  };
+
+  const handleDeleteConfirm = () => {
+    if (deletionState.recording) {
+      deleteRecording(deletionState.recording.name);
+    }
   };
 
   if (loading) {
@@ -331,6 +338,14 @@ export function RecordingList({ onSelectRecording }: RecordingListProps) {
           No recordings found. Check your recordings directory configuration.
         </div>
       )}
+
+      <DeletionConfirmDialog
+        isOpen={deletionState.isOpen}
+        recording={deletionState.recording}
+        onConfirm={handleDeleteConfirm}
+        onCancel={hideDeletionDialog}
+        isDeleting={deletionState.isDeleting}
+      />
     </div>
   );
 } 
