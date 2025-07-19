@@ -34,8 +34,8 @@ def open_blender_with_video_editing(blend_file_path: Path) -> None:
         print(f"🎬 Otwieranie Blender (projekt utworzony z Video Editing template)...")
         print(f"📁 Plik: {blend_file_path}")
         
-        # Start Blender in background (non-blocking)
-        subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        # Start Blender in background (non-blocking) with output visible
+        subprocess.Popen(cmd)
         
     except Exception as e:
         print(f"⚠ Nie udało się otworzyć Blender: {e}")

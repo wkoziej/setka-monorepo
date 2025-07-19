@@ -70,9 +70,9 @@ class AnimationCompositor:
             for animation in self.animations:
                 events = self._extract_events(audio_analysis, animation.trigger)
                 if events:  # Only apply if events exist
-                    for strip in video_strips:
+                    for strip_index, strip in enumerate(video_strips):
                         if animation.should_apply_to_strip(strip):
-                            animation.apply_to_strip(strip, events, fps)
+                            animation.apply_to_strip(strip, events, fps, strip_index=strip_index)
             
             return True
             

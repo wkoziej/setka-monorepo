@@ -12,6 +12,7 @@ from .brightness_flicker_animation import BrightnessFlickerAnimation
 from .black_white_animation import BlackWhiteAnimation
 from .film_grain_animation import FilmGrainAnimation
 from .vintage_color_grade_animation import VintageColorGradeAnimation
+from .visibility_animation import VisibilityAnimation
 
 __all__ = [
     "BaseEffectAnimation",
@@ -22,5 +23,6 @@ __all__ = [
     "BrightnessFlickerAnimation",
     "BlackWhiteAnimation",
     "FilmGrainAnimation",
-    "VintageColorGradeAnimation"
+    "VintageColorGradeAnimation",
+    "VisibilityAnimation"
 ]

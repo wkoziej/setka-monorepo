@@ -155,6 +155,11 @@ class BlenderProjectManager:
             result = subprocess.run(
                 cmd, capture_output=True, text=True, check=True
             )
+            # Show any output for debugging
+            if result.stdout.strip():
+                logger.debug(f"Blender stdout: {result.stdout}")
+            if result.stderr.strip():
+                logger.debug(f"Blender stderr: {result.stderr}")
             logger.info("Blender script executed successfully with YAML config")
             logger.debug(f"Blender stdout: {result.stdout}")
             logger.debug(f"Blender stderr: {result.stderr}")

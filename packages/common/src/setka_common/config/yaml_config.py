@@ -103,15 +103,15 @@ class YAMLConfigLoader:
     
     VALID_ANIMATION_TYPES = {
         "scale", "shake", "rotation", "jitter", "brightness_flicker",
-        "black_white", "film_grain", "vintage_color"
+        "black_white", "film_grain", "vintage_color", "visibility"
     }
     
     VALID_TRIGGERS = {
-        "bass", "beat", "energy_peaks", "one_time", "continuous"
+        "bass", "beat", "energy_peaks", "one_time", "continuous", "sections"
     }
     
     VALID_LAYOUT_TYPES = {
-        "random", "grid", "center", "fill"
+        "random", "grid", "center", "fill", "main-pip"
     }
     
     def load_config(self, config_path: Path) -> BlenderYAMLConfig:

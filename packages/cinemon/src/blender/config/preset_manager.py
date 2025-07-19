@@ -7,6 +7,7 @@ import json
 from pathlib import Path
 from typing import Dict, List, Any, Optional
 from dataclasses import dataclass
+from .device_names import DeviceNames
 
 
 @dataclass
@@ -104,7 +105,7 @@ class PresetManager:
             "animations": [
                 {
                     "type": "scale",
-                    "trigger": "bass",
+                    "trigger": "energy_peaks",
                     "intensity": 0.5,
                     "duration_frames": 3,
                     "target_strips": []
@@ -140,7 +141,7 @@ class PresetManager:
             "animations": [
                 {
                     "type": "scale",
-                    "trigger": "bass",
+                    "trigger": "energy_peaks",
                     "intensity": 0.2,
                     "duration_frames": 3,
                     "target_strips": []
@@ -166,6 +167,53 @@ class PresetManager:
                     "intensity": 0.1,
                     "duration_frames": 1,
                     "target_strips": []
+                }
+            ]
+        },
+        "multi-pip": {
+            "description": "Two main cameras fullscreen with corner PiPs, replicating legacy multi-pip behavior",
+            "layout": {
+                "type": "main-pip",
+                "config": {
+                    "pip_scale": 0.25,
+                    "margin_percent": 0.05
+                }
+            },
+            "animations": [
+                {
+                    "type": "visibility",
+                    "trigger": "sections",
+                    "pattern": "alternate",
+                    "target_strips": DeviceNames.MAIN_CAMERAS
+                },
+                {
+                    "type": "vintage_color",
+                    "trigger": "one_time",
+                    "sepia_amount": 0.4,
+                    "contrast_boost": 0.3,
+                    "target_strips": DeviceNames.MAIN_CAMERAS
+                },
+                {
+                    "type": "jitter",
+                    "trigger": "continuous",
+                    "intensity": 1.0,
+                    "min_interval": 3,
+                    "max_interval": 8,
+                    "target_strips": DeviceNames.MAIN_CAMERAS
+                },
+                {
+                    "type": "scale",
+                    "trigger": "energy_peaks",
+                    "intensity": 0.5,
+                    "duration_frames": 3,
+                    "target_strips": DeviceNames.PIP_CAMERAS
+                },
+                {
+                    "type": "shake",
+                    "trigger": "beat",
+                    "intensity": 8.0,
+                    "return_frames": 2,
+                    "target_strips": DeviceNames.PIP_CAMERAS
                 }
             ]
         }

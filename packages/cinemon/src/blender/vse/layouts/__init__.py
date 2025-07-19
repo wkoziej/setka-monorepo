@@ -5,5 +5,6 @@
 
 from .base import BaseLayout, LayoutPosition
 from .random_layout import RandomLayout
+from .main_pip_layout import MainPipLayout
 
-__all__ = ["BaseLayout", "LayoutPosition", "RandomLayout"]
+__all__ = ["BaseLayout", "LayoutPosition", "RandomLayout", "MainPipLayout"]

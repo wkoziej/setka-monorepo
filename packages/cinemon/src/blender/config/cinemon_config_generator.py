@@ -239,8 +239,8 @@ class CinemonConfigGenerator:
                 "main_audio": main_audio,
                 "fps": overrides.get("fps", 30),
                 "resolution": {
-                    "width": overrides.get("width", 1920),
-                    "height": overrides.get("height", 1080)
+                    "width": overrides.get("width", 752),
+                    "height": overrides.get("height", 564)
                 }
             },
             "audio_analysis": {
@@ -291,8 +291,8 @@ class CinemonConfigGenerator:
             "main_audio": main_audio,
             "fps": 30,
             "resolution": {
-                "width": 1920,
-                "height": 1080
+                "width": 752,
+                "height": 564
             }
         }
         
