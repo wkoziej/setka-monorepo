@@ -82,8 +82,8 @@ function RecordingRow({ recording, onAction, isOperationRunning }: {
   return (
     <tr style={{ borderBottom: '1px solid #e5e7eb' }}>
       <td style={{ padding: '12px 8px' }}>
-        <div style={{ fontWeight: '500' }}>{recording.name}</div>
-        <div style={{ fontSize: '0.875rem', color: '#6b7280' }}>
+        <div style={{ fontWeight: '500', fontSize: '1.2em' }}>{recording.name}</div>
+        <div style={{ fontSize: '0.7875rem', color: '#6b7280' }}>
           {formatFileSize(totalSize)}
         </div>
       </td>
