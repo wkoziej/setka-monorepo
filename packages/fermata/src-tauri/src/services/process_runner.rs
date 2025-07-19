@@ -39,31 +39,76 @@ impl ProcessRunner {
         self.execute_command(cmd).await
     }
 
-    /// Run cinemon render command
-    pub async fn run_cinemon_render(&self, recording_path: &Path, animation_mode: &str) -> anyhow::Result<ProcessResult> {
+    /// Generate YAML config and setup Blender project (2-step process)
+    pub async fn run_cinemon_render(&self, recording_path: &Path, preset: &str, main_audio: Option<&str>) -> anyhow::Result<ProcessResult> {
+        // Step 1: Generate YAML configuration
+        log::info!("🎬 Generating cinemon config: preset={}, main_audio={:?}", preset, main_audio);
+        let config_result = self.run_cinemon_generate_config(recording_path, preset, main_audio).await?;
+        
+        if !config_result.success {
+            log::error!("❌ Config generation failed: {}", config_result.stderr);
+            return Ok(config_result);
+        }
+        
+        // Step 2: Setup Blender project with generated config
+        let config_filename = format!("animation_config_{}.yaml", preset);
+        let config_path = recording_path.join(&config_filename);
+        
+        if !config_path.exists() {
+            return Ok(ProcessResult {
+                success: false,
+                stdout: String::new(),
+                stderr: format!("Generated config file not found: {}", config_path.display()),
+                exit_code: Some(1),
+            });
+        }
+        
+        log::info!("🎬 Setting up Blender project with config: {}", config_path.display());
         let mut cmd = AsyncCommand::new(&self.uv_path);
         cmd.args(&["run", "--package", "cinemon", "cinemon-blend-setup"])
             .arg(recording_path)
-            .args(&["--animation-mode", animation_mode])
+            .args(&["--config", &config_path.to_string_lossy()])
             .current_dir(&self.workspace_root);
-
+        
         self.execute_command(cmd).await
     }
 
-    /// Run cinemon render command with main audio selection
-    pub async fn run_cinemon_render_with_audio(&self, recording_path: &Path, animation_mode: &str, main_audio: Option<&str>) -> anyhow::Result<ProcessResult> {
+    /// Generate cinemon YAML configuration
+    pub async fn run_cinemon_generate_config(&self, recording_path: &Path, preset: &str, main_audio: Option<&str>) -> anyhow::Result<ProcessResult> {
         let mut cmd = AsyncCommand::new(&self.uv_path);
-        cmd.args(&["run", "--package", "cinemon", "cinemon-blend-setup"])
+        cmd.args(&["run", "--package", "cinemon", "cinemon-generate-config"])
             .arg(recording_path)
-            .args(&["--animation-mode", animation_mode]);
-
+            .args(&["--preset", preset]);
+        
         if let Some(audio_file) = main_audio {
             cmd.args(&["--main-audio", audio_file]);
         }
-
+        
         cmd.current_dir(&self.workspace_root);
-
         self.execute_command(cmd).await
+    }
+
+    /// List available cinemon presets
+    pub async fn list_cinemon_presets(&self) -> anyhow::Result<ProcessResult> {
+        let mut cmd = AsyncCommand::new(&self.uv_path);
+        cmd.args(&["run", "--package", "cinemon", "cinemon-generate-config", "--list-presets"])
+            .current_dir(&self.workspace_root);
+        
+        self.execute_command(cmd).await
+    }
+
+    /// Legacy method for backwards compatibility - delegates to new preset-based method
+    pub async fn run_cinemon_render_with_audio(&self, recording_path: &Path, animation_mode: &str, main_audio: Option<&str>) -> anyhow::Result<ProcessResult> {
+        // Map legacy animation modes to presets
+        let preset = match animation_mode {
+            "beat-switch" => "beat-switch",
+            "energy-pulse" => "music-video", 
+            "multi-pip" => "vintage",
+            _ => "beat-switch", // Default fallback
+        };
+        
+        log::warn!("🔄 Using legacy animation mode '{}', mapping to preset '{}'", animation_mode, preset);
+        self.run_cinemon_render(recording_path, preset, main_audio).await
     }
 
     /// Run medusa upload command

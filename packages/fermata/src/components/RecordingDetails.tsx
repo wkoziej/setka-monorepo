@@ -4,6 +4,7 @@ import { Recording, RecordingStatus } from '../types';
 import { useRecordingOperations, useRenameRecording } from '../hooks/useRecordings';
 import { invoke } from '@tauri-apps/api/core';
 import { RenameRecordingDialog } from './RenameRecordingDialog';
+import { PresetSelector } from './PresetSelector';
 
 interface RecordingDetailsProps {
   recordingName: string;
@@ -15,7 +16,9 @@ export function RecordingDetails({ recordingName, onBack, onRecordingRenamed }: 
   const [recording, setRecording] = useState<Recording | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const { runNextStep, runSpecificStep, running, output, error: operationError } = useRecordingOperations();
+  const [selectedPreset, setSelectedPreset] = useState("beat-switch");
+  const [showPresetConfig, setShowPresetConfig] = useState(false);
+  const { runNextStep, runSpecificStep, runSetupRenderWithPreset, running, output, error: operationError } = useRecordingOperations();
   const { renameState, showRenameDialog, hideRenameDialog, renameRecording } = useRenameRecording();
 
   useEffect(() => {
@@ -37,6 +40,35 @@ export function RecordingDetails({ recordingName, onBack, onRecordingRenamed }: 
   };
 
   const handleRunAction = async (action: string) => {
+    if (action === 'Next Step' && recording?.status === 'Analyzed') {
+      // Pokaż konfigurację presetów przed wykonaniem
+      setShowPresetConfig(true);
+      return;
+    }
+    
+    if (action === 'Setup') {
+      // Pokaż konfigurację presetów dla manual setup
+      setShowPresetConfig(true);
+      return;
+    }
+    
+    if (action === 'Setup Render') {
+      // Execute setup render with selected preset
+      try {
+        await runSetupRenderWithPreset(recordingName, selectedPreset);
+        
+        // Refresh recording details
+        setTimeout(() => {
+          loadRecordingDetails();
+          setShowPresetConfig(false);
+        }, 2000);
+      } catch (error) {
+        console.error('Setup render failed:', error);
+      }
+      return;
+    }
+    
+    // Existing logic for other actions
     if (action === 'Next Step') {
       await runNextStep(recordingName);
     } else {
@@ -464,6 +496,83 @@ export function RecordingDetails({ recordingName, onBack, onRecordingRenamed }: 
               ❌ {operationError}
             </div>
           )}
+        </div>
+      )}
+
+      {/* Preset Configuration Dialog */}
+      {showPresetConfig && recording?.status === 'Analyzed' && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 50
+        }}>
+          <div style={{
+            backgroundColor: 'white',
+            borderRadius: '8px',
+            padding: '24px',
+            maxWidth: '500px',
+            width: '90%',
+            margin: '16px'
+          }}>
+            <h3 style={{ fontSize: '18px', fontWeight: 'bold', marginBottom: '16px' }}>
+              Configure Animation
+            </h3>
+            
+            <PresetSelector
+              selectedPreset={selectedPreset}
+              onPresetChange={setSelectedPreset}
+              disabled={!!running[recordingName]}
+              className="mb-6"
+            />
+            
+            {/* Show main audio info if available */}
+            <div style={{ marginBottom: '16px', padding: '12px', backgroundColor: '#f3f4f6', borderRadius: '6px' }}>
+              <p style={{ fontSize: '14px', color: '#6b7280', margin: 0 }}>
+                <strong>Path:</strong> {recording.path}
+              </p>
+            </div>
+            
+            <div style={{ display: 'flex', gap: '12px' }}>
+              <button
+                onClick={() => setShowPresetConfig(false)}
+                style={{
+                  flex: 1,
+                  padding: '12px 16px',
+                  color: '#6b7280',
+                  border: '1px solid #d1d5db',
+                  borderRadius: '6px',
+                  backgroundColor: 'white',
+                  cursor: 'pointer'
+                }}
+                disabled={!!running[recordingName]}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => handleRunAction('Setup Render')}
+                style={{
+                  flex: 1,
+                  padding: '12px 16px',
+                  backgroundColor: '#3b82f6',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: running ? 'not-allowed' : 'pointer',
+                  opacity: !!running[recordingName] ? 0.5 : 1
+                }}
+                disabled={!!running[recordingName]}
+              >
+                {running[recordingName] ? 'Setting up...' : 'Setup Render'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
 

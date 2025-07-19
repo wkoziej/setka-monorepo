@@ -2,6 +2,22 @@ use crate::models::{Recording, RecordingStatus, NextStep};
 use crate::services::{FileScanner, ProcessRunner, ProcessResult};
 use crate::commands::recordings::AppConfig;
 use tauri::State;
+use serde::{Serialize, Deserialize};
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct RenderOptions {
+    pub preset: String,
+    pub main_audio: Option<String>,
+}
+
+impl Default for RenderOptions {
+    fn default() -> Self {
+        Self {
+            preset: "beat-switch".to_string(),  // Zachowanie kompatybilności
+            main_audio: None,
+        }
+    }
+}
 
 /// Run the next step in the pipeline for a specific recording
 #[tauri::command]
@@ -191,18 +207,18 @@ async fn execute_step(
                     // Use configured main audio file if available
                     if !config.main_audio_file.is_empty() && audio_files.contains(&config.main_audio_file) {
                         log::info!("🎯 Using configured main audio: {}", config.main_audio_file);
-                        runner.run_cinemon_render_with_audio(&recording.path, "beat-switch", Some(&config.main_audio_file)).await
+                        runner.run_cinemon_render(&recording.path, "beat-switch", Some(&config.main_audio_file)).await
                     } else {
                         log::warn!("⚠️ Multiple audio files found but main audio '{}' not available in: {:?}", config.main_audio_file, audio_files);
                         return Err(format!("Multiple audio files found: {:?}. Configure FERMATA_MAIN_AUDIO environment variable to specify which one to use.", audio_files));
                     }
                 } else {
                     // Single audio file, use without --main-audio parameter
-                    runner.run_cinemon_render(&recording.path, "beat-switch").await
+                    runner.run_cinemon_render(&recording.path, "beat-switch", None).await
                 }
             } else {
                 // No extracted directory, use basic render
-                runner.run_cinemon_render(&recording.path, "beat-switch").await
+                runner.run_cinemon_render(&recording.path, "beat-switch", None).await
             }
         }
         NextStep::Render => {
@@ -274,6 +290,97 @@ async fn execute_step(
     .map_err(|e| format!("Command execution failed: {}", e))?;
 
     Ok(result)
+}
+
+#[tauri::command]
+pub async fn run_specific_step_with_options(
+    recording_name: String, 
+    step: String, 
+    options: Option<RenderOptions>,
+    config: State<'_, AppConfig>
+) -> Result<String, String> {
+    log::info!("🚀 [run_specific_step_with_options] Called for recording: {}, step: {}, options: {:?}", recording_name, step, options);
+    
+    // Get the recording details first
+    let recordings = FileScanner::scan_recordings(&config.recordings_path);
+    let recording = recordings
+        .into_iter()
+        .find(|r| r.name == recording_name)
+        .ok_or_else(|| format!("Recording '{}' not found", recording_name))?;
+
+    match step.as_str() {
+        "setuprender" => {
+            let opts = options.unwrap_or_default();
+            let result = execute_step_with_preset(&recording, &NextStep::SetupRender, &config, &opts.preset, opts.main_audio.as_deref()).await?;
+            
+            if result.success {
+                Ok(format!("✅ Render setup completed with preset: {}", opts.preset))
+            } else {
+                Err(format!("❌ Render setup failed: {}", result.stderr))
+            }
+        },
+        _ => {
+            // Zachować istniejące step handling dla innych kroków
+            run_specific_step(recording_name, step, config).await
+        }
+    }
+}
+
+#[tauri::command]
+pub async fn list_animation_presets(config: State<'_, AppConfig>) -> Result<Vec<String>, String> {
+    let runner = ProcessRunner::new(
+        config.cli_paths.workspace_root.clone(),
+        config.cli_paths.uv_path.clone()
+    );
+    let result = runner.list_cinemon_presets().await.map_err(|e| e.to_string())?;
+    
+    if result.success {
+        // Parse preset names from output
+        let presets: Vec<String> = result.stdout
+            .lines()
+            .filter_map(|line| {
+                if line.trim().starts_with("  ") && !line.contains("Available presets:") {
+                    Some(line.trim().to_string())
+                } else {
+                    None
+                }
+            })
+            .collect();
+        Ok(presets)
+    } else {
+        Err(format!("Failed to list presets: {}", result.stderr))
+    }
+}
+
+/// Execute a specific pipeline step with preset options
+async fn execute_step_with_preset(
+    recording: &Recording, 
+    step: &NextStep, 
+    config: &AppConfig,
+    preset: &str,
+    main_audio: Option<&str>
+) -> Result<ProcessResult, String> {
+    let runner = ProcessRunner::new(
+        config.cli_paths.workspace_root.clone(),
+        config.cli_paths.uv_path.clone()
+    );
+
+    match step {
+        NextStep::SetupRender => {
+            // Check if analysis exists
+            if !recording.path.join("analysis").exists() {
+                return Err("Analysis directory not found - run analyze step first".to_string());
+            }
+
+            log::info!("🎬 Setting up render with preset: {}, main_audio: {:?}", preset, main_audio);
+            runner.run_cinemon_render(&recording.path, preset, main_audio).await
+                .map_err(|e| format!("Command execution failed: {}", e))
+        }
+        _ => {
+            // Fallback to regular execute_step for other steps
+            execute_step(recording, step, config).await
+        }
+    }
 }
 
 #[cfg(test)]
