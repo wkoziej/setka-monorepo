@@ -2,26 +2,17 @@
 Parametryczny skrypt Blender do konfiguracji VSE.
 
 Ten skrypt może być uruchomiony w Blenderze i konfiguruje VSE project
-na podstawie parametrów przekazanych przez zmienne środowiskowe.
+na podstawie konfiguracji YAML przekazanej jako argument.
 
-Zmienne środowiskowe:
-- BLENDER_VSE_VIDEO_FILES: Lista plików wideo (oddzielone przecinkami)
-- BLENDER_VSE_MAIN_AUDIO: Ścieżka do głównego pliku audio
-- BLENDER_VSE_OUTPUT_BLEND: Ścieżka do pliku .blend
-- BLENDER_VSE_RENDER_OUTPUT: Ścieżka do pliku wyjściowego renderowania
-- BLENDER_VSE_FPS: Liczba klatek na sekundę (domyślnie 30)
-- BLENDER_VSE_RESOLUTION_X: Szerokość rozdzielczości (domyślnie 1280)
-- BLENDER_VSE_RESOLUTION_Y: Wysokość rozdzielczości (domyślnie 720)
+Użycie z CLI:
+blender --background --python blender_vse_script.py -- --config config.yaml
 
 Użycie w Blenderze:
 1. Otwórz Blender
 2. Przejdź do workspace Scripting
 3. Wklej ten skrypt
-4. Ustaw zmienne środowiskowe lub zmodyfikuj parametry w skrypcie
+4. Zmodyfikuj CONFIG_PATH na ścieżkę do pliku konfiguracyjnego
 5. Uruchom skrypt (Alt+P)
-
-Użycie z CLI:
-blender --background --python blender_vse_script.py
 """
 
 import bpy
@@ -33,44 +24,56 @@ from typing import List, Optional, Tuple, Dict
 
 # Import refactored modules
 try:
-    from .vse.config import BlenderVSEConfig
+    from .vse.yaml_config import BlenderYAMLConfigReader
     from .vse.constants import AnimationConstants
     from .vse.keyframe_helper import KeyframeHelper
     from .vse.layout_manager import BlenderLayoutManager
     from .vse.animation_engine import BlenderAnimationEngine
     from .vse.project_setup import BlenderProjectSetup
+    from .vse.animators.compositional_animator import CompositionalAnimator
 except ImportError:
     # Fallback for when script is run standalone in Blender
     sys.path.append(str(Path(__file__).parent))
-    from vse.config import BlenderVSEConfig
+    from vse.yaml_config import BlenderYAMLConfigReader
     from vse.constants import AnimationConstants
     from vse.keyframe_helper import KeyframeHelper
     from vse.layout_manager import BlenderLayoutManager
     from vse.animation_engine import BlenderAnimationEngine
     from vse.project_setup import BlenderProjectSetup
+    from vse.animators.compositional_animator import CompositionalAnimator
 
 
 class BlenderVSEConfigurator:
-    """Konfigurator Blender VSE z parametrami."""
+    """Konfigurator Blender VSE z konfiguracji YAML."""
 
-    def __init__(self):
-        """Inicjalizuj konfigurator z parametrami z zmiennych środowiskowych."""
-        # Use new config module for parameter parsing
-        config = BlenderVSEConfig()
-
+    def __init__(self, config_path: Optional[str] = None):
+        """Inicjalizuj konfigurator z konfiguracji YAML.
+        
+        Args:
+            config_path: Ścieżka do pliku konfiguracyjnego YAML
+        """
+        # Parse command line arguments if no config path provided
+        if config_path is None:
+            config_path = self._parse_command_line_args()
+        
+        # Load YAML configuration
+        self.yaml_config = BlenderYAMLConfigReader(config_path)
+        
         # Set attributes from config (maintaining compatibility)
-        self.video_files = config.video_files
-        self.main_audio = config.main_audio
-        self.output_blend = config.output_blend
-        self.render_output = config.render_output
-        self.fps = config.fps
-        self.resolution_x = config.resolution_x
-        self.resolution_y = config.resolution_y
-        self.animation_mode = config.animation_mode
-        self.beat_division = config.beat_division
-
-        # Initialize components for delegation
-        self.animation_engine = BlenderAnimationEngine()
+        self.video_files = [Path(f) for f in self.yaml_config.video_files]
+        self.main_audio = Path(self.yaml_config.main_audio) if self.yaml_config.main_audio else None
+        self.output_blend = Path(self.yaml_config.output_blend) if self.yaml_config.output_blend else None
+        self.render_output = Path(self.yaml_config.render_output) if self.yaml_config.render_output else None
+        self.fps = self.yaml_config.fps
+        self.resolution_x = self.yaml_config.resolution_x
+        self.resolution_y = self.yaml_config.resolution_y
+        self.beat_division = self.yaml_config.beat_division
+        
+        # Animation mode is always compositional with YAML config
+        self.animation_mode = "compositional"
+        
+        # Initialize compositional animator
+        self.compositional_animator = CompositionalAnimator()
 
         # Initialize project setup with config
         self.project_setup = BlenderProjectSetup(
@@ -84,6 +87,23 @@ class BlenderVSEConfigurator:
                 "render_output": self.render_output,
             }
         )
+    
+    def _parse_command_line_args(self) -> Optional[str]:
+        """Parse command line arguments to find config file.
+        
+        Returns:
+            Optional[str]: Path to config file or None
+        """
+        # Look for --config argument in sys.argv
+        for i, arg in enumerate(sys.argv):
+            if arg == '--config' and i + 1 < len(sys.argv):
+                return sys.argv[i + 1]
+        
+        # Fallback - look for CONFIG_PATH constant (for Blender GUI usage)
+        if 'CONFIG_PATH' in globals():
+            return CONFIG_PATH
+        
+        raise ValueError("No config file specified. Use --config argument or set CONFIG_PATH variable.")
 
     def validate_parameters(self) -> Tuple[bool, List[str]]:
         """
@@ -92,9 +112,7 @@ class BlenderVSEConfigurator:
         Returns:
             Tuple[bool, List[str]]: (czy_valid, lista_błędów)
         """
-        # Use config module for validation (maintaining compatibility)
-        config = BlenderVSEConfig()
-        return config.validate()
+        return self.yaml_config.validate()
 
     def setup_vse_project(self) -> bool:
         """
@@ -119,10 +137,10 @@ class BlenderVSEConfigurator:
             print("✗ Błąd konfiguracji podstawowego projektu")
             return False
 
-        # Apply animations if requested (this remains in facade for now)
-        if self.animation_mode != "none":
+        # Apply compositional animations if configured
+        if self.yaml_config.animations:
             sequencer = bpy.context.scene.sequence_editor
-            animation_success = self._apply_animations(sequencer)
+            animation_success = self._apply_compositional_animations(sequencer)
             if not animation_success:
                 print(
                     "⚠ Animacje nie zostały zastosowane, ale projekt został utworzony"
@@ -140,9 +158,9 @@ class BlenderVSEConfigurator:
         print("=== Konfiguracja projektu VSE zakończona sukcesem ===")
         return True
 
-    def _apply_animations(self, sequencer) -> bool:
+    def _apply_compositional_animations(self, sequencer) -> bool:
         """
-        Apply audio-driven animations to video strips.
+        Apply compositional animations to video strips using YAML configuration.
 
         Args:
             sequencer: Blender sequence editor
@@ -150,7 +168,7 @@ class BlenderVSEConfigurator:
         Returns:
             bool: True if animations were applied successfully
         """
-        print(f"=== Applying {self.animation_mode} animations ===")
+        print("=== Applying compositional animations from YAML config ===")
 
         # Load animation data
         animation_data = self._load_animation_data()
@@ -169,62 +187,42 @@ class BlenderVSEConfigurator:
             return False
 
         print(f"✓ Found {len(video_strips)} video strips for animation")
-
-        # Apply animation based on mode using animation engine
-        success = self.animation_engine.animate(
-            video_strips, animation_data, self.fps, self.animation_mode
-        )
-
+        print(f"✓ Layout type: {self.yaml_config.layout_type}")
+        print(f"✓ Animations configured: {len(self.yaml_config.animations)}")
+        
+        # Apply layout using YAML config
+        success = self._apply_yaml_layout_and_animations(video_strips, animation_data)
+        
         if success:
-            print(f"✓ Animation mode '{self.animation_mode}' applied successfully")
+            print("✓ Compositional animations applied successfully")
         else:
-            print(f"✗ Animation mode '{self.animation_mode}' failed or not supported")
+            print("✗ Compositional animations failed")
 
         return success
 
     def _load_animation_data(self) -> Optional[Dict]:
         """
-        Load animation data from BLENDER_VSE_AUDIO_ANALYSIS environment variable.
-
-        MVP version: Only loads beat events, ignores other animation data.
+        Load animation data from YAML configuration.
 
         Returns:
-            Optional[Dict]: Animation data with beat events or None if not available
+            Optional[Dict]: Animation data with events or None if not available
         """
-        # Try loading from file first (new approach)
-        analysis_file = os.getenv("BLENDER_VSE_AUDIO_ANALYSIS_FILE", "")
+        # Load animation data using YAML config
+        full_data = self.yaml_config.load_audio_analysis_data()
+        
+        if not full_data:
+            print("No audio analysis data found in YAML config")
+            return None
 
-        if analysis_file and Path(analysis_file).exists():
-            try:
-                with open(analysis_file, "r") as f:
-                    full_data = json.load(f)
-            except Exception as e:
-                print(f"Error loading analysis file {analysis_file}: {e}")
-                return None
-        else:
-            # Fallback to environment variable (old approach)
-            analysis_json = os.getenv("BLENDER_VSE_AUDIO_ANALYSIS", "")
-
-            if not analysis_json:
-                print("No audio analysis data found in file or environment variable")
-                return None
-
-            try:
-                full_data = json.loads(analysis_json)
-            except json.JSONDecodeError as e:
-                print(f"Error parsing animation data JSON: {e}")
-                return None
-
-        # Common processing for both file and env var approaches
         try:
-            # Phase 3B: Extract beat events and energy peaks
+            # Extract beat events and energy peaks
             if "animation_events" not in full_data:
                 print("No animation_events found in analysis data")
                 return None
 
             animation_events = full_data["animation_events"]
 
-            # Phase 3B: Support both beats and energy_peaks
+            # Support beats, energy_peaks, and sections
             events_data = {}
             if "beats" in animation_events:
                 events_data["beats"] = animation_events["beats"]
@@ -234,7 +232,6 @@ class BlenderVSEConfigurator:
                 events_data["energy_peaks"] = animation_events["energy_peaks"]
                 print(f"✓ Loaded {len(events_data['energy_peaks'])} energy peak events")
 
-            # Phase 3B.2: Support sections for multi-pip mode
             if "sections" in animation_events:
                 events_data["sections"] = animation_events["sections"]
                 print(
@@ -247,7 +244,7 @@ class BlenderVSEConfigurator:
                 )
                 return None
 
-            # Phase 3B: Return expanded data
+            # Return expanded data
             expanded_data = {
                 "duration": full_data.get("duration", 0.0),
                 "tempo": full_data.get("tempo", {"bpm": 120.0}),
@@ -634,6 +631,158 @@ class BlenderVSEConfigurator:
         print(f"✓ Corner PiP effects applied to {len(corner_pips)} strips")
         return True
 
+    def _apply_yaml_layout_and_animations(self, video_strips: List, animation_data: Dict) -> bool:
+        """
+        Apply layout and animations using YAML configuration.
+        
+        Args:
+            video_strips: List of video strips from Blender VSE
+            animation_data: Animation data containing events
+            
+        Returns:
+            bool: True if layout and animations were applied successfully
+        """
+        from .vse.animation_compositor import AnimationCompositor
+        from .vse.layouts import RandomLayout
+        from .vse.animations import (
+            ScaleAnimation, ShakeAnimation, RotationWobbleAnimation,
+            JitterAnimation, BrightnessFlickerAnimation,
+            BlackWhiteAnimation, FilmGrainAnimation, VintageColorGradeAnimation
+        )
+        
+        print("=== Applying YAML layout and animations ===")
+        
+        # Create layout from YAML config
+        layout = self._create_layout_from_yaml()
+        
+        # Create animations from YAML config
+        animations = self._create_animations_from_yaml()
+        
+        # Create and apply compositor
+        compositor = AnimationCompositor(layout, animations)
+        success = compositor.apply(video_strips, animation_data, self.fps)
+        
+        if success:
+            print("✓ YAML layout and animations applied successfully")
+        else:
+            print("✗ Failed to apply YAML layout and animations")
+        
+        return success
+    
+    def _create_layout_from_yaml(self):
+        """Create layout instance from YAML configuration."""
+        from .vse.layouts import RandomLayout
+        
+        layout_type = self.yaml_config.layout_type
+        layout_config = self.yaml_config.layout_config or {}
+        
+        if layout_type == "random":
+            return RandomLayout(
+                overlap_allowed=layout_config.get('overlap_allowed', True),
+                margin=layout_config.get('margin', 0.05),
+                min_scale=layout_config.get('min_scale', 0.3),
+                max_scale=layout_config.get('max_scale', 0.8),
+                seed=layout_config.get('seed', None)
+            )
+        else:
+            # Default to random layout
+            return RandomLayout()
+    
+    def _create_animations_from_yaml(self) -> List:
+        """Create animation instances from YAML configuration."""
+        from .vse.animations import (
+            ScaleAnimation, ShakeAnimation, RotationWobbleAnimation,
+            JitterAnimation, BrightnessFlickerAnimation,
+            BlackWhiteAnimation, FilmGrainAnimation, VintageColorGradeAnimation
+        )
+        
+        animations = []
+        
+        for anim_spec in self.yaml_config.animations:
+            anim_type = anim_spec.type
+            trigger = anim_spec.trigger
+            
+            # Create animation based on type
+            if anim_type == "scale":
+                intensity = getattr(anim_spec, 'intensity', 0.3)
+                duration_frames = getattr(anim_spec, 'duration_frames', 2)
+                animation = ScaleAnimation(
+                    trigger=trigger,
+                    intensity=intensity,
+                    duration_frames=duration_frames
+                )
+                animations.append(animation)
+                
+            elif anim_type == "shake":
+                intensity = getattr(anim_spec, 'intensity', 10.0)
+                return_frames = getattr(anim_spec, 'return_frames', 2)
+                animation = ShakeAnimation(
+                    trigger=trigger,
+                    intensity=intensity,
+                    return_frames=return_frames
+                )
+                animations.append(animation)
+                
+            elif anim_type == "rotation":
+                wobble_degrees = getattr(anim_spec, 'wobble_degrees', 1.0)
+                return_frames = getattr(anim_spec, 'return_frames', 3)
+                animation = RotationWobbleAnimation(
+                    trigger=trigger,
+                    wobble_degrees=wobble_degrees,
+                    return_frames=return_frames
+                )
+                animations.append(animation)
+                
+            elif anim_type == "jitter":
+                intensity = getattr(anim_spec, 'intensity', 2.0)
+                min_interval = getattr(anim_spec, 'min_interval', 3)
+                max_interval = getattr(anim_spec, 'max_interval', 8)
+                animation = JitterAnimation(
+                    trigger=trigger,
+                    intensity=intensity,
+                    min_interval=min_interval,
+                    max_interval=max_interval
+                )
+                animations.append(animation)
+                
+            elif anim_type == "brightness_flicker":
+                intensity = getattr(anim_spec, 'intensity', 0.15)
+                return_frames = getattr(anim_spec, 'return_frames', 1)
+                animation = BrightnessFlickerAnimation(
+                    trigger=trigger,
+                    intensity=intensity,
+                    return_frames=return_frames
+                )
+                animations.append(animation)
+                
+            elif anim_type == "black_white":
+                intensity = getattr(anim_spec, 'intensity', 0.8)
+                animation = BlackWhiteAnimation(
+                    trigger=trigger,
+                    intensity=intensity
+                )
+                animations.append(animation)
+                
+            elif anim_type == "film_grain":
+                intensity = getattr(anim_spec, 'intensity', 0.1)
+                animation = FilmGrainAnimation(
+                    trigger=trigger,
+                    intensity=intensity
+                )
+                animations.append(animation)
+                
+            elif anim_type == "vintage_color":
+                sepia_amount = getattr(anim_spec, 'sepia_amount', 0.3)
+                contrast_boost = getattr(anim_spec, 'contrast_boost', 0.2)
+                animation = VintageColorGradeAnimation(
+                    trigger=trigger,
+                    sepia_amount=sepia_amount,
+                    contrast_boost=contrast_boost
+                )
+                animations.append(animation)
+        
+        return animations
+
 
 def main() -> int:
     """
@@ -642,24 +791,30 @@ def main() -> int:
     Returns:
         int: Kod wyjścia (0 dla sukcesu, 1 dla błędu)
     """
-    configurator = BlenderVSEConfigurator()
+    try:
+        configurator = BlenderVSEConfigurator()
 
-    print("=== Parametryczny skrypt Blender VSE ===")
-    print(f"Pliki wideo: {len(configurator.video_files)}")
-    print(f"Główne audio: {configurator.main_audio}")
-    print(f"Plik wyjściowy: {configurator.output_blend}")
-    print(f"Renderowanie: {configurator.render_output}")
-    print(f"Rozdzielczość: {configurator.resolution_x}x{configurator.resolution_y}")
-    print(f"FPS: {configurator.fps}")
-    print()
+        print("=== Parametryczny skrypt Blender VSE z YAML ===")
+        print(f"Pliki wideo: {len(configurator.video_files)}")
+        print(f"Główne audio: {configurator.main_audio}")
+        print(f"Plik wyjściowy: {configurator.output_blend}")
+        print(f"Renderowanie: {configurator.render_output}")
+        print(f"Rozdzielczość: {configurator.resolution_x}x{configurator.resolution_y}")
+        print(f"FPS: {configurator.fps}")
+        print(f"Layout: {configurator.yaml_config.layout_type}")
+        print(f"Animations: {len(configurator.yaml_config.animations)}")
+        print()
 
-    success = configurator.setup_vse_project()
+        success = configurator.setup_vse_project()
 
-    if success:
-        print("✅ Projekt VSE skonfigurowany pomyślnie!")
-        return 0
-    else:
-        print("❌ Błąd konfiguracji projektu VSE")
+        if success:
+            print("✅ Projekt VSE skonfigurowany pomyślnie z YAML!")
+            return 0
+        else:
+            print("❌ Błąd konfiguracji projektu VSE")
+            return 1
+    except Exception as e:
+        print(f"❌ Błąd inicjalizacji: {e}")
         return 1
 
 

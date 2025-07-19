@@ -224,6 +224,13 @@ class CinemonConfigGenerator:
         # Get video files from the discovery instance
         video_files = discovery.discover_video_files()
         
+        # Auto-detect audio analysis file
+        analysis_files = discovery.discover_analysis_files()
+        analysis_file = None
+        if analysis_files:
+            # Use the first analysis file found
+            analysis_file = f"analysis/{analysis_files[0]}"
+        
         # Build complete configuration
         config_data = {
             "project": {
@@ -237,7 +244,8 @@ class CinemonConfigGenerator:
             },
             "audio_analysis": {
                 "beat_division": overrides.get("beat_division", 4),
-                "min_onset_interval": overrides.get("min_onset_interval", 0.5)
+                "min_onset_interval": overrides.get("min_onset_interval", 0.5),
+                "file": analysis_file
             },
             "layout": layout,
             "animations": animations
@@ -269,6 +277,13 @@ class CinemonConfigGenerator:
         # Get video files from the discovery instance
         video_files = discovery.discover_video_files()
         
+        # Auto-detect audio analysis file
+        analysis_files = discovery.discover_analysis_files()
+        analysis_file = None
+        if analysis_files:
+            # Use the first analysis file found
+            analysis_file = f"analysis/{analysis_files[0]}"
+        
         # Default project settings
         project_settings = {
             "video_files": video_files,
@@ -287,7 +302,8 @@ class CinemonConfigGenerator:
         # Default audio analysis settings
         audio_analysis = {
             "beat_division": kwargs.get("beat_division", 4),
-            "min_onset_interval": kwargs.get("min_onset_interval", 0.5)
+            "min_onset_interval": kwargs.get("min_onset_interval", 0.5),
+            "file": analysis_file
         }
         
         config_data = {
