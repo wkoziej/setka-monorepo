@@ -12,6 +12,25 @@ import json
 from blender.config.preset_manager import PresetManager, PresetConfig
 
 
+@pytest.fixture(autouse=True)
+def isolated_custom_presets(tmp_path, monkeypatch):
+    """Ensure each test uses isolated temporary directory for custom presets."""
+    temp_presets_dir = tmp_path / "custom_presets"
+    temp_presets_dir.mkdir()
+    
+    # Mock the custom presets directory method
+    monkeypatch.setattr(PresetManager, '_get_custom_presets_dir', lambda self: temp_presets_dir)
+    
+    # Clear any cached presets to ensure isolation
+    original_init = PresetManager.__init__
+    def patched_init(self):
+        original_init(self)
+        self._custom_presets_cache = None
+    monkeypatch.setattr(PresetManager, '__init__', patched_init)
+    
+    yield temp_presets_dir
+
+
 class TestPresetManager:
     """Test cases for PresetManager preset functionality."""
 

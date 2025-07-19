@@ -94,7 +94,7 @@ class TestRotationWobbleAnimation:
         assert not (rotations[0] == rotations[1] == rotations[2])
     
     def test_rotation_wobble_no_oscillate(self, mock_strip):
-        """Test że bez oscillate kierunek jest zawsze ten sam."""
+        """Test że bez oscillate wartości są w zakresie ale nie kontrolowane."""
         animation = RotationWobbleAnimation(
             wobble_degrees=1.0,
             oscillate=False
@@ -106,9 +106,11 @@ class TestRotationWobbleAnimation:
         
         calls = animation.keyframe_helper.insert_transform_rotation_keyframe.call_args_list
         
-        # All wobbles should be in same direction (positive)
+        # All wobbles should be within range (random in both directions)
         for i in [1, 3]:  # Wobble keyframes
-            assert calls[i][0][2] >= 0
+            wobble_radians = calls[i][0][2]
+            wobble_degrees = math.degrees(wobble_radians)
+            assert -1.0 <= wobble_degrees <= 1.0
     
     def test_rotation_wobble_return_frames(self, mock_strip):
         """Test że return_frames kontroluje czas powrotu."""

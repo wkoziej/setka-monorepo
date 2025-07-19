@@ -3,6 +3,7 @@
 
 """Main configuration generator for cinemon."""
 
+import copy
 import yaml
 from pathlib import Path
 from typing import Dict, List, Any, Optional, Union
@@ -209,9 +210,9 @@ class CinemonConfigGenerator:
         Returns:
             Complete configuration dictionary
         """
-        # Start with preset base
-        layout = preset_config.layout.copy()
-        animations = [anim.copy() for anim in preset_config.animations]
+        # Start with preset base (deep copy to avoid modifying original)
+        layout = copy.deepcopy(preset_config.layout)
+        animations = copy.deepcopy(preset_config.animations)
         
         # Apply overrides to layout
         if "seed" in overrides:

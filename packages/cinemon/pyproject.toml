@@ -35,6 +35,7 @@ dev = [
 
 [project.scripts]
 cinemon-blend-setup = "blender.cli.blend_setup:main"
+cinemon-generate-config = "blender.cli.generate_config:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/blender"]
