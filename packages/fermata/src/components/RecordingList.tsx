@@ -82,8 +82,8 @@ function RecordingRow({ recording, onAction, isOperationRunning }: {
   return (
     <tr style={{ borderBottom: '1px solid #e5e7eb' }}>
       <td style={{ padding: '12px 8px' }}>
-        <div style={{ fontWeight: '500' }}>{recording.name}</div>
-        <div style={{ fontSize: '0.875rem', color: '#6b7280' }}>
+        <div style={{ fontWeight: '500', fontSize: '1.2em' }}>{recording.name}</div>
+        <div style={{ fontSize: '0.7875rem', color: '#6b7280' }}>
           {formatFileSize(totalSize)}
         </div>
       </td>
@@ -108,6 +108,35 @@ function RecordingRow({ recording, onAction, isOperationRunning }: {
       </td>
       <td style={{ padding: '12px 8px' }}>
         <div style={{ display: 'flex', gap: '8px' }}>
+          <button
+            onClick={() => onAction(recording.name, 'View')}
+            style={{
+              padding: '6px 12px',
+              fontSize: '0.875rem',
+              backgroundColor: '#f3f4f6',
+              color: '#374151',
+              border: '1px solid #d1d5db',
+              borderRadius: '6px',
+              cursor: 'pointer'
+            }}
+          >
+            👁️
+          </button>
+          <button
+            onClick={() => onAction(recording.name, 'Delete')}
+            disabled={isOperationRunning}
+            style={{
+              padding: '6px 12px',
+              fontSize: '0.875rem',
+              backgroundColor: isOperationRunning ? '#f3f4f6' : 'transparent',
+              color: isOperationRunning ? '#9ca3af' : '#dc2626',
+              border: `1px solid ${isOperationRunning ? '#d1d5db' : '#dc2626'}`,
+              borderRadius: '6px',
+              cursor: isOperationRunning ? 'not-allowed' : 'pointer'
+            }}
+          >
+            🗑️
+          </button>
           {nextAction && (
             <button
               onClick={() => onAction(recording.name, nextAction)}
@@ -124,35 +153,6 @@ function RecordingRow({ recording, onAction, isOperationRunning }: {
               {nextAction}
             </button>
           )}
-          <button
-            onClick={() => onAction(recording.name, 'View')}
-            style={{
-              padding: '6px 12px',
-              fontSize: '0.875rem',
-              backgroundColor: '#f3f4f6',
-              color: '#374151',
-              border: '1px solid #d1d5db',
-              borderRadius: '6px',
-              cursor: 'pointer'
-            }}
-          >
-            View
-          </button>
-          <button
-            onClick={() => onAction(recording.name, 'Delete')}
-            disabled={isOperationRunning}
-            style={{
-              padding: '6px 12px',
-              fontSize: '0.875rem',
-              backgroundColor: isOperationRunning ? '#f3f4f6' : 'transparent',
-              color: isOperationRunning ? '#9ca3af' : '#dc2626',
-              border: `1px solid ${isOperationRunning ? '#d1d5db' : '#dc2626'}`,
-              borderRadius: '6px',
-              cursor: isOperationRunning ? 'not-allowed' : 'pointer'
-            }}
-          >
-            🗑️ Usuń
-          </button>
         </div>
       </td>
     </tr>
@@ -239,9 +239,33 @@ export function RecordingList({ onSelectRecording }: RecordingListProps) {
         display: 'flex', 
         justifyContent: 'space-between', 
         alignItems: 'center', 
-        marginBottom: '20px' 
+        marginBottom: '20px',
+        paddingTop: '30px',
+        paddingBottom: '10px'
       }}>
-        <h1>fermata - Recording Manager</h1>
+        <h1 style={{ position: 'relative', display: 'inline-block' }}>
+          <span style={{ position: 'relative' }}>
+            <span style={{ 
+              position: 'absolute', 
+              top: '-20px', 
+              left: '0px',
+              fontSize: '24px',
+              lineHeight: '1'
+            }}>𝄐</span>
+            f
+          </span>
+          ermat
+          <span style={{ position: 'relative' }}>
+            a
+            <span style={{ 
+              position: 'absolute', 
+              bottom: '-20px', 
+              right: '0px',
+              fontSize: '24px',
+              lineHeight: '1'
+            }}>𝄑</span>
+          </span>
+        </h1>
         <div style={{ display: 'flex', gap: '10px' }}>
           <button 
             onClick={refreshRecordings}
