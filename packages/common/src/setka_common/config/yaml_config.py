@@ -64,6 +64,38 @@ class BlenderYAMLConfig:
     audio_analysis: AudioAnalysisConfig
     layout: LayoutConfig
     animations: List[AnimationSpec]
+    
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert config to dictionary for JSON serialization."""
+        return {
+            'project': {
+                'video_files': self.project.video_files,
+                'main_audio': self.project.main_audio,
+                'output_blend': self.project.output_blend,
+                'render_output': self.project.render_output,
+                'fps': self.project.fps,
+                'resolution': self.project.resolution,
+                'beat_division': self.project.beat_division
+            },
+            'audio_analysis': {
+                'file': self.audio_analysis.file,
+                'data': self.audio_analysis.data
+            },
+            'layout': {
+                'type': self.layout.type,
+                'config': self.layout.config
+            },
+            'animations': [
+                {
+                    'type': anim.type,
+                    'trigger': anim.trigger,
+                    'target_strips': anim.target_strips,
+                    **{k: v for k, v in anim.__dict__.items() 
+                       if k not in ('type', 'trigger', 'target_strips')}
+                }
+                for anim in self.animations
+            ]
+        }
 
 
 class YAMLConfigLoader:

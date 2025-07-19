@@ -17,15 +17,17 @@ Desktop aplikacja (Tauri) do zarządzania i przeglądania nagrań oraz ich statu
 
 **F1.2 Szczegóły Nagrania**
 - Widok szczegółowy pojedynczego nagrania
-- Status każdego etapu: extracted → analyzed → rendered → uploaded
-- Metadane z każdego etapu (rozmiar plików, czas przetwarzania)
+- Status każdego etapu: extracted → analyzed → config_generated → setup_rendered → rendered → uploaded
+- Metadane z każdego etapu (rozmiar plików, czas przetwarzania, selected animation preset)
 - Podgląd błędów jeśli wystąpiły
+- Edycja YAML konfiguracji przed setup
 
 ### 2. Zarządzanie Workflow
 
 **F2.1 Uruchamianie Etapów**
 - Przycisk "Run Next Step" dla nagrania
-- Możliwość uruchomienia konkretnego etapu (beatrix analyze, cinemon render, medusa upload)
+- Możliwość uruchomienia konkretnego etapu (beatrix analyze, cinemon config generation, cinemon setup, medusa upload)
+- Animation preset selection dla cinemon etapu
 - Batch operations - uruchomienie operacji na wielu nagraniach
 
 **F2.2 Monitoring Operacji**
@@ -42,6 +44,8 @@ Desktop aplikacja (Tauri) do zarządzania i przeglądania nagrań oraz ich statu
 
 **F3.2 Workflow Configuration**
 - Default parametry dla każdego etapu
+- Animation preset selection (vintage, modern, minimal, etc.)
+- YAML config template generation and editing
 
 ## Wymagania Techniczne
 
@@ -68,14 +72,15 @@ Desktop aplikacja (Tauri) do zarządzania i przeglądania nagrań oraz ich statu
 ```rust
 // Sprawdzanie obecności plików/katalogów:
 recording_dir/
-├── *.mkv           → recorded (obsession done)
-├── extracted/      → extracted  
-├── analysis/       → analyzed (beatrix done)
-├── blender/        → setup_rendered (cinemon created .blend project)
+├── *.mkv                    → recorded (obsession done)
+├── extracted/               → extracted  
+├── analysis/                → analyzed (beatrix done)
+├── animation_config_*.yaml  → config_generated (cinemon config ready)
+├── blender/                 → setup_rendered (cinemon created .blend project)
 │   ├── *.blend
 │   └── render/
-│       └── *.mp4   → rendered (blender rendering complete)
-└── uploads/        → uploaded (medusa done)
+│       └── *.mp4            → rendered (blender rendering complete)
+└── uploads/                 → uploaded (medusa done)
 ```
 
 **Uruchamianie Etapów:**
@@ -83,8 +88,11 @@ recording_dir/
 # Beatrix analyze
 uv run --package beatrix analyze recording_dir/extracted/audio.m4a
 
-# Cinemon setup (creates .blend project)  
-uv run --package cinemon cinemon-blend-setup recording_dir --animation-mode beat-switch
+# Cinemon config generation with presets
+cinemon-generate-config recording_dir --preset vintage
+
+# Cinemon setup (creates .blend project using YAML config)
+cinemon-blend-setup recording_dir --config recording_dir/animation_config_vintage.yaml
 
 # Manual Blender render (user runs this manually or via script)
 blender -b recording_dir/blender/project.blend -o recording_dir/blender/render/frame_#### -f 1
@@ -115,17 +123,20 @@ uv run --package medusa upload recording_dir/blender/render/final.mp4 --config c
 │ stream_20240115_120000                              [< Back] │
 ├─────────────────────────────────────────────────────────────┤
 │ Pipeline Status:                                            │
-│ ✅ Recorded → ✅ Extracted → ✅ Analyzed → 🎬 Setup → ⏳ Render → Upload │
+│ ✅ Recorded → ✅ Extracted → ✅ Analyzed → ✅ Config → 🎬 Setup → ⏳ Render → Upload │
 ├─────────────────────────────────────────────────────────────┤
 │ Files:                                                      │
 │ 📹 recording.mkv (2.3GB)    📁 extracted/ (5 files)        │
-│ 📊 analysis/ (1 file)       🎬 blender/ (.blend project)    │
+│ 📊 analysis/ (1 file)       ⚙️ animation_config_vintage.yaml │
+│ 🎬 blender/ (.blend project)                               │
 ├─────────────────────────────────────────────────────────────┤
-│ Actions: [Render in Blender] [Re-setup] [View Logs]         │
+│ Actions: [Generate Config] [Edit Config] [Render in Blender] [Re-setup] [View Logs] │
 ├─────────────────────────────────────────────────────────────┤
 │ Recent Logs:                                                │
 │ [14:30] cinemon: Blender project created successfully       │
-│ [14:25] cinemon: Processing beat-switch animations...       │
+│ [14:28] cinemon: Applied vintage animation preset          │
+│ [14:25] cinemon: Processing compositional animations...     │
+│ [14:22] cinemon: Generated YAML config with vintage preset │
 │ [14:20] cinemon: Loading audio analysis data               │
 └─────────────────────────────────────────────────────────────┘
 ```
@@ -149,6 +160,30 @@ uv run --package medusa upload recording_dir/blender/render/final.mp4 --config c
 - Harmonogram operacji
 - Integracja z system notifications
 - Export/import konfiguracji
+
+## YAML Configuration System
+
+### Animation Presets
+Fermata now supports animation preset selection with the cinemon config generator:
+
+**Available Presets:**
+- `vintage`: Film grain, sepia toning, vintage color grading, rotation wobbles
+- `modern`: Clean scale animations with bass response
+- `minimal`: Subtle effects with reduced intensity
+- `custom`: User-defined template for manual editing
+
+**Workflow Integration:**
+1. User selects animation preset in GUI
+2. `cinemon-generate-config recording_dir --preset vintage` generates YAML config
+3. User can optionally edit YAML config in GUI text editor
+4. `cinemon-blend-setup recording_dir --config animation_config_vintage.yaml` creates Blender project
+5. YAML→JSON fallback ensures compatibility with Blender environment
+
+### Technical Implementation
+- **Config Generation**: CinemonConfigGenerator creates YAML configs from presets and auto-discovered media
+- **Blender Integration**: YAML configs converted to JSON before passing to Blender (no PyYAML dependency)
+- **Status Detection**: New `config_generated` status detected by presence of `animation_config_*.yaml` files
+- **UI Integration**: PresetSelector component in React frontend for preset selection
 
 ## Structure
 

@@ -73,13 +73,14 @@ class BlenderProjectManager:
         # 3. Resolve paths relative to recording directory and create resolved config
         resolved_config = self._create_resolved_config(yaml_config, recording_path, structure)
         
-        # 4. Create temporary YAML file with resolved paths
+        # 4. Create temporary JSON file with resolved paths
         temp_config_file = None
         try:
-            # Write resolved config to temporary YAML file
-            temp_config_file = tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False, encoding='utf-8')
-            config_dict = self._convert_config_to_dict(resolved_config)
-            yaml_module.dump(config_dict, temp_config_file, default_flow_style=False, allow_unicode=True)
+            # Write resolved config to temporary JSON file
+            import json
+            temp_config_file = tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False, encoding='utf-8')
+            config_dict = resolved_config.to_dict()
+            json.dump(config_dict, temp_config_file, indent=2, ensure_ascii=False)
             temp_config_file.close()
             
             logger.info(f"Created temporary config file: {temp_config_file.name}")
@@ -88,9 +89,9 @@ class BlenderProjectManager:
                 logger.info(f"Main audio: {resolved_config.project.main_audio}")
             logger.info(f"Animation mode: compositional with {len(resolved_config.animations)} animations")
 
-            # 5. Execute Blender with YAML config path
+            # 5. Execute Blender with JSON config path
             output_blend = resolved_config.project.output_blend
-            self._execute_blender_with_yaml_config(temp_config_file.name)
+            self._execute_blender_with_json_config(temp_config_file.name)
             
             logger.info(f"Blender project created successfully with YAML config: {output_blend}")
             return Path(output_blend)
@@ -110,12 +111,12 @@ class BlenderProjectManager:
 
 
 
-    def _execute_blender_with_yaml_config(self, config_path: str) -> None:
+    def _execute_blender_with_json_config(self, config_path: str) -> None:
         """
-        Execute Blender with the parametric script and YAML config file path.
+        Execute Blender with the parametric script and JSON config file path.
 
         Args:
-            config_path: Path to the YAML configuration file
+            config_path: Path to the JSON configuration file
 
         Raises:
             RuntimeError: If Blender execution fails
@@ -328,55 +329,3 @@ class BlenderProjectManager:
             animations=yaml_config.animations
         )
     
-    def _convert_config_to_dict(self, config: BlenderYAMLConfig) -> dict:
-        """
-        Convert BlenderYAMLConfig object to dictionary for YAML serialization.
-        
-        Args:
-            config: YAML configuration object
-            
-        Returns:
-            dict: Configuration as dictionary
-        """
-        config_dict = {
-            "project": {
-                "video_files": config.project.video_files,
-                "main_audio": config.project.main_audio,
-                "output_blend": config.project.output_blend,
-                "render_output": config.project.render_output,
-                "fps": config.project.fps,
-                "beat_division": config.project.beat_division
-            },
-            "audio_analysis": {
-                "file": config.audio_analysis.file,
-                "data": config.audio_analysis.data
-            },
-            "layout": {
-                "type": config.layout.type,
-                "config": config.layout.config
-            },
-            "animations": []
-        }
-        
-        # Add resolution if present
-        if config.project.resolution:
-            config_dict["project"]["resolution"] = config.project.resolution
-        
-        # Convert animations
-        for animation in config.animations:
-            anim_dict = {
-                "type": animation.type,
-                "trigger": animation.trigger,
-                "target_strips": animation.target_strips
-            }
-            
-            # Add dynamic parameters
-            for attr_name in dir(animation):
-                if not attr_name.startswith('_') and attr_name not in ['type', 'trigger', 'target_strips']:
-                    value = getattr(animation, attr_name)
-                    if not callable(value):
-                        anim_dict[attr_name] = value
-            
-            config_dict["animations"].append(anim_dict)
-        
-        return config_dict

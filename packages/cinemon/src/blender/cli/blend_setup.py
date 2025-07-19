@@ -104,7 +104,9 @@ def validate_recording_directory(recording_dir: Path) -> None:
     # Check for metadata.json
     metadata_path = recording_dir / "metadata.json"
     if not metadata_path.exists():
-        raise ValueError(f"Brak pliku metadata.json w katalogu: {recording_dir}")
+        raise ValueError(f"❌ Stare nagranie bez metadata.json: {recording_dir}\n"
+                        f"💡 To nagranie pochodzi sprzed aktualizacji OBS script.\n"
+                        f"🔧 Przenieś je do osobnego katalogu lub wygeneruj metadata.json ręcznie.")
 
     # Check for extracted directory
     extracted_dir = recording_dir / "extracted"

@@ -24,7 +24,6 @@ from typing import List, Optional, Tuple, Dict
 
 # Import refactored modules
 try:
-    from .vse.yaml_config import BlenderYAMLConfigReader
     from .vse.constants import AnimationConstants
     from .vse.keyframe_helper import KeyframeHelper
     from .vse.layout_manager import BlenderLayoutManager
@@ -32,7 +31,6 @@ try:
 except ImportError:
     # Fallback for when script is run standalone in Blender
     sys.path.append(str(Path(__file__).parent))
-    from vse.yaml_config import BlenderYAMLConfigReader
     from vse.constants import AnimationConstants
     from vse.keyframe_helper import KeyframeHelper
     from vse.layout_manager import BlenderLayoutManager
@@ -43,29 +41,32 @@ class BlenderVSEConfigurator:
     """Konfigurator Blender VSE z konfiguracji YAML."""
 
     def __init__(self, config_path: Optional[str] = None):
-        """Inicjalizuj konfigurator z konfiguracji YAML.
+        """Inicjalizuj konfigurator z konfiguracji JSON.
         
         Args:
-            config_path: Ścieżka do pliku konfiguracyjnego YAML
+            config_path: Ścieżka do pliku konfiguracyjnego JSON
         """
         # Parse command line arguments if no config path provided
         if config_path is None:
             config_path = self._parse_command_line_args()
         
-        # Load YAML configuration
-        self.yaml_config = BlenderYAMLConfigReader(config_path)
+        # Load JSON configuration
+        with open(config_path, 'r', encoding='utf-8') as f:
+            self.config_data = json.load(f)
         
         # Set attributes from config (maintaining compatibility)
-        self.video_files = [Path(f) for f in self.yaml_config.video_files]
-        self.main_audio = Path(self.yaml_config.main_audio) if self.yaml_config.main_audio else None
-        self.output_blend = Path(self.yaml_config.output_blend) if self.yaml_config.output_blend else None
-        self.render_output = Path(self.yaml_config.render_output) if self.yaml_config.render_output else None
-        self.fps = self.yaml_config.fps
-        self.resolution_x = self.yaml_config.resolution_x
-        self.resolution_y = self.yaml_config.resolution_y
-        self.beat_division = self.yaml_config.beat_division
+        project = self.config_data['project']
+        self.video_files = [Path(f) for f in project['video_files']]
+        self.main_audio = Path(project['main_audio']) if project.get('main_audio') else None
+        self.output_blend = Path(project['output_blend']) if project.get('output_blend') else None
+        self.render_output = Path(project['render_output']) if project.get('render_output') else None
+        self.fps = project.get('fps', 30)
+        resolution = project.get('resolution', {})
+        self.resolution_x = resolution.get('width', 1920)
+        self.resolution_y = resolution.get('height', 1080)
+        self.beat_division = project.get('beat_division', 8)
         
-        # Animation mode is always compositional with YAML config
+        # Animation mode is always compositional with JSON config
         self.animation_mode = "compositional"
 
         # Initialize project setup with config
@@ -105,7 +106,14 @@ class BlenderVSEConfigurator:
         Returns:
             Tuple[bool, List[str]]: (czy_valid, lista_błędów)
         """
-        return self.yaml_config.validate()
+        # Basic validation for JSON config
+        errors = []
+        required_keys = ['project', 'audio_analysis', 'layout', 'animations']
+        for key in required_keys:
+            if key not in self.config_data:
+                errors.append(f"Missing required key: {key}")
+        
+        return len(errors) == 0, errors
 
     def setup_vse_project(self) -> bool:
         """
@@ -131,7 +139,7 @@ class BlenderVSEConfigurator:
             return False
 
         # Apply compositional animations if configured
-        if self.yaml_config.animations:
+        if self.config_data['animations']:
             sequencer = bpy.context.scene.sequence_editor
             animation_success = self._apply_compositional_animations(sequencer)
             if not animation_success:
@@ -180,8 +188,10 @@ class BlenderVSEConfigurator:
             return False
 
         print(f"✓ Found {len(video_strips)} video strips for animation")
-        print(f"✓ Layout type: {self.yaml_config.layout_type}")
-        print(f"✓ Animations configured: {len(self.yaml_config.animations)}")
+        layout = self.config_data.get('layout', {})
+        animations = self.config_data.get('animations', [])
+        print(f"✓ Layout type: {layout.get('type', 'unknown')}")
+        print(f"✓ Animations configured: {len(animations)}")
         
         # Apply layout using YAML config
         success = self._apply_yaml_layout_and_animations(video_strips, animation_data)
@@ -201,7 +211,9 @@ class BlenderVSEConfigurator:
             Optional[Dict]: Animation data with events or None if not available
         """
         # Load animation data using YAML config
-        full_data = self.yaml_config.load_audio_analysis_data()
+        # Load audio analysis data from JSON config
+        audio_analysis = self.config_data.get('audio_analysis', {})
+        full_data = audio_analysis.get('data', {})
         
         if not full_data:
             print("No audio analysis data found in YAML config")
@@ -293,8 +305,9 @@ class BlenderVSEConfigurator:
         """Create layout instance from YAML configuration."""
         from .vse.layouts import RandomLayout
         
-        layout_type = self.yaml_config.layout_type
-        layout_config = self.yaml_config.layout_config or {}
+        layout = self.config_data.get('layout', {})
+        layout_type = layout.get('type', 'random')
+        layout_config = layout.get('config', {})
         
         if layout_type == "random":
             return RandomLayout(
@@ -318,14 +331,14 @@ class BlenderVSEConfigurator:
         
         animations = []
         
-        for anim_spec in self.yaml_config.animations:
-            anim_type = anim_spec.type
-            trigger = anim_spec.trigger
+        for anim_spec in self.config_data.get('animations', []):
+            anim_type = anim_spec.get('type')
+            trigger = anim_spec.get('trigger')
             
             # Create animation based on type
             if anim_type == "scale":
-                intensity = getattr(anim_spec, 'intensity', 0.3)
-                duration_frames = getattr(anim_spec, 'duration_frames', 2)
+                intensity = anim_spec.get('intensity', 0.3)
+                duration_frames = anim_spec.get('duration_frames', 2)
                 animation = ScaleAnimation(
                     trigger=trigger,
                     intensity=intensity,
@@ -334,8 +347,8 @@ class BlenderVSEConfigurator:
                 animations.append(animation)
                 
             elif anim_type == "shake":
-                intensity = getattr(anim_spec, 'intensity', 10.0)
-                return_frames = getattr(anim_spec, 'return_frames', 2)
+                intensity = anim_spec.get('intensity', 10.0)
+                return_frames = anim_spec.get('return_frames', 2)
                 animation = ShakeAnimation(
                     trigger=trigger,
                     intensity=intensity,
@@ -344,8 +357,8 @@ class BlenderVSEConfigurator:
                 animations.append(animation)
                 
             elif anim_type == "rotation":
-                wobble_degrees = getattr(anim_spec, 'wobble_degrees', 1.0)
-                return_frames = getattr(anim_spec, 'return_frames', 3)
+                wobble_degrees = anim_spec.get('wobble_degrees', 1.0)
+                return_frames = anim_spec.get('return_frames', 3)
                 animation = RotationWobbleAnimation(
                     trigger=trigger,
                     wobble_degrees=wobble_degrees,
@@ -354,9 +367,9 @@ class BlenderVSEConfigurator:
                 animations.append(animation)
                 
             elif anim_type == "jitter":
-                intensity = getattr(anim_spec, 'intensity', 2.0)
-                min_interval = getattr(anim_spec, 'min_interval', 3)
-                max_interval = getattr(anim_spec, 'max_interval', 8)
+                intensity = anim_spec.get('intensity', 2.0)
+                min_interval = anim_spec.get('min_interval', 3)
+                max_interval = anim_spec.get('max_interval', 8)
                 animation = JitterAnimation(
                     trigger=trigger,
                     intensity=intensity,
@@ -366,8 +379,8 @@ class BlenderVSEConfigurator:
                 animations.append(animation)
                 
             elif anim_type == "brightness_flicker":
-                intensity = getattr(anim_spec, 'intensity', 0.15)
-                return_frames = getattr(anim_spec, 'return_frames', 1)
+                intensity = anim_spec.get('intensity', 0.15)
+                return_frames = anim_spec.get('return_frames', 1)
                 animation = BrightnessFlickerAnimation(
                     trigger=trigger,
                     intensity=intensity,
@@ -376,7 +389,7 @@ class BlenderVSEConfigurator:
                 animations.append(animation)
                 
             elif anim_type == "black_white":
-                intensity = getattr(anim_spec, 'intensity', 0.8)
+                intensity = anim_spec.get('intensity', 0.8)
                 animation = BlackWhiteAnimation(
                     trigger=trigger,
                     intensity=intensity
@@ -384,7 +397,7 @@ class BlenderVSEConfigurator:
                 animations.append(animation)
                 
             elif anim_type == "film_grain":
-                intensity = getattr(anim_spec, 'intensity', 0.1)
+                intensity = anim_spec.get('intensity', 0.1)
                 animation = FilmGrainAnimation(
                     trigger=trigger,
                     intensity=intensity
@@ -392,8 +405,8 @@ class BlenderVSEConfigurator:
                 animations.append(animation)
                 
             elif anim_type == "vintage_color":
-                sepia_amount = getattr(anim_spec, 'sepia_amount', 0.3)
-                contrast_boost = getattr(anim_spec, 'contrast_boost', 0.2)
+                sepia_amount = anim_spec.get('sepia_amount', 0.3)
+                contrast_boost = anim_spec.get('contrast_boost', 0.2)
                 animation = VintageColorGradeAnimation(
                     trigger=trigger,
                     sepia_amount=sepia_amount,
@@ -421,8 +434,8 @@ def main() -> int:
         print(f"Renderowanie: {configurator.render_output}")
         print(f"Rozdzielczość: {configurator.resolution_x}x{configurator.resolution_y}")
         print(f"FPS: {configurator.fps}")
-        print(f"Layout: {configurator.yaml_config.layout_type}")
-        print(f"Animations: {len(configurator.yaml_config.animations)}")
+        print(f"Layout: {configurator.config_data.get('layout', {}).get('type', 'unknown')}")
+        print(f"Animations: {len(configurator.config_data.get('animations', []))}")
         print()
 
         success = configurator.setup_vse_project()
