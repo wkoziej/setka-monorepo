@@ -75,18 +75,18 @@ class TestAnimationConstants:
         assert AnimationConstants.PIP_SCALE_FACTOR > 0.0
 
     def test_pip_scale_factor_value(self):
-        """PiP scale factor should be 0.3 (small corner PiP scale)."""
-        assert AnimationConstants.PIP_SCALE_FACTOR == 0.3
+        """PiP scale factor should be 0.25 (small corner PiP scale)."""
+        assert AnimationConstants.PIP_SCALE_FACTOR == 0.25
 
     def test_pip_margin_exists_and_valid(self):
-        """PiP margin should be a positive integer."""
+        """PiP margin should be a positive float (percentage)."""
         assert hasattr(AnimationConstants, "PIP_MARGIN")
-        assert isinstance(AnimationConstants.PIP_MARGIN, int)
+        assert isinstance(AnimationConstants.PIP_MARGIN, float)
         assert AnimationConstants.PIP_MARGIN > 0
 
     def test_pip_margin_value(self):
-        """PiP margin should be 160 (current system value)."""
-        assert AnimationConstants.PIP_MARGIN == 160
+        """PiP margin should be 0.05 (5% margin from edges)."""
+        assert AnimationConstants.PIP_MARGIN == 0.05
 
     def test_scale_factors_are_reasonable(self):
         """Scale factors should be within reasonable bounds for UI animations."""
@@ -142,8 +142,7 @@ class TestConstantsIntegration:
         scaled_energy = 100 * AnimationConstants.ENERGY_SCALE_FACTOR
         assert scaled_energy == 120.0
 
-        # Test margin calculation
-        corner_x = (
-            BlenderConstants.DEFAULT_RESOLUTION_X // 2 - AnimationConstants.PIP_MARGIN
-        )
-        assert corner_x == 480  # 640 - 160
+        # Test margin calculation (percentage-based)
+        margin_pixels = BlenderConstants.DEFAULT_RESOLUTION_X * AnimationConstants.PIP_MARGIN
+        corner_x = BlenderConstants.DEFAULT_RESOLUTION_X // 2 - margin_pixels
+        assert corner_x == 576.0  # 640 - (1280 * 0.05) = 640 - 64 = 576

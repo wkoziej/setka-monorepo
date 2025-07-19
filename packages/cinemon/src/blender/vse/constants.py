@@ -20,3 +20,4 @@ class AnimationConstants:
     PIP_MARGIN_PERCENT = (
         0.05  # 5% margin from edges - should work with corrected PiP size calculation
     )
+    PIP_MARGIN = PIP_MARGIN_PERCENT  # Alias for backwards compatibility

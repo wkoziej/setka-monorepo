@@ -66,12 +66,13 @@ class AnimationCompositor:
             positions = self.layout.calculate_positions(len(video_strips), resolution)
             self._apply_layout(video_strips, positions)
             
-            # 3. Apply animations independently
+            # 3. Apply animations independently with strip targeting
             for animation in self.animations:
                 events = self._extract_events(audio_analysis, animation.trigger)
                 if events:  # Only apply if events exist
                     for strip in video_strips:
-                        animation.apply_to_strip(strip, events, fps)
+                        if animation.should_apply_to_strip(strip):
+                            animation.apply_to_strip(strip, events, fps)
             
             return True
             

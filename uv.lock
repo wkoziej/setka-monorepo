@@ -1977,6 +1977,7 @@ version = "0.1.0"
 source = { editable = "packages/common" }
 dependencies = [
     { name = "pathlib-extensions" },
+    { name = "pyyaml" },
 ]
 
 [package.optional-dependencies]
@@ -2003,6 +2004,7 @@ requires-dist = [
     { name = "pathlib-extensions", specifier = ">=0.1.0" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=7.0.0" },
     { name = "pytest-cov", marker = "extra == 'dev'", specifier = ">=4.0.0" },
+    { name = "pyyaml", specifier = ">=6.0.0" },
 ]
 provides-extras = ["dev"]
 

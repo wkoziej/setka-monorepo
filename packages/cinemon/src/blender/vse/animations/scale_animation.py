@@ -3,7 +3,7 @@
 
 """Scale animation for VSE strips."""
 
-from typing import List
+from typing import List, Optional
 
 from .base_effect_animation import BaseEffectAnimation
 
@@ -23,7 +23,8 @@ class ScaleAnimation(BaseEffectAnimation):
                  trigger: str = "bass",
                  intensity: float = 0.3,
                  duration_frames: int = 2,
-                 easing: str = "linear"):
+                 easing: str = "linear",
+                 target_strips: Optional[List[str]] = None):
         """
         Initialize ScaleAnimation.
         
@@ -32,8 +33,9 @@ class ScaleAnimation(BaseEffectAnimation):
             intensity: How much to scale up (0.1 = 10% increase)
             duration_frames: Duration of scale effect in frames
             easing: Type of easing (future feature)
+            target_strips: List of strip names to target (None = all strips)
         """
-        super().__init__()
+        super().__init__(target_strips=target_strips)
         self.trigger = trigger
         self.intensity = intensity
         self.duration_frames = duration_frames

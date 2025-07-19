@@ -25,6 +25,7 @@ classifiers = [
 
 dependencies = [
     "pathlib-extensions>=0.1.0",
+    "PyYAML>=6.0.0",
 ]
 
 [project.optional-dependencies]

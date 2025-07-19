@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
-import { Recording, RecordingListState, DeletionConfirmationState, RenameConfirmationState } from '../types';
+import { Recording, RecordingListState, DeletionConfirmationState, RenameConfirmationState, RenderOptions } from '../types';
 import { invoke } from '@tauri-apps/api/core';
 
 // Tauri API wrapper with fallback for development
@@ -202,10 +202,45 @@ export function useRecordingOperations() {
     }
   }, []);
 
+  const runSetupRenderWithPreset = useCallback(async (recordingName: string, preset: string, mainAudio?: string) => {
+    console.log(`🚀 Starting runSetupRenderWithPreset for: ${recordingName}, preset: ${preset}, mainAudio: ${mainAudio}`);
+    setOperationState(prev => ({ 
+      ...prev, 
+      running: { ...prev.running, [recordingName]: true }, 
+      output: '', 
+      error: null 
+    }));
+
+    try {
+      const options: RenderOptions = { preset, main_audio: mainAudio };
+      const result = await invokeCommand('run_specific_step_with_options', {
+        recordingName,
+        step: 'setuprender',
+        options
+      });
+      
+      setOperationState(prev => ({
+        ...prev,
+        running: { ...prev.running, [recordingName]: false },
+        output: result as string,
+        error: null
+      }));
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      setOperationState(prev => ({
+        ...prev,
+        running: { ...prev.running, [recordingName]: false },
+        output: `Error: ${errorMessage}`,
+        error: errorMessage
+      }));
+    }
+  }, []);
+
   return {
     ...operationState,
     runNextStep,
-    runSpecificStep
+    runSpecificStep,
+    runSetupRenderWithPreset,
   };
 }
 

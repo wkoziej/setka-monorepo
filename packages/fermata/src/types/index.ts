@@ -66,4 +66,22 @@ export interface RenameConfirmationState {
   isOpen: boolean;
   recording?: Recording;
   isRenaming: boolean;
-} 
+}
+
+// Render options types
+export interface RenderOptions {
+  preset: string;
+  main_audio?: string;
+}
+
+export interface AnimationPreset {
+  name: string;
+  description: string;
+}
+
+export const AVAILABLE_PRESETS: AnimationPreset[] = [
+  { name: "vintage", description: "Classic film effects with jitter, grain, and vintage color" },
+  { name: "music-video", description: "High-energy effects for music videos with scale, shake, and rotation" },
+  { name: "minimal", description: "Clean, simple animation with basic scale on bass only" },
+  { name: "beat-switch", description: "Legacy compatibility mode replicating old beat-switch behavior" }
+]; 

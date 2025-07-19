@@ -4,6 +4,7 @@
 """Pytest configuration for cinemon tests."""
 
 import sys
+from pathlib import Path
 from unittest.mock import Mock
 import pytest
 
@@ -33,3 +34,39 @@ def mock_bpy(monkeypatch):
     
     # If bpy already exists, return it
     return sys.modules["bpy"]
+
+
+@pytest.fixture
+def sample_recording_structure(tmp_path):
+    """Create a sample recording structure for testing."""
+    # Create recording directory structure
+    recording_dir = tmp_path / "sample_recording"
+    recording_dir.mkdir()
+    
+    # Create metadata.json
+    metadata_file = recording_dir / "metadata.json"
+    metadata_file.write_text('{"fps": 30, "resolution": "1920x1080"}')
+    
+    # Create main video file in recording directory (for RecordingStructureManager)
+    (recording_dir / "recording.mkv").write_text("fake main recording data")
+    
+    # Create extracted directory with sample files
+    extracted_dir = recording_dir / "extracted"
+    extracted_dir.mkdir()
+    
+    # Create sample video files
+    (extracted_dir / "camera1.mp4").write_text("fake video data")
+    (extracted_dir / "screen.mkv").write_text("fake video data")
+    (extracted_dir / "main_audio.m4a").write_text("fake audio data")
+    
+    # Create analysis directory
+    analysis_dir = recording_dir / "analysis"
+    analysis_dir.mkdir()
+    (analysis_dir / "main_audio_analysis.json").write_text('{"beats": [], "energy_peaks": []}')
+    
+    # Create blender directory
+    blender_dir = recording_dir / "blender"
+    blender_dir.mkdir()
+    (blender_dir / "render").mkdir()
+    
+    return recording_dir

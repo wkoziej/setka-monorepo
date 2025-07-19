@@ -4,7 +4,7 @@
 """Shake animation for VSE strips."""
 
 import random
-from typing import List
+from typing import List, Optional
 
 from .base_effect_animation import BaseEffectAnimation
 
@@ -26,7 +26,8 @@ class ShakeAnimation(BaseEffectAnimation):
                  trigger: str = "beat",
                  intensity: float = 10.0,
                  return_frames: int = 2,
-                 random_direction: bool = True):
+                 random_direction: bool = True,
+                 target_strips: Optional[List[str]] = None):
         """
         Initialize ShakeAnimation.
         
@@ -35,8 +36,9 @@ class ShakeAnimation(BaseEffectAnimation):
             intensity: Maximum shake offset in pixels
             return_frames: Frames until position returns to normal
             random_direction: If True, shake randomly; if False, shake horizontally only
+            target_strips: List of strip names to target (None = all strips)
         """
-        super().__init__()
+        super().__init__(target_strips=target_strips)
         self.trigger = trigger
         self.intensity = intensity
         self.return_frames = return_frames

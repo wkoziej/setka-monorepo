@@ -97,7 +97,11 @@ beatrix ←┘
 
 The cinemon package handles Blender VSE automation through:
 
-- **Parametric Scripts**: Environment variables control Blender execution
+- **YAML Configuration System**: Replaces environment variables with structured configuration files
+- **Preset Management**: Built-in presets (vintage, music-video, minimal, beat-switch) with customization support
+- **Media Auto-Discovery**: Automatic detection of video/audio files in recording directories
+- **Configuration Generation**: High-level API for generating YAML configurations from presets or custom parameters
+- **Selective Animation Targeting**: Apply different animations to specific video strips
 - **bpy Mock System**: `conftest.py` provides Mock bpy for testing outside Blender
 - **Animation Engine**: Delegation pattern routing to specialized animators
 - **Audio-Driven Timing**: Beat detection drives keyframe generation
@@ -106,6 +110,9 @@ Key files:
 - `cinemon/vse_script.py` - Main Blender script (executed by Blender)
 - `cinemon/project_manager.py` - Python API for project creation
 - `cinemon/animation_engine.py` - Delegates to beat-switch/energy-pulse/multi-pip animators
+- `cinemon/config/cinemon_config_generator.py` - High-level YAML configuration generation API
+- `cinemon/config/media_discovery.py` - Auto-discovery of media files in recording directories
+- `cinemon/config/preset_manager.py` - Built-in and custom preset management
 
 ### OBS Integration (obsession)
 
@@ -224,9 +231,9 @@ uv run --package beatrix python -m beatrix.cli.analyze_audio \
   "/path/to/recording/extracted/main_audio.m4a" \
   "/path/to/recording/analysis"
 
-# 3. Create Blender VSE project with beat-synchronized animations
+# 3. Create Blender VSE project with preset-based animations
 cinemon-blend-setup /path/to/recording \
-  --animation-mode beat-switch \
+  --preset vintage \
   --main-audio "main_audio.m4a"
 
 # 4. Upload and publish to social media
@@ -255,19 +262,41 @@ print(f'Detected {len(result[\"animation_events\"][\"beats\"])} beats')
 "
 ```
 
-### Cinemon Integration with Beatrix
+### Cinemon YAML Configuration Examples
 
 ```bash
-# Auto-detects and runs beatrix analysis if needed
-cinemon-blend-setup /path/to/recording --animation-mode beat-switch
+# Preset-based configuration generation and execution
+cinemon-blend-setup /path/to/recording --preset vintage
 
-# Using multiple audio files (requires --main-audio)
-cinemon-blend-setup /path/to/recording \
-  --animation-mode energy-pulse \
+# Multiple preset options available
+cinemon-blend-setup /path/to/recording --preset music-video \
   --main-audio "Przechwytywanie wejścia dźwięku (PulseAudio).m4a"
 
-# Skip audio analysis if already exists
-cinemon-blend-setup /path/to/recording \
-  --animation-mode multi-pip \
-  --use-existing-analysis
+# Using custom YAML configuration files
+cinemon-blend-setup /path/to/recording --config ./custom_animation.yaml
+
+# Advanced configuration generation with Python API
+uv run python -c "
+from blender.config import CinemonConfigGenerator
+generator = CinemonConfigGenerator()
+
+# Generate preset with custom overrides
+config_path = generator.generate_preset(
+    '/path/to/recording', 'vintage',
+    seed=42, fps=60, main_audio='audio.m4a'
+)
+
+# Generate completely custom configuration
+layout = {'type': 'random', 'config': {'seed': 123, 'margin': 0.15}}
+animations = [
+    {'type': 'scale', 'trigger': 'bass', 'intensity': 0.8, 'target_strips': ['Camera1']},
+    {'type': 'vintage_color', 'trigger': 'one_time', 'sepia_amount': 0.6}
+]
+config_path = generator.generate_config('/path/to/recording', layout, animations)
+print(f'Generated: {config_path}')
+"
+
+# Legacy animation modes (still supported)
+cinemon-blend-setup /path/to/recording --animation-mode beat-switch
+cinemon-blend-setup /path/to/recording --animation-mode energy-pulse
 ```

@@ -11,9 +11,9 @@ import sys
 from pathlib import Path
 
 from ..project_manager import BlenderProjectManager
-from beatrix import AudioValidationError, analyze_audio_command
-from setka_common.file_structure.specialized import RecordingStructureManager
-from setka_common.utils.files import find_files_by_type, MediaType
+from ..config import CinemonConfigGenerator
+from beatrix import AudioValidationError
+from setka_common.config import BlenderYAMLConfig, YAMLConfigLoader
 
 
 def setup_logging(verbose: bool = False) -> None:
@@ -43,12 +43,11 @@ def parse_args() -> argparse.Namespace:
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Przykłady użycia:
-  %(prog)s ./recording_20250105_143022
-  %(prog)s ./recording_20250105_143022 --verbose
-  %(prog)s ./recording_20250105_143022 --main-audio "main_audio.m4a"
-  %(prog)s ./recording_20250105_143022 --analyze-audio --animation-mode beat-switch
-  %(prog)s ./recording_20250105_143022 --animation-mode energy-pulse --beat-division 4
-  %(prog)s ./recording_20250105_143022 --force
+  %(prog)s ./recording_20250105_143022 --preset vintage
+  %(prog)s ./recording_20250105_143022 --preset music-video --verbose
+  %(prog)s ./recording_20250105_143022 --preset beat-switch --main-audio "main_audio.m4a"
+  %(prog)s ./recording_20250105_143022 --config custom_config.yaml
+  %(prog)s ./recording_20250105_143022 --config path/to/config.yaml --force
         """,
     )
 
@@ -65,36 +64,22 @@ Przykłady użycia:
     parser.add_argument(
         "--main-audio",
         type=str,
-        help="Nazwa głównego pliku audio (wymagane gdy jest więcej niż jeden plik audio)",
+        help="Nazwa głównego pliku audio (używane z presetami)",
     )
 
-    parser.add_argument(
-        "--analyze-audio",
-        action="store_true",
-        help="Uruchom analizę audio przed stworzeniem projektu",
+    # Mutually exclusive group for config sources (required)
+    config_group = parser.add_mutually_exclusive_group(required=True)
+    
+    config_group.add_argument(
+        "--config",
+        type=Path,
+        help="Ścieżka do pliku konfiguracji YAML",
     )
-
-    parser.add_argument(
-        "--animation-mode",
+    
+    config_group.add_argument(
+        "--preset",
         type=str,
-        default="none",
-        choices=[
-            "none",
-            "beat-switch",
-            "energy-pulse",
-            "section-transition",
-            "multi-pip",
-            "compositional",
-        ],
-        help="Tryb animacji dla VSE (default: none)",
-    )
-
-    parser.add_argument(
-        "--beat-division",
-        type=int,
-        default=8,
-        choices=[1, 2, 4, 8, 16],
-        help="Podział beatów dla animacji (default: 8)",
+        help="Nazwa presetu konfiguracji (vintage, music-video, minimal, beat-switch)",
     )
 
     return parser.parse_args()
@@ -119,7 +104,9 @@ def validate_recording_directory(recording_dir: Path) -> None:
     # Check for metadata.json
     metadata_path = recording_dir / "metadata.json"
     if not metadata_path.exists():
-        raise ValueError(f"Brak pliku metadata.json w katalogu: {recording_dir}")
+        raise ValueError(f"❌ Stare nagranie bez metadata.json: {recording_dir}\n"
+                        f"💡 To nagranie pochodzi sprzed aktualizacji OBS script.\n"
+                        f"🔧 Przenieś je do osobnego katalogu lub wygeneruj metadata.json ręcznie.")
 
     # Check for extracted directory
     extracted_dir = recording_dir / "extracted"
@@ -134,118 +121,35 @@ def validate_recording_directory(recording_dir: Path) -> None:
         raise ValueError(f"Katalog extracted/ jest pusty w: {recording_dir}")
 
 
-def validate_animation_parameters(animation_mode: str, beat_division: int) -> None:
+
+
+
+
+def load_yaml_config(config_path: Path) -> BlenderYAMLConfig:
     """
-    Validate animation parameters.
+    Load and validate YAML configuration.
 
     Args:
-        animation_mode: Animation mode string
-        beat_division: Beat division value
-
-    Raises:
-        ValueError: If parameters are invalid
-    """
-    valid_modes = {
-        "none",
-        "beat-switch",
-        "energy-pulse",
-        "section-transition",
-        "multi-pip",
-        "compositional",
-    }
-    valid_divisions = {1, 2, 4, 8, 16}
-
-    if animation_mode not in valid_modes:
-        raise ValueError(
-            f"Invalid animation mode: {animation_mode}. "
-            f"Valid modes: {', '.join(sorted(valid_modes))}"
-        )
-
-    if beat_division not in valid_divisions:
-        raise ValueError(
-            f"Invalid beat division: {beat_division}. "
-            f"Valid divisions: {', '.join(map(str, sorted(valid_divisions)))}"
-        )
-
-
-def find_main_audio_file(recording_dir: Path) -> Path:
-    """
-    Find main audio file in recording directory.
-
-    Args:
-        recording_dir: Path to recording directory
+        config_path: Path to YAML configuration file
 
     Returns:
-        Path: Path to main audio file
+        BlenderYAMLConfig: Loaded configuration
 
     Raises:
-        ValueError: If no audio file found
+        FileNotFoundError: If config file not found
+        ValueError: If config validation fails
     """
-    structure = RecordingStructureManager.find_recording_structure(recording_dir)
-    if not structure:
-        raise ValueError(f"Invalid recording structure in: {recording_dir}")
+    if not config_path.exists():
+        raise FileNotFoundError(f"Configuration file not found: {config_path}")
 
-    audio_files = find_files_by_type(structure.extracted_dir, MediaType.AUDIO)
-    if not audio_files:
-        raise ValueError(f"No audio files found in: {structure.extracted_dir}")
-
-    # Use the first audio file (sorted by name)
-    return audio_files[0]
-
-
-def _has_existing_audio_analysis(recording_dir: Path, main_audio: str = None) -> bool:
-    """
-    Check if audio analysis already exists for the recording.
-
-    Args:
-        recording_dir: Path to recording directory
-        main_audio: Main audio filename (optional)
-
-    Returns:
-        bool: True if analysis exists
-    """
     try:
-        # Find main audio file if not specified
-        if not main_audio:
-            main_audio_file = find_main_audio_file(recording_dir)
-        else:
-            main_audio_file = recording_dir / "extracted" / main_audio
-
-        # Check if analysis file exists using correct API
-        analysis_file = RecordingStructureManager.find_audio_analysis(main_audio_file)
-        return analysis_file is not None
-
-    except Exception:
-        # If any error occurs, assume no analysis exists
-        return False
-
-
-def perform_audio_analysis(recording_dir: Path, main_audio: Path) -> Path:
-    """
-    Perform audio analysis on main audio file.
-
-    Args:
-        recording_dir: Path to recording directory
-        main_audio: Path to main audio file
-
-    Returns:
-        Path: Path to analysis file
-
-    Raises:
-        RuntimeError: If analysis fails
-    """
-    try:
-        # Ensure analysis directory exists
-        analysis_dir = RecordingStructureManager.ensure_analysis_dir(recording_dir)
-
-        # Perform analysis
-        analysis_file = analyze_audio_command(main_audio, analysis_dir)
-
-        logging.getLogger(__name__).info(f"Audio analysis completed: {analysis_file}")
-        return analysis_file
-
+        loader = YAMLConfigLoader()
+        config = loader.load_config(config_path)
+        return config
     except Exception as e:
-        raise RuntimeError(f"Audio analysis failed: {e}")
+        raise ValueError(f"Failed to load YAML configuration: {e}")
+
+
 
 
 def main() -> int:
@@ -261,58 +165,62 @@ def main() -> int:
     logger = logging.getLogger(__name__)
 
     try:
-        # Validate recording directory
-        logger.info(f"Validating recording directory: {args.recording_dir}")
-        validate_recording_directory(args.recording_dir)
-
-        # Validate animation parameters
-        validate_animation_parameters(args.animation_mode, args.beat_division)
-
-        # Determine if audio analysis is needed
-        needs_audio_analysis = args.analyze_audio or (
-            args.animation_mode != "none"
-            and not _has_existing_audio_analysis(args.recording_dir, args.main_audio)
-        )
-
-        # Perform audio analysis if requested or automatically needed
-        if needs_audio_analysis:
-            if args.analyze_audio:
-                logger.info("Audio analysis requested...")
-            else:
-                logger.info(
-                    f"Audio analysis needed for animation mode: {args.animation_mode}"
-                )
-
-            # Find main audio file if not specified
-            if not args.main_audio:
-                main_audio_file = find_main_audio_file(args.recording_dir)
-                logger.info(f"Auto-detected main audio file: {main_audio_file}")
-            else:
-                # Use specified main audio file
-                main_audio_file = args.recording_dir / "extracted" / args.main_audio
-                if not main_audio_file.exists():
-                    raise ValueError(
-                        f"Specified main audio file not found: {main_audio_file}"
-                    )
-
-            # Perform analysis
-            analysis_file = perform_audio_analysis(args.recording_dir, main_audio_file)
-            print(f"🎵 Analiza audio ukończona: {analysis_file}")
-
-        # Create Blender project manager
-        manager = BlenderProjectManager()
-
-        # Create VSE project
-        logger.info("Creating Blender VSE project...")
-        project_path = manager.create_vse_project(
-            args.recording_dir,
-            args.main_audio,
-            animation_mode=args.animation_mode,
-            beat_division=args.beat_division,
-        )
-
-        print(f"✅ Projekt Blender VSE utworzony: {project_path}")
-        return 0
+        # Handle preset configuration if provided
+        if args.preset:
+            logger.info(f"Generating configuration from preset: {args.preset}")
+            
+            # Prepare preset overrides from CLI arguments
+            preset_overrides = {}
+            if args.main_audio:
+                preset_overrides["main_audio"] = args.main_audio
+            
+            # Generate configuration from preset
+            generator = CinemonConfigGenerator()
+            config_path = generator.generate_preset(
+                args.recording_dir, 
+                args.preset, 
+                **preset_overrides
+            )
+            
+            logger.info(f"Generated configuration: {config_path}")
+            
+            # Create Blender project manager
+            manager = BlenderProjectManager()
+            
+            # Load generated YAML config
+            yaml_config = load_yaml_config(config_path)
+            
+            # Create VSE project with generated config
+            logger.info("Creating Blender VSE project with preset configuration...")
+            project_path = manager.create_vse_project_with_config(
+                args.recording_dir,
+                yaml_config
+            )
+            
+            print(f"✅ Projekt Blender VSE utworzony z presetu {args.preset}: {project_path}")
+            return 0
+            
+        # Handle YAML configuration if provided
+        elif args.config:
+            logger.info(f"Loading YAML configuration: {args.config}")
+            yaml_config = load_yaml_config(args.config)
+            
+            # Create Blender project manager
+            manager = BlenderProjectManager()
+            
+            # Create VSE project with YAML config
+            logger.info("Creating Blender VSE project with YAML configuration...")
+            project_path = manager.create_vse_project_with_config(
+                args.recording_dir,
+                yaml_config
+            )
+            
+            print(f"✅ Projekt Blender VSE utworzony z YAML config: {project_path}")
+            return 0
+        
+        # This should never happen due to required=True, but just in case
+        else:
+            raise ValueError("Must specify either --preset or --config parameter")
 
     except AudioValidationError as e:
         logger.error(f"Audio validation error: {e}")
