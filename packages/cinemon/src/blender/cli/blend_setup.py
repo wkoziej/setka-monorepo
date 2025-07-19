@@ -7,6 +7,7 @@ from extracted OBS Canvas recordings.
 
 import argparse
 import logging
+import subprocess
 import sys
 from pathlib import Path
 
@@ -14,6 +15,31 @@ from ..project_manager import BlenderProjectManager
 from ..config import CinemonConfigGenerator
 from beatrix import AudioValidationError
 from setka_common.config import BlenderYAMLConfig, YAMLConfigLoader
+
+
+def open_blender_with_video_editing(blend_file_path: Path) -> None:
+    """
+    Open Blender GUI with the blend file (should already be in Video Editing workspace).
+    
+    Args:
+        blend_file_path: Path to .blend file to open
+    """
+    try:
+        # Simple Blender open - project was created with Video Editing template
+        cmd = [
+            "snap", "run", "blender",
+            str(blend_file_path)
+        ]
+        
+        print(f"🎬 Otwieranie Blender (projekt utworzony z Video Editing template)...")
+        print(f"📁 Plik: {blend_file_path}")
+        
+        # Start Blender in background (non-blocking)
+        subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        
+    except Exception as e:
+        print(f"⚠ Nie udało się otworzyć Blender: {e}")
+        print(f"💡 Otwórz ręcznie: snap run blender '{blend_file_path}'")
 
 
 def setup_logging(verbose: bool = False) -> None:
@@ -65,6 +91,12 @@ Przykłady użycia:
         "--main-audio",
         type=str,
         help="Nazwa głównego pliku audio (używane z presetami)",
+    )
+
+    parser.add_argument(
+        "--open-blender",
+        action="store_true",
+        help="Automatycznie otwórz Blender po utworzeniu projektu",
     )
 
     # Mutually exclusive group for config sources (required)
@@ -198,6 +230,12 @@ def main() -> int:
             )
             
             print(f"✅ Projekt Blender VSE utworzony z presetu {args.preset}: {project_path}")
+            
+            # Auto-open Blender if requested
+            if args.open_blender:
+                logger.info("Opening Blender with Video Editing workspace...")
+                open_blender_with_video_editing(project_path)
+            
             return 0
             
         # Handle YAML configuration if provided
@@ -216,6 +254,12 @@ def main() -> int:
             )
             
             print(f"✅ Projekt Blender VSE utworzony z YAML config: {project_path}")
+            
+            # Auto-open Blender if requested
+            if args.open_blender:
+                logger.info("Opening Blender with Video Editing workspace...")
+                open_blender_with_video_editing(project_path)
+            
             return 0
         
         # This should never happen due to required=True, but just in case

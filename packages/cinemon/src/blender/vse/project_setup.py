@@ -48,8 +48,8 @@ class BlenderProjectSetup:
             bool: True if successful
         """
         try:
-            # Clear default scene
-            bpy.ops.wm.read_factory_settings(use_empty=True)
+            # Load Video Editing template instead of empty scene
+            bpy.ops.wm.read_factory_settings(app_template="Video_Editing")
 
             # Configure basic scene settings
             scene = bpy.context.scene
@@ -57,6 +57,8 @@ class BlenderProjectSetup:
             scene.render.resolution_x = self.config.get("resolution_x", 1280)
             scene.render.resolution_y = self.config.get("resolution_y", 720)
             scene.frame_start = 1
+
+            print("✓ Loaded Video Editing template - workspace should be correct")
 
             return True
 
