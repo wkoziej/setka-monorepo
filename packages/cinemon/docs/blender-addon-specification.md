@@ -184,7 +184,7 @@ cinemon/
 
 3. **Faza 3: Modyfikacja vse_script.py**
    - Test: Mock Blendera ładujący nowy format
-   - Implementacja: Obsługa `strip_animations` i `global_animations`
+   - Implementacja: Obsługa `strip_animations`
    - Test: Aplikowanie animacji per-strip
 
 4. **Faza 4: Podstawowa struktura add-onu**

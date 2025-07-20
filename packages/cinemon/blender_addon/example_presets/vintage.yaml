@@ -1,0 +1,67 @@
+# ABOUTME: Vintage preset with sepia effects and classic film grain
+# ABOUTME: Uses beat-synchronized scale animations and vintage color grading
+
+# Vintage Preset - Classic film aesthetic with beat synchronization
+# This preset creates a nostalgic film look with sepia tones, grain, and subtle animations
+
+project:
+  video_files: []  # Will be auto-discovered
+  fps: 30
+  resolution:
+    width: 1920
+    height: 1080
+
+layout:
+  type: "random"
+  config:
+    seed: 42
+    margin: 0.1
+    overlap_allowed: false
+
+strip_animations:
+  # Main cameras get beat-synchronized scaling
+  Camera1:
+    - type: "scale"
+      trigger: "beat"
+      intensity: 0.3
+      easing: "EASE_OUT"
+    - type: "vintage_color"
+      trigger: "one_time"
+      sepia_amount: 0.6
+      contrast_boost: 0.3
+      grain_intensity: 0.2
+
+  Camera2:
+    - type: "scale"
+      trigger: "beat"
+      intensity: 0.25
+      easing: "EASE_IN_OUT"
+    - type: "vintage_color"
+      trigger: "one_time"
+      sepia_amount: 0.5
+      contrast_boost: 0.25
+
+  # Screen recordings get subtle shake on energy peaks
+  Screen:
+    - type: "shake"
+      trigger: "energy_peaks"
+      intensity: 0.8
+      return_frames: 2
+    - type: "vintage_color"
+      trigger: "one_time"
+      sepia_amount: 0.4
+      grain_intensity: 0.15
+
+  # Additional cameras
+  Camera3:
+    - type: "scale"
+      trigger: "beat"
+      intensity: 0.2
+    - type: "vintage_color"
+      trigger: "one_time"
+      sepia_amount: 0.55
+
+audio_analysis:
+  file: "./analysis/main_audio_analysis.json"
+  beat_division: 4
+  min_onset_interval: 0.8

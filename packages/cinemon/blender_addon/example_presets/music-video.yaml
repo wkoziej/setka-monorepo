@@ -1,0 +1,71 @@
+# ABOUTME: Music video preset with high-energy animations and beat switching
+# ABOUTME: Dynamic pip switching and intense visual effects synchronized to music
+
+# Music Video Preset - High-energy visual effects with beat switching
+# Designed for music content with frequent cuts and dynamic animations
+
+project:
+  video_files: []  # Will be auto-discovered
+  fps: 60  # Higher frame rate for smooth motion
+  resolution:
+    width: 1920
+    height: 1080
+
+layout:
+  type: "grid"
+  config:
+    rows: 2
+    cols: 2
+    margin: 0.02
+    overlap_allowed: true
+
+strip_animations:
+  # Main camera with pip switching between positions
+  Camera1:
+    - type: "pip_switch"
+      trigger: "beat"
+      positions: ["TOP_LEFT", "TOP_RIGHT", "BOTTOM_LEFT", "BOTTOM_RIGHT", "CENTER"]
+      switch_probability: 0.3
+    - type: "scale"
+      trigger: "energy_peaks"
+      intensity: 0.8
+      easing: "BOUNCE"
+
+  # Secondary camera with rotation effects
+  Camera2:
+    - type: "rotation"
+      trigger: "beat"
+      intensity: 0.4
+      max_angle: 15
+    - type: "shake"
+      trigger: "energy_peaks"
+      intensity: 2.0
+      return_frames: 3
+
+  # Screen with opacity flashing
+  Screen:
+    - type: "opacity"
+      trigger: "beat"
+      intensity: 0.6
+      min_opacity: 0.3
+    - type: "position"
+      trigger: "energy_peaks"
+      intensity: 1.2
+      drift_distance: 50
+
+  # Third camera with complex animations
+  Camera3:
+    - type: "scale"
+      trigger: "bass"
+      intensity: 0.6
+      easing: "ELASTIC"
+    - type: "vintage_color"
+      trigger: "one_time"
+      sepia_amount: 0.0  # No sepia for modern look
+      contrast_boost: 0.5
+      saturation_boost: 1.3
+
+audio_analysis:
+  file: "./analysis/main_audio_analysis.json"
+  beat_division: 8  # More frequent beat detection
+  min_onset_interval: 0.3  # Faster response to music changes

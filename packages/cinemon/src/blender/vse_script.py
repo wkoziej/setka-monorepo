@@ -18,9 +18,15 @@ Użycie w Blenderze:
 import bpy
 import os
 import sys
-import json
 from pathlib import Path
 from typing import List, Optional, Tuple, Dict
+
+# Import YAML configuration loader
+addon_path = Path(__file__).parent.parent.parent / "blender_addon"
+if str(addon_path) not in sys.path:
+    sys.path.insert(0, str(addon_path))
+
+from config_loader import YAMLConfigLoader, ValidationError
 
 # Import refactored modules
 try:
@@ -41,18 +47,20 @@ class BlenderVSEConfigurator:
     """Konfigurator Blender VSE z konfiguracji YAML."""
 
     def __init__(self, config_path: Optional[str] = None):
-        """Inicjalizuj konfigurator z konfiguracji JSON.
+        """Inicjalizuj konfigurator z konfiguracji YAML.
         
         Args:
-            config_path: Ścieżka do pliku konfiguracyjnego JSON
+            config_path: Ścieżka do pliku konfiguracyjnego YAML
         """
         # Parse command line arguments if no config path provided
         if config_path is None:
             config_path = self._parse_command_line_args()
         
-        # Load JSON configuration
-        with open(config_path, 'r', encoding='utf-8') as f:
-            self.config_data = json.load(f)
+        # Load YAML configuration
+        self.config_path = Path(config_path)
+        loader = YAMLConfigLoader()
+        config = loader.load_from_file(config_path)
+        self.config_data = loader.convert_to_internal(config)
         
         # Set attributes from config (maintaining compatibility)
         project = self.config_data['project']
@@ -97,7 +105,7 @@ class BlenderVSEConfigurator:
         if 'CONFIG_PATH' in globals():
             return CONFIG_PATH
         
-        raise ValueError("No config file specified. Use --config argument or set CONFIG_PATH variable.")
+        raise ValueError("No YAML config file specified. Use --config argument or set CONFIG_PATH variable.")
 
     def validate_parameters(self) -> Tuple[bool, List[str]]:
         """
@@ -106,12 +114,19 @@ class BlenderVSEConfigurator:
         Returns:
             Tuple[bool, List[str]]: (czy_valid, lista_błędów)
         """
-        # Basic validation for JSON config
+        # Validation for internal format (converted from YAML)
         errors = []
         required_keys = ['project', 'audio_analysis', 'layout', 'animations']
         for key in required_keys:
             if key not in self.config_data:
                 errors.append(f"Missing required key: {key}")
+        
+        # Additional validation
+        project = self.config_data.get('project', {})
+        # Empty video_files is allowed for auto-discovery in presets
+        
+        if not project.get('fps'):
+            errors.append("FPS not specified in project")
         
         return len(errors) == 0, errors
 
@@ -213,35 +228,30 @@ class BlenderVSEConfigurator:
 
     def _load_animation_data(self) -> Optional[Dict]:
         """
-        Load animation data from YAML configuration.
+        Load animation data from audio analysis file specified in YAML config.
 
         Returns:
             Optional[Dict]: Animation data with events or None if not available
         """
-        # Load animation data using YAML config
-        # Load audio analysis data from JSON config
+        # Load audio analysis data from file specified in YAML config
         audio_analysis = self.config_data.get('audio_analysis', {})
         print(f"🎵 Audio analysis section: {audio_analysis.keys() if audio_analysis else 'None'}")
         
-        full_data = audio_analysis.get('data', {})
-        print(f"🎵 Full data type: {type(full_data)}, empty: {not full_data}")
+        analysis_file = audio_analysis.get('file')
+        print(f"🎵 Loading from file: {analysis_file}")
         
-        if not full_data:
-            # Try loading from file
-            analysis_file = audio_analysis.get('file')
-            print(f"🎵 Trying to load from file: {analysis_file}")
-            if analysis_file:
-                try:
-                    with open(analysis_file, 'r', encoding='utf-8') as f:
-                        import json
-                        full_data = json.load(f)
-                        print(f"🎵 Loaded from file successfully: {len(full_data)} keys")
-                except Exception as e:
-                    print(f"❌ Failed to load from file {analysis_file}: {e}")
-                    return None
-            else:
-                print("❌ No audio analysis data found in config and no file specified")
-                return None
+        if not analysis_file:
+            print("❌ No audio analysis file specified in YAML config")
+            return None
+            
+        try:
+            import json
+            with open(analysis_file, 'r', encoding='utf-8') as f:
+                full_data = json.load(f)
+                print(f"🎵 Loaded from file successfully: {len(full_data)} keys")
+        except Exception as e:
+            print(f"❌ Failed to load from file {analysis_file}: {e}")
+            return None
 
         try:
             # Extract beat events and energy peaks
