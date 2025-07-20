@@ -91,8 +91,6 @@ class CINEMON_PT_main_panel(Panel):
             # Show stored config info
             if 'cinemon_layout_type' in context.scene:
                 box.label(text=f"Layout: {context.scene['cinemon_layout_type']}")
-            if 'cinemon_fps' in context.scene:
-                box.label(text=f"FPS: {context.scene['cinemon_fps']}")
             if 'cinemon_animations_count' in context.scene:
                 box.label(text=f"Animations: {context.scene['cinemon_animations_count']}")
             
@@ -197,10 +195,7 @@ class CINEMON_OT_load_preset(bpy.types.Operator):
             context.scene.cinemon_config_path = str(preset_path)
             
             # Store basic config info as scene properties for UI display
-            fps = getattr(config.project, 'fps', 30) if hasattr(config, 'project') else 30
             layout_type = getattr(config.layout, 'type', 'unknown') if hasattr(config, 'layout') else 'unknown'
-            
-            context.scene['cinemon_fps'] = fps
             context.scene['cinemon_layout_type'] = layout_type
             
             # Count animations for display
