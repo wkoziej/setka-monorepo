@@ -1,6 +1,9 @@
 import { Recording, RecordingStatus } from '../types';
 import { useRecordings, useRecordingOperations } from '../hooks/useRecordings';
 import { DeletionConfirmDialog } from './DeletionConfirmDialog';
+import { VideoPlayer } from './VideoPlayer';
+import { invoke } from '@tauri-apps/api/core';
+import { useState } from 'react';
 
 function formatFileSize(bytes: number): string {
   const sizes = ['B', 'KB', 'MB', 'GB'];
@@ -123,6 +126,22 @@ function RecordingRow({ recording, onAction, isOperationRunning }: {
             👁️
           </button>
           <button
+            onClick={() => onAction(recording.name, 'Play Video')}
+            disabled={isOperationRunning}
+            style={{
+              padding: '6px 12px',
+              fontSize: '0.875rem',
+              backgroundColor: isOperationRunning ? '#f3f4f6' : '#16a34a',
+              color: 'white',
+              border: 'none',
+              borderRadius: '6px',
+              cursor: isOperationRunning ? 'not-allowed' : 'pointer',
+              opacity: isOperationRunning ? 0.6 : 1
+            }}
+          >
+            🎬
+          </button>
+          <button
             onClick={() => onAction(recording.name, 'Delete')}
             disabled={isOperationRunning}
             style={{
@@ -166,11 +185,28 @@ interface RecordingListProps {
 export function RecordingList({ onSelectRecording }: RecordingListProps) {
   const { recordings, loading, error, refreshRecordings, showDeletionDialog, deletionState, deleteRecording, hideDeletionDialog } = useRecordings();
   const { runNextStep, runSpecificStep, running, output } = useRecordingOperations();
+  const [showVideoPlayer, setShowVideoPlayer] = useState(false);
+  const [videoPath, setVideoPath] = useState<string | null>(null);
+  const [currentRecordingName, setCurrentRecordingName] = useState<string | null>(null);
 
   const handleAction = async (recordingName: string, action: string) => {
     if (action === 'View') {
       if (onSelectRecording) {
         onSelectRecording(recordingName);
+      }
+      return;
+    }
+
+    if (action === 'Play Video') {
+      try {
+        const path = await invoke('get_playable_video_path', { recordingName }) as string;
+        console.log('🎬 Video path from backend:', path);
+        setVideoPath(path);
+        setCurrentRecordingName(recordingName);
+        setShowVideoPlayer(true);
+      } catch (error) {
+        console.error('🚨 Video error:', error);
+        alert(error instanceof Error ? error.message : 'Failed to find video file');
       }
       return;
     }
@@ -370,6 +406,19 @@ export function RecordingList({ onSelectRecording }: RecordingListProps) {
         onCancel={hideDeletionDialog}
         isDeleting={deletionState.isDeleting}
       />
+
+      {/* Video Player Modal */}
+      {showVideoPlayer && videoPath && currentRecordingName && (
+        <VideoPlayer
+          videoPath={videoPath}
+          recordingName={currentRecordingName}
+          onClose={() => {
+            setShowVideoPlayer(false);
+            setVideoPath(null);
+            setCurrentRecordingName(null);
+          }}
+        />
+      )}
     </div>
   );
 } 

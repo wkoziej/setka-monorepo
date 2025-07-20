@@ -8,13 +8,14 @@ use commands::recordings::{
 };
 use commands::operations::{run_next_step, run_specific_step, run_specific_step_with_options, list_animation_presets};
 use commands::rename::rename_recording;
+use commands::video::{get_playable_video_path, open_video_external};
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
   tauri::Builder::default()
     .manage(AppConfig::default())
     .invoke_handler(tauri::generate_handler![
-      get_recordings,
+      get_recordings, 
       get_recording_details,
       get_recordings_by_status,
       get_recordings_needing_attention,
@@ -25,7 +26,9 @@ pub fn run() {
       run_specific_step,
       run_specific_step_with_options,
       list_animation_presets,
-      rename_recording
+      rename_recording,
+      get_playable_video_path,
+      open_video_external
     ])
     .setup(|app| {
       if cfg!(debug_assertions) {
