@@ -7,7 +7,10 @@ from pathlib import Path
 from typing import Dict, List, Any, Optional, Union
 from dataclasses import dataclass
 
-from vendor import yaml
+try:
+    from .vendor import yaml
+except ImportError:
+    from vendor import yaml
 
 
 class ValidationError(Exception):

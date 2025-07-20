@@ -73,14 +73,18 @@ class BlenderProjectManager:
         # 3. Resolve paths relative to recording directory and create resolved config
         resolved_config = self._create_resolved_config(yaml_config, recording_path, structure)
         
-        # 4. Create temporary JSON file with resolved paths
+        # 4. Create temporary YAML file with resolved paths
         temp_config_file = None
         try:
-            # Write resolved config to temporary JSON file
-            import json
-            temp_config_file = tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False, encoding='utf-8')
-            config_dict = resolved_config.to_dict()
-            json.dump(config_dict, temp_config_file, indent=2, ensure_ascii=False)
+            # Write resolved config to temporary YAML file
+            import yaml
+            temp_config_file = tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False, encoding='utf-8')
+            
+            # Convert to internal format for vse_script.py compatibility
+            loader = YAMLConfigLoader()
+            internal_config = loader.convert_to_internal(resolved_config)
+            
+            yaml.dump(internal_config, temp_config_file, indent=2, allow_unicode=True, default_flow_style=False)
             temp_config_file.close()
             
             logger.info(f"Created temporary config file: {temp_config_file.name}")

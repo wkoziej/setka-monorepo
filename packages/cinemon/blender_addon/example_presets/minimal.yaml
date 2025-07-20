@@ -12,10 +12,8 @@ project:
     height: 1080
 
 layout:
-  type: "cascade"
+  type: "center"
   config:
-    offset_x: 100
-    offset_y: 80
     margin: 0.15
     overlap_allowed: false
 

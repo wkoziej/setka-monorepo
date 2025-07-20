@@ -10,6 +10,13 @@ import yaml
 
 
 @dataclass
+class Resolution:
+    """Video resolution configuration."""
+    width: int
+    height: int
+
+
+@dataclass
 class ProjectConfig:
     """Configuration for Blender VSE project parameters."""
     
@@ -18,7 +25,7 @@ class ProjectConfig:
     output_blend: Optional[str] = None
     render_output: Optional[str] = None
     fps: int = 30
-    resolution: Optional[Dict[str, int]] = None
+    resolution: Optional[Resolution] = None
     beat_division: int = 8
 
 
@@ -28,6 +35,8 @@ class AudioAnalysisConfig:
     
     file: Optional[str] = None
     data: Optional[Dict[str, Any]] = None
+    beat_division: Optional[int] = None
+    min_onset_interval: Optional[float] = None
 
 
 @dataclass
@@ -63,7 +72,8 @@ class BlenderYAMLConfig:
     project: ProjectConfig
     audio_analysis: AudioAnalysisConfig
     layout: LayoutConfig
-    animations: List[AnimationSpec]
+    strip_animations: Dict[str, List[Dict[str, Any]]] = field(default_factory=dict)
+    animations: List[AnimationSpec] = field(default_factory=list)  # Deprecated - use strip_animations
     
     def to_dict(self) -> Dict[str, Any]:
         """Convert config to dictionary for JSON serialization."""
@@ -130,6 +140,7 @@ class YAMLConfigLoader:
         audio_analysis_data = data.get("audio_analysis", {})
         layout_data = data.get("layout", {})
         animations_data = data.get("animations", [])
+        strip_animations_data = data.get("strip_animations", {})
         
         # Create configuration objects
         project = self._parse_project_config(project_data)
@@ -141,7 +152,8 @@ class YAMLConfigLoader:
             project=project,
             audio_analysis=audio_analysis,
             layout=layout,
-            animations=animations
+            animations=animations,
+            strip_animations=strip_animations_data
         )
         
         # Validate configuration
@@ -157,13 +169,25 @@ class YAMLConfigLoader:
         if not isinstance(video_files, list):
             raise ValueError("video_files must be a list")
         
+        # Parse resolution
+        resolution_data = data.get("resolution")
+        resolution = None
+        if resolution_data:
+            if isinstance(resolution_data, dict):
+                resolution = Resolution(
+                    width=resolution_data.get("width", 1920),
+                    height=resolution_data.get("height", 1080)
+                )
+            else:
+                resolution = resolution_data  # Backwards compatibility
+        
         return ProjectConfig(
             video_files=video_files,
             main_audio=data.get("main_audio"),
             output_blend=data.get("output_blend"),
             render_output=data.get("render_output"),
             fps=data.get("fps", 30),
-            resolution=data.get("resolution"),
+            resolution=resolution,
             beat_division=data.get("beat_division", 8)
         )
     
@@ -171,7 +195,9 @@ class YAMLConfigLoader:
         """Parse audio analysis configuration section."""
         return AudioAnalysisConfig(
             file=data.get("file"),
-            data=data.get("data")
+            data=data.get("data"),
+            beat_division=data.get("beat_division"),
+            min_onset_interval=data.get("min_onset_interval")
         )
     
     def _parse_layout_config(self, data: Dict[str, Any]) -> LayoutConfig:
@@ -218,8 +244,14 @@ class YAMLConfigLoader:
             errors.append("FPS must be greater than 0")
         
         if config.project.resolution:
-            width = config.project.resolution.get("width", 0)
-            height = config.project.resolution.get("height", 0)
+            if isinstance(config.project.resolution, Resolution):
+                width = config.project.resolution.width
+                height = config.project.resolution.height
+            else:
+                # Backwards compatibility with dict
+                width = config.project.resolution.get("width", 0)
+                height = config.project.resolution.get("height", 0)
+            
             if width <= 0 or height <= 0:
                 errors.append("Resolution width and height must be greater than 0")
         
@@ -236,4 +268,79 @@ class YAMLConfigLoader:
                 errors.append(f"Animation {i}: Invalid trigger '{animation.trigger}'. Must be one of {self.VALID_TRIGGERS}")
         
         return len(errors) == 0, errors
+    
+    def convert_to_internal(self, config: BlenderYAMLConfig) -> Dict[str, Any]:
+        """Convert BlenderYAMLConfig to internal format used by vse_script.py.
+        
+        Converts strip_animations (grouped format) to animations (flat format with target_strips).
+        This is needed for backwards compatibility with vse_script.py.
+        
+        Args:
+            config: BlenderYAMLConfig object to convert
+            
+        Returns:
+            Dictionary in internal format expected by vse_script.py
+        """
+        # Start with project configuration
+        internal_format = {
+            "project": {
+                "video_files": config.project.video_files,
+                "main_audio": config.project.main_audio,
+                "output_blend": config.project.output_blend,
+                "render_output": config.project.render_output,
+                "fps": config.project.fps,
+                "beat_division": config.project.beat_division,
+            },
+            "layout": {
+                "type": config.layout.type,
+                "config": config.layout.config or {}
+            },
+            "audio_analysis": {
+                "file": config.audio_analysis.file,
+                "data": config.audio_analysis.data,
+                "beat_division": config.audio_analysis.beat_division,
+                "min_onset_interval": config.audio_analysis.min_onset_interval,
+            }
+        }
+        
+        # Add resolution if present
+        if config.project.resolution:
+            if isinstance(config.project.resolution, Resolution):
+                internal_format["project"]["resolution"] = {
+                    "width": config.project.resolution.width,
+                    "height": config.project.resolution.height
+                }
+            else:
+                # Handle dict format for backwards compatibility
+                internal_format["project"]["resolution"] = config.project.resolution
+        
+        # Convert strip_animations to flat animations list
+        flat_animations = []
+        
+        # First, convert strip_animations (new format)
+        for strip_name, animations in config.strip_animations.items():
+            if animations:  # Only include strips that have animations
+                for animation in animations:
+                    # Create copy and add target_strips
+                    flat_animation = animation.copy()
+                    flat_animation["target_strips"] = [strip_name]
+                    flat_animations.append(flat_animation)
+        
+        # Then, add any legacy flat animations (for backwards compatibility)
+        for animation in config.animations:
+            flat_animation = {
+                "type": animation.type,
+                "trigger": animation.trigger,
+                "target_strips": animation.target_strips or []
+            }
+            # Add any additional properties from the animation spec
+            for key, value in animation.__dict__.items():
+                if key not in ["type", "trigger", "target_strips"] and value is not None:
+                    flat_animation[key] = value
+            
+            flat_animations.append(flat_animation)
+        
+        internal_format["animations"] = flat_animations
+        
+        return internal_format
     

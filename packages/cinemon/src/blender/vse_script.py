@@ -19,6 +19,7 @@ import bpy
 import os
 import sys
 from pathlib import Path
+from pathlib import Path
 from typing import List, Optional, Tuple, Dict
 
 # Import YAML configuration loader
@@ -26,7 +27,8 @@ addon_path = Path(__file__).parent.parent.parent / "blender_addon"
 if str(addon_path) not in sys.path:
     sys.path.insert(0, str(addon_path))
 
-from config_loader import YAMLConfigLoader, ValidationError
+# NOTE: This import is kept for fallback compatibility but not used
+# The actual config loading is done through setka-common later in the file
 
 # Import refactored modules
 try:
@@ -56,11 +58,44 @@ class BlenderVSEConfigurator:
         if config_path is None:
             config_path = self._parse_command_line_args()
         
-        # Load YAML configuration
+        # Load YAML configuration 
         self.config_path = Path(config_path)
-        loader = YAMLConfigLoader()
-        config = loader.load_from_file(config_path)
-        self.config_data = loader.convert_to_internal(config)
+        
+        # Add vendor path for PyYAML (Blender doesn't have it)
+        addon_vendor_path = Path(__file__).parent.parent.parent / "blender_addon" / "vendor"
+        if str(addon_vendor_path) not in sys.path:
+            sys.path.insert(0, str(addon_vendor_path))
+        
+        import yaml
+        with open(config_path, 'r', encoding='utf-8') as f:
+            raw_config = yaml.safe_load(f)
+        
+        # Detect format and convert if needed
+        if "strip_animations" in raw_config:
+            # This is grouped format (preset file) - need to convert to internal
+            common_path = Path(__file__).parent.parent.parent.parent.parent / "common" / "src"
+            if str(common_path) not in sys.path:
+                sys.path.insert(0, str(common_path))
+            
+            from setka_common.config.yaml_config import YAMLConfigLoader
+            
+            loader = YAMLConfigLoader()
+            # Write temp file and load through standard pipeline
+            import tempfile
+            with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False) as temp_file:
+                yaml.dump(raw_config, temp_file, default_flow_style=False, allow_unicode=True)
+                temp_path = temp_file.name
+            
+            try:
+                config_obj = loader.load_config(Path(temp_path))
+                # Convert to internal format
+                self.config_data = loader.convert_to_internal(config_obj)
+            finally:
+                import os
+                os.unlink(temp_path)
+        else:
+            # This is already internal format (from project_manager.py)
+            self.config_data = raw_config
         
         # Set attributes from config (maintaining compatibility)
         project = self.config_data['project']
