@@ -1,7 +1,10 @@
 import { Recording, RecordingStatus } from '../types';
 import { useRecordings, useRecordingOperations } from '../hooks/useRecordings';
+import { useSortingAndFiltering } from '../hooks/useSortingAndFiltering';
 import { DeletionConfirmDialog } from './DeletionConfirmDialog';
 import { VideoPlayer } from './VideoPlayer';
+import { ControlsBar } from './ControlsBar';
+import { ResultsCounter } from './ResultsCounter';
 import { invoke } from '@tauri-apps/api/core';
 import { useState } from 'react';
 
@@ -27,26 +30,26 @@ function formatLastUpdated(timestamp: number): string {
   return 'Just now';
 }
 
-function getStatusDisplay(status: RecordingStatus): { text: string; emoji: string; color: string } {
+function getStatusDisplay(status: RecordingStatus): { text: string; emoji: string; className: string } {
   if (typeof status === 'object' && 'Failed' in status) {
-    return { text: 'Failed', emoji: '❌', color: '#dc2626' };
+    return { text: 'Failed', emoji: '❌', className: 'failed' };
   }
   
   switch (status) {
     case 'Recorded':
-      return { text: 'Recorded', emoji: '📹', color: '#7c3aed' };
+      return { text: 'Recorded', emoji: '📹', className: 'recorded' };
     case 'Extracted':
-      return { text: 'Extracted', emoji: '📁', color: '#2563eb' };
+      return { text: 'Extracted', emoji: '📁', className: 'extracted' };
     case 'Analyzed':
-      return { text: 'Analyzed', emoji: '📊', color: '#059669' };
+      return { text: 'Analyzed', emoji: '📊', className: 'analyzed' };
     case 'SetupRendered':
-      return { text: 'Setup', emoji: '🎬', color: '#0891b2' };
+      return { text: 'Setup', emoji: '🎬', className: 'setup' };
     case 'Rendered':
-      return { text: 'Rendered', emoji: '✅', color: '#16a34a' };
+      return { text: 'Rendered', emoji: '✅', className: 'rendered' };
     case 'Uploaded':
-      return { text: 'Uploaded', emoji: '🚀', color: '#0891b2' };
+      return { text: 'Uploaded', emoji: '🚀', className: 'uploaded' };
     default:
-      return { text: 'Unknown', emoji: '❓', color: '#6b7280' };
+      return { text: 'Unknown', emoji: '❓', className: 'failed' };
   }
 }
 
@@ -73,7 +76,7 @@ function getNextAction(status: RecordingStatus): string | null {
   }
 }
 
-function RecordingRow({ recording, onAction, isOperationRunning }: { 
+function RecordingCard({ recording, onAction, isOperationRunning }: { 
   recording: Recording; 
   onAction: (name: string, action: string) => void;
   isOperationRunning: boolean;
@@ -83,98 +86,69 @@ function RecordingRow({ recording, onAction, isOperationRunning }: {
   const totalSize = Object.values(recording.file_sizes).reduce((sum, size) => sum + size, 0);
 
   return (
-    <tr style={{ borderBottom: '1px solid #e5e7eb' }}>
-      <td style={{ padding: '12px 8px' }}>
-        <div style={{ fontWeight: '500', fontSize: '1.2em' }}>{recording.name}</div>
-        <div style={{ fontSize: '0.7875rem', color: '#6b7280' }}>
-          {formatFileSize(totalSize)}
+    <div className="recording-card">
+      <div className="recording-card-header">
+        <div>
+          <h3 className="recording-title">{recording.name}</h3>
+          <div className="recording-meta">
+            <span>📁 {formatFileSize(totalSize)}</span>
+            <span>🕒 {formatLastUpdated(recording.last_updated)}</span>
+          </div>
         </div>
-      </td>
-      <td style={{ padding: '12px 8px' }}>
-        <div style={{ 
-          display: 'flex', 
-          alignItems: 'center', 
-          gap: '8px',
-          color: statusDisplay.color 
-        }}>
+        <div className={`recording-status ${statusDisplay.className}`}>
           <span>{statusDisplay.emoji}</span>
           <span>{statusDisplay.text}</span>
         </div>
-        {typeof recording.status === 'object' && 'Failed' in recording.status && (
-          <div style={{ fontSize: '0.75rem', color: '#dc2626', marginTop: '4px' }}>
-            {recording.status.Failed}
-          </div>
-        )}
-      </td>
-      <td style={{ padding: '12px 8px', color: '#6b7280' }}>
-        {formatLastUpdated(recording.last_updated)}
-      </td>
-      <td style={{ padding: '12px 8px' }}>
-        <div style={{ display: 'flex', gap: '8px' }}>
-          <button
-            onClick={() => onAction(recording.name, 'View')}
-            style={{
-              padding: '6px 12px',
-              fontSize: '0.875rem',
-              backgroundColor: '#f3f4f6',
-              color: '#374151',
-              border: '1px solid #d1d5db',
-              borderRadius: '6px',
-              cursor: 'pointer'
-            }}
-          >
-            👁️
-          </button>
-          <button
-            onClick={() => onAction(recording.name, 'Play Video')}
-            disabled={isOperationRunning}
-            style={{
-              padding: '6px 12px',
-              fontSize: '0.875rem',
-              backgroundColor: isOperationRunning ? '#f3f4f6' : '#16a34a',
-              color: 'white',
-              border: 'none',
-              borderRadius: '6px',
-              cursor: isOperationRunning ? 'not-allowed' : 'pointer',
-              opacity: isOperationRunning ? 0.6 : 1
-            }}
-          >
-            🎬
-          </button>
-          <button
-            onClick={() => onAction(recording.name, 'Delete')}
-            disabled={isOperationRunning}
-            style={{
-              padding: '6px 12px',
-              fontSize: '0.875rem',
-              backgroundColor: isOperationRunning ? '#f3f4f6' : 'transparent',
-              color: isOperationRunning ? '#9ca3af' : '#dc2626',
-              border: `1px solid ${isOperationRunning ? '#d1d5db' : '#dc2626'}`,
-              borderRadius: '6px',
-              cursor: isOperationRunning ? 'not-allowed' : 'pointer'
-            }}
-          >
-            🗑️
-          </button>
-          {nextAction && (
-            <button
-              onClick={() => onAction(recording.name, nextAction)}
-              style={{
-                padding: '6px 12px',
-                fontSize: '0.875rem',
-                backgroundColor: '#3b82f6',
-                color: 'white',
-                border: 'none',
-                borderRadius: '6px',
-                cursor: 'pointer'
-              }}
-            >
-              {nextAction}
-            </button>
-          )}
+      </div>
+
+      {typeof recording.status === 'object' && 'Failed' in recording.status && (
+        <div style={{ 
+          background: '#fee2e2', 
+          color: '#dc2626', 
+          padding: '8px 12px', 
+          borderRadius: '6px',
+          fontSize: '0.875rem',
+          marginBottom: '16px'
+        }}>
+          <strong>Error:</strong> {recording.status.Failed}
         </div>
-      </td>
-    </tr>
+      )}
+
+      <div className="recording-actions">
+        <button
+          className="btn btn-secondary"
+          onClick={() => onAction(recording.name, 'View')}
+        >
+          👁️ View
+        </button>
+        
+        <button
+          className="btn btn-primary"
+          onClick={() => onAction(recording.name, 'Play Video')}
+          disabled={isOperationRunning}
+        >
+          🎬 Play Video
+        </button>
+        
+        <button
+          className="btn btn-danger"
+          onClick={() => onAction(recording.name, 'Delete')}
+          disabled={isOperationRunning}
+        >
+          🗑️ Delete
+        </button>
+        
+        {nextAction && (
+          <button
+            className="btn btn-primary"
+            onClick={() => onAction(recording.name, nextAction)}
+            disabled={isOperationRunning}
+          >
+            {nextAction}
+          </button>
+        )}
+      </div>
+    </div>
   );
 }
 
@@ -185,6 +159,14 @@ interface RecordingListProps {
 export function RecordingList({ onSelectRecording }: RecordingListProps) {
   const { recordings, loading, error, refreshRecordings, showDeletionDialog, deletionState, deleteRecording, hideDeletionDialog } = useRecordings();
   const { runNextStep, runSpecificStep, running, output } = useRecordingOperations();
+  const { 
+    processedRecordings, 
+    filterConfig, 
+    hasActiveFilters, 
+    updateFilter, 
+    clearFilters 
+  } = useSortingAndFiltering(recordings);
+  
   const [showVideoPlayer, setShowVideoPlayer] = useState(false);
   const [videoPath, setVideoPath] = useState<string | null>(null);
   const [currentRecordingName, setCurrentRecordingName] = useState<string | null>(null);
@@ -247,157 +229,95 @@ export function RecordingList({ onSelectRecording }: RecordingListProps) {
     }
   };
 
-  if (loading) {
-    return (
-      <div style={{ padding: '20px', textAlign: 'center' }}>
-        <div>Loading recordings...</div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div style={{ padding: '20px', color: '#dc2626' }}>
-        <div>Error: {error}</div>
-        <button 
-          onClick={refreshRecordings}
-          style={{ marginTop: '10px' }}
-        >
-          Retry
-        </button>
-      </div>
-    );
-  }
-
   return (
-    <div style={{ padding: '20px' }}>
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'space-between', 
-        alignItems: 'center', 
-        marginBottom: '20px',
-        paddingTop: '30px',
-        paddingBottom: '10px'
-      }}>
-        <h1 style={{ position: 'relative', display: 'inline-block' }}>
-          <span style={{ position: 'relative' }}>
-            <span style={{ 
-              position: 'absolute', 
-              top: '-20px', 
-              left: '0px',
-              fontSize: '24px',
-              lineHeight: '1'
-            }}>𝄐</span>
-            f
-          </span>
-          ermat
-          <span style={{ position: 'relative' }}>
-            a
-            <span style={{ 
-              position: 'absolute', 
-              bottom: '-20px', 
-              right: '0px',
-              fontSize: '24px',
-              lineHeight: '1'
-            }}>𝄑</span>
-          </span>
+    <div>
+      <header className="app-header">
+        <h1 className="app-title">
+          <span className="fermata-before">𝄐</span>
+          fermata
+          <span className="fermata-after">𝄑</span>
         </h1>
-        <div style={{ display: 'flex', gap: '10px' }}>
+        <div className="header-actions">
           <button 
+            className="btn btn-secondary"
             onClick={refreshRecordings}
-            style={{ padding: '8px 16px' }}
           >
-            Refresh
+            🔄 Refresh
           </button>
           <button 
-            style={{ 
-              padding: '8px 16px',
-              backgroundColor: '#f3f4f6',
-              color: '#374151'
-            }}
+            className="btn btn-secondary"
           >
-            Settings
+            ⚙️ Settings
           </button>
         </div>
+      </header>
+
+      <div className="content">
+        {/* NEW: Controls Bar */}
+        <ControlsBar
+          filterConfig={filterConfig}
+          onUpdateFilter={updateFilter}
+          onClearFilters={clearFilters}
+          hasActiveFilters={hasActiveFilters}
+        />
+
+        {/* NEW: Results Counter */}
+        <ResultsCounter
+          filteredCount={processedRecordings.length}
+          totalCount={recordings.length}
+          hasActiveFilters={hasActiveFilters}
+        />
+
+        {Object.values(running).some(Boolean) && (
+          <div className="operation-status">
+            <div className="title">Operation in progress...</div>
+            {output && <div className="output">{output}</div>}
+          </div>
+        )}
+
+        {loading && (
+          <div className="loading-state">
+            <div>Loading recordings...</div>
+          </div>
+        )}
+
+        {error && (
+          <div className="error-state">
+            <div><strong>Error:</strong> {error}</div>
+            <button 
+              className="btn btn-primary"
+              onClick={refreshRecordings}
+              style={{ marginTop: '10px' }}
+            >
+              Retry
+            </button>
+          </div>
+        )}
+
+        {!loading && !error && (
+          <>
+            {processedRecordings.length === 0 ? (
+              <div className="empty-state">
+                {hasActiveFilters ? 
+                  'No recordings match your filters. Try adjusting your search or filters.' :
+                  'No recordings found. Check your recordings directory configuration.'
+                }
+              </div>
+            ) : (
+              <div>
+                {processedRecordings.map((recording) => (
+                  <RecordingCard
+                    key={recording.name}
+                    recording={recording}
+                    onAction={handleAction}
+                    isOperationRunning={!!running[recording.name]}
+                  />
+                ))}
+              </div>
+            )}
+          </>
+        )}
       </div>
-
-      {Object.values(running).some(Boolean) && (
-        <div style={{ 
-          marginBottom: '20px', 
-          padding: '12px', 
-          backgroundColor: '#fef3c7', 
-          border: '1px solid #f59e0b',
-          borderRadius: '6px' 
-        }}>
-          <div style={{ fontWeight: '500' }}>Operation in progress...</div>
-          {output && <div style={{ marginTop: '8px', fontFamily: 'monospace' }}>{output}</div>}
-        </div>
-      )}
-
-      <div style={{ 
-        border: '1px solid #e5e7eb', 
-        borderRadius: '8px', 
-        overflow: 'hidden' 
-      }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-          <thead style={{ backgroundColor: '#f9fafb' }}>
-            <tr>
-              <th style={{ 
-                padding: '12px 8px', 
-                textAlign: 'left', 
-                fontWeight: '600',
-                borderBottom: '1px solid #e5e7eb'
-              }}>
-                Recording Name
-              </th>
-              <th style={{ 
-                padding: '12px 8px', 
-                textAlign: 'left', 
-                fontWeight: '600',
-                borderBottom: '1px solid #e5e7eb'
-              }}>
-                Status
-              </th>
-              <th style={{ 
-                padding: '12px 8px', 
-                textAlign: 'left', 
-                fontWeight: '600',
-                borderBottom: '1px solid #e5e7eb'
-              }}>
-                Last Updated
-              </th>
-              <th style={{ 
-                padding: '12px 8px', 
-                textAlign: 'left', 
-                fontWeight: '600',
-                borderBottom: '1px solid #e5e7eb'
-              }}>
-                Actions
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {recordings.map((recording) => (
-              <RecordingRow
-                key={recording.name}
-                recording={recording}
-                onAction={handleAction}
-                isOperationRunning={!!running[recording.name]}
-              />
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      {recordings.length === 0 && (
-        <div style={{ 
-          textAlign: 'center', 
-          padding: '40px', 
-          color: '#6b7280' 
-        }}>
-          No recordings found. Check your recordings directory configuration.
-        </div>
-      )}
 
       <DeletionConfirmDialog
         isOpen={deletionState.isOpen}

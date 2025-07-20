@@ -48,40 +48,107 @@ export interface RecordingListState {
   error: string | null;
 }
 
-export interface OperationState {
-  running: boolean;
-  output: string;
-  error: string | null;
-}
-
-// Deletion types
-export interface DeletionConfirmationState {
+export interface DeletionState {
   isOpen: boolean;
-  recording?: Recording;
+  recording: Recording | null;
   isDeleting: boolean;
 }
 
-// Rename types
-export interface RenameConfirmationState {
+export interface RenameState {
   isOpen: boolean;
-  recording?: Recording;
+  recording: Recording | null;
   isRenaming: boolean;
 }
 
-// Render options types
-export interface RenderOptions {
-  preset: string;
-  main_audio?: string;
+export interface OperationState {
+  running: Record<string, boolean>;
+  output: string | null;
+  error: string | null;
 }
 
-export interface AnimationPreset {
+// Video types
+export interface VideoFile {
+  name: string;
+  path: string;
+  size: number;
+  format: string;
+  duration?: number;
+  thumbnail?: string;
+}
+
+export interface VideoInfo {
+  duration: number;
+  width: number;
+  height: number;
+  codec: string;
+  bitrate: number;
+  fps: number;
+}
+
+// Preset types
+export interface PresetConfig {
+  name: string;
+  description: string;
+  settings: Record<string, any>;
+}
+
+export interface PresetOption {
   name: string;
   description: string;
 }
 
-export const AVAILABLE_PRESETS: AnimationPreset[] = [
-  { name: "vintage", description: "Classic film effects with jitter, grain, and vintage color" },
-  { name: "music-video", description: "High-energy effects for music videos with scale, shake, and rotation" },
-  { name: "minimal", description: "Clean, simple animation with basic scale on bass only" },
-  { name: "beat-switch", description: "Legacy compatibility mode replicating old beat-switch behavior" }
-]; 
+export const AVAILABLE_PRESETS: PresetOption[] = [
+  {
+    name: 'beat-switch',
+    description: 'Dynamic camera switching synchronized with beat detection'
+  },
+  {
+    name: 'minimal',
+    description: 'Clean, simple layout with minimal animations'
+  },
+  {
+    name: 'music-video',
+    description: 'High-energy effects perfect for music content'
+  },
+  {
+    name: 'vintage',
+    description: 'Retro-style effects with film grain and color grading'
+  }
+];
+
+// Sorting and Filtering types
+export type SortOption = 
+  | 'date-desc'    // Newest First (default)
+  | 'date-asc'     // Oldest First  
+  | 'status'       // By Status
+  | 'name-asc'     // Name A→Z
+  | 'name-desc'    // Name Z→A
+  | 'size-desc'    // Largest First
+  | 'size-asc';    // Smallest First
+
+export interface FilterConfig {
+  searchTerm: string;
+  status: RecordingStatus | 'all';
+  sortOption: SortOption;
+}
+
+export const DEFAULT_FILTERS: FilterConfig = {
+  searchTerm: '',
+  status: 'all',
+  sortOption: 'date-desc'
+};
+
+// Controls Bar component props
+export interface ControlsBarProps {
+  filterConfig: FilterConfig;
+  onUpdateFilter: (key: keyof FilterConfig, value: any) => void;
+  onClearFilters: () => void;
+  hasActiveFilters: boolean;
+}
+
+// Results Counter component props
+export interface ResultsCounterProps {
+  filteredCount: number;
+  totalCount: number;
+  hasActiveFilters: boolean;
+} 

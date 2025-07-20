@@ -138,6 +138,22 @@ export function RecordingDetails({ recordingName, onBack, onRecordingRenamed }: 
     }
   };
 
+  const getStatusClassName = (status: RecordingStatus): string => {
+    if (typeof status === 'object' && 'Failed' in status) {
+      return 'failed';
+    }
+    
+    switch (status) {
+      case 'Recorded': return 'recorded';
+      case 'Extracted': return 'extracted';
+      case 'Analyzed': return 'analyzed';
+      case 'SetupRendered': return 'setup';
+      case 'Rendered': return 'rendered';
+      case 'Uploaded': return 'uploaded';
+      default: return 'failed';
+    }
+  };
+
   const getPipelineSteps = () => {
     const steps = [
       { name: 'Recorded', status: 'completed' },
@@ -234,25 +250,24 @@ export function RecordingDetails({ recordingName, onBack, onRecordingRenamed }: 
 
   if (loading) {
     return (
-      <div style={{ padding: '20px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', marginBottom: '20px' }}>
-          <button 
-            onClick={onBack}
-            style={{ 
-              background: 'none', 
-              border: 'none', 
-              cursor: 'pointer', 
-              display: 'flex', 
-              alignItems: 'center',
-              fontSize: '16px'
-            }}
-          >
-            <ArrowLeft size={20} style={{ marginRight: '8px' }} />
-            Back
-          </button>
-        </div>
-        <div style={{ textAlign: 'center', padding: '40px' }}>
-          Loading recording details...
+      <div>
+        <header className="app-header">
+          <div style={{ display: 'flex', alignItems: 'center' }}>
+            <button 
+              className="btn btn-secondary"
+              onClick={onBack}
+              style={{ marginRight: '16px' }}
+            >
+              <ArrowLeft size={16} />
+              Back
+            </button>
+            <h1 className="app-title" style={{ fontSize: '1.5rem' }}>Loading...</h1>
+          </div>
+        </header>
+        <div className="content content-loading">
+          <div className="loading-state">
+            Loading recording details...
+          </div>
         </div>
       </div>
     );
@@ -260,31 +275,31 @@ export function RecordingDetails({ recordingName, onBack, onRecordingRenamed }: 
 
   if (error) {
     return (
-      <div style={{ padding: '20px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', marginBottom: '20px' }}>
-          <button 
-            onClick={onBack}
-            style={{ 
-              background: 'none', 
-              border: 'none', 
-              cursor: 'pointer', 
-              display: 'flex', 
-              alignItems: 'center',
-              fontSize: '16px'
-            }}
-          >
-            <ArrowLeft size={20} style={{ marginRight: '8px' }} />
-            Back
-          </button>
-        </div>
-        <div style={{ color: '#dc2626', padding: '20px' }}>
-          Error: {error}
-          <button 
-            onClick={loadRecordingDetails}
-            style={{ marginLeft: '10px' }}
-          >
-            Retry
-          </button>
+      <div>
+        <header className="app-header">
+          <div style={{ display: 'flex', alignItems: 'center' }}>
+            <button 
+              className="btn btn-secondary"
+              onClick={onBack}
+              style={{ marginRight: '16px' }}
+            >
+              <ArrowLeft size={16} />
+              Back
+            </button>
+            <h1 className="app-title" style={{ fontSize: '1.5rem' }}>Error</h1>
+          </div>
+        </header>
+        <div className="content content-error">
+          <div className="error-state">
+            <strong>Error:</strong> {error}
+            <button 
+              className="btn btn-primary"
+              onClick={loadRecordingDetails}
+              style={{ marginTop: '10px' }}
+            >
+              Retry
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -292,24 +307,25 @@ export function RecordingDetails({ recordingName, onBack, onRecordingRenamed }: 
 
   if (!recording) {
     return (
-      <div style={{ padding: '20px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', marginBottom: '20px' }}>
-          <button 
-            onClick={onBack}
-            style={{ 
-              background: 'none', 
-              border: 'none', 
-              cursor: 'pointer', 
-              display: 'flex', 
-              alignItems: 'center',
-              fontSize: '16px'
-            }}
-          >
-            <ArrowLeft size={20} style={{ marginRight: '8px' }} />
-            Back
-          </button>
+      <div>
+        <header className="app-header">
+          <div style={{ display: 'flex', alignItems: 'center' }}>
+            <button 
+              className="btn btn-secondary"
+              onClick={onBack}
+              style={{ marginRight: '16px' }}
+            >
+              <ArrowLeft size={16} />
+              Back
+            </button>
+            <h1 className="app-title" style={{ fontSize: '1.5rem' }}>Not Found</h1>
+          </div>
+        </header>
+        <div className="content content-notfound">
+          <div className="empty-state">
+            Recording not found
+          </div>
         </div>
-        <div>Recording not found</div>
       </div>
     );
   }
@@ -318,225 +334,163 @@ export function RecordingDetails({ recordingName, onBack, onRecordingRenamed }: 
   const availableActions = getAvailableActions();
 
   return (
-    <div style={{ padding: '20px', maxWidth: '800px', margin: '0 auto' }}>
+    <div>
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '30px' }}>
+      <header className="app-header">
         <div style={{ display: 'flex', alignItems: 'center' }}>
           <button 
+            className="btn btn-secondary"
             onClick={onBack}
-            style={{ 
-              background: 'none', 
-              border: 'none', 
-              cursor: 'pointer', 
-              display: 'flex', 
-              alignItems: 'center',
-              fontSize: '16px',
-              marginRight: '15px'
-            }}
+            style={{ marginRight: '16px' }}
           >
-            <ArrowLeft size={20} style={{ marginRight: '8px' }} />
+            <ArrowLeft size={16} />
             Back
           </button>
-          <h1 style={{ margin: 0, fontSize: '24px' }}>{recording.name}</h1>
+          <h1 className="app-title" style={{ fontSize: '1.5rem' }}>{recording.name}</h1>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center' }}>
-          {getStatusIcon(recording.status)}
-          <span style={{ marginLeft: '8px', fontSize: '16px', fontWeight: 'bold' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span style={{ fontSize: '1.5rem' }}>{getStatusIcon(recording.status)}</span>
+          <div className={`recording-status ${getStatusClassName(recording.status)}`}>
             {typeof recording.status === 'object' && 'Failed' in recording.status 
               ? `Failed: ${recording.status.Failed}`
               : recording.status
             }
-          </span>
+          </div>
         </div>
-      </div>
+      </header>
 
-      {/* Actions */}
-      <div style={{ 
-        border: '1px solid #e5e7eb', 
-        borderRadius: '8px', 
-        padding: '20px', 
-        marginBottom: '30px' 
-      }}>
-        <h2 style={{ margin: '0 0 15px 0', fontSize: '18px' }}>Actions</h2>
-        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-          {/* Rename button - always available */}
-          <button
-            onClick={handleRenameClick}
-            disabled={!!running[recording.name] || renameState.isRenaming}
-            style={{
-              padding: '10px 16px',
-              backgroundColor: '#6b7280',
-              color: 'white',
-              border: 'none',
-              borderRadius: '6px',
-              cursor: (running[recording.name] || renameState.isRenaming) ? 'not-allowed' : 'pointer',
-              opacity: (running[recording.name] || renameState.isRenaming) ? 0.6 : 1,
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px'
-            }}
-          >
-            <Edit size={16} />
-            Rename
-          </button>
-
-          {/* Play Video button - always try to show */}
-          <button
-            onClick={handlePlayVideo}
-            disabled={!!running[recording.name]}
-            style={{
-              padding: '10px 16px',
-              backgroundColor: '#16a34a',
-              color: 'white',
-              border: 'none',
-              borderRadius: '6px',
-              cursor: running[recording.name] ? 'not-allowed' : 'pointer',
-              opacity: running[recording.name] ? 0.6 : 1,
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px'
-            }}
-          >
-            <Film size={16} />
-            Play Video
-          </button>
-
-          {availableActions.map((action) => (
+      <div className="content content-main">
+        {/* Actions */}
+        <div className="recording-card">
+          <h2 style={{ margin: '0 0 16px 0', fontSize: '1.125rem', fontWeight: '600' }}>Actions</h2>
+          <div className="recording-actions">
+            {/* Rename button - always available */}
             <button
-              key={action}
-              onClick={() => handleRunAction(action)}
-              disabled={!!running[recording.name]}
-              style={{
-                padding: '10px 16px',
-                backgroundColor: action === 'Next Step' ? '#3b82f6' : '#6b7280',
-                color: 'white',
-                border: 'none',
-                borderRadius: '6px',
-                cursor: running ? 'not-allowed' : 'pointer',
-                opacity: running ? 0.6 : 1,
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px'
-              }}
+              className="btn btn-secondary"
+              onClick={handleRenameClick}
+              disabled={!!running[recording.name] || renameState.isRenaming}
             >
-              {action === 'Next Step' && <Play size={16} />}
-              {action === 'Retry' && <RotateCcw size={16} />}
-              {action === 'View Logs' && <Eye size={16} />}
-              {action}
+              <Edit size={16} />
+              Rename
             </button>
-          ))}
-        </div>
-      </div>
 
-      {/* Pipeline Status */}
-      <div style={{ 
-        border: '1px solid #e5e7eb', 
-        borderRadius: '8px', 
-        padding: '20px', 
-        marginBottom: '30px',
-        backgroundColor: '#f9fafb'
-      }}>
-        <h2 style={{ margin: '0 0 20px 0', fontSize: '18px' }}>Pipeline Status</h2>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-          {pipelineSteps.map((step, index) => (
-            <div key={step.name} style={{ display: 'flex', alignItems: 'center' }}>
-              <div style={{
-                padding: '8px 12px',
-                borderRadius: '6px',
-                backgroundColor: 
-                  step.status === 'completed' ? '#10b981' :
-                  step.status === 'current' ? '#f59e0b' :
-                  step.status === 'failed' ? '#ef4444' : '#6b7280',
-                color: 'white',
-                fontSize: '14px',
-                fontWeight: 'bold',
-                minWidth: '80px',
-                textAlign: 'center'
+            {/* Play Video button - always try to show */}
+            <button
+              className="btn btn-primary"
+              onClick={handlePlayVideo}
+              disabled={!!running[recording.name]}
+            >
+              <Film size={16} />
+              Play Video
+            </button>
+
+            {availableActions.map((action) => (
+              <button
+                key={action}
+                className={`btn ${action === 'Next Step' ? 'btn-primary' : 'btn-secondary'}`}
+                onClick={() => handleRunAction(action)}
+                disabled={!!running[recording.name]}
+              >
+                {action === 'Next Step' && <Play size={16} />}
+                {action === 'Retry' && <RotateCcw size={16} />}
+                {action === 'View Logs' && <Eye size={16} />}
+                {action}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Pipeline Status */}
+        <div className="recording-card pipeline-status">
+          <h2 style={{ margin: '0 0 20px 0', fontSize: '1.125rem', fontWeight: '600' }}>Pipeline Status</h2>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+            {pipelineSteps.map((step, index) => (
+              <div key={step.name} style={{ display: 'flex', alignItems: 'center' }}>
+                <div style={{
+                  padding: '8px 12px',
+                  borderRadius: 'var(--border-radius)',
+                  backgroundColor: 
+                    step.status === 'completed' ? 'var(--green-success)' :
+                    step.status === 'current' ? 'var(--orange-warning)' :
+                    step.status === 'failed' ? 'var(--red-danger)' : 'var(--gray-400)',
+                  color: 'white',
+                  fontSize: '0.875rem',
+                  fontWeight: '500',
+                  minWidth: '80px',
+                  textAlign: 'center'
+                }}>
+                  {step.status === 'completed' ? '✅' : 
+                   step.status === 'current' ? '⏳' :
+                   step.status === 'failed' ? '❌' : '⭕'} {step.name}
+                </div>
+                {index < pipelineSteps.length - 1 && (
+                  <div style={{ margin: '0 8px', color: 'var(--gray-400)' }}>→</div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* File Information */}
+        <div className="recording-card">
+          <h2 style={{ margin: '0 0 16px 0', fontSize: '1.125rem', fontWeight: '600' }}>Files</h2>
+          <div className="files-grid">
+            {Object.entries(recording.file_sizes).map(([filename, size]) => (
+              <div key={filename} className="file-item">
+                <div className="file-item-name">
+                  {filename.includes('.mkv') ? '📹' :
+                   filename.includes('extracted') ? '📁' :
+                   filename.includes('analysis') ? '📊' :
+                   filename.includes('render') ? '🎬' : '📄'} {filename}
+                </div>
+                <div className="file-item-size">
+                  {formatFileSize(size)}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Operation Output */}
+        {(Object.values(running).some(Boolean) || output || operationError) && (
+          <div className="recording-card" style={{ backgroundColor: 'var(--gray-50)' }}>
+            <h2 style={{ margin: '0 0 16px 0', fontSize: '1.125rem', fontWeight: '600' }}>Operation Status</h2>
+            
+            {Object.values(running).some(Boolean) && (
+              <div style={{ color: 'var(--orange-warning)', marginBottom: '12px', fontWeight: '500' }}>
+                🔄 Operation in progress...
+              </div>
+            )}
+            
+            {output && (
+              <div style={{ 
+                backgroundColor: 'var(--green-success)', 
+                color: 'white', 
+                padding: '12px', 
+                borderRadius: 'var(--border-radius)',
+                marginBottom: '12px',
+                fontFamily: 'monospace',
+                fontSize: '0.875rem'
               }}>
-                {step.status === 'completed' ? '✅' : 
-                 step.status === 'current' ? '⏳' :
-                 step.status === 'failed' ? '❌' : '⭕'} {step.name}
+                ✅ {output}
               </div>
-              {index < pipelineSteps.length - 1 && (
-                <div style={{ margin: '0 5px', color: '#6b7280' }}>→</div>
-              )}
-            </div>
-          ))}
-        </div>
+            )}
+            
+            {operationError && (
+              <div style={{ 
+                backgroundColor: 'var(--red-danger)', 
+                color: 'white', 
+                padding: '12px', 
+                borderRadius: 'var(--border-radius)',
+                fontFamily: 'monospace',
+                fontSize: '0.875rem'
+              }}>
+                ❌ {operationError}
+              </div>
+            )}
+          </div>
+        )}
       </div>
-
-      {/* File Information */}
-      <div style={{ 
-        border: '1px solid #e5e7eb', 
-        borderRadius: '8px', 
-        padding: '20px', 
-        marginBottom: '30px' 
-      }}>
-        <h2 style={{ margin: '0 0 15px 0', fontSize: '18px' }}>Files</h2>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '15px' }}>
-          {Object.entries(recording.file_sizes).map(([filename, size]) => (
-            <div key={filename} style={{
-              padding: '12px',
-              border: '1px solid #d1d5db',
-              borderRadius: '6px',
-              backgroundColor: '#f9fafb'
-            }}>
-              <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>
-                {filename.includes('.mkv') ? '📹' :
-                 filename.includes('extracted') ? '📁' :
-                 filename.includes('analysis') ? '📊' :
-                 filename.includes('render') ? '🎬' : '📄'} {filename}
-              </div>
-              <div style={{ color: '#6b7280', fontSize: '14px' }}>
-                {formatFileSize(size)}
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Operation Output */}
-      {(Object.values(running).some(Boolean) || output || operationError) && (
-        <div style={{ 
-          border: '1px solid #e5e7eb', 
-          borderRadius: '8px', 
-          padding: '20px',
-          backgroundColor: '#f9fafb'
-        }}>
-          <h2 style={{ margin: '0 0 15px 0', fontSize: '18px' }}>Operation Status</h2>
-          
-          {Object.values(running).some(Boolean) && (
-            <div style={{ color: '#f59e0b', marginBottom: '10px' }}>
-              🔄 Operation in progress...
-            </div>
-          )}
-          
-          {output && (
-            <div style={{ 
-              backgroundColor: '#10b981', 
-              color: 'white', 
-              padding: '10px', 
-              borderRadius: '4px',
-              marginBottom: '10px',
-              fontFamily: 'monospace'
-            }}>
-              ✅ {output}
-            </div>
-          )}
-          
-          {operationError && (
-            <div style={{ 
-              backgroundColor: '#ef4444', 
-              color: 'white', 
-              padding: '10px', 
-              borderRadius: '4px',
-              fontFamily: 'monospace'
-            }}>
-              ❌ {operationError}
-            </div>
-          )}
-        </div>
-      )}
 
       {/* Preset Configuration Dialog */}
       {showPresetConfig && recording?.status === 'Analyzed' && (
@@ -554,13 +508,14 @@ export function RecordingDetails({ recordingName, onBack, onRecordingRenamed }: 
         }}>
           <div style={{
             backgroundColor: 'white',
-            borderRadius: '8px',
+            borderRadius: 'var(--border-radius-lg)',
             padding: '24px',
             maxWidth: '500px',
             width: '90%',
-            margin: '16px'
+            margin: '16px',
+            boxShadow: 'var(--shadow-lg)'
           }}>
-            <h3 style={{ fontSize: '18px', fontWeight: 'bold', marginBottom: '16px' }}>
+            <h3 style={{ fontSize: '1.125rem', fontWeight: '600', marginBottom: '16px' }}>
               Configure Animation
             </h3>
             
@@ -572,41 +527,26 @@ export function RecordingDetails({ recordingName, onBack, onRecordingRenamed }: 
             />
             
             {/* Show main audio info if available */}
-            <div style={{ marginBottom: '16px', padding: '12px', backgroundColor: '#f3f4f6', borderRadius: '6px' }}>
-              <p style={{ fontSize: '14px', color: '#6b7280', margin: 0 }}>
+            <div style={{ marginBottom: '16px', padding: '12px', backgroundColor: 'var(--gray-100)', borderRadius: 'var(--border-radius)' }}>
+              <p style={{ fontSize: '0.875rem', color: 'var(--gray-600)', margin: 0 }}>
                 <strong>Path:</strong> {recording.path}
               </p>
             </div>
             
             <div style={{ display: 'flex', gap: '12px' }}>
               <button
+                className="btn btn-secondary"
                 onClick={() => setShowPresetConfig(false)}
-                style={{
-                  flex: 1,
-                  padding: '12px 16px',
-                  color: '#6b7280',
-                  border: '1px solid #d1d5db',
-                  borderRadius: '6px',
-                  backgroundColor: 'white',
-                  cursor: 'pointer'
-                }}
                 disabled={!!running[recordingName]}
+                style={{ flex: 1 }}
               >
                 Cancel
               </button>
               <button
+                className="btn btn-primary"
                 onClick={() => handleRunAction('Setup Render')}
-                style={{
-                  flex: 1,
-                  padding: '12px 16px',
-                  backgroundColor: '#3b82f6',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '6px',
-                  cursor: running ? 'not-allowed' : 'pointer',
-                  opacity: !!running[recordingName] ? 0.5 : 1
-                }}
                 disabled={!!running[recordingName]}
+                style={{ flex: 1 }}
               >
                 {running[recordingName] ? 'Setting up...' : 'Setup Render'}
               </button>
