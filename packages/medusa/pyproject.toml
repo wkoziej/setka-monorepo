@@ -15,6 +15,7 @@ dependencies = [
     "Pillow>=8.0.0",
     "pytest>=8.3.5",
     "pytest-asyncio>=0.21.0",
+    "click>=8.0.0",
 ]
 keywords = ["media", "upload", "social", "automation", "youtube", "facebook"]
 classifiers = [
@@ -28,6 +29,9 @@ classifiers = [
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12"
 ]
+
+[project.scripts]
+medusa = "medusa.main:main"
 
 [build-system]
 requires = ["hatchling"]

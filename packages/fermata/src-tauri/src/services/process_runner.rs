@@ -114,7 +114,7 @@ impl ProcessRunner {
     /// Run medusa upload command
     pub async fn run_medusa_upload(&self, video_path: &Path, config_path: &Path) -> anyhow::Result<ProcessResult> {
         let mut cmd = AsyncCommand::new(&self.uv_path);
-        cmd.args(&["run", "--package", "medusa", "upload"])
+        cmd.args(&["run", "medusa", "upload"])
             .arg(video_path)
             .args(&["--config", &config_path.to_string_lossy()])
             .current_dir(&self.workspace_root);
