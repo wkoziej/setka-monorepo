@@ -19,6 +19,29 @@ class KeyframeHelper:
         """Initialize keyframe helper."""
         pass
 
+    def _get_strip_object(self, strip: Union[str, object]) -> tuple:
+        """
+        Get strip object from either a string name or strip object.
+        
+        Args:
+            strip: Strip name (str) or strip object
+            
+        Returns:
+            tuple: (strip_object, strip_name) or (None, None) if not found
+        """
+        if isinstance(strip, str):
+            strip_name = strip
+            if bpy and bpy.context.scene.sequence_editor:
+                strip_obj = bpy.context.scene.sequence_editor.sequences_all.get(strip_name)
+                if not strip_obj:
+                    print(f"Strip '{strip_name}' not found in sequence editor")
+                    return None, None
+                return strip_obj, strip_name
+            else:
+                return None, None
+        else:
+            return strip, strip.name
+
     def insert_blend_alpha_keyframe(
         self, strip: Union[str, object], frame: int, alpha_value: float = None
     ) -> bool:
@@ -34,22 +57,23 @@ class KeyframeHelper:
             bool: True if keyframe inserted successfully
         """
         try:
-            # Extract strip name and alpha value
-            if isinstance(strip, str):
-                strip_name = strip
-                if alpha_value is None:
-                    alpha_value = 1.0  # Default alpha
-            else:
-                strip_name = strip.name
-                if alpha_value is None:
-                    alpha_value = strip.blend_alpha
-
-            # Build data path and insert keyframe
-            data_path = self.build_data_path(strip_name, "blend_alpha")
-            bpy.context.scene.keyframe_insert(data_path=data_path, frame=frame)
+            strip_obj, strip_name = self._get_strip_object(strip)
+            if not strip_obj:
+                return False
+                
+            # Set alpha value
+            if alpha_value is None:
+                alpha_value = strip_obj.blend_alpha if hasattr(strip_obj, 'blend_alpha') else 1.0
+            
+            # Use direct method - blend_alpha is a direct property of the strip
+            strip_obj.blend_alpha = alpha_value
+            strip_obj.keyframe_insert(data_path="blend_alpha", frame=frame)
             return True
 
-        except Exception:
+        except Exception as e:
+            print(f"Error inserting blend_alpha keyframe: {e}")
+            import traceback
+            traceback.print_exc()
             return False
 
     def insert_transform_scale_keyframes(
@@ -72,31 +96,31 @@ class KeyframeHelper:
             bool: True if keyframes inserted successfully
         """
         try:
-            # Extract strip name and scale values
-            if isinstance(strip, str):
-                strip_name = strip
-                if scale_x is None:
-                    scale_x = 1.0  # Default scale
-                if scale_y is None:
-                    scale_y = scale_x  # Uniform scaling
-            else:
-                strip_name = strip.name
-                if scale_x is None:
-                    scale_x = strip.transform.scale_x
-                if scale_y is None:
-                    scale_y = (
-                        scale_x if scale_x is not None else strip.transform.scale_y
-                    )
+            strip_obj, strip_name = self._get_strip_object(strip)
+            if not strip_obj:
+                return False
+                
+            if not hasattr(strip_obj, 'transform'):
+                print(f"Strip '{strip_name}' has no transform property")
+                return False
+                
+            # Set scale values
+            if scale_x is None:
+                scale_x = strip_obj.transform.scale_x if hasattr(strip_obj.transform, 'scale_x') else 1.0
+            if scale_y is None:
+                scale_y = scale_x  # Uniform scaling by default
 
-            # Build data paths and insert keyframes
-            data_path_x = self.build_data_path(strip_name, "transform.scale_x")
-            data_path_y = self.build_data_path(strip_name, "transform.scale_y")
-
-            bpy.context.scene.keyframe_insert(data_path=data_path_x, frame=frame)
-            bpy.context.scene.keyframe_insert(data_path=data_path_y, frame=frame)
+            # Use direct method like addon system
+            strip_obj.transform.scale_x = scale_x
+            strip_obj.transform.scale_y = scale_y
+            strip_obj.transform.keyframe_insert(data_path="scale_x", frame=frame)
+            strip_obj.transform.keyframe_insert(data_path="scale_y", frame=frame)
             return True
 
-        except Exception:
+        except Exception as e:
+            print(f"Error inserting scale keyframes: {e}")
+            import traceback
+            traceback.print_exc()
             return False
 
     def insert_transform_offset_keyframes(
@@ -119,29 +143,31 @@ class KeyframeHelper:
             bool: True if keyframes inserted successfully
         """
         try:
-            # Extract strip name and offset values
-            if isinstance(strip, str):
-                strip_name = strip
-                if offset_x is None:
-                    offset_x = 0  # Default offset
-                if offset_y is None:
-                    offset_y = 0  # Default offset
-            else:
-                strip_name = strip.name
-                if offset_x is None:
-                    offset_x = strip.transform.offset_x
-                if offset_y is None:
-                    offset_y = strip.transform.offset_y
+            strip_obj, strip_name = self._get_strip_object(strip)
+            if not strip_obj:
+                return False
+                
+            if not hasattr(strip_obj, 'transform'):
+                print(f"Strip '{strip_name}' has no transform property")
+                return False
+                
+            # Set offset values
+            if offset_x is None:
+                offset_x = strip_obj.transform.offset_x if hasattr(strip_obj.transform, 'offset_x') else 0
+            if offset_y is None:
+                offset_y = strip_obj.transform.offset_y if hasattr(strip_obj.transform, 'offset_y') else 0
 
-            # Build data paths and insert keyframes
-            data_path_x = self.build_data_path(strip_name, "transform.offset_x")
-            data_path_y = self.build_data_path(strip_name, "transform.offset_y")
-
-            bpy.context.scene.keyframe_insert(data_path=data_path_x, frame=frame)
-            bpy.context.scene.keyframe_insert(data_path=data_path_y, frame=frame)
+            # Use direct method like addon system
+            strip_obj.transform.offset_x = offset_x
+            strip_obj.transform.offset_y = offset_y
+            strip_obj.transform.keyframe_insert(data_path="offset_x", frame=frame)
+            strip_obj.transform.keyframe_insert(data_path="offset_y", frame=frame)
             return True
 
-        except Exception:
+        except Exception as e:
+            print(f"Error inserting offset keyframes: {e}")
+            import traceback
+            traceback.print_exc()
             return False
 
     def build_data_path(self, strip_name: str, property_path: str) -> str:
@@ -196,23 +222,28 @@ class KeyframeHelper:
             rotation: Rotation value in radians. If None, uses strip's current value
 
         Returns:
-            bool: True if keyframe inserted successfully
+            bool: True if keyframes inserted successfully
         """
         try:
-            # Extract strip name and rotation value
-            if isinstance(strip, str):
-                strip_name = strip
-                if rotation is None:
-                    rotation = 0.0  # Default rotation
-            else:
-                strip_name = strip.name
-                if rotation is None:
-                    rotation = strip.transform.rotation
+            strip_obj, strip_name = self._get_strip_object(strip)
+            if not strip_obj:
+                return False
+                
+            if not hasattr(strip_obj, 'transform'):
+                print(f"Strip '{strip_name}' has no transform property")
+                return False
+                
+            # Set rotation value
+            if rotation is None:
+                rotation = strip_obj.transform.rotation if hasattr(strip_obj.transform, 'rotation') else 0.0
 
-            # Build data path and insert keyframe
-            data_path = self.build_data_path(strip_name, "transform.rotation")
-            bpy.context.scene.keyframe_insert(data_path=data_path, frame=frame)
+            # Use direct method like addon system
+            strip_obj.transform.rotation = rotation
+            strip_obj.transform.keyframe_insert(data_path="rotation", frame=frame)
             return True
 
-        except Exception:
+        except Exception as e:
+            print(f"Error inserting rotation keyframe: {e}")
+            import traceback
+            traceback.print_exc()
             return False

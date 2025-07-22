@@ -1,7 +1,7 @@
 # ABOUTME: VisibilityAnimation implementation - animates strip visibility using blend_alpha
 # ABOUTME: Supports alternating visibility patterns for main cameras based on audio events
 
-"""Visibility animation for VSE strips."""
+"""Visibility animation for addon."""
 
 from typing import List, Optional
 
@@ -75,8 +75,7 @@ class VisibilityAnimation(BaseEffectAnimation):
             # Other patterns start visible
             initial_alpha = 1.0
             
-        strip.blend_alpha = initial_alpha
-        self.keyframe_helper.insert_blend_alpha_keyframe(strip.name, 1, initial_alpha)
+        self.keyframe_helper.insert_blend_alpha_keyframe(strip, 1, initial_alpha)
         
         # Apply visibility changes for each event
         print(f"    🎯 Adding visibility keyframes for {len(events)} events")
@@ -112,15 +111,13 @@ class VisibilityAnimation(BaseEffectAnimation):
                 
             print(f"    📍 Event {i+1}: time={event_time:.2f}s, frame={frame}, strip_index={strip_index}, alpha={target_alpha}")
             
-            strip.blend_alpha = target_alpha
-            self.keyframe_helper.insert_blend_alpha_keyframe(strip.name, frame, target_alpha)
+            self.keyframe_helper.insert_blend_alpha_keyframe(strip, frame, target_alpha)
             
             # For pulse pattern, add return to previous state
             if self.pattern == "pulse":
                 return_frame = frame + self.duration_frames
                 return_alpha = 0.0 if target_alpha == 1.0 else 1.0
-                strip.blend_alpha = return_alpha
-                self.keyframe_helper.insert_blend_alpha_keyframe(strip.name, return_frame, return_alpha)
+                self.keyframe_helper.insert_blend_alpha_keyframe(strip, return_frame, return_alpha)
                 print(f"    📍 Return frame: {return_frame}, alpha={return_alpha}")
             
             # Only show first 3 events to avoid spam

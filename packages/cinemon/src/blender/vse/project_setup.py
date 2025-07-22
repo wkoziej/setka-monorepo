@@ -4,6 +4,7 @@ ABOUTME: Extracted from BlenderVSEConfigurator to centralize project setup logic
 """
 
 from typing import Dict
+from pathlib import Path
 
 try:
     import bpy
@@ -48,17 +49,21 @@ class BlenderProjectSetup:
             bool: True if successful
         """
         try:
-            # Load Video Editing template instead of empty scene
-            bpy.ops.wm.read_factory_settings(app_template="Video_Editing")
+            # DON'T use Video_Editing template - it causes problems with strip saving in background mode
+            # Load default scene instead
+            print("🎬 Loading default scene (avoiding Video_Editing template issues)...")
+            bpy.ops.wm.read_factory_settings()
+            print("🎬 Default scene loaded")
 
             # Configure basic scene settings
             scene = bpy.context.scene
+            print(f"🎬 Scene: {scene.name}, has sequence_editor: {scene.sequence_editor is not None}")
             scene.render.fps = self.config.get("fps", 30)
             scene.render.resolution_x = self.config.get("resolution_x", 1280)
             scene.render.resolution_y = self.config.get("resolution_y", 720)
             scene.frame_start = 1
 
-            print("✓ Loaded Video Editing template - workspace should be correct")
+            print("✓ Loaded default scene - will manually create sequence editor")
 
             return True
 
@@ -156,12 +161,18 @@ class BlenderProjectSetup:
 
             for i, video_file in enumerate(video_files):
                 channel = i + 2  # Start from channel 2 (audio is channel 1)
-                sequencer.sequences.new_movie(
-                    name=f"Video_{i + 1}",
+                
+                # Use filename (without extension) for clear identification
+                strip_name = Path(video_file).stem
+                
+                print(f"🎬 Adding video strip: {strip_name} from {video_file} to channel {channel}")
+                new_strip = sequencer.sequences.new_movie(
+                    name=strip_name,
                     filepath=str(video_file),
                     channel=channel,
                     frame_start=1,
                 )
+                print(f"🎬 Added strip: {new_strip.name if new_strip else 'FAILED'}")
 
             return True
 
@@ -199,11 +210,21 @@ class BlenderProjectSetup:
         """
         output_blend = self.config.get("output_blend")
         if not output_blend:
+            print("🎬 No output_blend specified - skipping save in project_setup")
             return True  # No save path is not an error
 
         try:
             # Ensure directory exists
             output_blend.parent.mkdir(parents=True, exist_ok=True)
+
+            # Debug: Check strips before save
+            sequencer = bpy.context.scene.sequence_editor
+            if sequencer:
+                strips_count = len(sequencer.sequences)
+                video_strips_count = len([s for s in sequencer.sequences if s.type == 'MOVIE'])
+                print(f"🎬 Before save: {strips_count} total sequences, {video_strips_count} video strips")
+            else:
+                print("🎬 Before save: No sequence editor found")
 
             # Save project
             bpy.ops.wm.save_as_mainfile(filepath=str(output_blend))

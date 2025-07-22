@@ -91,7 +91,7 @@ class BlenderProjectManager:
             logger.info(f"Video files: {resolved_config.project.video_files}")
             if resolved_config.project.main_audio:
                 logger.info(f"Main audio: {resolved_config.project.main_audio}")
-            logger.info(f"Animation mode: compositional with {len(resolved_config.animations)} animations")
+            logger.info(f"Animation mode: compositional with {len(internal_config.get('animations', []))} animations")
 
             # 5. Execute Blender with JSON config path
             output_blend = resolved_config.project.output_blend
@@ -323,7 +323,9 @@ class BlenderProjectManager:
         
         resolved_audio_analysis = AudioAnalysisConfig(
             file=resolved_analysis_file,
-            data=yaml_config.audio_analysis.data
+            data=yaml_config.audio_analysis.data,
+            beat_division=yaml_config.audio_analysis.beat_division,
+            min_onset_interval=yaml_config.audio_analysis.min_onset_interval
         )
         
         resolved_layout = LayoutConfig(
@@ -335,6 +337,7 @@ class BlenderProjectManager:
             project=resolved_project,
             audio_analysis=resolved_audio_analysis,
             layout=resolved_layout,
-            animations=yaml_config.animations
+            animations=yaml_config.animations,
+            strip_animations=yaml_config.strip_animations
         )
     

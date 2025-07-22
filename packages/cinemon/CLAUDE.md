@@ -8,23 +8,32 @@ Cinemon is a **Blender VSE (Video Sequence Editor) automation package** within t
 
 ## Architecture Overview
 
+### Unified Animation System (NEW)
+
+- **blender_addon/unified_api.py**: Central API for all animation logic
+- **blender_addon/animation_applicators.py**: Routes animations to strips with events-based timing
+- **blender_addon/keyframe_helper.py**: Unified keyframe insertion for all animations
+- **Events-Based Animations**: All animations driven by audio analysis events (beats, energy)
+- **DRY Principle**: Single animation codebase used by both VSE script and addon GUI
+
 ### Core Components
 
 - **project_manager.py**: Python API for creating VSE projects via subprocess calls to Blender
-- **vse_script.py**: Parametric Blender script executed inside Blender (Polish comments)
-- **animation_engine.py**: Delegation pattern routing to specialized animator classes
+- **vse_script.py**: Thin wrapper that delegates to addon Animation API
 - **CLI (blend_setup.py)**: Command-line interface with auto-detection of audio analysis needs
 - **config/**: YAML configuration system with preset management and auto-discovery
   - **CinemonConfigGenerator**: High-level API for generating YAML configurations
   - **MediaDiscovery**: Auto-discovery of video/audio files in recording directories
-  - **PresetManager**: Built-in and custom preset management
+  - **PresetManager**: Built-in presets (vintage, multi-pip, minimal)
 
-### Animation System
+### Available Animations (in addon)
 
-Uses **delegation pattern** with three specialized animators:
-- **BeatSwitchAnimator**: Alternates video strip visibility on beat events
-- **EnergyPulseAnimator**: Scales strips on energy peaks for bass response
-- **MultiPipAnimator**: Complex 2x2 grid layout with main cameras + corner PiPs
+- **ScaleAnimation**: Audio-reactive scaling
+- **ShakeAnimation**: Camera shake effects
+- **VisibilityAnimation**: Strip visibility control
+- **RotationWobbleAnimation**: Rotation effects
+- **JitterAnimation**: Film jitter simulation
+- **BrightnessFlickerAnimation**: Brightness modulation
 
 ### Integration Points
 
@@ -64,6 +73,19 @@ print(f'Generated: {config_path}')
 
 ## Key Technical Patterns
 
+### Unified Animation System
+
+**NEW**: All animations now live in the addon and use events-based timing:
+
+```python
+# In addon animations
+def apply_to_strip(self, strip, events: List[float], fps: int, **kwargs) -> bool:
+    """Apply animation based on event times in seconds."""
+    for event_time in events:
+        frame = int(event_time * fps)
+        # Apply keyframes at event frames
+```
+
 ### YAML Configuration System
 
 Cinemon uses **YAML configuration files** for parametric Blender execution:
@@ -82,15 +104,15 @@ layout:
     seed: 42
     margin: 0.1
 
-animations:
-  - type: scale
-    trigger: bass
-    intensity: 0.3
-    target_strips: [Camera1, Camera2]
-  - type: vintage_color
-    trigger: one_time
-    sepia_amount: 0.4
-    target_strips: []
+strip_animations:
+  Camera1.mp4:
+    - type: scale
+      trigger: bass
+      intensity: 0.3
+  Camera2.mp4:
+    - type: shake
+      trigger: beat
+      intensity: 0.5
 ```
 
 ### Configuration Generation
@@ -182,68 +204,64 @@ recording_name/
 layout:
   type: random
   config: {margin: 0.1, seed: 1950}
-animations:
-  - {type: shake, trigger: beat, intensity: 2.0}
-  - {type: jitter, trigger: continuous, intensity: 1.0}
-  - {type: brightness_flicker, trigger: beat, intensity: 0.1}
-  - {type: black_white, trigger: one_time, intensity: 0.6}
-  - {type: film_grain, trigger: one_time, intensity: 0.15}
-  - {type: vintage_color, trigger: one_time, sepia_amount: 0.4}
+strip_animations:
+  "*":  # Apply to all strips
+    - {type: shake, trigger: beat, intensity: 2.0}
+    - {type: jitter, trigger: continuous, intensity: 1.0}
+    - {type: brightness_flicker, trigger: beat, intensity: 0.1}
 ```
 
-**music-video** - High-energy effects:
+**multi-pip** - Picture-in-picture layout:
 ```yaml
 layout:
-  type: random
-  config: {margin: 0.05, seed: 100, min_scale: 0.4, max_scale: 0.9}
-animations:
-  - {type: scale, trigger: bass, intensity: 0.5, duration_frames: 3}
-  - {type: shake, trigger: beat, intensity: 12.0}
-  - {type: rotation, trigger: energy_peaks, degrees: 2.0}
+  type: multi_pip
+  config: {main_strip_indices: [0, 1]}
+strip_animations:
+  "*":  # Apply to all strips
+    - {type: scale, trigger: bass, intensity: 0.3}
 ```
 
 **minimal** - Basic effects:
 ```yaml
-animations:
-  - {type: scale, trigger: bass, intensity: 0.2, duration_frames: 3}
-```
-
-**beat-switch** - Legacy compatibility:
-```yaml
-animations:
-  - {type: scale, trigger: beat, intensity: 0.2}
+strip_animations:
+  "*":  # Apply to all strips
+    - {type: scale, trigger: bass, intensity: 0.2, duration_frames: 3}
 ```
 
 #### Selective Strip Targeting
 
-All animations support `target_strips` for selective application:
+Animations are now targeted per-strip using the new `strip_animations` structure:
 
 ```yaml
-animations:
-  - type: scale
-    trigger: bass
-    intensity: 0.5
-    target_strips: [Camera1, Camera2]  # Only these strips
-    
-  - type: vintage_color
-    trigger: one_time
-    sepia_amount: 0.4
-    target_strips: []  # All strips (default)
+strip_animations:
+  Camera1.mp4:
+    - type: scale
+      trigger: bass
+      intensity: 0.5
+  Camera2.mp4:
+    - type: shake
+      trigger: beat
+      intensity: 3.0
+  "*":  # Apply to all strips
+    - type: brightness_flicker
+      trigger: beat
+      intensity: 0.1
 ```
 
-#### Supported Animation Types
+#### Supported Animation Types (in addon)
 
-**Transform Animations:**
-- `scale` - Scale changes on audio events
-- `shake` - Position shake effects  
-- `rotation` - Rotation wobble effects
-- `jitter` - Continuous random position changes
-
-**Visual Effects:**
+**Available Animations:**
+- `scale` - Audio-reactive scaling
+- `shake` - Camera shake effects
+- `visibility` - Strip visibility control
+- `rotation_wobble` - Rotation effects
+- `jitter` - Film jitter simulation
 - `brightness_flicker` - Brightness modulation
-- `vintage_color` - Sepia tint and contrast boost
-- `black_white` - Desaturation effects
-- `film_grain` - Grain overlay effects
+
+**Removed Animations:**
+- ~~`vintage_color`~~ - Removed
+- ~~`black_white`~~ - Removed
+- ~~`film_grain`~~ - Removed
 
 ## Testing Considerations
 

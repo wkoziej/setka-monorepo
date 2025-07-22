@@ -113,7 +113,8 @@ class YAMLConfigLoader:
     
     VALID_ANIMATION_TYPES = {
         "scale", "shake", "rotation", "jitter", "brightness_flicker",
-        "black_white", "film_grain", "vintage_color", "visibility"
+        "black_white", "film_grain", "vintage_color", "visibility",
+        "desaturate_pulse", "contrast_flash", "pip_switch", "opacity", "position"
     }
     
     VALID_TRIGGERS = {
@@ -314,7 +315,10 @@ class YAMLConfigLoader:
                 # Handle dict format for backwards compatibility
                 internal_format["project"]["resolution"] = config.project.resolution
         
-        # Convert strip_animations to flat animations list
+        # Keep original strip_animations format for unified_api
+        internal_format["strip_animations"] = config.strip_animations
+        
+        # Also convert to flat animations list for backwards compatibility with vse_script.py
         flat_animations = []
         
         # First, convert strip_animations (new format)

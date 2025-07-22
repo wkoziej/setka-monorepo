@@ -16,6 +16,14 @@ Setka is a monorepo containing five interconnected media processing and automati
 
 This is a uv workspace with shared dependencies. All packages depend on `setka-common` for core functionality.
 
+### Package Build Systems
+
+- **obsession**: Uses setuptools with src layout (`src/` directory structure)
+- **cinemon**: Uses hatchling with src layout, entry points: `cinemon-blend-setup`, `cinemon-generate-config`
+- **setka-common**: Uses setuptools with src layout
+- **beatrix**: Audio analysis package with librosa dependencies
+- **medusa**: Media upload automation package
+
 ### Development Commands
 
 ```bash
@@ -48,14 +56,41 @@ uv run --package beatrix pytest
 uv run --package cinemon pytest
 uv run --package medusa pytest
 
-# Test with coverage
+# Test with coverage (80% minimum required)
 uv run pytest --cov
+uv run pytest --cov --cov-report=html  # Generate HTML report
 
 # Run single test file
 uv run pytest packages/obsession/tests/test_extractor.py -v
 
-# Run specific test
+# Run specific test by marker
+uv run pytest -m "unit" -v
+uv run pytest -m "integration" -v
+uv run pytest -m "slow" -v
+
+# Run specific test pattern
 uv run pytest -k "test_audio_analysis" -v
+
+# Parallel testing (faster)
+uv run pytest -n auto
+```
+
+### Code Quality Commands
+
+```bash
+# Format code (black)
+uv run black packages/
+
+# Type checking (mypy)
+uv run mypy packages/obsession/src
+uv run mypy packages/cinemon/src
+
+# Linting (ruff for cinemon, flake8 for obsession)
+uv run ruff check packages/cinemon/
+uv run flake8 packages/obsession/src
+
+# Format check without changes
+uv run black --check packages/
 ```
 
 ## Architecture Overview
@@ -97,21 +132,21 @@ beatrix ←┘
 
 The cinemon package handles Blender VSE automation through:
 
+- **Unified Animation System**: Single animation codebase in addon, used by both VSE script and GUI
 - **YAML Configuration System**: Replaces environment variables with structured configuration files
-- **Preset Management**: Built-in presets (vintage, music-video, minimal, beat-switch) with customization support
+- **Preset Management**: Built-in presets (vintage, multi-pip, minimal) with customization support
 - **Media Auto-Discovery**: Automatic detection of video/audio files in recording directories
-- **Configuration Generation**: High-level API for generating YAML configurations from presets or custom parameters
-- **Selective Animation Targeting**: Apply different animations to specific video strips
+- **Events-Based Animation**: All animations driven by audio analysis events (beats, energy peaks)
+- **Strip Name Mapping**: Uses filename-based naming (webcam.mkv) instead of generic (Video_1)
 - **bpy Mock System**: `conftest.py` provides Mock bpy for testing outside Blender
-- **Animation Engine**: Delegation pattern routing to specialized animators
 - **Audio-Driven Timing**: Beat detection drives keyframe generation
 
 Key files:
-- `cinemon/vse_script.py` - Main Blender script (executed by Blender)
+- `cinemon/blender_addon/unified_api.py` - Main animation API interface
+- `cinemon/blender_addon/animation_applicators.py` - Routes animations to strips
+- `cinemon/blender_addon/keyframe_helper.py` - Unified keyframe insertion
+- `cinemon/vse_script.py` - Main Blender script (thin wrapper, delegates to addon)
 - `cinemon/project_manager.py` - Python API for project creation
-- `cinemon/animation_engine.py` - Delegates to beat-switch/energy-pulse/multi-pip animators
-- `cinemon/config/cinemon_config_generator.py` - High-level YAML configuration generation API
-- `cinemon/config/media_discovery.py` - Auto-discovery of media files in recording directories
 - `cinemon/config/preset_manager.py` - Built-in and custom preset management
 
 ### OBS Integration (obsession)
@@ -170,6 +205,20 @@ Managed by `setka-common.file_structure.specialized.RecordingStructureManager`
 
 Some tests in obsession fail when run together due to `importlib.reload()` calls in `setup_method()`. Run individual test files if encountering `ImportError: module core.metadata not in sys.modules`.
 
+## Recent Development Focus
+
+### Unified Animation System (Phase 1 Complete, Issues Found)
+- **Single animation codebase** in addon eliminates VSE/addon duplication
+- **7/10 animations migrated** to addon with events-based timing
+- **Removed all VSE animations** to follow DRY principle
+- **Known issues**: Layout import failure, VSE script not calling Animation API
+
+### YAML Configuration Migration (Completed)
+- **cinemon** now uses YAML configuration files instead of environment variables
+- **YAML→JSON fallback** implemented for Blender compatibility
+- **cinemon-generate-config** CLI command added for configuration generation
+- **Preset system** with built-in templates (vintage, multi-pip, minimal)
+
 ## External Dependencies
 
 ### Required External Tools
@@ -214,9 +263,10 @@ Some tests in obsession fail when run together due to `importlib.reload()` calls
 Each package provides specific commands:
 
 - `obs-extract` - Extract sources from OBS recordings (obsession)
-- `beatrix` - Analyze audio for animation timing (beatrix)
-- `cinemon-blend-setup` - Create animated Blender VSE projects (cinemon)  
-- Direct module execution for medusa: `python -m medusa.cli`
+- `cinemon-blend-setup` - Create animated Blender VSE projects (cinemon)
+- `cinemon-generate-config` - Generate YAML configuration files (cinemon)
+- `uv run --package beatrix python -m beatrix.cli.analyze_audio` - Audio analysis (beatrix)
+- `uv run --package medusa python -m medusa.cli` - Media upload automation (medusa)
 
 ## Practical Usage Examples
 
@@ -276,7 +326,7 @@ cinemon-blend-setup /path/to/recording --preset music-video \
 cinemon-blend-setup /path/to/recording --config ./custom_animation.yaml
 
 # Advanced configuration generation with Python API
-uv run python -c "
+uv run --package cinemon python -c "
 from blender.config import CinemonConfigGenerator
 generator = CinemonConfigGenerator()
 

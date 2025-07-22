@@ -22,10 +22,18 @@ from pathlib import Path
 from pathlib import Path
 from typing import List, Optional, Tuple, Dict
 
-# Import YAML configuration loader
+# Import YAML configuration loader and Animation API
 addon_path = Path(__file__).parent.parent.parent / "blender_addon"
 if str(addon_path) not in sys.path:
     sys.path.insert(0, str(addon_path))
+
+# Import Animation API for unified animation system
+try:
+    from unified_api import get_animation_api
+    print("✓ Animation API imported successfully")
+except ImportError as e:
+    print(f"⚠ Warning: Could not import Animation API: {e}")
+    get_animation_api = None
 
 # NOTE: This import is kept for fallback compatibility but not used
 # The actual config loading is done through setka-common later in the file
@@ -88,8 +96,10 @@ class BlenderVSEConfigurator:
             
             try:
                 config_obj = loader.load_config(Path(temp_path))
+                print(f"🔍 DEBUG: Loaded config has {len(getattr(config_obj, 'strip_animations', {}))} strip_animations")
                 # Convert to internal format
                 self.config_data = loader.convert_to_internal(config_obj)
+                print(f"🔍 DEBUG: After conversion has {len(self.config_data.get('animations', []))} animations")
             finally:
                 import os
                 os.unlink(temp_path)
@@ -99,9 +109,57 @@ class BlenderVSEConfigurator:
         
         # Set attributes from config (maintaining compatibility)
         project = self.config_data['project']
-        self.video_files = [Path(f) for f in project['video_files']]
-        self.main_audio = Path(project['main_audio']) if project.get('main_audio') else None
-        self.output_blend = Path(project['output_blend']) if project.get('output_blend') else None
+        print(f"🎬 VSE script received video_files: {project['video_files']}")
+        
+        # Resolve relative paths to absolute paths relative to config file directory
+        config_dir = self.config_path.parent
+        resolved_video_files = []
+        for video_file in project['video_files']:
+            video_path = Path(video_file)
+            if not video_path.is_absolute():
+                # Try relative to config directory first
+                resolved_path = config_dir / video_path
+                if not resolved_path.exists():
+                    # Try relative to config_dir/extracted/ (standard structure)
+                    resolved_path = config_dir / "extracted" / video_path
+                if resolved_path.exists():
+                    resolved_video_files.append(resolved_path.resolve())
+                else:
+                    print(f"❌ Video file not found: {video_path} (tried {config_dir / video_path} and {config_dir / 'extracted' / video_path})")
+                    resolved_video_files.append(video_path)  # Keep original if not found
+            else:
+                resolved_video_files.append(Path(video_file))
+        
+        self.video_files = resolved_video_files
+        print(f"🎬 VSE script resolved video_files: {[str(p) + ' (absolute: ' + str(p.is_absolute()) + ', exists: ' + str(p.exists()) + ')' for p in self.video_files]}")
+        
+        # Resolve main_audio path similar to video files
+        if project.get('main_audio'):
+            main_audio_path = Path(project['main_audio'])
+            if not main_audio_path.is_absolute():
+                # Try relative to config directory first  
+                resolved_audio = config_dir / main_audio_path
+                if not resolved_audio.exists():
+                    # Try relative to config_dir/extracted/ (standard structure)
+                    resolved_audio = config_dir / "extracted" / main_audio_path
+                if resolved_audio.exists():
+                    self.main_audio = resolved_audio.resolve()
+                else:
+                    print(f"❌ Main audio file not found: {main_audio_path}")
+                    self.main_audio = main_audio_path
+            else:
+                self.main_audio = main_audio_path
+            print(f"🎬 VSE script resolved main_audio: {self.main_audio} (absolute: {self.main_audio.is_absolute()}, exists: {self.main_audio.exists()})")
+        else:
+            self.main_audio = None
+        # Set output_blend - if not specified, generate default path based on config location
+        if project.get('output_blend'):
+            self.output_blend = Path(project['output_blend'])
+        else:
+            # Generate default output path: config_dir/blender/{config_name}.blend
+            config_name = self.config_path.stem.replace('animation_config_', '').replace('animation_config', 'project')
+            self.output_blend = config_dir / "blender" / f"{config_name}.blend"
+            print(f"🎬 Generated default output_blend: {self.output_blend}")
         self.render_output = Path(project['render_output']) if project.get('render_output') else None
         self.fps = project.get('fps', 30)
         resolution = project.get('resolution', {})
@@ -187,26 +245,61 @@ class BlenderVSEConfigurator:
         if not success:
             print("✗ Błąd konfiguracji podstawowego projektu")
             return False
-
+        
         # Apply compositional animations if configured
         print(f"🎭 Checking animations: config has {len(self.config_data.get('animations', []))} animations")
-        if self.config_data['animations']:
-            print(f"🎭 Applying compositional animations...")
-            sequencer = bpy.context.scene.sequence_editor
-            animation_success = self._apply_compositional_animations(sequencer)
+        print(f"🎭 Checking strip_animations: config has {len(self.config_data.get('strip_animations', {}))} strips with animations")
+        print(f"🎭 Config keys: {list(self.config_data.keys())}")
+        animation_success = True
+        
+        # Use unified Animation API - no fallbacks!
+        if self.config_data.get('animations') or self.config_data.get('strip_animations'):
+            if not get_animation_api:
+                print("❌ Animation API not available - cannot apply animations")
+                return False
+                
+            print("🎭 Using unified Animation API for animations...")
+            animation_success = self._apply_animations_via_api()
             if not animation_success:
-                print(
-                    "⚠ Animacje nie zostały zastosowane, ale projekt został utworzony"
-                )
-            else:
-                # Save file again after adding animations
-                if self.output_blend:
-                    try:
-                        bpy.ops.wm.save_as_mainfile(filepath=str(self.output_blend))
-                        print(f"✓ Zapisano projekt z animacjami: {self.output_blend}")
-                    except Exception as e:
-                        print(f"✗ Błąd zapisywania projektu z animacjami: {e}")
-                        return False
+                print("❌ Failed to apply animations via Animation API")
+                return False
+
+        # Save project once at the end, after all setup and animations
+        if self.output_blend:
+            try:
+                # Verify layout and strips before final save
+                sequencer = bpy.context.scene.sequence_editor
+                if sequencer:
+                    strips_count = len(sequencer.sequences)
+                    video_strips = [s for s in sequencer.sequences if s.type == 'MOVIE']
+                    video_strips_count = len(video_strips)
+                    print(f"🎬 Before final save: {strips_count} total sequences, {video_strips_count} video strips")
+                    
+                    # Verify layout positions for debugging
+                    if video_strips_count > 0:
+                        print("🎬 Layout verification:")
+                        for i, strip in enumerate(video_strips):
+                            if hasattr(strip, 'transform'):
+                                pos_x = strip.transform.offset_x
+                                pos_y = strip.transform.offset_y
+                                scale = strip.transform.scale_x
+                                print(f"  Strip {i+1} ({strip.name}): pos=({pos_x}, {pos_y}), scale={scale}")
+                            else:
+                                print(f"  Strip {i+1} ({strip.name}): No transform property")
+                    
+                    if video_strips_count == 0:
+                        print("⚠ Warning: No video strips found before save - this indicates a problem!")
+                else:
+                    print("🎬 Before final save: No sequence editor found")
+                    return False
+                
+                
+                bpy.ops.wm.save_as_mainfile(filepath=str(self.output_blend))
+                success_msg = "z animacjami" if animation_success and self.config_data['animations'] else "podstawowy"
+                print(f"✓ Zapisano projekt {success_msg}: {self.output_blend}")
+            except Exception as e:
+                print(f"✗ Błąd zapisywania projektu: {e}")
+                return False
 
         print("=== Konfiguracja projektu VSE zakończona sukcesem ===")
         return True
@@ -280,12 +373,47 @@ class BlenderVSEConfigurator:
             return None
             
         try:
+            # Resolve relative paths relative to config file directory or recording directory
+            analysis_path = Path(analysis_file)
+            if not analysis_path.is_absolute():
+                # Try relative to config directory first
+                if hasattr(self, 'config_path') and self.config_path:
+                    config_dir = self.config_path.parent
+                    resolved_path = config_dir / analysis_file
+                    if resolved_path.exists():
+                        analysis_path = resolved_path
+                    else:
+                        print(f"🎵 Analysis file not found relative to config: {resolved_path}")
+                        # Try relative to recording directory (parent of config directory)
+                        recording_dir = config_dir
+                        resolved_path = recording_dir / analysis_file
+                        if resolved_path.exists():
+                            analysis_path = resolved_path
+                        else:
+                            print(f"🎵 Analysis file not found relative to recording: {resolved_path}")
+                            return None
+                else:
+                    # Fallback: try relative to first video file directory
+                    if self.video_files:
+                        video_dir = self.video_files[0].parent.parent  # Go up from extracted/ to recording/
+                        resolved_path = video_dir / analysis_file
+                        if resolved_path.exists():
+                            analysis_path = resolved_path
+                        else:
+                            print(f"🎵 Analysis file not found relative to video directory: {resolved_path}")
+                            return None
+                    else:
+                        print(f"🎵 Cannot resolve relative path {analysis_file} - no config_path or video files")
+                        return None
+            
+            print(f"🎵 Resolved analysis file path: {analysis_path}")
+            
             import json
-            with open(analysis_file, 'r', encoding='utf-8') as f:
+            with open(analysis_path, 'r', encoding='utf-8') as f:
                 full_data = json.load(f)
                 print(f"🎵 Loaded from file successfully: {len(full_data)} keys")
         except Exception as e:
-            print(f"❌ Failed to load from file {analysis_file}: {e}")
+            print(f"❌ Failed to load from file {analysis_path}: {e}")
             return None
 
         try:
@@ -331,6 +459,64 @@ class BlenderVSEConfigurator:
             print(f"Error processing animation data: {e}")
             return None
 
+    def _apply_animations_via_api(self) -> bool:
+        """Apply animations using unified Animation API.
+        
+        Returns:
+            bool: True if animations applied successfully
+        """
+        try:
+            # Get Animation API instance
+            api = get_animation_api()
+            
+            # Load audio analysis data
+            audio_data = self._load_animation_data()
+            
+            # Extract preset name from config path
+            preset_name = "custom"
+            if hasattr(self, 'config_path') and self.config_path:
+                config_name = self.config_path.name
+                if config_name.startswith('animation_config_'):
+                    preset_name = config_name.replace('animation_config_', '').replace('.yaml', '')
+            
+            print(f"🎭 Applying preset '{preset_name}' via Animation API")
+            
+            # Get recording path from the first video file or output blend path
+            recording_path = None
+            if self.video_files:
+                recording_path = self.video_files[0].parent.parent  # Go up from extracted/video.mp4
+            elif self.output_blend:
+                recording_path = self.output_blend.parent.parent  # Go up from blender/project.blend
+            
+            if not recording_path:
+                print("❌ Could not determine recording path")
+                return False
+            
+            # Apply preset using unified API - it handles both layout and animations
+            # Pass our already loaded config instead of loading preset by name
+            result = api.apply_preset(
+                recording_path=recording_path,
+                preset_config=self.config_data,
+                audio_analysis_data=audio_data
+            )
+            
+            if result['success']:
+                print(f"✅ Successfully applied preset '{preset_name}'")
+                print(f"   Layout applied: {result['layout_applied']}")
+                print(f"   Animations applied: {result['animations_applied']}")
+                print(f"   Strips affected: {result['strips_affected']}")
+                return True
+            else:
+                print(f"❌ Failed to apply preset '{preset_name}'")
+                for error in result['errors']:
+                    print(f"   Error: {error}")
+                return False
+            
+        except Exception as e:
+            print(f"❌ Error in _apply_animations_via_api: {e}")
+            import traceback
+            traceback.print_exc()
+            return False
 
     def _apply_yaml_layout_and_animations(self, video_strips: List, animation_data: Dict) -> bool:
         """

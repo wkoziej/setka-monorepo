@@ -9,10 +9,13 @@ import argparse
 import logging
 import subprocess
 import sys
+import yaml
 from pathlib import Path
+from typing import Optional
 
 from ..project_manager import BlenderProjectManager
 from ..config import CinemonConfigGenerator
+from ..config.media_discovery import MediaDiscovery
 from beatrix import AudioValidationError
 from setka_common.config import BlenderYAMLConfig, YAMLConfigLoader
 
@@ -25,17 +28,59 @@ def open_blender_with_video_editing(blend_file_path: Path) -> None:
         blend_file_path: Path to .blend file to open
     """
     try:
-        # Simple Blender open - project was created with Video Editing template
+        # Create a simple Python script to switch workspace
+        workspace_script = f"""
+import bpy
+
+# Ensure we have workspaces
+if bpy.data.workspaces:
+    # Try to find Video Editing workspace
+    video_editing_ws = None
+    for ws in bpy.data.workspaces:
+        if ws.name == 'Video Editing':
+            video_editing_ws = ws
+            break
+    
+    # Switch to Video Editing workspace if found
+    if video_editing_ws and bpy.context.window:
+        bpy.context.window.workspace = video_editing_ws
+        print("✓ Switched to Video Editing workspace")
+    else:
+        print("⚠ Video Editing workspace not found")
+else:
+    print("⚠ No workspaces available")
+"""
+        
+        # Write script to temporary file
+        import tempfile
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.py', delete=False) as temp_script:
+            temp_script.write(workspace_script)
+            temp_script_path = temp_script.name
+        
+        # Open Blender with script
         cmd = [
             "snap", "run", "blender",
-            str(blend_file_path)
+            str(blend_file_path),
+            "--python", temp_script_path
         ]
         
-        print(f"🎬 Otwieranie Blender (projekt utworzony z Video Editing template)...")
+        print(f"🎬 Otwieranie Blender w workspace Video Editing...")
         print(f"📁 Plik: {blend_file_path}")
         
         # Start Blender in background (non-blocking) with output visible
         subprocess.Popen(cmd)
+        
+        # Clean up temp script after a delay (Blender should have read it by then)
+        import threading
+        def cleanup_script():
+            import time
+            time.sleep(5)  # Wait 5 seconds for Blender to start
+            try:
+                import os
+                os.unlink(temp_script_path)
+            except:
+                pass
+        threading.Thread(target=cleanup_script, daemon=True).start()
         
     except Exception as e:
         print(f"⚠ Nie udało się otworzyć Blender: {e}")
@@ -201,17 +246,11 @@ def main() -> int:
         if args.preset:
             logger.info(f"Generating configuration from preset: {args.preset}")
             
-            # Prepare preset overrides from CLI arguments
-            preset_overrides = {}
-            if args.main_audio:
-                preset_overrides["main_audio"] = args.main_audio
-            
-            # Generate configuration from preset
-            generator = CinemonConfigGenerator()
-            config_path = generator.generate_preset(
-                args.recording_dir, 
-                args.preset, 
-                **preset_overrides
+            # Use addon preset files directly (new strip_animations format)
+            config_path = generate_config_from_addon_preset(
+                args.recording_dir,
+                args.preset,
+                args.main_audio
             )
             
             logger.info(f"Generated configuration: {config_path}")
@@ -219,8 +258,9 @@ def main() -> int:
             # Create Blender project manager
             manager = BlenderProjectManager()
             
-            # Load generated YAML config
-            yaml_config = load_yaml_config(config_path)
+            # Load generated YAML config  
+            yaml_loader = YAMLConfigLoader()
+            yaml_config = yaml_loader.load_config(config_path)
             
             # Create VSE project with generated config
             logger.info("Creating Blender VSE project with preset configuration...")
@@ -280,6 +320,94 @@ def main() -> int:
         logger.error(f"Unexpected error: {e}")
         print(f"❌ Nieoczekiwany błąd: {e}", file=sys.stderr)
         return 1
+
+
+def generate_config_from_addon_preset(recording_dir: Path, preset_name: str, main_audio: Optional[str] = None) -> Path:
+    """
+    Generate configuration from addon preset file (new strip_animations format).
+    
+    Args:
+        recording_dir: Path to recording directory
+        preset_name: Name of preset (e.g., 'vintage')
+        main_audio: Optional main audio override
+        
+    Returns:
+        Path to generated configuration file
+        
+    Raises:
+        ValueError: If preset not found or validation fails
+    """
+    # Find addon preset file
+    addon_presets_dir = Path(__file__).parent.parent.parent.parent / "blender_addon" / "example_presets"
+    preset_file = addon_presets_dir / f"{preset_name}.yaml"
+    
+    if not preset_file.exists():
+        raise ValueError(f"Preset '{preset_name}' not found at: {preset_file}")
+    
+    # Load preset template
+    with open(preset_file, 'r', encoding='utf-8') as f:
+        preset_data = yaml.safe_load(f)
+    
+    # Discover and validate media files
+    discovery = MediaDiscovery(recording_dir)
+    validation_result = discovery.validate_structure()
+    
+    if not validation_result.is_valid:
+        error_message = "; ".join(validation_result.errors)
+        raise ValueError(f"Invalid recording directory: {error_message}")
+    
+    # Auto-discover media files
+    video_files = discovery.discover_video_files()
+    audio_files = discovery.discover_audio_files()
+    
+    # Determine main audio
+    if not main_audio:
+        main_audio = discovery.detect_main_audio()
+        if not main_audio:
+            if len(audio_files) > 1:
+                raise ValueError(
+                    f"Multiple audio files found, specify --main-audio: {[f.name for f in audio_files]}"
+                )
+            elif len(audio_files) == 1:
+                main_audio = audio_files[0].name
+    
+    # Update preset with actual project data
+    config_data = preset_data.copy()
+    
+    # Update project section
+    config_data["project"]["video_files"] = [f.name if hasattr(f, 'name') else str(f) for f in video_files]
+    if main_audio:
+        config_data["project"]["main_audio"] = main_audio if isinstance(main_audio, str) else main_audio.name
+    
+    # Update audio analysis file path
+    if main_audio and "audio_analysis" in config_data:
+        audio_stem = Path(main_audio).stem
+        config_data["audio_analysis"]["file"] = f"analysis/{audio_stem}_analysis.json"
+    
+    # Map Video_X to actual filename stems in strip_animations
+    if "strip_animations" in config_data and video_files:
+        new_strip_animations = {}
+        
+        # Create mapping from Video_X to filename stems
+        for i, video_file in enumerate(video_files):
+            video_key = f"Video_{i + 1}"
+            filename_stem = Path(video_file).stem
+            
+            # If there's animation config for this Video_X, map it to filename
+            if video_key in config_data["strip_animations"]:
+                new_strip_animations[filename_stem] = config_data["strip_animations"][video_key]
+        
+        # Replace with mapped animations
+        config_data["strip_animations"] = new_strip_animations
+    
+    # Generate output path
+    output_path = recording_dir / f"animation_config_{preset_name}.yaml"
+    
+    # Write generated config
+    with open(output_path, 'w', encoding='utf-8') as f:
+        yaml.dump(config_data, f, default_flow_style=False, allow_unicode=True, sort_keys=False)
+    
+    return output_path
 
 
 if __name__ == "__main__":

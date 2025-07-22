@@ -90,42 +90,6 @@ class PresetManager:
                 }
             ]
         },
-        "music-video": {
-            "description": "High-energy effects for music videos with scale, shake, and rotation",
-            "layout": {
-                "type": "random",
-                "config": {
-                    "overlap_allowed": False,
-                    "margin": 0.05,
-                    "min_scale": 0.4,
-                    "max_scale": 0.9,
-                    "seed": 100
-                }
-            },
-            "animations": [
-                {
-                    "type": "scale",
-                    "trigger": "energy_peaks",
-                    "intensity": 0.5,
-                    "duration_frames": 3,
-                    "target_strips": []
-                },
-                {
-                    "type": "shake",
-                    "trigger": "beat",
-                    "intensity": 12.0,
-                    "return_frames": 2,
-                    "target_strips": []
-                },
-                {
-                    "type": "rotation",
-                    "trigger": "energy_peaks",
-                    "degrees": 2.0,
-                    "return_frames": 5,
-                    "target_strips": []
-                }
-            ]
-        },
         "minimal": {
             "description": "Clean, simple animation with basic scale on bass only",
             "layout": {
@@ -144,28 +108,6 @@ class PresetManager:
                     "trigger": "energy_peaks",
                     "intensity": 0.2,
                     "duration_frames": 3,
-                    "target_strips": []
-                }
-            ]
-        },
-        "beat-switch": {
-            "description": "Legacy compatibility mode replicating old beat-switch behavior",
-            "layout": {
-                "type": "random",
-                "config": {
-                    "overlap_allowed": False,
-                    "margin": 0.0,
-                    "min_scale": 1.0,
-                    "max_scale": 1.0,
-                    "seed": 42
-                }
-            },
-            "animations": [
-                {
-                    "type": "scale",
-                    "trigger": "beat",
-                    "intensity": 0.1,
-                    "duration_frames": 1,
                     "target_strips": []
                 }
             ]

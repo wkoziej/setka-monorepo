@@ -103,6 +103,7 @@ class CINEMON_PT_layout_panel(Panel):
     bl_region_type = 'UI'
     bl_category = "Cinemon"
     bl_parent_id = "CINEMON_PT_main_panel"
+    bl_options = {'DEFAULT_CLOSED'}  # Start collapsed
     
     def draw(self, context):
         """Draw the layout configuration panel UI."""
@@ -135,9 +136,19 @@ class CINEMON_PT_layout_panel(Panel):
         elif layout_type == 'grid':
             self.draw_grid_params(layout, scene)
         
-        # Preview button
+        # Layout changes info
         layout.separator()
-        layout.operator("cinemon.preview_layout", text="Preview Layout", icon='RESTRICT_VIEW_OFF')
+        
+        # Import strip context to check for pending changes
+        try:
+            from .strip_context import get_strip_context_manager
+            manager = get_strip_context_manager()
+            
+            if manager.get_pending_layout():
+                layout.label(text="Layout changes pending", icon='INFO')
+                layout.label(text="Use Apply button to apply changes")
+        except ImportError:
+            pass
     
     def draw_random_params(self, layout, scene):
         """Draw random layout parameters."""
@@ -200,7 +211,13 @@ class CINEMON_OT_set_layout_type(Operator):
         """Set the layout type in scene."""
         try:
             context.scene.cinemon_layout_type = self.layout_type
-            self.report({'INFO'}, f"Layout type set to: {self.layout_type}")
+            
+            # Update strip context manager
+            from .strip_context import get_strip_context_manager
+            manager = get_strip_context_manager()
+            manager.update_layout_parameter('type', self.layout_type)
+            
+            self.report({'INFO'}, f"Layout type set to: {self.layout_type} (pending Apply)")
             return {'FINISHED'}
         except Exception as e:
             self.report({'ERROR'}, f"Failed to set layout type: {e}")
@@ -251,7 +268,14 @@ class CINEMON_OT_set_random_params(Operator):
             context.scene.cinemon_random_seed = self.seed
             context.scene.cinemon_random_overlap = self.overlap_allowed
             
-            self.report({'INFO'}, f"Random layout params set: margin={self.margin}, seed={self.seed}")
+            # Update strip context manager
+            from .strip_context import get_strip_context_manager
+            manager = get_strip_context_manager()
+            manager.update_layout_parameter('config.margin', self.margin)
+            manager.update_layout_parameter('config.seed', self.seed)
+            manager.update_layout_parameter('config.overlap_allowed', self.overlap_allowed)
+            
+            self.report({'INFO'}, f"Random layout params set (pending Apply)")
             return {'FINISHED'}
         except Exception as e:
             self.report({'ERROR'}, f"Failed to set random parameters: {e}")
@@ -413,7 +437,6 @@ classes = [
     CINEMON_OT_set_layout_type,
     CINEMON_OT_set_random_params,
     CINEMON_OT_set_grid_params,
-    CINEMON_OT_preview_layout,
 ]
 
 

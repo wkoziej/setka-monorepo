@@ -63,8 +63,9 @@ class YAMLConfigLoader:
     
     # Valid animation types
     VALID_ANIMATION_TYPES = {
-        "scale", "shake", "vintage_color", "pip_switch", 
-        "rotation", "opacity", "position"
+        "scale", "shake", "rotation", "jitter",
+        "brightness_flicker", "desaturate_pulse", "contrast_flash",
+        "visibility", "pip_switch", "opacity", "position", "vintage_color"
     }
     
     # Valid trigger types
@@ -304,7 +305,10 @@ class YAMLConfigLoader:
         if config.audio_analysis.min_onset_interval:
             internal_format["audio_analysis"]["min_onset_interval"] = config.audio_analysis.min_onset_interval
         
-        # Convert strip animations to internal format (flat list with target_strips)
+        # Keep original strip_animations format for unified_api
+        internal_format["strip_animations"] = config.strip_animations
+        
+        # Also convert strip animations to internal format (flat list with target_strips) for backwards compatibility
         flat_animations = []
         for strip_name, animations in config.strip_animations.items():
             if animations:  # Only include strips that have animations

@@ -49,7 +49,7 @@ class TestParseArgs:
                 "blend_setup.py",
                 "/path/to/recording",
                 "--preset",
-                "music-video",
+                "multi-pip",
                 "--verbose",
                 "--force",
                 "--main-audio",
@@ -58,7 +58,7 @@ class TestParseArgs:
         ):
             args = parse_args()
             assert args.recording_dir == Path("/path/to/recording")
-            assert args.preset == "music-video"
+            assert args.preset == "multi-pip"
             assert args.verbose is True
             assert args.force is True
             assert args.main_audio == "audio.mp3"
@@ -357,7 +357,7 @@ class TestMainWithPresetOverrides:
         """Test main with preset and main audio override."""
         # Setup mocks
         mock_args = Mock()
-        mock_args.preset = "music-video"
+        mock_args.preset = "multi-pip"
         mock_args.config = None
         mock_args.recording_dir = Path("/test/recording")
         mock_args.main_audio = "custom_audio.m4a"
@@ -384,6 +384,6 @@ class TestMainWithPresetOverrides:
         assert result == 0
         mock_generator.generate_preset.assert_called_once_with(
             mock_args.recording_dir, 
-            "music-video",
+            "multi-pip",
             main_audio="custom_audio.m4a"
         )

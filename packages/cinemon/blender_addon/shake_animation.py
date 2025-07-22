@@ -1,12 +1,33 @@
 # ABOUTME: ShakeAnimation implementation - creates camera shake effect by animating strip position
 # ABOUTME: Refactored from VintageFilmEffects with support for random and deterministic shaking
 
-"""Shake animation for VSE strips."""
+"""Shake animation for addon."""
 
 import random
 from typing import List, Optional
+import sys
+from pathlib import Path
 
-from .base_effect_animation import BaseEffectAnimation
+# Ensure addon path is available
+addon_path = Path(__file__).parent
+if str(addon_path) not in sys.path:
+    sys.path.insert(0, str(addon_path))
+
+try:
+    from .base_effect_animation import BaseEffectAnimation
+except ImportError:
+    # Fallback for background mode
+    try:
+        import base_effect_animation
+        BaseEffectAnimation = base_effect_animation.BaseEffectAnimation
+    except ImportError:
+        # If still failing, use a minimal base class
+        class BaseEffectAnimation:
+            def __init__(self, keyframe_helper=None, target_strips=None):
+                self.target_strips = target_strips or []
+            
+            def should_apply_to_strip(self, strip):
+                return not self.target_strips or strip.name in self.target_strips
 
 
 class ShakeAnimation(BaseEffectAnimation):
@@ -38,7 +59,7 @@ class ShakeAnimation(BaseEffectAnimation):
             random_direction: If True, shake randomly; if False, shake horizontally only
             target_strips: List of strip names to target (None = all strips)
         """
-        super().__init__(target_strips=target_strips)
+        super().__init__(keyframe_helper=None, target_strips=target_strips)
         self.trigger = trigger
         self.intensity = intensity
         self.return_frames = return_frames
@@ -64,8 +85,10 @@ class ShakeAnimation(BaseEffectAnimation):
         base_x = strip.transform.offset_x
         base_y = strip.transform.offset_y
         
-        # Set initial keyframe at frame 1
-        self.keyframe_helper.insert_transform_position_keyframes(strip.name, 1)
+        # Set initial keyframe at frame 1 (fixed from VSE version)
+        self.keyframe_helper.insert_transform_position_keyframes(
+            strip, 1, base_x, base_y
+        )
         
         # Apply shake for each event
         for event_time in events:
@@ -81,16 +104,22 @@ class ShakeAnimation(BaseEffectAnimation):
                 shake_y = 0
             
             # Apply shake
-            strip.transform.offset_x = base_x + shake_x
-            strip.transform.offset_y = base_y + shake_y
-            self.keyframe_helper.insert_transform_position_keyframes(strip.name, frame)
+            new_x = base_x + shake_x
+            new_y = base_y + shake_y
+            strip.transform.offset_x = new_x
+            strip.transform.offset_y = new_y
+            
+            self.keyframe_helper.insert_transform_position_keyframes(
+                strip, frame, new_x, new_y
+            )
             
             # Return to base position
             return_frame = frame + self.return_frames
             strip.transform.offset_x = base_x
             strip.transform.offset_y = base_y
+            
             self.keyframe_helper.insert_transform_position_keyframes(
-                strip.name, return_frame
+                strip, return_frame, base_x, base_y
             )
         
         return True

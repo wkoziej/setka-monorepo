@@ -111,12 +111,17 @@ class AnimationCompositor:
             strips: List of video strips
             positions: List of calculated positions
         """
-        for strip, position in zip(strips, positions):
+        print(f"🎬 AnimationCompositor._apply_layout: {len(strips)} strips, {len(positions)} positions")
+        for i, (strip, position) in enumerate(zip(strips, positions)):
             if hasattr(strip, 'transform'):
+                print(f"🎬 Strip {i} ({strip.name}): pos=({position.x}, {position.y}), scale={position.scale}")
                 strip.transform.offset_x = position.x
                 strip.transform.offset_y = position.y
                 strip.transform.scale_x = position.scale
                 strip.transform.scale_y = position.scale
+                print(f"🎬 Applied to {strip.name}: offset=({strip.transform.offset_x}, {strip.transform.offset_y}), scale=({strip.transform.scale_x}, {strip.transform.scale_y})")
+            else:
+                print(f"🎬 Strip {i} ({getattr(strip, 'name', 'unknown')}): No transform property")
     
     def _extract_events(self, audio_analysis: Dict, trigger: str) -> List:
         """

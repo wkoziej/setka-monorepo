@@ -1,8 +1,8 @@
-# ABOUTME: Minimal preset with subtle animations and clean layout
-# ABOUTME: Perfect for professional content with understated visual effects
+# ABOUTME: Minimal preset with basic scale animation for testing
+# ABOUTME: Simple random layout with single animation type
 
-# Minimal Preset - Clean and professional look
-# Subtle animations that don't distract from content
+# Minimal Preset - Basic scale animation for testing
+# This preset provides minimal configuration to test the basic workflow
 
 project:
   video_files: []  # Will be auto-discovered
@@ -12,37 +12,28 @@ project:
     height: 1080
 
 layout:
-  type: "center"
+  type: "random"
   config:
-    margin: 0.15
+    seed: 123
+    margin: 0.1
     overlap_allowed: false
+    min_scale: 0.8
+    max_scale: 1.0
 
 strip_animations:
-  # Main camera with very subtle scale
-  Camera1:
+  Video_1:
     - type: "scale"
       trigger: "beat"
-      intensity: 0.1  # Very subtle
-      easing: "EASE_IN_OUT"
+      intensity: 0.2
+      duration_frames: 3
 
-  # Secondary camera with minimal shake
-  Camera2:
-    - type: "shake"
-      trigger: "energy_peaks"
-      intensity: 0.5  # Gentle shake
-      return_frames: 1
-
-  # Screen recording stays mostly static
-  Screen:
-    - type: "opacity"
-      trigger: "energy_peaks"
-      intensity: 0.2  # Very subtle opacity change
-      min_opacity: 0.9
-
-  # Additional cameras get no animations (professional look)
-  # Camera3: []  # Commented out - no animations
+  Video_2:
+    - type: "scale"
+      trigger: "beat"
+      intensity: 0.15
+      duration_frames: 3
 
 audio_analysis:
   file: "./analysis/main_audio_analysis.json"
   beat_division: 4
-  min_onset_interval: 2.0  # Less frequent triggers
+  min_onset_interval: 0.8

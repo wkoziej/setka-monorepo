@@ -1,12 +1,33 @@
 # ABOUTME: BrightnessFlickerAnimation implementation - creates brightness flicker effect
 # ABOUTME: Refactored from VintageFilmEffects with event-based flickering for vintage film look
 
-"""Brightness flicker animation for VSE strips."""
+"""Brightness flicker animation for addon."""
 
 import random
-from typing import List
+from typing import List, Optional
+import sys
+from pathlib import Path
 
-from .base_effect_animation import BaseEffectAnimation
+# Ensure addon path is available
+addon_path = Path(__file__).parent
+if str(addon_path) not in sys.path:
+    sys.path.insert(0, str(addon_path))
+
+try:
+    from .base_effect_animation import BaseEffectAnimation
+except ImportError:
+    # Fallback for background mode
+    try:
+        import base_effect_animation
+        BaseEffectAnimation = base_effect_animation.BaseEffectAnimation
+    except ImportError:
+        # If still failing, use a minimal base class
+        class BaseEffectAnimation:
+            def __init__(self, keyframe_helper=None, target_strips=None):
+                self.target_strips = target_strips or []
+            
+            def should_apply_to_strip(self, strip):
+                return not self.target_strips or strip.name in self.target_strips
 
 
 class BrightnessFlickerAnimation(BaseEffectAnimation):
@@ -21,21 +42,26 @@ class BrightnessFlickerAnimation(BaseEffectAnimation):
         return_frames: How many frames until return to normal brightness
     """
     
-    def __init__(self,
+    def __init__(self, 
                  trigger: str = "beat",
-                 intensity: float = 0.15,
-                 return_frames: int = 1):
+                 intensity: float = 0.1,
+                 duration_frames: int = 2,
+                 return_frames: int = 1,
+                 target_strips: Optional[List[str]] = None):
         """
         Initialize BrightnessFlickerAnimation.
         
         Args:
             trigger: Event type to trigger animation
-            intensity: Maximum brightness reduction (0.0 to 1.0)
-            return_frames: Frames until brightness returns to normal
+            intensity: Flicker intensity (0.1 = 10% dimmer)
+            duration_frames: Duration of flicker effect in frames
+            return_frames: Frames to return to original state
+            target_strips: List of strip names to target (None = all strips)
         """
-        super().__init__()
+        super().__init__(keyframe_helper=None, target_strips=target_strips)
         self.trigger = trigger
         self.intensity = intensity
+        self.duration_frames = duration_frames
         self.return_frames = return_frames
     
     def apply_to_strip(self, strip, events: List[float], fps: int, **kwargs) -> bool:
@@ -52,8 +78,7 @@ class BrightnessFlickerAnimation(BaseEffectAnimation):
             True if animation was applied successfully
         """
         # Set initial brightness keyframe
-        strip.blend_alpha = 1.0
-        self.keyframe_helper.insert_blend_alpha_keyframe(strip.name, 1, 1.0)
+        self.keyframe_helper.insert_blend_alpha_keyframe(strip, 1, 1.0)
         
         # Apply flicker for each event
         for event_time in events:
@@ -63,16 +88,14 @@ class BrightnessFlickerAnimation(BaseEffectAnimation):
             flicker_alpha = 1.0 - random.uniform(0, self.intensity)
             
             # Apply flicker at event frame
-            strip.blend_alpha = flicker_alpha
             self.keyframe_helper.insert_blend_alpha_keyframe(
-                strip.name, frame, flicker_alpha
+                strip, frame, flicker_alpha
             )
             
             # Return to normal brightness
             return_frame = frame + self.return_frames
-            strip.blend_alpha = 1.0
             self.keyframe_helper.insert_blend_alpha_keyframe(
-                strip.name, return_frame, 1.0
+                strip, return_frame, 1.0
             )
         
         return True

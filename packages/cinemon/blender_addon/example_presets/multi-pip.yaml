@@ -1,0 +1,86 @@
+# ABOUTME: Multi-PiP preset with main cameras and corner Picture-in-Picture strips
+# ABOUTME: Uses main-pip layout with varied animations for different strip types
+
+# Multi-PiP Preset - Main cameras + corner PiPs with dynamic animations
+# This preset creates a layout with main cameras fullscreen and additional cameras as corner PiPs
+
+project:
+  video_files: []  # Will be auto-discovered
+  fps: 30
+  resolution:
+    width: 600
+    height: 500
+
+layout:
+  type: "main-pip"
+  config:
+    pip_scale: 0.25
+    margin_percent: 0.08
+
+strip_animations:
+  # Main cameras (fullscreen) - strong reactions to audio
+  Video_1:
+    - type: "scale"
+      trigger: "beat"
+      intensity: 0.2
+      duration_frames: 3
+    - type: "brightness_flicker"
+      trigger: "energy_peaks"
+      intensity: 0.12
+      duration_frames: 2
+
+  Video_2:
+    - type: "scale"
+      trigger: "beat"
+      intensity: 0.18
+      duration_frames: 3
+    - type: "contrast_flash"
+      trigger: "energy_peaks"
+      intensity: 0.25
+      duration_frames: 2
+
+  # Corner PiPs - subtle animations to maintain focus on mains
+  Video_3:
+    - type: "shake"
+      trigger: "energy_peaks"
+      intensity: 0.6
+      return_frames: 2
+    - type: "desaturate_pulse"
+      trigger: "beat"
+      intensity: 0.3
+      duration_frames: 3
+
+  Video_4:
+    - type: "rotation"
+      trigger: "beat"
+      intensity: 0.8
+      duration_frames: 2
+    - type: "brightness_flicker"
+      trigger: "beat"
+      intensity: 0.08
+      duration_frames: 1
+
+  Video_5:
+    - type: "shake"
+      trigger: "beat"
+      intensity: 0.4
+      return_frames: 1
+    - type: "contrast_flash"
+      trigger: "energy_peaks"
+      intensity: 0.2
+      duration_frames: 2
+
+  Video_6:
+    - type: "rotation"
+      trigger: "energy_peaks"
+      intensity: 1.2
+      duration_frames: 3
+    - type: "desaturate_pulse"
+      trigger: "beat"
+      intensity: 0.25
+      duration_frames: 2
+
+audio_analysis:
+  file: "./analysis/main_audio_analysis.json"
+  beat_division: 4
+  min_onset_interval: 0.6

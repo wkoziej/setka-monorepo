@@ -59,27 +59,26 @@ class TestPresetManager:
         assert "film_grain" in animation_types
         assert "vintage_color" in animation_types
 
-    def test_get_music_video_preset(self):
-        """Test getting the built-in music-video preset."""
+    def test_get_multi_pip_preset(self):
+        """Test getting the built-in multi-pip preset."""
         preset_manager = PresetManager()
-        music_video_preset = preset_manager.get_preset("music-video")
+        multi_pip_preset = preset_manager.get_preset("multi-pip")
         
-        assert isinstance(music_video_preset, PresetConfig)
-        assert music_video_preset.name == "music-video"
-        assert music_video_preset.description == "High-energy effects for music videos with scale, shake, and rotation"
+        assert isinstance(multi_pip_preset, PresetConfig)
+        assert multi_pip_preset.name == "multi-pip"
+        assert "main cameras" in multi_pip_preset.description.lower()
         
         # Check layout configuration
-        assert music_video_preset.layout["type"] == "random"
-        assert music_video_preset.layout["config"]["overlap_allowed"] is False
-        assert music_video_preset.layout["config"]["margin"] == 0.05
-        assert music_video_preset.layout["config"]["seed"] == 100
+        assert multi_pip_preset.layout["type"] == "main-pip"
+        assert multi_pip_preset.layout["config"]["pip_scale"] == 0.25
+        assert multi_pip_preset.layout["config"]["margin_percent"] == 0.08
         
-        # Check animations
-        assert len(music_video_preset.animations) == 3
-        animation_types = [anim["type"] for anim in music_video_preset.animations]
+        # Check animations - should have multiple strips with different animations
+        assert len(multi_pip_preset.animations) >= 6
+        animation_types = [anim["type"] for anim in multi_pip_preset.animations]
         assert "scale" in animation_types
         assert "shake" in animation_types
-        assert "rotation" in animation_types
+        assert "brightness_flicker" in animation_types
 
 
     def test_list_presets(self):
@@ -88,11 +87,10 @@ class TestPresetManager:
         presets = preset_manager.list_presets()
         
         assert isinstance(presets, list)
-        assert len(presets) >= 4  # At least 4 built-in presets
+        assert len(presets) >= 3  # At least 3 built-in presets
         assert "vintage" in presets
-        assert "music-video" in presets
+        assert "multi-pip" in presets
         assert "minimal" in presets
-        assert "beat-switch" in presets
 
     def test_get_nonexistent_preset(self):
         """Test getting a preset that doesn't exist."""
@@ -231,17 +229,6 @@ class TestPresetManager:
         assert minimal_preset.animations[0]["type"] == "scale"
         assert minimal_preset.animations[0]["trigger"] == "bass"
 
-    def test_beat_switch_legacy_preset(self):
-        """Test that beat-switch preset provides legacy compatibility."""
-        preset_manager = PresetManager()
-        beat_switch_preset = preset_manager.get_preset("beat-switch")
-        
-        assert beat_switch_preset.name == "beat-switch"
-        assert "legacy" in beat_switch_preset.description.lower()
-        
-        # Should have simplified configuration for compatibility
-        animation_types = [anim["type"] for anim in beat_switch_preset.animations]
-        assert len(animation_types) >= 1
 
     @pytest.fixture
     def temp_presets_dir(self):

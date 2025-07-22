@@ -17,49 +17,53 @@ layout:
     seed: 42
     margin: 0.1
     overlap_allowed: false
+    min_scale: 0.8
+    max_scale: 1.2
 
 strip_animations:
   # Main cameras get beat-synchronized scaling
-  Camera1:
+  Video_1:
     - type: "scale"
       trigger: "beat"
       intensity: 0.3
-      easing: "EASE_OUT"
-    - type: "vintage_color"
-      trigger: "one_time"
-      sepia_amount: 0.6
-      contrast_boost: 0.3
-      grain_intensity: 0.2
+      duration_frames: 3
+    - type: "brightness_flicker"
+      trigger: "beat"
+      intensity: 0.1
+      duration_frames: 2
 
-  Camera2:
+  Video_2:
     - type: "scale"
       trigger: "beat"
       intensity: 0.25
-      easing: "EASE_IN_OUT"
-    - type: "vintage_color"
-      trigger: "one_time"
-      sepia_amount: 0.5
-      contrast_boost: 0.25
+      duration_frames: 3
+    - type: "brightness_flicker"
+      trigger: "beat"
+      intensity: 0.08
+      duration_frames: 2
 
-  # Screen recordings get subtle shake on energy peaks
-  Screen:
+  # V4L2 devices get subtle shake on energy peaks
+  "Video_3":
     - type: "shake"
       trigger: "energy_peaks"
       intensity: 0.8
       return_frames: 2
-    - type: "vintage_color"
-      trigger: "one_time"
-      sepia_amount: 0.4
-      grain_intensity: 0.15
+    - type: "desaturate_pulse"
+      trigger: "beat"
+      intensity: 0.4
+      duration_frames: 2
 
-  # Additional cameras
-  Camera3:
+  "Video_4":
     - type: "scale"
       trigger: "beat"
       intensity: 0.2
-    - type: "vintage_color"
-      trigger: "one_time"
-      sepia_amount: 0.55
+      duration_frames: 3
+
+  "Video_5":
+    - type: "contrast_flash"
+      trigger: "energy_peaks"
+      intensity: 0.3
+      duration_frames: 2
 
 audio_analysis:
   file: "./analysis/main_audio_analysis.json"

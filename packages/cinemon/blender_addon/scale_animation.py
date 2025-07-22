@@ -1,11 +1,32 @@
 # ABOUTME: ScaleAnimation implementation - animates strip scale based on audio events
 # ABOUTME: Supports customizable intensity, duration, and easing for smooth scale transitions
 
-"""Scale animation for VSE strips."""
+"""Scale animation for addon."""
 
 from typing import List, Optional
+import sys
+from pathlib import Path
 
-from .base_effect_animation import BaseEffectAnimation
+# Ensure addon path is available
+addon_path = Path(__file__).parent
+if str(addon_path) not in sys.path:
+    sys.path.insert(0, str(addon_path))
+
+try:
+    from .base_effect_animation import BaseEffectAnimation
+except ImportError:
+    # Fallback for background mode
+    try:
+        import base_effect_animation
+        BaseEffectAnimation = base_effect_animation.BaseEffectAnimation
+    except ImportError:
+        # If still failing, use a minimal base class
+        class BaseEffectAnimation:
+            def __init__(self, keyframe_helper=None, target_strips=None):
+                self.target_strips = target_strips or []
+            
+            def should_apply_to_strip(self, strip):
+                return not self.target_strips or strip.name in self.target_strips
 
 
 class ScaleAnimation(BaseEffectAnimation):
@@ -35,7 +56,7 @@ class ScaleAnimation(BaseEffectAnimation):
             easing: Type of easing (future feature)
             target_strips: List of strip names to target (None = all strips)
         """
-        super().__init__(target_strips=target_strips)
+        super().__init__(keyframe_helper=None, target_strips=target_strips)
         self.trigger = trigger
         self.intensity = intensity
         self.duration_frames = duration_frames
@@ -63,7 +84,7 @@ class ScaleAnimation(BaseEffectAnimation):
         
         # Set initial keyframe at frame 1
         self.keyframe_helper.insert_transform_scale_keyframes(
-            strip.name, 1, base_scale_x, base_scale_y
+            strip, 1, base_scale_x, base_scale_y
         )
         
         # Apply scale animation for each event
@@ -75,18 +96,14 @@ class ScaleAnimation(BaseEffectAnimation):
             new_scale_x = base_scale_x * scale_factor
             new_scale_y = base_scale_y * scale_factor
             
-            strip.transform.scale_x = new_scale_x
-            strip.transform.scale_y = new_scale_y
             self.keyframe_helper.insert_transform_scale_keyframes(
-                strip.name, frame, new_scale_x, new_scale_y
+                strip, frame, new_scale_x, new_scale_y
             )
             
             # Return to base scale after duration_frames
             return_frame = frame + self.duration_frames
-            strip.transform.scale_x = base_scale_x
-            strip.transform.scale_y = base_scale_y
             self.keyframe_helper.insert_transform_scale_keyframes(
-                strip.name, return_frame, base_scale_x, base_scale_y
+                strip, return_frame, base_scale_x, base_scale_y
             )
         
         return True

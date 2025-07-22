@@ -37,25 +37,26 @@ class TestExamplePresets:
         has_vintage_color = any(anim["type"] == "vintage_color" for anim in camera1_animations)
         assert has_vintage_color, "Vintage preset should have vintage_color animation"
     
-    def test_music_video_preset_loads(self):
-        """Test that music-video preset loads correctly."""
+    def test_multi_pip_preset_loads(self):
+        """Test that multi-pip preset loads correctly."""
         from config_loader import YAMLConfigLoader
         
-        preset_path = addon_path / "example_presets" / "music-video.yaml"
-        assert preset_path.exists(), f"Music video preset not found at {preset_path}"
+        preset_path = addon_path / "example_presets" / "multi-pip.yaml"
+        assert preset_path.exists(), f"Multi-pip preset not found at {preset_path}"
         
         loader = YAMLConfigLoader()
         config = loader.load_from_file(preset_path)
         
         # Verify basic structure
-        assert config.project.fps == 60  # Higher FPS for music videos
-        assert config.layout.type == "grid"
-        assert "Camera1" in config.strip_animations
+        assert config.project.fps == 30
+        assert config.layout.type == "main-pip"
+        assert "Video_1" in config.strip_animations
+        assert "Video_2" in config.strip_animations
         
-        # Verify music-video specific settings
-        camera1_animations = config.strip_animations["Camera1"]
-        has_pip_switch = any(anim["type"] == "pip_switch" for anim in camera1_animations)
-        assert has_pip_switch, "Music video preset should have pip_switch animation"
+        # Verify multi-pip specific settings
+        video1_animations = config.strip_animations["Video_1"]
+        has_scale = any(anim["type"] == "scale" for anim in video1_animations)
+        assert has_scale, "Multi-pip preset should have scale animation"
     
     def test_minimal_preset_loads(self):
         """Test that minimal preset loads correctly."""
@@ -78,25 +79,6 @@ class TestExamplePresets:
         assert scale_animation is not None
         assert scale_animation["intensity"] <= 0.2, "Minimal preset should have low intensity animations"
     
-    def test_beat_switch_preset_loads(self):
-        """Test that beat-switch preset loads correctly."""
-        from config_loader import YAMLConfigLoader
-        
-        preset_path = addon_path / "example_presets" / "beat-switch.yaml"
-        assert preset_path.exists(), f"Beat switch preset not found at {preset_path}"
-        
-        loader = YAMLConfigLoader()
-        config = loader.load_from_file(preset_path)
-        
-        # Verify basic structure
-        assert config.project.fps == 30
-        assert config.layout.type == "random"
-        assert "Camera1" in config.strip_animations
-        
-        # Verify beat-switch specific settings
-        camera1_animations = config.strip_animations["Camera1"]
-        has_pip_switch = any(anim["type"] == "pip_switch" for anim in camera1_animations)
-        assert has_pip_switch, "Beat switch preset should have pip_switch animation"
     
     def test_all_presets_convert_to_internal(self):
         """Test that all presets convert to internal format correctly."""
@@ -104,9 +86,8 @@ class TestExamplePresets:
         
         preset_files = [
             "vintage.yaml",
-            "music-video.yaml", 
-            "minimal.yaml",
-            "beat-switch.yaml"
+            "multi-pip.yaml", 
+            "minimal.yaml"
         ]
         
         loader = YAMLConfigLoader()
@@ -134,9 +115,8 @@ class TestExamplePresets:
         """Test that all expected preset files exist."""
         expected_presets = [
             "vintage.yaml",
-            "music-video.yaml",
-            "minimal.yaml", 
-            "beat-switch.yaml"
+            "multi-pip.yaml",
+            "minimal.yaml"
         ]
         
         presets_dir = addon_path / "example_presets"
@@ -154,27 +134,23 @@ class TestExamplePresets:
         
         # Load all presets
         vintage = loader.load_from_file(addon_path / "example_presets" / "vintage.yaml")
-        music_video = loader.load_from_file(addon_path / "example_presets" / "music-video.yaml")
+        multi_pip = loader.load_from_file(addon_path / "example_presets" / "multi-pip.yaml")
         minimal = loader.load_from_file(addon_path / "example_presets" / "minimal.yaml")
-        beat_switch = loader.load_from_file(addon_path / "example_presets" / "beat-switch.yaml")
         
         # Verify different FPS settings
         assert vintage.project.fps == 30
-        assert music_video.project.fps == 60  # Higher for music videos
+        assert multi_pip.project.fps == 30
         assert minimal.project.fps == 30
-        assert beat_switch.project.fps == 30
         
         # Verify different layout types
         assert vintage.layout.type == "random"
-        assert music_video.layout.type == "grid"
+        assert multi_pip.layout.type == "main-pip"
         assert minimal.layout.type == "cascade"
-        assert beat_switch.layout.type == "random"
         
         # Verify different audio analysis settings
         assert vintage.audio_analysis.beat_division == 4
-        assert music_video.audio_analysis.beat_division == 8  # More responsive
+        assert multi_pip.audio_analysis.beat_division == 4
         assert minimal.audio_analysis.min_onset_interval == 2.0  # Less frequent
-        assert beat_switch.audio_analysis.min_onset_interval == 0.5  # More frequent
 
 
 if __name__ == "__main__":

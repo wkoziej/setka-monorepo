@@ -1,13 +1,34 @@
 # ABOUTME: RotationWobbleAnimation implementation - creates subtle rotation wobble effect
 # ABOUTME: Refactored from VintageFilmEffects with oscillation support for natural movement
 
-"""Rotation wobble animation for VSE strips."""
+"""Rotation wobble animation for addon."""
 
 import random
 import math
-from typing import List
+from typing import List, Optional
+import sys
+from pathlib import Path
 
-from .base_effect_animation import BaseEffectAnimation
+# Ensure addon path is available
+addon_path = Path(__file__).parent
+if str(addon_path) not in sys.path:
+    sys.path.insert(0, str(addon_path))
+
+try:
+    from .base_effect_animation import BaseEffectAnimation
+except ImportError:
+    # Fallback for background mode
+    try:
+        import base_effect_animation
+        BaseEffectAnimation = base_effect_animation.BaseEffectAnimation
+    except ImportError:
+        # If still failing, use a minimal base class
+        class BaseEffectAnimation:
+            def __init__(self, keyframe_helper=None, target_strips=None):
+                self.target_strips = target_strips or []
+            
+            def should_apply_to_strip(self, strip):
+                return not self.target_strips or strip.name in self.target_strips
 
 
 class RotationWobbleAnimation(BaseEffectAnimation):
@@ -27,7 +48,8 @@ class RotationWobbleAnimation(BaseEffectAnimation):
                  trigger: str = "beat",
                  wobble_degrees: float = 1.0,
                  return_frames: int = 3,
-                 oscillate: bool = True):
+                 oscillate: bool = True,
+                 target_strips: Optional[List[str]] = None):
         """
         Initialize RotationWobbleAnimation.
         
@@ -36,8 +58,9 @@ class RotationWobbleAnimation(BaseEffectAnimation):
             wobble_degrees: Maximum rotation in degrees
             return_frames: Frames until rotation returns to normal
             oscillate: If True, alternate wobble direction between events
+            target_strips: List of strip names to target (None = all strips)
         """
-        super().__init__()
+        super().__init__(keyframe_helper=None, target_strips=target_strips)
         self.trigger = trigger
         self.wobble_degrees = wobble_degrees
         self.return_frames = return_frames
@@ -63,7 +86,7 @@ class RotationWobbleAnimation(BaseEffectAnimation):
             return False
         
         # Set initial rotation keyframe at frame 1
-        self.keyframe_helper.insert_transform_rotation_keyframe(strip.name, 1, 0.0)
+        self.keyframe_helper.insert_transform_rotation_keyframe(strip, 1, 0.0)
         
         # Track direction for oscillation
         direction = 1
@@ -84,16 +107,14 @@ class RotationWobbleAnimation(BaseEffectAnimation):
             wobble_radians = math.radians(wobble_rotation)
             
             # Apply wobble
-            strip.transform.rotation = wobble_radians
             self.keyframe_helper.insert_transform_rotation_keyframe(
-                strip.name, frame, wobble_radians
+                strip, frame, wobble_radians
             )
             
             # Return to normal rotation (same as VintageFilmEffects: 3 frames)
             return_frame = frame + self.return_frames
-            strip.transform.rotation = 0.0
             self.keyframe_helper.insert_transform_rotation_keyframe(
-                strip.name, return_frame, 0.0
+                strip, return_frame, 0.0
             )
         
         return True

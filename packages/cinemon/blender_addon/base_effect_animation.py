@@ -1,13 +1,17 @@
-# ABOUTME: Base class for all effect animations - provides common interface and keyframe handling
+# ABOUTME: Base class for all addon effect animations - provides common interface and keyframe handling
 # ABOUTME: Serves as foundation for compositional animation system with required property checking
 
-"""Base class for VSE effect animations."""
+"""Base class for addon effect animations."""
 
 from abc import ABC, abstractmethod
 from typing import List, Optional
 from pathlib import Path
+import sys
 
-from ..keyframe_helper import KeyframeHelper
+# Ensure addon path is available
+addon_path = Path(__file__).parent
+if str(addon_path) not in sys.path:
+    sys.path.insert(0, str(addon_path))
 
 
 class BaseEffectAnimation(ABC):
@@ -18,7 +22,7 @@ class BaseEffectAnimation(ABC):
     that can be composed together in the animation system.
     """
     
-    def __init__(self, keyframe_helper: KeyframeHelper = None, target_strips: Optional[List[str]] = None):
+    def __init__(self, keyframe_helper=None, target_strips: Optional[List[str]] = None):
         """
         Initialize base animation.
         
@@ -26,7 +30,19 @@ class BaseEffectAnimation(ABC):
             keyframe_helper: KeyframeHelper instance (creates new if None)
             target_strips: List of strip names to target (None = all strips)
         """
-        self.keyframe_helper = keyframe_helper or KeyframeHelper()
+        if keyframe_helper is None:
+            # Import KeyframeHelper when needed
+            try:
+                from .keyframe_helper import KeyframeHelper
+            except ImportError:
+                try:
+                    import keyframe_helper
+                    KeyframeHelper = keyframe_helper.KeyframeHelper
+                except ImportError as e:
+                    raise ImportError(f"Could not import KeyframeHelper: {e}")
+            keyframe_helper = KeyframeHelper()
+            
+        self.keyframe_helper = keyframe_helper
         self.target_strips = target_strips or []
     
     @abstractmethod
