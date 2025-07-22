@@ -69,6 +69,9 @@ class StripContextManager:
     
     def get_active_strip_animations(self) -> List[Dict[str, Any]]:
         """Get animations for currently active strip."""
+        # Try to load config from scene if not loaded yet
+        self._ensure_config_loaded()
+        
         active_strip = self.get_active_strip_name()
         if not active_strip:
             return []
@@ -78,7 +81,42 @@ class StripContextManager:
             return copy.deepcopy(self.changes_buffer[active_strip])
         
         strip_animations = self.config.get('strip_animations', {})
-        return copy.deepcopy(strip_animations.get(active_strip, []))
+        result = copy.deepcopy(strip_animations.get(active_strip, []))
+        return result
+    
+    def _ensure_config_loaded(self) -> None:
+        """Ensure config is loaded from scene properties if available."""
+        # If we already have config with animations, don't reload
+        strip_animations = self.config.get('strip_animations', {})
+        if strip_animations and any(len(anims) > 0 for anims in strip_animations.values()):
+            return
+            
+        try:
+            import bpy
+            scene = bpy.context.scene
+            
+            # Try to load strip_animations from scene properties
+            if 'cinemon_strip_animations' in scene:
+                strip_animations_str = scene['cinemon_strip_animations']
+                if strip_animations_str:
+                    # Parse string back to dict
+                    import ast
+                    try:
+                        strip_animations = ast.literal_eval(strip_animations_str)
+                        if isinstance(strip_animations, dict):
+                            # Initialize config if empty
+                            if not self.config:
+                                self.config = {}
+                            self.config['strip_animations'] = strip_animations
+                            print(f"✓ Loaded {len(strip_animations)} strips from scene properties")
+                        else:
+                            print(f"⚠ Strip animations from scene is not a dict")
+                    except (ValueError, SyntaxError) as e:
+                        print(f"⚠ Failed to parse strip animations from scene: {e}")
+                
+        except (ImportError, AttributeError):
+            # For testing or when bpy not available
+            pass
     
     def add_animation_to_active_strip(self, animation: Dict[str, Any]) -> bool:
         """Add animation to currently active strip."""

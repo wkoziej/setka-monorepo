@@ -41,6 +41,8 @@ class BlenderProjectManager:
         self,
         recording_path: Path,
         yaml_config: BlenderYAMLConfig,
+        preset_name: str = None,
+        original_config_path: Path = None,
     ) -> Path:
         """
         Create a Blender VSE project using YAML configuration.
@@ -73,32 +75,59 @@ class BlenderProjectManager:
         # 3. Resolve paths relative to recording directory and create resolved config
         resolved_config = self._create_resolved_config(yaml_config, recording_path, structure)
         
-        # 4. Create temporary YAML file with resolved paths
+        # 4. Create temporary YAML file with resolved paths OR use original if it has preset_name
+        config_file_to_use = None
         temp_config_file = None
+        
+        # If we have original config path and preset_name, try to use it directly
+        if original_config_path and preset_name and original_config_path.exists():
+            logger.info(f"Using original config file directly: {original_config_path}")
+            config_file_to_use = str(original_config_path)
+        else:
+            # Fallback to creating temporary file
+            try:
+                # Write resolved config to temporary YAML file
+                import yaml
+                temp_config_file = tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False, encoding='utf-8')
+                
+                # Convert to internal format for vse_script.py compatibility
+                loader = YAMLConfigLoader()
+                internal_config = loader.convert_to_internal(resolved_config)
+                
+                # Add preset name from parameter (AFTER convert_to_internal which may filter fields)
+                if preset_name:
+                    internal_config['preset_name'] = preset_name
+                    logger.info(f"Added preset_name to internal_config: {preset_name}")
+                
+                yaml.dump(internal_config, temp_config_file, indent=2, allow_unicode=True, default_flow_style=False)
+                temp_config_file.close()
+                config_file_to_use = temp_config_file.name
+                
+                logger.info(f"Created temporary config file: {config_file_to_use}")
+            except Exception as e:
+                logger.error(f"Failed to create config file: {e}")
+                raise RuntimeError(f"Config file creation failed: {e}")
+        
         try:
-            # Write resolved config to temporary YAML file
-            import yaml
-            temp_config_file = tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False, encoding='utf-8')
-            
-            # Convert to internal format for vse_script.py compatibility
-            loader = YAMLConfigLoader()
-            internal_config = loader.convert_to_internal(resolved_config)
-            
-            yaml.dump(internal_config, temp_config_file, indent=2, allow_unicode=True, default_flow_style=False)
-            temp_config_file.close()
-            
-            logger.info(f"Created temporary config file: {temp_config_file.name}")
             logger.info(f"Video files: {resolved_config.project.video_files}")
             if resolved_config.project.main_audio:
                 logger.info(f"Main audio: {resolved_config.project.main_audio}")
-            logger.info(f"Animation mode: compositional with {len(internal_config.get('animations', []))} animations")
+            logger.info(f"Animation mode: compositional with {len(resolved_config.strip_animations) if hasattr(resolved_config, 'strip_animations') else 0} strip animations")
 
-            # 5. Execute Blender with JSON config path
+            # 5. Execute Blender with config file
             output_blend = resolved_config.project.output_blend
-            self._execute_blender_with_json_config(temp_config_file.name)
+            self._execute_blender_with_json_config(config_file_to_use)
             
-            logger.info(f"Blender project created successfully with YAML config: {output_blend}")
-            return Path(output_blend)
+            # Return the ACTUAL output path from the config file that was used
+            # (not the resolved_config path which may be different)
+            if original_config_path and preset_name:
+                # When using original config, output_blend will be generated based on config name
+                actual_output_path = recording_path / "blender" / f"{preset_name}.blend"
+                logger.info(f"Using actual output path for preset: {actual_output_path}")
+                return actual_output_path
+            else:
+                logger.info(f"Blender project created successfully with YAML config: {output_blend}")
+                return Path(output_blend)
             
         except Exception as e:
             logger.error(f"Failed to create Blender project with YAML config: {e}")
@@ -135,6 +164,7 @@ class BlenderProjectManager:
                 "snap",
                 "run",
                 "blender",
+                "--app-template", "Video_Editing",  # Use Video Editing template for workspace
                 "--background",
                 "--python",
                 str(self.script_path),
@@ -145,6 +175,7 @@ class BlenderProjectManager:
         else:
             cmd = [
                 self.blender_executable,
+                "--app-template", "Video_Editing",  # Use Video Editing template for workspace
                 "--background",
                 "--python",
                 str(self.script_path),

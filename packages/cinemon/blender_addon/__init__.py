@@ -21,6 +21,7 @@ bl_info = {
 }
 
 import sys
+import json
 from pathlib import Path
 
 # Import Blender API
@@ -381,8 +382,7 @@ class CINEMON_OT_apply_all_changes(bpy.types.Operator):
             # Get changed strips BEFORE applying (apply clears the buffer)
             changed_strips = manager.get_changed_strips()
             
-            # Apply all changes to config
-            config = manager.apply_changes()
+            # Apply all changes to config - ALREADY DONE ABOVE, no need to call again
             
             # Apply animation changes
             if changed_strips:
@@ -517,6 +517,94 @@ def get_available_presets(self, context):
     return presets
 
 
+@bpy.app.handlers.persistent
+def auto_load_handler(dummy):
+    """Auto-load preset based on metadata JSON file."""
+    try:
+        blend_path = bpy.data.filepath
+        if not blend_path:
+            return  # No blend file loaded
+        
+        # Look for metadata file next to .blend
+        metadata_file = Path(blend_path).with_suffix('.cinemon.json')
+        if not metadata_file.exists():
+            return  # No metadata file
+        
+        print(f"🔍 Found Cinemon metadata: {metadata_file}")
+        
+        # Load metadata
+        with open(metadata_file, 'r', encoding='utf-8') as f:
+            metadata = json.load(f)
+        
+        # Check if auto-loading is enabled
+        if not metadata.get('auto_load', False):
+            print("ℹ Auto-loading disabled in metadata")
+            return
+        
+        preset_name = metadata.get('preset_name')
+        if not preset_name:
+            print("ℹ No preset specified in metadata")
+            return
+        
+        print(f"🎯 Auto-loading preset: {preset_name}")
+        
+        # Find and set preset
+        # Use SAME logic as get_available_presets() function
+        available_presets = [('NONE', 'Select Preset...', 'No preset selected')]
+        
+        # Get available presets using same logic as dropdown
+        addon_dir = Path(__file__).parent
+        builtin_presets_dir = addon_dir / "example_presets"
+        
+        # Check built-in presets (same as get_available_presets)
+        if builtin_presets_dir.exists():
+            for preset_file in sorted(builtin_presets_dir.glob("*.yaml")):
+                preset_file_name = preset_file.name
+                display_name = preset_file_name.replace('.yaml', '').replace('-', ' ').replace('_', ' ').title()
+                available_presets.append((preset_file_name, f"{display_name} (Built-in)", f"Built-in preset: {display_name}"))
+        
+        # Check user presets (same as get_available_presets)
+        user_presets_dir = Path.home() / ".cinemon" / "presets"
+        if user_presets_dir.exists():
+            for preset_file in sorted(user_presets_dir.glob("*.yaml")):
+                preset_file_name = preset_file.name
+                display_name = preset_file_name.replace('.yaml', '').replace('-', ' ').replace('_', ' ').title()
+                # Check if already exists (avoid duplicates)
+                preset_ids = [p[0] for p in available_presets]
+                if preset_file_name not in preset_ids:
+                    available_presets.append((preset_file_name, f"{display_name} (User)", f"User preset: {display_name}"))
+        
+        # Find preset in available list
+        target_preset = preset_name + ".yaml"
+        preset_index = None
+        for i, (preset_id, _, _) in enumerate(available_presets):
+            if preset_id == target_preset:
+                preset_index = i
+                break
+        
+        print(f"🔍 DEBUG: target_preset = {target_preset}")
+        print(f"🔍 DEBUG: available_presets = {[p[0] for p in available_presets]}")
+        print(f"🔍 DEBUG: preset_index = {preset_index}")
+        
+        if preset_index is not None:
+            # Set preset selection - use enum VALUE instead of index
+            preset_enum_value = available_presets[preset_index][0]  # Get enum ID
+            print(f"🔍 DEBUG: Setting cinemon_selected_preset to enum value: {preset_enum_value}")
+            bpy.context.scene.cinemon_selected_preset = preset_enum_value
+            
+            # Load the preset
+            bpy.ops.cinemon.load_selected_preset()
+            
+            print(f"✅ Auto-loaded preset: {preset_name}")
+        else:
+            print(f"⚠ Preset '{preset_name}' not found in available presets")
+            print(f"Available: {[p[0] for p in available_presets]}")
+            
+    except Exception as e:
+        print(f"⚠ Auto-load handler error: {e}")
+        import traceback
+        traceback.print_exc()
+
 
 def register():
     """Register addon classes and operators."""
@@ -563,6 +651,10 @@ def register():
         
         # Collection property will be registered after AnimationPropertyGroup
         
+        # Register auto-loading handler
+        if auto_load_handler not in bpy.app.handlers.load_post:
+            bpy.app.handlers.load_post.append(auto_load_handler)
+        
     except (NameError, AttributeError):
         # bpy not available in test environment
         pass
@@ -599,44 +691,54 @@ def register():
 def unregister():
     """Unregister addon classes and operators."""
     try:
-        # Unregister UI classes
+        # Remove auto-loading handler
+        if auto_load_handler in bpy.app.handlers.load_post:
+            bpy.app.handlers.load_post.remove(auto_load_handler)
+        
+        # Unregister animation UI
+        from . import animation_ui
+        animation_ui.unregister()
+        
+        # Unregister layout UI  
+        from . import layout_ui
+        layout_ui.unregister()
+        
+        # Unregister vse operators
+        from . import vse_operators
+        vse_operators.unregister()
+        
+        # Unregister apply system
+        from . import apply_system
+        apply_system.unregister()
+        
+        # Unregister animation panel
+        from . import animation_panel
+        animation_panel.unregister()
+        
+        # Remove scene properties
+        if hasattr(bpy.types.Scene, 'cinemon_config'):
+            del bpy.types.Scene.cinemon_config
+        if hasattr(bpy.types.Scene, 'cinemon_config_path'):
+            del bpy.types.Scene.cinemon_config_path
+        if hasattr(bpy.types.Scene, 'cinemon_selected_preset'):
+            del bpy.types.Scene.cinemon_selected_preset
+        if hasattr(bpy.types.Scene, 'cinemon_current_preset'):
+            del bpy.types.Scene.cinemon_current_preset
+        if hasattr(bpy.types.Scene, 'cinemon_new_preset_name'):
+            del bpy.types.Scene.cinemon_new_preset_name
+        
+        # Unregister main UI classes
         for cls in reversed(classes):
             bpy.utils.unregister_class(cls)
         
-        # Clean up scene properties
-        if hasattr(bpy.types.Scene, 'cinemon_selected_preset'):
-            delattr(bpy.types.Scene, 'cinemon_selected_preset')
-        if hasattr(bpy.types.Scene, 'cinemon_current_preset'):
-            delattr(bpy.types.Scene, 'cinemon_current_preset')
-        if hasattr(bpy.types.Scene, 'cinemon_new_preset_name'):
-            delattr(bpy.types.Scene, 'cinemon_new_preset_name')
-        if hasattr(bpy.types.Scene, 'cinemon_config'):
-            delattr(bpy.types.Scene, 'cinemon_config')
-        if hasattr(bpy.types.Scene, 'cinemon_config_path'):
-            delattr(bpy.types.Scene, 'cinemon_config_path')
-        if hasattr(bpy.types.Scene, 'cinemon_animations'):
-            delattr(bpy.types.Scene, 'cinemon_animations')
-        
-        print("Cinemon VSE Animator addon unregistered")
-    except (NameError, AttributeError):
-        # bpy not available in test environment
+    except (NameError, AttributeError, RuntimeError):
+        # bpy not available in test environment or already unregistered
         pass
     
-    # Unregister animation panel
-    animation_panel.unregister()
-    
-    # Unregister apply system
-    apply_system.unregister()
-    
-    # Unregister animation UI
-    from . import animation_ui
-    animation_ui.unregister()
-    
-    # Unregister layout UI
-    layout_ui.unregister()
-    
-    # Unregister operators
+    # Unregister operators last
     operators.unregister()
+    
+    print("Cinemon VSE Animator addon unregistered")
 
 
 # For development/testing

@@ -18,6 +18,7 @@ Użycie w Blenderze:
 import bpy
 import os
 import sys
+import json
 from pathlib import Path
 from pathlib import Path
 from typing import List, Optional, Tuple, Dict
@@ -295,8 +296,14 @@ class BlenderVSEConfigurator:
                 
                 
                 bpy.ops.wm.save_as_mainfile(filepath=str(self.output_blend))
-                success_msg = "z animacjami" if animation_success and self.config_data['animations'] else "podstawowy"
+                success_msg = "z animacjami" if animation_success and self.config_data.get('animations') else "podstawowy"
                 print(f"✓ Zapisano projekt {success_msg}: {self.output_blend}")
+                
+                # Save metadata JSON for addon auto-loading
+                print("🔍 DEBUG: About to call _save_metadata_for_addon()")
+                self._save_metadata_for_addon()
+                print("🔍 DEBUG: Finished _save_metadata_for_addon()")
+                
             except Exception as e:
                 print(f"✗ Błąd zapisywania projektu: {e}")
                 return False
@@ -722,6 +729,57 @@ class BlenderVSEConfigurator:
                 animations.append(animation)
         
         return animations
+
+    def _save_metadata_for_addon(self):
+        """Save metadata JSON file for addon auto-loading."""
+        try:
+            # Save metadata next to .blend file
+            metadata_file = self.output_blend.with_suffix('.cinemon.json')
+            
+            # Debug: Print config_data content
+            print(f"🔍 DEBUG: config_data keys: {list(self.config_data.keys())}")
+            print(f"🔍 DEBUG: preset_name in config: {self.config_data.get('preset_name', 'NOT FOUND')}")
+            
+            # Get preset name from config (passed from CLI)
+            preset_name = self.config_data.get('preset_name')
+            if not preset_name:
+                # Fallback: try to extract from config path
+                if hasattr(self, 'config_path') and self.config_path:
+                    config_name = self.config_path.name
+                    if config_name.startswith('animation_config_'):
+                        preset_name = config_name.replace('animation_config_', '').replace('.yaml', '')
+                        print(f"🔍 DEBUG: Fallback preset_name from path: {preset_name}")
+            
+            metadata = {
+                "version": "1.0",
+                "preset_name": preset_name,
+                "auto_load": True,
+                "workspace": "Video Editing",
+                "project": {
+                    "video_files": [str(f) for f in self.video_files],
+                    "main_audio": str(self.main_audio) if self.main_audio else None,
+                    "output_blend": str(self.output_blend),
+                    "fps": self.fps,
+                    "resolution": {"width": self.resolution_x, "height": self.resolution_y}
+                },
+                "config": {
+                    "path": str(self.config_path),
+                    "animations": len(self.config_data.get('animations', [])),
+                    "layout_type": self.config_data.get('layout', {}).get('type', 'unknown')
+                }
+            }
+            
+            with open(metadata_file, 'w', encoding='utf-8') as f:
+                json.dump(metadata, f, indent=2, ensure_ascii=False)
+            
+            print(f"📄 Zapisano metadata dla add-on: {metadata_file}")
+            if preset_name:
+                print(f"🎯 Preset do auto-ładowania: {preset_name}")
+                
+        except Exception as e:
+            print(f"⚠ Błąd zapisywania metadata dla add-on: {e}")
+            import traceback
+            traceback.print_exc()
 
 
 def main() -> int:

@@ -20,67 +20,28 @@ from beatrix import AudioValidationError
 from setka_common.config import BlenderYAMLConfig, YAMLConfigLoader
 
 
-def open_blender_with_video_editing(blend_file_path: Path) -> None:
+def open_blender_with_video_editing(blend_file_path: Path, preset_name: str = None) -> None:
     """
-    Open Blender GUI with the blend file (should already be in Video Editing workspace).
+    Open Blender GUI with the blend file using Video_Editing app template.
+    Preset auto-loading is handled by the addon via metadata JSON.
     
     Args:
         blend_file_path: Path to .blend file to open
+        preset_name: Ignored - kept for backward compatibility
     """
     try:
-        # Create a simple Python script to switch workspace
-        workspace_script = f"""
-import bpy
-
-# Ensure we have workspaces
-if bpy.data.workspaces:
-    # Try to find Video Editing workspace
-    video_editing_ws = None
-    for ws in bpy.data.workspaces:
-        if ws.name == 'Video Editing':
-            video_editing_ws = ws
-            break
-    
-    # Switch to Video Editing workspace if found
-    if video_editing_ws and bpy.context.window:
-        bpy.context.window.workspace = video_editing_ws
-        print("✓ Switched to Video Editing workspace")
-    else:
-        print("⚠ Video Editing workspace not found")
-else:
-    print("⚠ No workspaces available")
-"""
-        
-        # Write script to temporary file
-        import tempfile
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.py', delete=False) as temp_script:
-            temp_script.write(workspace_script)
-            temp_script_path = temp_script.name
-        
-        # Open Blender with script
+        # Simple Blender execution - .blend file now has Video Editing workspace built-in
         cmd = [
             "snap", "run", "blender",
-            str(blend_file_path),
-            "--python", temp_script_path
+            str(blend_file_path)
         ]
         
-        print(f"🎬 Otwieranie Blender w workspace Video Editing...")
+        print(f"🎬 Otwieranie Blender z wbudowanym workspace Video Editing...")
         print(f"📁 Plik: {blend_file_path}")
+        print(f"🎯 Built-in Video Editing workspace + auto-loading presetu")
         
-        # Start Blender in background (non-blocking) with output visible
+        # Start Blender in background (non-blocking)
         subprocess.Popen(cmd)
-        
-        # Clean up temp script after a delay (Blender should have read it by then)
-        import threading
-        def cleanup_script():
-            import time
-            time.sleep(5)  # Wait 5 seconds for Blender to start
-            try:
-                import os
-                os.unlink(temp_script_path)
-            except:
-                pass
-        threading.Thread(target=cleanup_script, daemon=True).start()
         
     except Exception as e:
         print(f"⚠ Nie udało się otworzyć Blender: {e}")
@@ -262,19 +223,21 @@ def main() -> int:
             yaml_loader = YAMLConfigLoader()
             yaml_config = yaml_loader.load_config(config_path)
             
-            # Create VSE project with generated config
+            # Create VSE project with generated config (use original config file path)
             logger.info("Creating Blender VSE project with preset configuration...")
             project_path = manager.create_vse_project_with_config(
                 args.recording_dir,
-                yaml_config
+                yaml_config,
+                preset_name=args.preset,
+                original_config_path=config_path  # Pass original config file
             )
             
             print(f"✅ Projekt Blender VSE utworzony z presetu {args.preset}: {project_path}")
             
             # Auto-open Blender if requested
             if args.open_blender:
-                logger.info("Opening Blender with Video Editing workspace...")
-                open_blender_with_video_editing(project_path)
+                logger.info("Opening Blender...")
+                open_blender_with_video_editing(project_path, args.preset)
             
             return 0
             
@@ -297,8 +260,8 @@ def main() -> int:
             
             # Auto-open Blender if requested
             if args.open_blender:
-                logger.info("Opening Blender with Video Editing workspace...")
-                open_blender_with_video_editing(project_path)
+                logger.info("Opening Blender...")
+                open_blender_with_video_editing(project_path, None)  # No preset for YAML config
             
             return 0
         
@@ -399,6 +362,9 @@ def generate_config_from_addon_preset(recording_dir: Path, preset_name: str, mai
         
         # Replace with mapped animations
         config_data["strip_animations"] = new_strip_animations
+    
+    # Add preset name to config for VSE script
+    config_data["preset_name"] = preset_name
     
     # Generate output path
     output_path = recording_dir / f"animation_config_{preset_name}.yaml"
