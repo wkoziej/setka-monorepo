@@ -50,6 +50,10 @@ strip_animations:
       trigger: "beat"
       intensity: 0.25
       duration_frames: 3
+    - type: "visibility"
+      trigger: "energy_peaks"
+      pattern: "alternate"
+      duration_frames: 15
 
   # Corner PiPs - varied animations for testing
   Video_3:

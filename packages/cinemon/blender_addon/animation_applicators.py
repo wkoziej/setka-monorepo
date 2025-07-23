@@ -6,6 +6,7 @@
 from typing import Dict, Any, List
 import traceback
 import sys
+import importlib
 from pathlib import Path
 
 # Ensure addon path is available for imports
@@ -13,7 +14,7 @@ addon_path = Path(__file__).parent
 if str(addon_path) not in sys.path:
     sys.path.insert(0, str(addon_path))
 
-# Initialize animation classes to None first
+# Initialize animation classes to None first (used only for debug import verification)
 ScaleAnimation = None
 ShakeAnimation = None
 VisibilityAnimation = None
@@ -60,6 +61,29 @@ except ImportError as e:
         print(f"DEBUG: Addon path: {addon_path}")
         print(f"DEBUG: Files in addon path: {list(addon_path.glob('*_animation.py'))}")
         # Animation classes remain None
+
+
+def safe_import_animation(animation_module_name: str, animation_class_name: str):
+    """Try to import animation class with fallback patterns.
+    
+    Args:
+        animation_module_name: Module name (e.g., 'visibility_animation')
+        animation_class_name: Class name (e.g., 'VisibilityAnimation')
+        
+    Returns:
+        Animation class or None if import failed
+    """
+    try:
+        # Try relative import first (addon/GUI mode)
+        module = importlib.import_module(f'.{animation_module_name}', package=__name__)
+        return getattr(module, animation_class_name)
+    except ImportError:
+        try:
+            # Try direct import (background mode)
+            module = importlib.import_module(animation_module_name)
+            return getattr(module, animation_class_name)
+        except ImportError:
+            return None
 
 
 def apply_animation_to_strip(strip, animations: List[Dict[str, Any]], audio_events: Dict[str, Any], fps: int = 30) -> None:
@@ -176,16 +200,11 @@ def apply_scale_animation(strip, animation: Dict[str, Any], events: List[float],
         True if animation was applied successfully
     """
     try:
-        # Import ScaleAnimation directly in function
-        try:
-            from .scale_animation import ScaleAnimation
-        except ImportError:
-            try:
-                import scale_animation
-                ScaleAnimation = scale_animation.ScaleAnimation
-            except ImportError:
-                print(f"    ScaleAnimation not available - skipping")
-                return False
+        # Import ScaleAnimation using helper function
+        ScaleAnimation = safe_import_animation('scale_animation', 'ScaleAnimation')
+        if ScaleAnimation is None:
+            print(f"    ScaleAnimation not available - skipping")
+            return False
         
         print(f"    DEBUG: In apply_scale_animation, ScaleAnimation = {ScaleAnimation}")
         
@@ -224,16 +243,11 @@ def apply_shake_animation(strip, animation: Dict[str, Any], events: List[float],
         True if animation was applied successfully
     """
     try:
-        # Import ShakeAnimation directly in function
-        try:
-            from .shake_animation import ShakeAnimation
-        except ImportError:
-            try:
-                import shake_animation
-                ShakeAnimation = shake_animation.ShakeAnimation
-            except ImportError:
-                print(f"    ShakeAnimation not available - skipping")
-                return False
+        # Import ShakeAnimation using helper function
+        ShakeAnimation = safe_import_animation('shake_animation', 'ShakeAnimation')
+        if ShakeAnimation is None:
+            print(f"    ShakeAnimation not available - skipping")
+            return False
         
         # Create ShakeAnimation instance from configuration
         shake_anim = ShakeAnimation(
@@ -270,8 +284,9 @@ def apply_visibility_animation(strip, animation: Dict[str, Any], events: List[fl
     Returns:
         True if animation was applied successfully
     """
-    global VisibilityAnimation
     try:
+        # Import VisibilityAnimation using helper function
+        VisibilityAnimation = safe_import_animation('visibility_animation', 'VisibilityAnimation')
         if VisibilityAnimation is None:
             print(f"    VisibilityAnimation not available - skipping")
             return False
@@ -311,16 +326,11 @@ def apply_rotation_wobble_animation(strip, animation: Dict[str, Any], events: Li
         True if animation was applied successfully
     """
     try:
-        # Import RotationWobbleAnimation directly in function
-        try:
-            from .rotation_wobble_animation import RotationWobbleAnimation
-        except ImportError:
-            try:
-                import rotation_wobble_animation
-                RotationWobbleAnimation = rotation_wobble_animation.RotationWobbleAnimation
-            except ImportError:
-                print(f"    RotationWobbleAnimation not available - skipping")
-                return False
+        # Import RotationWobbleAnimation using helper function
+        RotationWobbleAnimation = safe_import_animation('rotation_wobble_animation', 'RotationWobbleAnimation')
+        if RotationWobbleAnimation is None:
+            print(f"    RotationWobbleAnimation not available - skipping")
+            return False
         
         # Create RotationWobbleAnimation instance from configuration
         rotation_anim = RotationWobbleAnimation(
@@ -357,11 +367,17 @@ def apply_jitter_animation(strip, animation: Dict[str, Any], events: List[float]
     Returns:
         True if animation was applied successfully
     """
-    global JitterAnimation
     try:
-        if JitterAnimation is None:
-            print(f"    JitterAnimation not available - skipping")
-            return False
+        # Import JitterAnimation directly in function
+        try:
+            from .jitter_animation import JitterAnimation
+        except ImportError:
+            try:
+                import jitter_animation
+                JitterAnimation = jitter_animation.JitterAnimation
+            except ImportError:
+                print(f"    JitterAnimation not available - skipping")
+                return False
             
         # Create JitterAnimation instance from configuration
         jitter_anim = JitterAnimation(
@@ -399,16 +415,11 @@ def apply_brightness_flicker_animation(strip, animation: Dict[str, Any], events:
         True if animation was applied successfully
     """
     try:
-        # Import BrightnessFlickerAnimation directly in function
-        try:
-            from .brightness_flicker_animation import BrightnessFlickerAnimation
-        except ImportError:
-            try:
-                import brightness_flicker_animation
-                BrightnessFlickerAnimation = brightness_flicker_animation.BrightnessFlickerAnimation
-            except ImportError:
-                print(f"    BrightnessFlickerAnimation not available - skipping")
-                return False
+        # Import BrightnessFlickerAnimation using helper function
+        BrightnessFlickerAnimation = safe_import_animation('brightness_flicker_animation', 'BrightnessFlickerAnimation')
+        if BrightnessFlickerAnimation is None:
+            print(f"    BrightnessFlickerAnimation not available - skipping")
+            return False
         
         print(f"    DEBUG: In apply_brightness_flicker_animation, BrightnessFlickerAnimation = {BrightnessFlickerAnimation}")
         
@@ -447,16 +458,11 @@ def apply_contrast_flash_animation(strip, animation: Dict[str, Any], events: Lis
         True if animation was applied successfully
     """
     try:
-        # Import BrightnessFlickerAnimation directly in function
-        try:
-            from .brightness_flicker_animation import BrightnessFlickerAnimation
-        except ImportError:
-            try:
-                import brightness_flicker_animation
-                BrightnessFlickerAnimation = brightness_flicker_animation.BrightnessFlickerAnimation
-            except ImportError:
-                print(f"    BrightnessFlickerAnimation not available - skipping")
-                return False
+        # Import BrightnessFlickerAnimation using helper function (contrast flash uses BrightnessFlickerAnimation)
+        BrightnessFlickerAnimation = safe_import_animation('brightness_flicker_animation', 'BrightnessFlickerAnimation')
+        if BrightnessFlickerAnimation is None:
+            print(f"    BrightnessFlickerAnimation not available - skipping")
+            return False
         
         # Create BrightnessFlickerAnimation instance from configuration (for contrast flash)
         flicker_anim = BrightnessFlickerAnimation(
@@ -493,16 +499,11 @@ def apply_desaturate_pulse_animation(strip, animation: Dict[str, Any], events: L
         True if animation was applied successfully
     """
     try:
-        # Import BrightnessFlickerAnimation directly in function
-        try:
-            from .brightness_flicker_animation import BrightnessFlickerAnimation
-        except ImportError:
-            try:
-                import brightness_flicker_animation
-                BrightnessFlickerAnimation = brightness_flicker_animation.BrightnessFlickerAnimation
-            except ImportError:
-                print(f"    BrightnessFlickerAnimation not available - skipping")
-                return False
+        # Import BrightnessFlickerAnimation using helper function (desaturate pulse uses BrightnessFlickerAnimation)
+        BrightnessFlickerAnimation = safe_import_animation('brightness_flicker_animation', 'BrightnessFlickerAnimation')
+        if BrightnessFlickerAnimation is None:
+            print(f"    BrightnessFlickerAnimation not available - skipping")
+            return False
         
         # Create BrightnessFlickerAnimation instance from configuration (for desaturate pulse)
         flicker_anim = BrightnessFlickerAnimation(
