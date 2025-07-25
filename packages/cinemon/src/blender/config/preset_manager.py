@@ -4,9 +4,10 @@
 """Preset management for cinemon configurations."""
 
 import json
-from pathlib import Path
-from typing import Dict, List, Any, Optional
 from dataclasses import dataclass
+from pathlib import Path
+from typing import Any, Dict, List
+
 from .device_names import DeviceNames
 
 
@@ -22,16 +23,16 @@ class PresetConfig:
 class PresetManager:
     """
     Manages built-in and custom configuration presets.
-    
+
     Provides access to predefined preset templates and allows
     creation and persistence of custom presets.
-    
+
     Example:
         manager = PresetManager()
         vintage_preset = manager.get_preset("vintage")
         manager.create_custom_preset("my-style", custom_config)
     """
-    
+
     # Built-in preset definitions
     BUILTIN_PRESETS = {
         "vintage": {
@@ -160,21 +161,21 @@ class PresetManager:
             ]
         }
     }
-    
+
     def __init__(self):
         """Initialize PresetManager."""
         self._custom_presets_cache = None
-    
+
     def get_preset(self, name: str) -> PresetConfig:
         """
         Get preset configuration by name.
-        
+
         Args:
             name: Preset name
-            
+
         Returns:
             PresetConfig object
-            
+
         Raises:
             ValueError: If preset doesn't exist
         """
@@ -187,7 +188,7 @@ class PresetManager:
                 layout=preset_data["layout"],
                 animations=preset_data["animations"]
             )
-        
+
         # Check custom presets
         custom_presets = self._load_custom_presets()
         if name in custom_presets:
@@ -198,131 +199,131 @@ class PresetManager:
                 layout=preset_data["layout"],
                 animations=preset_data["animations"]
             )
-        
+
         raise ValueError(f"Preset '{name}' not found")
-    
+
     def list_presets(self) -> List[str]:
         """
         List all available preset names.
-        
+
         Returns:
             List of preset names (built-in + custom)
         """
         builtin_names = list(self.BUILTIN_PRESETS.keys())
         custom_names = list(self._load_custom_presets().keys())
         return sorted(builtin_names + custom_names)
-    
+
     def create_custom_preset(self, name: str, config: Dict[str, Any], description: str = "") -> None:
         """
         Create and save custom preset.
-        
+
         Args:
             name: Preset name
             config: Preset configuration
             description: Preset description
-            
+
         Raises:
             ValueError: If trying to overwrite built-in preset or invalid config
         """
         # Prevent overwriting built-in presets
         if name in self.BUILTIN_PRESETS:
             raise ValueError(f"Cannot overwrite built-in preset '{name}'")
-        
+
         # Validate configuration
         self._validate_preset_config(config)
-        
+
         # Prepare preset data
         preset_data = {
             "description": description,
             "layout": config["layout"],
             "animations": config["animations"]
         }
-        
+
         # Save to custom presets directory
         custom_presets_dir = self._get_custom_presets_dir()
         custom_presets_dir.mkdir(parents=True, exist_ok=True)
-        
+
         preset_file = custom_presets_dir / f"{name}.json"
         with preset_file.open('w', encoding='utf-8') as f:
             json.dump(preset_data, f, indent=2, ensure_ascii=False)
-        
+
         # Clear cache to reload on next access
         self._custom_presets_cache = None
-    
+
     def _validate_preset_config(self, config: Dict[str, Any]) -> None:
         """
         Validate preset configuration structure.
-        
+
         Args:
             config: Configuration to validate
-            
+
         Raises:
             ValueError: If configuration is invalid
         """
         required_fields = ["layout", "animations"]
-        
+
         for field in required_fields:
             if field not in config:
                 raise ValueError(f"Invalid preset configuration: missing '{field}' field")
-        
+
         # Validate layout structure
         if not isinstance(config["layout"], dict):
             raise ValueError("Invalid preset configuration: 'layout' must be a dictionary")
-        
+
         if "type" not in config["layout"]:
             raise ValueError("Invalid preset configuration: 'layout' missing 'type' field")
-        
+
         # Validate animations structure
         if not isinstance(config["animations"], list):
             raise ValueError("Invalid preset configuration: 'animations' must be a list")
-        
+
         for i, animation in enumerate(config["animations"]):
             if not isinstance(animation, dict):
                 raise ValueError(f"Invalid preset configuration: animation {i} must be a dictionary")
-            
+
             if "type" not in animation:
                 raise ValueError(f"Invalid preset configuration: animation {i} missing 'type' field")
-            
+
             if "trigger" not in animation:
                 raise ValueError(f"Invalid preset configuration: animation {i} missing 'trigger' field")
-    
+
     def _load_custom_presets(self) -> Dict[str, Dict[str, Any]]:
         """
         Load custom presets from disk.
-        
+
         Returns:
             Dictionary of custom preset configurations
         """
         if self._custom_presets_cache is not None:
             return self._custom_presets_cache
-        
+
         custom_presets = {}
         custom_presets_dir = self._get_custom_presets_dir()
-        
+
         if not custom_presets_dir.exists():
             self._custom_presets_cache = custom_presets
             return custom_presets
-        
+
         # Load all JSON files in custom presets directory
         for preset_file in custom_presets_dir.glob("*.json"):
             try:
                 with preset_file.open('r', encoding='utf-8') as f:
                     preset_data = json.load(f)
-                
+
                 preset_name = preset_file.stem
                 custom_presets[preset_name] = preset_data
-                
+
             except (json.JSONDecodeError, KeyError, IOError):
                 # Skip corrupt or invalid preset files
                 continue
-        
+
         self._custom_presets_cache = custom_presets
         return custom_presets
-    
+
     def _get_custom_presets_dir(self) -> Path:
         """
         Get path to custom presets directory.
-        
+
         Returns:
             Path to custom presets directory
         """

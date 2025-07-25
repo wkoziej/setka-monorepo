@@ -22,10 +22,10 @@ class KeyframeHelper:
     def _get_strip_object(self, strip: Union[str, object]) -> tuple:
         """
         Get strip object from either a string name or strip object.
-        
+
         Args:
             strip: Strip name (str) or strip object
-            
+
         Returns:
             tuple: (strip_object, strip_name) or (None, None) if not found
         """
@@ -60,11 +60,11 @@ class KeyframeHelper:
             strip_obj, strip_name = self._get_strip_object(strip)
             if not strip_obj:
                 return False
-                
+
             # Set alpha value
             if alpha_value is None:
                 alpha_value = strip_obj.blend_alpha if hasattr(strip_obj, 'blend_alpha') else 1.0
-            
+
             # Use direct method - blend_alpha is a direct property of the strip
             strip_obj.blend_alpha = alpha_value
             strip_obj.keyframe_insert(data_path="blend_alpha", frame=frame)
@@ -99,11 +99,11 @@ class KeyframeHelper:
             strip_obj, strip_name = self._get_strip_object(strip)
             if not strip_obj:
                 return False
-                
+
             if not hasattr(strip_obj, 'transform'):
                 print(f"Strip '{strip_name}' has no transform property")
                 return False
-                
+
             # Set scale values
             if scale_x is None:
                 scale_x = strip_obj.transform.scale_x if hasattr(strip_obj.transform, 'scale_x') else 1.0
@@ -146,11 +146,11 @@ class KeyframeHelper:
             strip_obj, strip_name = self._get_strip_object(strip)
             if not strip_obj:
                 return False
-                
+
             if not hasattr(strip_obj, 'transform'):
                 print(f"Strip '{strip_name}' has no transform property")
                 return False
-                
+
             # Set offset values
             if offset_x is None:
                 offset_x = strip_obj.transform.offset_x if hasattr(strip_obj.transform, 'offset_x') else 0
@@ -228,11 +228,11 @@ class KeyframeHelper:
             strip_obj, strip_name = self._get_strip_object(strip)
             if not strip_obj:
                 return False
-                
+
             if not hasattr(strip_obj, 'transform'):
                 print(f"Strip '{strip_name}' has no transform property")
                 return False
-                
+
             # Set rotation value
             if rotation is None:
                 rotation = strip_obj.transform.rotation if hasattr(strip_obj.transform, 'rotation') else 0.0

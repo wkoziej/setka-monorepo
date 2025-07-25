@@ -3,13 +3,13 @@ ABOUTME: Tests for Blender VSE constants module - validates extracted magic numb
 ABOUTME: TDD approach - tests written first to define expected behavior and values.
 """
 
-from pathlib import Path
 import sys
+from pathlib import Path
 
 # Add src to path for testing
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-from blender.vse.constants import BlenderConstants, AnimationConstants
+from blender.vse.constants import AnimationConstants, BlenderConstants
 
 
 class TestBlenderConstants:

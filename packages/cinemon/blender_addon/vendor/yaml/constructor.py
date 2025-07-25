@@ -8,10 +8,17 @@ __all__ = [
     'ConstructorError'
 ]
 
+import base64
+import binascii
+import collections.abc
+import datetime
+import re
+import sys
+import types
+
 from .error import *
 from .nodes import *
 
-import collections.abc, datetime, base64, binascii, re, sys, types
 
 class ConstructorError(MarkedYAMLError):
     pass
@@ -158,13 +165,13 @@ class BaseConstructor:
 
     @classmethod
     def add_constructor(cls, tag, constructor):
-        if not 'yaml_constructors' in cls.__dict__:
+        if 'yaml_constructors' not in cls.__dict__:
             cls.yaml_constructors = cls.yaml_constructors.copy()
         cls.yaml_constructors[tag] = constructor
 
     @classmethod
     def add_multi_constructor(cls, tag_prefix, multi_constructor):
-        if not 'yaml_multi_constructors' in cls.__dict__:
+        if 'yaml_multi_constructors' not in cls.__dict__:
             cls.yaml_multi_constructors = cls.yaml_multi_constructors.copy()
         cls.yaml_multi_constructors[tag_prefix] = multi_constructor
 
@@ -320,7 +327,7 @@ class SafeConstructor(BaseConstructor):
                 (?::(?P<tz_minute>[0-9][0-9]))?))?)?$''', re.X)
 
     def construct_yaml_timestamp(self, node):
-        value = self.construct_scalar(node)
+        self.construct_scalar(node)
         match = self.timestamp_regexp.match(node.value)
         values = match.groupdict()
         year = int(values['year'])

@@ -4,24 +4,21 @@
 """Apply system coordination for Cinemon addon."""
 
 try:
-    from .vse_operators import (
-        regenerate_animations_for_strips, 
-        CINEMON_OT_discard_changes,
-        ApplyUIManager,
-        register as register_vse_operators,
-        unregister as unregister_vse_operators
-    )
     from .animation_applicators import apply_animation_to_strip, clear_strip_animations
+    from .vse_operators import (
+        ApplyUIManager,
+        CINEMON_OT_discard_changes,
+        regenerate_animations_for_strips,
+    )
+    from .vse_operators import register as register_vse_operators
+    from .vse_operators import unregister as unregister_vse_operators
 except ImportError:
     # For direct module execution/testing
     from vse_operators import (
-        regenerate_animations_for_strips,
         CINEMON_OT_discard_changes,
-        ApplyUIManager,
-        register as register_vse_operators,
-        unregister as unregister_vse_operators
     )
-    from animation_applicators import apply_animation_to_strip, clear_strip_animations
+    from vse_operators import register as register_vse_operators
+    from vse_operators import unregister as unregister_vse_operators
 
 
 # Export all classes and functions for backward compatibility

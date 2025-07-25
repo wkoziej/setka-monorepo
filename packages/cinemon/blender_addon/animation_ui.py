@@ -3,14 +3,13 @@
 
 """Animation UI controls and property management for Cinemon addon."""
 
-from typing import List, Dict, Any, Optional
-import copy
+from typing import Any, Dict, List
 
 try:
     import bpy
+    from bpy.props import BoolProperty, EnumProperty, FloatProperty, StringProperty
     from bpy.types import PropertyGroup
-    from bpy.props import StringProperty, FloatProperty, BoolProperty, EnumProperty
-    
+
     # Make sure we can register the property group
     class MockBpy:
         class Utils:
@@ -21,28 +20,28 @@ try:
             def unregister_class(cls):
                 pass
         utils = Utils()
-    
+
     # Ensure bpy.utils exists for registration
     if not hasattr(bpy, 'utils'):
         bpy.utils = MockBpy.Utils()
-        
+
 except ImportError:
     # For testing without Blender
     class PropertyGroup:
         pass
-    
+
     def StringProperty(**kwargs):
         return kwargs.get('default', '')
-    
+
     def FloatProperty(**kwargs):
         return kwargs.get('default', 0.0)
-    
+
     def BoolProperty(**kwargs):
         return kwargs.get('default', False)
-    
+
     def EnumProperty(**kwargs):
         return kwargs.get('default', '')
-    
+
     class MockBpy:
         class Utils:
             @staticmethod
@@ -52,7 +51,7 @@ except ImportError:
             def unregister_class(cls):
                 pass
         utils = Utils()
-    
+
     bpy = MockBpy()
 
 try:
@@ -64,7 +63,7 @@ except ImportError:
 
 class AnimationPropertyGroup(PropertyGroup):
     """Property group for single animation configuration."""
-    
+
     # Animation type dropdown
     animation_type: EnumProperty(
         name="Type",
@@ -81,7 +80,7 @@ class AnimationPropertyGroup(PropertyGroup):
         ],
         default='scale'
     )
-    
+
     # Trigger dropdown
     trigger: EnumProperty(
         name="Trigger",
@@ -95,14 +94,14 @@ class AnimationPropertyGroup(PropertyGroup):
         ],
         default='beat'
     )
-    
+
     # Common parameters
     enabled: BoolProperty(
         name="Enabled",
         description="Enable this animation",
         default=True
     )
-    
+
     intensity: FloatProperty(
         name="Intensity",
         description="Animation intensity",
@@ -110,7 +109,7 @@ class AnimationPropertyGroup(PropertyGroup):
         min=0.0,
         max=10.0
     )
-    
+
     duration_frames: FloatProperty(
         name="Duration",
         description="Animation duration in frames",
@@ -118,7 +117,7 @@ class AnimationPropertyGroup(PropertyGroup):
         min=1.0,
         max=30.0
     )
-    
+
     # Specific parameters for different animation types
     degrees: FloatProperty(
         name="Degrees",
@@ -127,7 +126,7 @@ class AnimationPropertyGroup(PropertyGroup):
         min=0.0,
         max=360.0
     )
-    
+
     return_frames: FloatProperty(
         name="Return Frames",
         description="Frames to return to original position (for shake)",
@@ -135,7 +134,7 @@ class AnimationPropertyGroup(PropertyGroup):
         min=1.0,
         max=10.0
     )
-    
+
     sepia_amount: FloatProperty(
         name="Sepia Amount",
         description="Amount of sepia effect (for vintage_color)",
@@ -143,7 +142,7 @@ class AnimationPropertyGroup(PropertyGroup):
         min=0.0,
         max=1.0
     )
-    
+
     contrast_boost: FloatProperty(
         name="Contrast Boost",
         description="Contrast boost amount (for vintage_color)",
@@ -151,7 +150,7 @@ class AnimationPropertyGroup(PropertyGroup):
         min=0.0,
         max=2.0
     )
-    
+
     grain_intensity: FloatProperty(
         name="Grain Intensity",
         description="Film grain intensity (for vintage_color/film_grain)",
@@ -163,11 +162,11 @@ class AnimationPropertyGroup(PropertyGroup):
 
 class AnimationUIManager:
     """Manages animation UI controls and property groups."""
-    
+
     def __init__(self):
         """Initialize animation UI manager."""
         self.context_manager = StripContextManager()
-        
+
         # Map animation types to their specific parameters
         self.type_parameters = {
             'scale': ['intensity', 'duration_frames'],
@@ -179,29 +178,29 @@ class AnimationUIManager:
             'black_white': ['intensity'],
             'film_grain': ['grain_intensity']
         }
-    
+
     def populate_from_animations(self, scene, animations: List[Dict[str, Any]]) -> None:
         """Populate UI property groups from animations list."""
         try:
             # Clear existing animations
             scene.cinemon_animations.clear()
-            
+
             # Add each animation as property group
             for anim_data in animations:
                 anim_prop = scene.cinemon_animations.add()
-                
+
                 # Set basic properties
                 anim_prop.animation_type = anim_data.get('type', 'scale')
                 anim_prop.trigger = anim_data.get('trigger', 'beat')
                 anim_prop.enabled = anim_data.get('enabled', True)
-                
+
                 # Set parameters based on animation type
                 self._set_animation_parameters(anim_prop, anim_data)
-                
+
         except AttributeError:
             # For testing when scene properties don't exist
             pass
-    
+
     def _set_animation_parameters(self, anim_prop, anim_data: Dict[str, Any]) -> None:
         """Set animation-specific parameters on property group."""
         # Common parameters
@@ -209,7 +208,7 @@ class AnimationUIManager:
             anim_prop.intensity = anim_data['intensity']
         if 'duration_frames' in anim_data:
             anim_prop.duration_frames = anim_data['duration_frames']
-        
+
         # Type-specific parameters
         if 'degrees' in anim_data:
             anim_prop.degrees = anim_data['degrees']
@@ -221,49 +220,49 @@ class AnimationUIManager:
             anim_prop.contrast_boost = anim_data['contrast_boost']
         if 'grain_intensity' in anim_data:
             anim_prop.grain_intensity = anim_data['grain_intensity']
-    
+
     def extract_animations_from_ui(self, scene) -> List[Dict[str, Any]]:
         """Extract animations from UI property groups."""
         animations = []
-        
+
         try:
             for anim_prop in scene.cinemon_animations:
                 if not anim_prop.enabled:
                     continue  # Skip disabled animations
-                
+
                 anim_dict = {
                     'type': anim_prop.animation_type,
                     'trigger': anim_prop.trigger
                 }
-                
+
                 # Add relevant parameters based on animation type
                 self._extract_animation_parameters(anim_dict, anim_prop)
-                
+
                 animations.append(anim_dict)
-                
+
         except AttributeError:
             # For testing when scene properties don't exist
             pass
-        
+
         return animations
-    
+
     def _extract_animation_parameters(self, anim_dict: Dict[str, Any], anim_prop) -> None:
         """Extract animation-specific parameters from property group."""
         anim_type = anim_dict['type']
-        
+
         # Get relevant parameters for this animation type
         relevant_params = self.type_parameters.get(anim_type, [])
-        
+
         # Always include intensity if it's used by this type
         if 'intensity' in relevant_params:
             anim_dict['intensity'] = anim_prop.intensity
-        
+
         # Include other relevant parameters
         for param in relevant_params:
             if param != 'intensity':  # Already handled above
                 if hasattr(anim_prop, param):
                     anim_dict[param] = getattr(anim_prop, param)
-    
+
     def add_new_animation(self, scene, animation_type: str, trigger: str):
         """Add new animation to UI."""
         try:
@@ -271,16 +270,16 @@ class AnimationUIManager:
             anim_prop.animation_type = animation_type
             anim_prop.trigger = trigger
             anim_prop.enabled = True
-            
+
             # Set default parameters
             defaults = self.context_manager.get_default_animation_parameters(animation_type)
             self._set_animation_parameters(anim_prop, defaults)
-            
+
             return anim_prop
         except AttributeError:
             # For testing
             return None
-    
+
     def remove_animation(self, scene, index: int) -> None:
         """Remove animation from UI."""
         try:
@@ -288,44 +287,44 @@ class AnimationUIManager:
         except (AttributeError, IndexError):
             # For testing or invalid index
             pass
-    
+
     def validate_animation_params(self, params: Dict[str, Any]) -> bool:
         """Validate animation parameters."""
         # Check required fields
         if 'type' not in params or 'trigger' not in params:
             return False
-        
+
         # Check valid animation type
         valid_types = self.get_available_animation_types()
         if params['type'] not in valid_types:
             return False
-        
+
         # Check valid trigger
         valid_triggers = self.get_available_triggers()
         if params['trigger'] not in valid_triggers:
             return False
-        
+
         return True
-    
+
     def get_parameter_defaults(self, animation_type: str) -> Dict[str, Any]:
         """Get default parameters for animation type."""
         return self.context_manager.get_default_animation_parameters(animation_type)
-    
+
     def get_available_animation_types(self) -> List[str]:
         """Get available animation types."""
         return self.context_manager.get_available_animation_types()
-    
+
     def get_available_triggers(self) -> List[str]:
         """Get available triggers."""
         return self.context_manager.get_available_triggers()
-    
+
     def draw_animation_parameters(self, layout, anim_prop) -> None:
         """Draw animation parameters in UI layout."""
         try:
             # Get relevant parameters for this animation type
             anim_type = anim_prop.animation_type
             relevant_params = self.type_parameters.get(anim_type, [])
-            
+
             # Draw relevant parameter controls
             for param in relevant_params:
                 if hasattr(anim_prop, param):

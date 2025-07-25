@@ -3,8 +3,8 @@ ABOUTME: BlenderProjectSetup class - handles Blender VSE project creation and co
 ABOUTME: Extracted from BlenderVSEConfigurator to centralize project setup logic.
 """
 
-from typing import Dict
 from pathlib import Path
+from typing import Dict
 
 try:
     import bpy
@@ -161,10 +161,10 @@ class BlenderProjectSetup:
 
             for i, video_file in enumerate(video_files):
                 channel = i + 2  # Start from channel 2 (audio is channel 1)
-                
+
                 # Use filename (without extension) for clear identification
                 strip_name = Path(video_file).stem
-                
+
                 print(f"🎬 Adding video strip: {strip_name} from {video_file} to channel {channel}")
                 new_strip = sequencer.sequences.new_movie(
                     name=strip_name,

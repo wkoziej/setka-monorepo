@@ -11,6 +11,7 @@ __all__ = ['Emitter', 'EmitterError']
 from .error import YAMLError
 from .events import *
 
+
 class EmitterError(YAMLError):
     pass
 
@@ -700,7 +701,6 @@ class Emitter:
                 if (ch == '\x85' or '\xA0' <= ch <= '\uD7FF'
                         or '\uE000' <= ch <= '\uFFFD'
                         or '\U00010000' <= ch < '\U0010ffff') and ch != '\uFEFF':
-                    unicode_characters = True
                     if not self.allow_unicode:
                         special_characters = True
                 else:

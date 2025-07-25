@@ -1,12 +1,12 @@
 """Tests for CLI YAML configuration support after migration."""
 
-import pytest
 import tempfile
 from pathlib import Path
-from unittest.mock import patch, MagicMock
-import sys
+from unittest.mock import MagicMock, patch
 
-from blender.cli.blend_setup import parse_args, main, load_yaml_config
+import pytest
+
+from blender.cli.blend_setup import load_yaml_config, main, parse_args
 
 
 class TestCLIYAMLConfig:
@@ -27,15 +27,15 @@ class TestCLIYAMLConfig:
         # Setup mocks
         mock_yaml_config = MagicMock()
         mock_load_yaml.return_value = mock_yaml_config
-        
+
         mock_manager = MagicMock()
         mock_project_path = Path("/test/recording/blender/project.blend")
         mock_manager.create_vse_project_with_config.return_value = mock_project_path
         mock_manager_class.return_value = mock_manager
-        
+
         with patch('sys.argv', ['cinemon-blend-setup', 'test_dir', '--config', 'test.yaml']):
             result = main()
-            
+
         assert result == 0
         mock_load_yaml.assert_called_once_with(Path('test.yaml'))
         mock_manager.create_vse_project_with_config.assert_called_once_with(
@@ -47,7 +47,7 @@ class TestCLIYAMLConfig:
         """Test main function with non-existent YAML config file."""
         with patch('sys.argv', ['cinemon-blend-setup', 'test_dir', '--config', 'nonexistent.yaml']):
             result = main()
-            
+
         assert result == 1  # Should return error code, not raise SystemExit
 
     def test_main_with_yaml_config_validation_error(self):
@@ -64,15 +64,15 @@ layout:
   config: {}
 animations: []
 """
-        
+
         with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False) as f:
             f.write(yaml_content)
             f.flush()
-            
+
             try:
                 with patch('sys.argv', ['cinemon-blend-setup', 'test_dir', '--config', f.name]):
                     result = main()
-                    
+
                 assert result == 1  # Should return error code for validation failure
             finally:
                 Path(f.name).unlink()
@@ -108,24 +108,24 @@ animations:
     intensity: 0.3
     duration_frames: 2
 """
-        
+
         # Setup mocks
         mock_yaml_config = MagicMock()
         mock_load_yaml.return_value = mock_yaml_config
-        
+
         mock_manager = MagicMock()
         mock_project_path = Path("/test/recording/blender/project.blend")
         mock_manager.create_vse_project_with_config.return_value = mock_project_path
         mock_manager_class.return_value = mock_manager
-        
+
         with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False) as f:
             f.write(yaml_content)
             f.flush()
-            
+
             try:
                 with patch('sys.argv', ['cinemon-blend-setup', 'test_dir', '--config', f.name]):
                     result = main()
-                    
+
                 assert result == 0
                 mock_load_yaml.assert_called_once_with(Path(f.name))
                 mock_manager.create_vse_project_with_config.assert_called_once()
@@ -149,12 +149,12 @@ animations: []
 """
             f.write(yaml_content)
             f.flush()
-            
+
             try:
                 # Test that load_yaml_config can handle Path objects
                 config_path = Path(f.name)
                 config = load_yaml_config(config_path)
-                
+
                 assert config is not None
                 # The function should not raise exceptions for valid files
             finally:
@@ -175,15 +175,15 @@ class TestCLIYAMLConfigErrorHandling:
     def test_yaml_config_invalid_syntax(self):
         """Test handling of invalid YAML syntax."""
         yaml_content = "invalid: yaml: syntax: [unclosed"
-        
+
         with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False) as f:
             f.write(yaml_content)
             f.flush()
-            
+
             try:
                 with patch('sys.argv', ['cinemon-blend-setup', 'test_dir', '--config', f.name]):
                     result = main()
-                    
+
                 assert result == 1  # Should handle YAML syntax errors
             finally:
                 Path(f.name).unlink()
@@ -198,15 +198,15 @@ layout:
   type: random
 animations: []
 """
-        
+
         with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False) as f:
             f.write(yaml_content)
             f.flush()
-            
+
             try:
                 with patch('sys.argv', ['cinemon-blend-setup', 'test_dir', '--config', f.name]):
                     result = main()
-                    
+
                 assert result == 1  # Should handle missing required fields
             finally:
                 Path(f.name).unlink()
@@ -231,14 +231,14 @@ layout:
   config: {}
 animations: []
 """
-        
+
         with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False) as f:
             f.write(yaml_content)
             f.flush()
-            
+
             try:
                 config = load_yaml_config(Path(f.name))
-                
+
                 assert config is not None
                 assert hasattr(config, 'project')
                 assert hasattr(config, 'layout')
@@ -254,11 +254,11 @@ animations: []
     def test_load_yaml_config_validation_error(self):
         """Test YAML config loading with validation error."""
         yaml_content = "invalid_yaml_structure: yes"
-        
+
         with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False) as f:
             f.write(yaml_content)
             f.flush()
-            
+
             try:
                 with pytest.raises(ValueError):
                     load_yaml_config(Path(f.name))

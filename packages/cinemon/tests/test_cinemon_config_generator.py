@@ -3,14 +3,14 @@
 
 """Tests for CinemonConfigGenerator class."""
 
+from unittest.mock import MagicMock, patch
+
 import pytest
 import yaml
-from pathlib import Path
-from unittest.mock import patch, MagicMock
 
 from blender.config.cinemon_config_generator import CinemonConfigGenerator
-from blender.config.media_discovery import MediaDiscovery, ValidationResult
-from blender.config.preset_manager import PresetManager, PresetConfig
+from blender.config.media_discovery import ValidationResult
+from blender.config.preset_manager import PresetConfig
 
 
 class TestCinemonConfigGeneratorPreset:
@@ -22,29 +22,29 @@ class TestCinemonConfigGeneratorPreset:
         recording_dir = tmp_path / "recording_20250105_143022"
         extracted_dir = recording_dir / "extracted"
         extracted_dir.mkdir(parents=True)
-        
+
         # Create test media files
         (extracted_dir / "Camera1.mp4").touch()
         (extracted_dir / "Camera2.mp4").touch()
         (extracted_dir / "main_audio.m4a").touch()
-        
+
         generator = CinemonConfigGenerator()
         config_path = generator.generate_preset(recording_dir, "vintage")
-        
+
         # Verify config file was created
         assert config_path.exists()
         assert config_path.name == "animation_config_vintage.yaml"
         assert config_path.parent == recording_dir
-        
+
         # Verify config content
         with config_path.open('r') as f:
             config_data = yaml.safe_load(f)
-        
+
         assert config_data["project"]["main_audio"] == "main_audio.m4a"
         assert config_data["layout"]["type"] == "random"
         assert config_data["layout"]["config"]["seed"] == 1950
         assert len(config_data["animations"]) == 6  # Vintage has 6 animations
-        
+
         # Check for vintage-specific animations
         animation_types = [anim["type"] for anim in config_data["animations"]]
         assert "shake" in animation_types
@@ -56,23 +56,23 @@ class TestCinemonConfigGeneratorPreset:
         recording_dir = tmp_path / "recording_20250105_143022"
         extracted_dir = recording_dir / "extracted"
         extracted_dir.mkdir(parents=True)
-        
+
         (extracted_dir / "Camera1.mp4").touch()
         (extracted_dir / "microphone.wav").touch()
-        
+
         generator = CinemonConfigGenerator()
         config_path = generator.generate_preset(recording_dir, "music-video")
-        
+
         assert config_path.exists()
         assert config_path.name == "animation_config_music-video.yaml"
-        
+
         with config_path.open('r') as f:
             config_data = yaml.safe_load(f)
-        
+
         assert config_data["project"]["main_audio"] == "microphone.wav"
         assert config_data["layout"]["config"]["margin"] == 0.05
         assert len(config_data["animations"]) == 3  # Music video has 3 animations
-        
+
         animation_types = [anim["type"] for anim in config_data["animations"]]
         assert "scale" in animation_types
         assert "shake" in animation_types
@@ -83,21 +83,21 @@ class TestCinemonConfigGeneratorPreset:
         recording_dir = tmp_path / "recording_20250105_143022"
         extracted_dir = recording_dir / "extracted"
         extracted_dir.mkdir(parents=True)
-        
+
         (extracted_dir / "Camera1.mp4").touch()
         (extracted_dir / "main_audio.m4a").touch()
-        
+
         generator = CinemonConfigGenerator()
         config_path = generator.generate_preset(
-            recording_dir, 
-            "vintage", 
+            recording_dir,
+            "vintage",
             seed=42,  # Override default seed of 1950
             main_audio="main_audio.m4a"  # Explicit main audio
         )
-        
+
         with config_path.open('r') as f:
             config_data = yaml.safe_load(f)
-        
+
         # Verify override was applied
         assert config_data["layout"]["config"]["seed"] == 42
         assert config_data["project"]["main_audio"] == "main_audio.m4a"
@@ -107,14 +107,14 @@ class TestCinemonConfigGeneratorPreset:
         recording_dir = tmp_path / "recording_20250105_143022"
         extracted_dir = recording_dir / "extracted"
         extracted_dir.mkdir(parents=True)
-        
+
         (extracted_dir / "Camera1.mp4").touch()
         (extracted_dir / "microphone.wav").touch()
         (extracted_dir / "desktop_audio.m4a").touch()
         (extracted_dir / "background_music.mp3").touch()
-        
+
         generator = CinemonConfigGenerator()
-        
+
         # Should raise error when multiple audio files and no main_audio specified
         with pytest.raises(ValueError, match="Multiple audio files found"):
             generator.generate_preset(recording_dir, "vintage")
@@ -124,21 +124,21 @@ class TestCinemonConfigGeneratorPreset:
         recording_dir = tmp_path / "recording_20250105_143022"
         extracted_dir = recording_dir / "extracted"
         extracted_dir.mkdir(parents=True)
-        
+
         (extracted_dir / "Camera1.mp4").touch()
         (extracted_dir / "microphone.wav").touch()
         (extracted_dir / "desktop_audio.m4a").touch()
-        
+
         generator = CinemonConfigGenerator()
         config_path = generator.generate_preset(
-            recording_dir, 
-            "vintage", 
+            recording_dir,
+            "vintage",
             main_audio="microphone.wav"
         )
-        
+
         with config_path.open('r') as f:
             config_data = yaml.safe_load(f)
-        
+
         assert config_data["project"]["main_audio"] == "microphone.wav"
 
     def test_generate_preset_nonexistent_preset(self, tmp_path):
@@ -146,21 +146,21 @@ class TestCinemonConfigGeneratorPreset:
         recording_dir = tmp_path / "recording_20250105_143022"
         extracted_dir = recording_dir / "extracted"
         extracted_dir.mkdir(parents=True)
-        
+
         (extracted_dir / "Camera1.mp4").touch()
         (extracted_dir / "main_audio.m4a").touch()
-        
+
         generator = CinemonConfigGenerator()
-        
+
         with pytest.raises(ValueError, match="Preset 'nonexistent' not found"):
             generator.generate_preset(recording_dir, "nonexistent")
 
     def test_generate_preset_invalid_recording_directory(self, tmp_path):
         """Test generating preset with invalid recording directory."""
         nonexistent_dir = tmp_path / "nonexistent"
-        
+
         generator = CinemonConfigGenerator()
-        
+
         with pytest.raises(FileNotFoundError):
             generator.generate_preset(nonexistent_dir, "vintage")
 
@@ -169,12 +169,12 @@ class TestCinemonConfigGeneratorPreset:
         recording_dir = tmp_path / "recording_20250105_143022"
         extracted_dir = recording_dir / "extracted"
         extracted_dir.mkdir(parents=True)
-        
+
         # Only audio files, no video
         (extracted_dir / "main_audio.m4a").touch()
-        
+
         generator = CinemonConfigGenerator()
-        
+
         with pytest.raises(ValueError, match="No video files found"):
             generator.generate_preset(recording_dir, "vintage")
 
@@ -183,12 +183,12 @@ class TestCinemonConfigGeneratorPreset:
         recording_dir = tmp_path / "recording_20250105_143022"
         extracted_dir = recording_dir / "extracted"
         extracted_dir.mkdir(parents=True)
-        
+
         # Only video files, no audio
         (extracted_dir / "Camera1.mp4").touch()
-        
+
         generator = CinemonConfigGenerator()
-        
+
         with pytest.raises(ValueError, match="No audio files found"):
             generator.generate_preset(recording_dir, "vintage")
 
@@ -197,17 +197,17 @@ class TestCinemonConfigGeneratorPreset:
         recording_dir = tmp_path / "recording_20250105_143022"
         extracted_dir = recording_dir / "extracted"
         extracted_dir.mkdir(parents=True)
-        
+
         (extracted_dir / "Camera1.mp4").touch()
         (extracted_dir / "main_audio.m4a").touch()
-        
+
         generator = CinemonConfigGenerator()
-        
+
         # Test different preset names
         vintage_path = generator.generate_preset(recording_dir, "vintage")
         music_path = generator.generate_preset(recording_dir, "music-video")
         minimal_path = generator.generate_preset(recording_dir, "minimal")
-        
+
         assert vintage_path.name == "animation_config_vintage.yaml"
         assert music_path.name == "animation_config_music-video.yaml"
         assert minimal_path.name == "animation_config_minimal.yaml"
@@ -217,25 +217,25 @@ class TestCinemonConfigGeneratorPreset:
         recording_dir = tmp_path / "recording_20250105_143022"
         extracted_dir = recording_dir / "extracted"
         extracted_dir.mkdir(parents=True)
-        
+
         (extracted_dir / "Camera1.mp4").touch()
         (extracted_dir / "main_audio.m4a").touch()
-        
+
         generator = CinemonConfigGenerator()
-        
+
         # Generate first version
         config_path1 = generator.generate_preset(recording_dir, "vintage", seed=100)
-        
+
         with config_path1.open('r') as f:
             config_data1 = yaml.safe_load(f)
         assert config_data1["layout"]["config"]["seed"] == 100
-        
+
         # Generate second version with different parameters
         config_path2 = generator.generate_preset(recording_dir, "vintage", seed=200)
-        
+
         # Should be same path
         assert config_path1 == config_path2
-        
+
         # But different content
         with config_path2.open('r') as f:
             config_data2 = yaml.safe_load(f)
@@ -246,16 +246,16 @@ class TestCinemonConfigGeneratorPreset:
         recording_dir = tmp_path / "recording_20250105_143022"
         extracted_dir = recording_dir / "extracted"
         extracted_dir.mkdir(parents=True)
-        
+
         (extracted_dir / "Kamera główna.mp4").touch()
         (extracted_dir / "Przechwytywanie wejścia dźwięku.m4a").touch()
-        
+
         generator = CinemonConfigGenerator()
         config_path = generator.generate_preset(recording_dir, "vintage")
-        
+
         with config_path.open('r', encoding='utf-8') as f:
             config_data = yaml.safe_load(f)
-        
+
         assert config_data["project"]["main_audio"] == "Przechwytywanie wejścia dźwięku.m4a"
 
     def test_generate_preset_uses_media_discovery(self, tmp_path):
@@ -263,10 +263,10 @@ class TestCinemonConfigGeneratorPreset:
         recording_dir = tmp_path / "recording_20250105_143022"
         extracted_dir = recording_dir / "extracted"
         extracted_dir.mkdir(parents=True)
-        
+
         (extracted_dir / "Camera1.mp4").touch()
         (extracted_dir / "main_audio.m4a").touch()
-        
+
         with patch('blender.config.cinemon_config_generator.MediaDiscovery') as mock_discovery_class:
             # Mock MediaDiscovery instance
             mock_discovery = MagicMock()
@@ -281,10 +281,10 @@ class TestCinemonConfigGeneratorPreset:
                 has_analysis_files=False
             )
             mock_discovery_class.return_value = mock_discovery
-            
+
             generator = CinemonConfigGenerator()
-            config_path = generator.generate_preset(recording_dir, "vintage")
-            
+            generator.generate_preset(recording_dir, "vintage")
+
             # Verify MediaDiscovery was used
             mock_discovery_class.assert_called_once_with(recording_dir)
             mock_discovery.validate_structure.assert_called_once()
@@ -295,10 +295,10 @@ class TestCinemonConfigGeneratorPreset:
         recording_dir = tmp_path / "recording_20250105_143022"
         extracted_dir = recording_dir / "extracted"
         extracted_dir.mkdir(parents=True)
-        
+
         (extracted_dir / "Camera1.mp4").touch()
         (extracted_dir / "main_audio.m4a").touch()
-        
+
         with patch('blender.config.cinemon_config_generator.PresetManager') as mock_preset_class:
             # Mock PresetManager instance
             mock_preset_manager = MagicMock()
@@ -310,10 +310,10 @@ class TestCinemonConfigGeneratorPreset:
             )
             mock_preset_manager.get_preset.return_value = mock_preset_config
             mock_preset_class.return_value = mock_preset_manager
-            
+
             generator = CinemonConfigGenerator()
-            config_path = generator.generate_preset(recording_dir, "vintage")
-            
+            generator.generate_preset(recording_dir, "vintage")
+
             # Verify PresetManager was used
             mock_preset_class.assert_called_once()
             mock_preset_manager.get_preset.assert_called_once_with("vintage")
@@ -323,35 +323,35 @@ class TestCinemonConfigGeneratorPreset:
         recording_dir = tmp_path / "recording_20250105_143022"
         extracted_dir = recording_dir / "extracted"
         extracted_dir.mkdir(parents=True)
-        
+
         (extracted_dir / "Camera1.mp4").touch()
         (extracted_dir / "main_audio.m4a").touch()
-        
+
         generator = CinemonConfigGenerator()
         config_path = generator.generate_preset(recording_dir, "vintage")
-        
+
         with config_path.open('r') as f:
             config_data = yaml.safe_load(f)
-        
+
         # Verify YAML structure follows setka-common format
         assert "project" in config_data
         assert "audio_analysis" in config_data
         assert "layout" in config_data
         assert "animations" in config_data
-        
+
         # Verify project section
         assert "main_audio" in config_data["project"]
         assert "fps" in config_data["project"]
         assert "resolution" in config_data["project"]
-        
+
         # Verify audio_analysis section
         assert "beat_division" in config_data["audio_analysis"]
         assert "min_onset_interval" in config_data["audio_analysis"]
-        
+
         # Verify layout section
         assert "type" in config_data["layout"]
         assert "config" in config_data["layout"]
-        
+
         # Verify animations section
         assert isinstance(config_data["animations"], list)
         for animation in config_data["animations"]:
@@ -367,11 +367,11 @@ class TestCinemonConfigGeneratorCustom:
         recording_dir = tmp_path / "recording_20250105_143022"
         extracted_dir = recording_dir / "extracted"
         extracted_dir.mkdir(parents=True)
-        
+
         (extracted_dir / "Camera1.mp4").touch()
         (extracted_dir / "Camera2.mp4").touch()
         (extracted_dir / "main_audio.m4a").touch()
-        
+
         layout = {
             "type": "random",
             "config": {
@@ -380,7 +380,7 @@ class TestCinemonConfigGeneratorCustom:
                 "margin": 0.05
             }
         }
-        
+
         animations = [
             {
                 "type": "scale",
@@ -397,28 +397,28 @@ class TestCinemonConfigGeneratorCustom:
                 "target_strips": ["Camera2"]
             }
         ]
-        
+
         generator = CinemonConfigGenerator()
         config_path = generator.generate_config(
             recording_dir,
             layout=layout,
             animations=animations
         )
-        
+
         # Verify config file was created
         assert config_path.exists()
         assert config_path.name == "animation_config.yaml"
         assert config_path.parent == recording_dir
-        
+
         # Verify config content
         with config_path.open('r') as f:
             config_data = yaml.safe_load(f)
-        
+
         assert config_data["project"]["main_audio"] == "main_audio.m4a"
         assert config_data["layout"]["type"] == "random"
         assert config_data["layout"]["config"]["seed"] == 42
         assert len(config_data["animations"]) == 2
-        
+
         # Check targeting
         scale_anim = next(anim for anim in config_data["animations"] if anim["type"] == "scale")
         assert scale_anim["target_strips"] == ["Camera1"]
@@ -428,14 +428,14 @@ class TestCinemonConfigGeneratorCustom:
         recording_dir = tmp_path / "recording_20250105_143022"
         extracted_dir = recording_dir / "extracted"
         extracted_dir.mkdir(parents=True)
-        
+
         (extracted_dir / "Camera1.mp4").touch()
         (extracted_dir / "microphone.wav").touch()
         (extracted_dir / "desktop_audio.m4a").touch()
-        
+
         layout = {"type": "random", "config": {"seed": 100}}
         animations = [{"type": "scale", "trigger": "bass", "intensity": 0.2}]
-        
+
         generator = CinemonConfigGenerator()
         config_path = generator.generate_config(
             recording_dir,
@@ -443,10 +443,10 @@ class TestCinemonConfigGeneratorCustom:
             animations=animations,
             main_audio="microphone.wav"
         )
-        
+
         with config_path.open('r') as f:
             config_data = yaml.safe_load(f)
-        
+
         assert config_data["project"]["main_audio"] == "microphone.wav"
 
     def test_generate_config_with_project_overrides(self, tmp_path):
@@ -454,13 +454,13 @@ class TestCinemonConfigGeneratorCustom:
         recording_dir = tmp_path / "recording_20250105_143022"
         extracted_dir = recording_dir / "extracted"
         extracted_dir.mkdir(parents=True)
-        
+
         (extracted_dir / "Camera1.mp4").touch()
         (extracted_dir / "main_audio.m4a").touch()
-        
+
         layout = {"type": "random", "config": {"seed": 42}}
         animations = [{"type": "scale", "trigger": "bass", "intensity": 0.3}]
-        
+
         project_overrides = {
             "fps": 60,
             "resolution": {
@@ -468,7 +468,7 @@ class TestCinemonConfigGeneratorCustom:
                 "height": 2160
             }
         }
-        
+
         generator = CinemonConfigGenerator()
         config_path = generator.generate_config(
             recording_dir,
@@ -476,10 +476,10 @@ class TestCinemonConfigGeneratorCustom:
             animations=animations,
             project_overrides=project_overrides
         )
-        
+
         with config_path.open('r') as f:
             config_data = yaml.safe_load(f)
-        
+
         assert config_data["project"]["fps"] == 60
         assert config_data["project"]["resolution"]["width"] == 3840
         assert config_data["project"]["resolution"]["height"] == 2160
@@ -489,13 +489,13 @@ class TestCinemonConfigGeneratorCustom:
         recording_dir = tmp_path / "recording_20250105_143022"
         extracted_dir = recording_dir / "extracted"
         extracted_dir.mkdir(parents=True)
-        
+
         (extracted_dir / "Camera1.mp4").touch()
         (extracted_dir / "main_audio.m4a").touch()
-        
+
         layout = {"type": "random", "config": {"seed": 42}}
         animations = [{"type": "scale", "trigger": "bass", "intensity": 0.3}]
-        
+
         generator = CinemonConfigGenerator()
         config_path = generator.generate_config(
             recording_dir,
@@ -504,10 +504,10 @@ class TestCinemonConfigGeneratorCustom:
             beat_division=8,
             min_onset_interval=1.5
         )
-        
+
         with config_path.open('r') as f:
             config_data = yaml.safe_load(f)
-        
+
         assert config_data["audio_analysis"]["beat_division"] == 8
         assert config_data["audio_analysis"]["min_onset_interval"] == 1.5
 
@@ -516,14 +516,14 @@ class TestCinemonConfigGeneratorCustom:
         recording_dir = tmp_path / "recording_20250105_143022"
         extracted_dir = recording_dir / "extracted"
         extracted_dir.mkdir(parents=True)
-        
+
         (extracted_dir / "Camera1.mp4").touch()
         (extracted_dir / "Camera2.mp4").touch()
         (extracted_dir / "Camera3.mp4").touch()
         (extracted_dir / "main_audio.m4a").touch()
-        
+
         layout = {"type": "random", "config": {"overlap_allowed": True, "seed": 123}}
-        
+
         animations = [
             {
                 "type": "scale",
@@ -547,24 +547,24 @@ class TestCinemonConfigGeneratorCustom:
                 "target_strips": []  # All strips
             }
         ]
-        
+
         generator = CinemonConfigGenerator()
         config_path = generator.generate_config(
             recording_dir,
             layout=layout,
             animations=animations
         )
-        
+
         with config_path.open('r') as f:
             config_data = yaml.safe_load(f)
-        
+
         assert len(config_data["animations"]) == 3
-        
+
         # Check targeting specificity
         scale_anim = next(anim for anim in config_data["animations"] if anim["type"] == "scale")
         vintage_anim = next(anim for anim in config_data["animations"] if anim["type"] == "vintage_color")
         shake_anim = next(anim for anim in config_data["animations"] if anim["type"] == "shake")
-        
+
         assert scale_anim["target_strips"] == ["Camera1", "Camera2"]
         assert vintage_anim["target_strips"] == ["Camera3"]
         assert shake_anim["target_strips"] == []
@@ -574,19 +574,19 @@ class TestCinemonConfigGeneratorCustom:
         recording_dir = tmp_path / "recording_20250105_143022"
         extracted_dir = recording_dir / "extracted"
         extracted_dir.mkdir(parents=True)
-        
+
         (extracted_dir / "Camera1.mp4").touch()
         (extracted_dir / "main_audio.m4a").touch()
-        
+
         generator = CinemonConfigGenerator()
-        
+
         # Missing layout parameter
         with pytest.raises(TypeError):
             generator.generate_config(
                 recording_dir,
                 animations=[{"type": "scale", "trigger": "bass", "intensity": 0.3}]
             )
-        
+
         # Missing animations parameter
         with pytest.raises(TypeError):
             generator.generate_config(
@@ -599,28 +599,28 @@ class TestCinemonConfigGeneratorCustom:
         recording_dir = tmp_path / "recording_20250105_143022"
         extracted_dir = recording_dir / "extracted"
         extracted_dir.mkdir(parents=True)
-        
+
         (extracted_dir / "Camera1.mp4").touch()
         (extracted_dir / "microphone.wav").touch()
         (extracted_dir / "desktop_audio.m4a").touch()
-        
+
         layout = {"type": "random", "config": {"seed": 42}}
         animations = [{"type": "scale", "trigger": "bass", "intensity": 0.3}]
-        
+
         generator = CinemonConfigGenerator()
-        
+
         with pytest.raises(ValueError, match="Multiple audio files found"):
             generator.generate_config(recording_dir, layout=layout, animations=animations)
 
     def test_generate_config_invalid_directory(self, tmp_path):
         """Test generating config with invalid recording directory."""
         nonexistent_dir = tmp_path / "nonexistent"
-        
+
         layout = {"type": "random", "config": {"seed": 42}}
         animations = [{"type": "scale", "trigger": "bass", "intensity": 0.3}]
-        
+
         generator = CinemonConfigGenerator()
-        
+
         with pytest.raises(FileNotFoundError):
             generator.generate_config(nonexistent_dir, layout=layout, animations=animations)
 
@@ -629,30 +629,30 @@ class TestCinemonConfigGeneratorCustom:
         recording_dir = tmp_path / "recording_20250105_143022"
         extracted_dir = recording_dir / "extracted"
         extracted_dir.mkdir(parents=True)
-        
+
         (extracted_dir / "Camera1.mp4").touch()
         (extracted_dir / "main_audio.m4a").touch()
-        
+
         layout1 = {"type": "random", "config": {"seed": 100}}
         animations1 = [{"type": "scale", "trigger": "bass", "intensity": 0.2}]
-        
+
         layout2 = {"type": "random", "config": {"seed": 200}}
         animations2 = [{"type": "shake", "trigger": "beat", "intensity": 5.0}]
-        
+
         generator = CinemonConfigGenerator()
-        
+
         # Generate first config
         config_path1 = generator.generate_config(recording_dir, layout=layout1, animations=animations1)
-        
+
         with config_path1.open('r') as f:
             config_data1 = yaml.safe_load(f)
         assert config_data1["layout"]["config"]["seed"] == 100
-        
+
         # Generate second config (should overwrite)
         config_path2 = generator.generate_config(recording_dir, layout=layout2, animations=animations2)
-        
+
         assert config_path1 == config_path2  # Same path
-        
+
         with config_path2.open('r') as f:
             config_data2 = yaml.safe_load(f)
         assert config_data2["layout"]["config"]["seed"] == 200
@@ -663,23 +663,23 @@ class TestCinemonConfigGeneratorCustom:
         recording_dir = tmp_path / "recording_20250105_143022"
         extracted_dir = recording_dir / "extracted"
         extracted_dir.mkdir(parents=True)
-        
+
         (extracted_dir / "Camera1.mp4").touch()
         (extracted_dir / "main_audio.m4a").touch()
-        
+
         layout = {"type": "random", "config": {"seed": 42}}
         animations = []  # Empty list
-        
+
         generator = CinemonConfigGenerator()
         config_path = generator.generate_config(
             recording_dir,
             layout=layout,
             animations=animations
         )
-        
+
         with config_path.open('r') as f:
             config_data = yaml.safe_load(f)
-        
+
         assert config_data["animations"] == []
         assert config_data["layout"]["type"] == "random"
 
@@ -688,27 +688,27 @@ class TestCinemonConfigGeneratorCustom:
         recording_dir = tmp_path / "recording_20250105_143022"
         extracted_dir = recording_dir / "extracted"
         extracted_dir.mkdir(parents=True)
-        
+
         (extracted_dir / "Camera1.mp4").touch()
         (extracted_dir / "main_audio.m4a").touch()
-        
+
         layout = {"type": "random", "config": {"seed": 42}}
         animations = [{"type": "scale", "trigger": "bass", "intensity": 0.3}]
-        
+
         generator = CinemonConfigGenerator()
-        
+
         # Generate custom config
         custom_path = generator.generate_config(recording_dir, layout=layout, animations=animations)
-        
+
         # Generate preset config for comparison
         preset_path = generator.generate_preset(recording_dir, "minimal")
-        
+
         with custom_path.open('r') as f:
             custom_data = yaml.safe_load(f)
-        
+
         with preset_path.open('r') as f:
             preset_data = yaml.safe_load(f)
-        
+
         # Both should have same structure
         assert set(custom_data.keys()) == set(preset_data.keys())
         assert set(custom_data["project"].keys()) == set(preset_data["project"].keys())
@@ -720,21 +720,21 @@ class TestCinemonConfigGeneratorCustom:
         recording_dir = tmp_path / "recording_20250105_143022"
         extracted_dir = recording_dir / "extracted"
         extracted_dir.mkdir(parents=True)
-        
+
         (extracted_dir / "Kamera główna.mp4").touch()
         (extracted_dir / "Przechwytywanie wejścia dźwięku.m4a").touch()
-        
+
         layout = {"type": "random", "config": {"seed": 42}}
         animations = [{"type": "scale", "trigger": "bass", "intensity": 0.3}]
-        
+
         generator = CinemonConfigGenerator()
         config_path = generator.generate_config(
             recording_dir,
             layout=layout,
             animations=animations
         )
-        
+
         with config_path.open('r', encoding='utf-8') as f:
             config_data = yaml.safe_load(f)
-        
+
         assert config_data["project"]["main_audio"] == "Przechwytywanie wejścia dźwięku.m4a"

@@ -9,8 +9,8 @@ from pathlib import Path
 # Import Blender API
 try:
     import bpy
-    from bpy.types import Operator
     from bpy.props import StringProperty
+    from bpy.types import Operator
     from bpy_extras.io_utils import ImportHelper
 except ImportError:
     # For testing without Blender
@@ -18,10 +18,10 @@ except ImportError:
         def report(self, level, message):
             """Mock report method for testing."""
             pass
-    
+
     class ImportHelper:
         pass
-    
+
     def StringProperty(**kwargs):
         """Mock StringProperty for testing."""
         # Return actual value for testing
@@ -34,14 +34,14 @@ try:
     vendor_path = Path(__file__).parent / "vendor"
     if str(vendor_path) not in sys.path:
         sys.path.insert(0, str(vendor_path))
-    
+
     # Add addon directory to path for local setka_common symlink
     addon_path = Path(__file__).parent
     if str(addon_path) not in sys.path:
         sys.path.insert(0, str(addon_path))
-    
+
     from setka_common.config.yaml_config import YAMLConfigLoader
-    
+
     class ValidationError(Exception):
         """Validation error for compatibility."""
         pass
@@ -51,7 +51,7 @@ except ImportError as e:
     class YAMLConfigLoader:
         def load_config(self, path):
             return {}
-    
+
     class ValidationError(Exception):
         pass
 
@@ -73,15 +73,15 @@ except ImportError:
 
 class LoadConfigOperator(Operator, ImportHelper):
     """Load YAML configuration for Cinemon VSE setup."""
-    
+
     bl_idname = "cinemon.load_config"
     bl_label = "Load Cinemon Config"
     bl_description = "Load YAML configuration for VSE animation setup"
     bl_options = {'REGISTER', 'UNDO'}
-    
+
     # File browser properties
     filename_ext = ".yaml"
-    
+
     # Properties - use try/except for testing compatibility
     try:
         filter_glob: StringProperty(
@@ -89,7 +89,7 @@ class LoadConfigOperator(Operator, ImportHelper):
             options={'HIDDEN'},
             maxlen=255,
         )
-        
+
         filepath: StringProperty(
             name="File Path",
             description="Path to YAML configuration file",
@@ -100,31 +100,31 @@ class LoadConfigOperator(Operator, ImportHelper):
         # For testing without bpy
         filter_glob = "*.yaml;*.yml"
         filepath = ""
-    
+
     def execute(self, context):
         """Load and validate YAML configuration file."""
         try:
             # Load configuration using YAMLConfigLoader
             loader = YAMLConfigLoader()
             config = loader.load_from_file(self.filepath)
-            
+
             # Store configuration in scene for later use
             context.scene.cinemon_config = config
-            
+
             # Store filepath for reference
             context.scene.cinemon_config_path = self.filepath
-            
+
             self.report({'INFO'}, f"Loaded configuration from {Path(self.filepath).name}")
             return {'FINISHED'}
-            
+
         except ValidationError as e:
             self.report({'ERROR'}, f"Configuration validation error: {e}")
             return {'CANCELLED'}
-            
+
         except Exception as e:
             self.report({'ERROR'}, f"Failed to load configuration: {e}")
             return {'CANCELLED'}
-    
+
     def invoke(self, context, event):
         """Open file browser for config selection."""
         context.window_manager.fileselect_add(self)
@@ -133,36 +133,35 @@ class LoadConfigOperator(Operator, ImportHelper):
 
 class ApplyConfigOperator(Operator):
     """Apply loaded YAML configuration to create VSE project."""
-    
+
     bl_idname = "cinemon.apply_config"
     bl_label = "Apply Cinemon Config"
     bl_description = "Apply loaded configuration to create animated VSE project"
     bl_options = {'REGISTER', 'UNDO'}
-    
+
     def execute(self, context):
         """Apply loaded configuration to VSE."""
         # Check if configuration is loaded
         if not hasattr(context.scene, 'cinemon_config'):
             self.report({'ERROR'}, "No config loaded. Use 'Load Cinemon Config' first.")
             return {'CANCELLED'}
-        
+
         try:
             config = context.scene.cinemon_config
-            
+
             # Convert config to internal format and create configurator
             loader = YAMLConfigLoader()
             internal_config = loader.convert_to_internal(config)
-            
+
             # Create temporary file path for vse_script compatibility
             # In real usage, this would be handled differently
-            temp_config_path = "/tmp/cinemon_temp_config.yaml"
-            
+
             # Create configurator with direct config data
             configurator = BlenderVSEConfiguratorDirect(internal_config)
-            
+
             # Apply configuration
             success = configurator.setup_vse_project()
-            
+
             if success:
                 config_name = getattr(context.scene, 'cinemon_config_path', 'loaded config')
                 self.report({'INFO'}, f"VSE project created successfully from {Path(config_name).name}")
@@ -170,7 +169,7 @@ class ApplyConfigOperator(Operator):
             else:
                 self.report({'ERROR'}, "Failed to setup VSE project")
                 return {'CANCELLED'}
-                
+
         except Exception as e:
             self.report({'ERROR'}, f"Error applying configuration: {e}")
             return {'CANCELLED'}
@@ -178,12 +177,12 @@ class ApplyConfigOperator(Operator):
 
 class BlenderVSEConfiguratorDirect(BlenderVSEConfigurator):
     """VSE Configurator that accepts config data directly instead of file path."""
-    
+
     def __init__(self, config_data):
         """Initialize with config data instead of file path."""
         # Set config data directly
         self.config_data = config_data
-        
+
         # Set attributes from config (maintaining compatibility)
         project = self.config_data['project']
         self.video_files = [Path(f) for f in project['video_files']]
@@ -195,10 +194,10 @@ class BlenderVSEConfiguratorDirect(BlenderVSEConfigurator):
         self.resolution_x = resolution.get('width', 1920)
         self.resolution_y = resolution.get('height', 1080)
         self.beat_division = project.get('beat_division', 8)
-        
+
         # Animation mode is always compositional
         self.animation_mode = "compositional"
-        
+
         # Initialize project setup with config (if we have BlenderProjectSetup available)
         try:
             from vse.project_setup import BlenderProjectSetup
