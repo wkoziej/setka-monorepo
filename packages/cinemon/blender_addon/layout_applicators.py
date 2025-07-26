@@ -42,7 +42,7 @@ def apply_layout_to_strips(layout_config: Dict[str, Any], context=None) -> bool:
             return False
 
         sequences = scene.sequence_editor.sequences
-        video_strips = [s for s in sequences if s.type == 'MOVIE']
+        video_strips = [s for s in sequences if s.type == "MOVIE"]
         print(f"DEBUG: Found {len(video_strips)} video strips")
 
         if not video_strips:
@@ -58,7 +58,9 @@ def apply_layout_to_strips(layout_config: Dict[str, Any], context=None) -> bool:
         # Create layout based on type (extracted from existing code)
         layout = _create_layout_instance(layout_config, layout_classes)
         if not layout:
-            print(f"DEBUG: Could not create layout for type: {layout_config.get('type')}")
+            print(
+                f"DEBUG: Could not create layout for type: {layout_config.get('type')}"
+            )
             return False
 
         # Apply layout positions to strips (extracted from existing code)
@@ -67,6 +69,7 @@ def apply_layout_to_strips(layout_config: Dict[str, Any], context=None) -> bool:
     except Exception as e:
         print(f"ERROR: Layout application failed: {e}")
         import traceback
+
         traceback.print_exc()
         return False
 
@@ -87,14 +90,15 @@ def _import_layout_classes() -> Optional[Dict[str, Any]]:
 
         from vse.layouts.main_pip_layout import MainPipLayout
         from vse.layouts.random_layout import RandomLayout
+
         # For now, use MainPipLayout for grid type as well (temporary fix)
         GridLayout = MainPipLayout
         print("DEBUG: Layout classes imported successfully")
 
         return {
-            'RandomLayout': RandomLayout,
-            'MainPipLayout': MainPipLayout,
-            'GridLayout': GridLayout
+            "RandomLayout": RandomLayout,
+            "MainPipLayout": MainPipLayout,
+            "GridLayout": GridLayout,
         }
 
     except ImportError as e:
@@ -102,7 +106,9 @@ def _import_layout_classes() -> Optional[Dict[str, Any]]:
         return None
 
 
-def _create_layout_instance(layout_config: Dict[str, Any], layout_classes: Dict[str, Any]) -> Optional[Any]:
+def _create_layout_instance(
+    layout_config: Dict[str, Any], layout_classes: Dict[str, Any]
+) -> Optional[Any]:
     """Create layout instance based on configuration.
 
     Args:
@@ -112,36 +118,38 @@ def _create_layout_instance(layout_config: Dict[str, Any], layout_classes: Dict[
     Returns:
         Layout instance or None if creation failed
     """
-    layout_type = layout_config.get('type', 'random')
-    config = layout_config.get('config', {})
+    layout_type = layout_config.get("type", "random")
+    config = layout_config.get("config", {})
 
     # Create layout based on type (reusing existing logic)
-    if layout_type == 'random':
-        RandomLayout = layout_classes['RandomLayout']
+    if layout_type == "random":
+        RandomLayout = layout_classes["RandomLayout"]
         return RandomLayout(
-            margin=config.get('margin', 0.1),
-            seed=config.get('seed', 42),
-            overlap_allowed=config.get('overlap_allowed', False)
+            margin=config.get("margin", 0.1),
+            seed=config.get("seed", 42),
+            overlap_allowed=config.get("overlap_allowed", False),
         )
-    elif layout_type == 'grid':
-        GridLayout = layout_classes['GridLayout']
+    elif layout_type == "grid":
+        GridLayout = layout_classes["GridLayout"]
         return GridLayout(
-            rows=config.get('rows', 2),
-            columns=config.get('columns', 2),
-            gap=config.get('gap', 0.05)
+            rows=config.get("rows", 2),
+            columns=config.get("columns", 2),
+            gap=config.get("gap", 0.05),
         )
-    elif layout_type == 'main-pip':
-        MainPipLayout = layout_classes['MainPipLayout']
+    elif layout_type == "main-pip":
+        MainPipLayout = layout_classes["MainPipLayout"]
         return MainPipLayout(
-            pip_scale=config.get('pip_scale', 0.25),
-            margin_percent=config.get('margin_percent', 0.1)
+            pip_scale=config.get("pip_scale", 0.25),
+            margin_percent=config.get("margin_percent", 0.1),
         )
     else:
         print(f"WARNING: Unknown layout type: {layout_type}")
         return None
 
 
-def _apply_positions_to_strips(video_strips: List[Any], layout: Any, scene: Any) -> bool:
+def _apply_positions_to_strips(
+    video_strips: List[Any], layout: Any, scene: Any
+) -> bool:
     """Apply layout positions to video strips.
 
     Args:
@@ -157,11 +165,15 @@ def _apply_positions_to_strips(video_strips: List[Any], layout: Any, scene: Any)
         resolution = (scene.render.resolution_x, scene.render.resolution_y)
         positions = layout.calculate_positions(len(video_strips), resolution)
 
-        print(f"DEBUG: Applying {len(positions)} positions to {len(video_strips)} strips")
+        print(
+            f"DEBUG: Applying {len(positions)} positions to {len(video_strips)} strips"
+        )
         for i, (strip, position) in enumerate(zip(video_strips, positions)):
-            if hasattr(strip, 'transform'):
+            if hasattr(strip, "transform"):
                 # position is LayoutPosition object with x, y, scale attributes (existing logic)
-                print(f"DEBUG: Strip {i+1} ({strip.name}): pos=({position.x}, {position.y}), scale={position.scale}")
+                print(
+                    f"DEBUG: Strip {i + 1} ({strip.name}): pos=({position.x}, {position.y}), scale={position.scale}"
+                )
                 strip.transform.offset_x = float(position.x)
                 strip.transform.offset_y = float(position.y)
                 strip.transform.scale_x = position.scale
@@ -174,33 +186,31 @@ def _apply_positions_to_strips(video_strips: List[Any], layout: Any, scene: Any)
     except Exception as e:
         print(f"ERROR: Failed to apply positions: {e}")
         import traceback
+
         traceback.print_exc()
         return False
 
 
 # Convenience functions for specific layout types
-def apply_random_layout(video_strips: List[Any], config: Dict[str, Any], context=None) -> bool:
+def apply_random_layout(
+    video_strips: List[Any], config: Dict[str, Any], context=None
+) -> bool:
     """Apply random layout to video strips."""
-    layout_config = {
-        'type': 'random',
-        'config': config
-    }
+    layout_config = {"type": "random", "config": config}
     return apply_layout_to_strips(layout_config, context)
 
 
-def apply_main_pip_layout(video_strips: List[Any], config: Dict[str, Any], context=None) -> bool:
+def apply_main_pip_layout(
+    video_strips: List[Any], config: Dict[str, Any], context=None
+) -> bool:
     """Apply main-pip layout to video strips."""
-    layout_config = {
-        'type': 'main-pip',
-        'config': config
-    }
+    layout_config = {"type": "main-pip", "config": config}
     return apply_layout_to_strips(layout_config, context)
 
 
-def apply_grid_layout(video_strips: List[Any], config: Dict[str, Any], context=None) -> bool:
+def apply_grid_layout(
+    video_strips: List[Any], config: Dict[str, Any], context=None
+) -> bool:
     """Apply grid layout to video strips."""
-    layout_config = {
-        'type': 'grid',
-        'config': config
-    }
+    layout_config = {"type": "grid", "config": config}
     return apply_layout_to_strips(layout_config, context)

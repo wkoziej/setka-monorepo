@@ -1,9 +1,9 @@
 # Animation System Unification Proposal
 
-**Date:** 2025-07-21  
-**Author:** Claude Code + Wojtas  
-**Priority:** HIGH  
-**Component:** Cinemon Animation System  
+**Date:** 2025-07-21
+**Author:** Claude Code + Wojtas
+**Priority:** HIGH
+**Component:** Cinemon Animation System
 **Status:** PROPOSAL
 
 ## Problem Summary
@@ -14,7 +14,7 @@ Cinemon currently has **two separate animation systems** that work differently a
 
 ### System 1: VSE Script Animation System (❌ BROKEN)
 
-**Location:** `/src/blender/vse/`  
+**Location:** `/src/blender/vse/`
 **Entry Points:**
 - `cinemon-blend-setup --preset multi-pip --open-blender`
 - Direct VSE script execution via `project_manager.py`
@@ -39,7 +39,7 @@ vse_script.py
 
 **Animation Classes:**
 - `ScaleAnimation`
-- `ShakeAnimation` 
+- `ShakeAnimation`
 - `RotationWobbleAnimation`
 - `JitterAnimation`
 - `BrightnessFlickerAnimation`
@@ -65,7 +65,7 @@ for event_time in events:
 
 ### System 2: Addon Animation System (✅ WORKING)
 
-**Location:** `/blender_addon/`  
+**Location:** `/blender_addon/`
 **Entry Points:**
 - Blender GUI → Cinemon Addon Panel → Apply Preset
 - Manual animation application in GUI
@@ -105,7 +105,7 @@ for frame in range(frame_start, frame_end + 1, pulse_interval):
 
 **Advantages:**
 - ✅ **Creates visible keyframes in Blender GUI**
-- ✅ Uses direct `strip.transform.keyframe_insert()` 
+- ✅ Uses direct `strip.transform.keyframe_insert()`
 - ✅ Simple, reliable keyframe creation
 - ✅ Immediate visual feedback
 
@@ -219,7 +219,7 @@ animations = [{
 
 **Changes:**
 1. **Replace KeyframeHelper** with direct strip object keyframe insertion
-2. **Preserve audio-driven timing** from VSE system  
+2. **Preserve audio-driven timing** from VSE system
 3. **Add GUI mode detection** to ensure proper context
 4. **Unify animation class interface** between systems
 
@@ -272,7 +272,7 @@ class UnifiedAnimationApplicator:
 
 ### Phase 1: Immediate Fix (VSE System Enhancement)
 
-**Priority:** HIGH  
+**Priority:** HIGH
 **Timeline:** 1-2 days
 
 1. **Fix KeyframeHelper** in VSE system:
@@ -299,7 +299,7 @@ class UnifiedAnimationApplicator:
 
 ### Phase 2: Code Consolidation (Medium Term)
 
-**Priority:** MEDIUM  
+**Priority:** MEDIUM
 **Timeline:** 1 week
 
 1. **Create unified animation interface**:
@@ -317,7 +317,7 @@ class UnifiedAnimationApplicator:
 
 ### Phase 3: Architecture Cleanup (Long Term)
 
-**Priority:** LOW  
+**Priority:** LOW
 **Timeline:** 2-3 weeks
 
 1. **Remove duplicated animation code**
@@ -350,7 +350,7 @@ class UnifiedAnimationApplicator:
 ### Success Criteria
 
 - ✅ Both execution paths produce identical animation results
-- ✅ Animations use actual audio analysis timing (not fixed intervals)  
+- ✅ Animations use actual audio analysis timing (not fixed intervals)
 - ✅ Keyframes visible and editable in Blender GUI
 - ✅ No duplicated animation logic between systems
 - ✅ All existing presets work correctly
@@ -390,10 +390,10 @@ class UnifiedAnimationApplicator:
 
 ### High Risk
 - **Breaking existing workflows** during migration
-- **Background vs GUI mode** compatibility issues  
+- **Background vs GUI mode** compatibility issues
 - **Audio analysis integration** complexity
 
-### Medium Risk  
+### Medium Risk
 - **Performance impact** of unified system
 - **Test coverage gaps** during transition
 

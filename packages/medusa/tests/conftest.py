@@ -15,45 +15,31 @@ import tempfile
 import json
 import os
 from pathlib import Path
-from typing import Dict, Any, Generator, AsyncGenerator
-from unittest.mock import Mock, MagicMock, AsyncMock, patch
-from datetime import datetime, timedelta
+from unittest.mock import Mock, AsyncMock
 
 # Import Medusa components for fixtures
 from medusa.models import TaskStatus, TaskResult, MediaMetadata, PlatformConfig
-from medusa.exceptions import (
-    MedusaError, ConfigError, UploadError, PublishError, 
-    TaskError, AuthenticationError, ValidationError, 
-    RateLimitError, NetworkError
-)
+from medusa.exceptions import ConfigError, UploadError, PublishError
 
 
 # ============================================================================
 # Pytest Configuration
 # ============================================================================
 
+
 def pytest_configure(config):
     """Configure pytest with custom markers."""
-    config.addinivalue_line(
-        "markers", "unit: Unit tests"
-    )
-    config.addinivalue_line(
-        "markers", "integration: Integration tests"
-    )
-    config.addinivalue_line(
-        "markers", "slow: Slow running tests"
-    )
-    config.addinivalue_line(
-        "markers", "async_test: Async tests requiring event loop"
-    )
-    config.addinivalue_line(
-        "markers", "mock_api: Tests using mocked external APIs"
-    )
+    config.addinivalue_line("markers", "unit: Unit tests")
+    config.addinivalue_line("markers", "integration: Integration tests")
+    config.addinivalue_line("markers", "slow: Slow running tests")
+    config.addinivalue_line("markers", "async_test: Async tests requiring event loop")
+    config.addinivalue_line("markers", "mock_api: Tests using mocked external APIs")
 
 
 # ============================================================================
 # Basic Fixtures
 # ============================================================================
+
 
 @pytest.fixture
 def temp_dir():
@@ -68,21 +54,16 @@ def temp_config_file(temp_dir):
     config = {
         "youtube": {
             "client_secrets_file": "secrets/youtube_client_secrets.json",
-            "credentials_file": "secrets/youtube_credentials.json"
+            "credentials_file": "secrets/youtube_credentials.json",
         },
-        "facebook": {
-            "page_id": "1234567890",
-            "access_token": "test_facebook_token"
-        },
-        "vimeo": {
-            "access_token": "test_vimeo_token"
-        }
+        "facebook": {"page_id": "1234567890", "access_token": "test_facebook_token"},
+        "vimeo": {"access_token": "test_vimeo_token"},
     }
-    
+
     config_file = temp_dir / "test_config.json"
-    with open(config_file, 'w') as f:
+    with open(config_file, "w") as f:
         json.dump(config, f, indent=2)
-    
+
     return config_file
 
 
@@ -91,8 +72,8 @@ def temp_media_file(temp_dir):
     """Provide temporary media file for testing."""
     media_file = temp_dir / "test_video.mp4"
     # Create a small test file
-    with open(media_file, 'wb') as f:
-        f.write(b'fake video content for testing' * 1000)
+    with open(media_file, "wb") as f:
+        f.write(b"fake video content for testing" * 1000)
     return media_file
 
 
@@ -102,27 +83,26 @@ def sample_config():
     return {
         "youtube": {
             "client_secrets_file": "secrets/youtube_client_secrets.json",
-            "credentials_file": "secrets/youtube_credentials.json"
+            "credentials_file": "secrets/youtube_credentials.json",
         },
         "facebook": {
             "page_id": "1234567890",
-            "access_token": "test_facebook_access_token"
+            "access_token": "test_facebook_access_token",
         },
-        "vimeo": {
-            "access_token": "test_vimeo_access_token"
-        },
+        "vimeo": {"access_token": "test_vimeo_access_token"},
         "twitter": {
             "api_key": "test_twitter_api_key",
             "api_secret": "test_twitter_api_secret",
             "access_token": "test_twitter_access_token",
-            "access_token_secret": "test_twitter_access_token_secret"
-        }
+            "access_token_secret": "test_twitter_access_token_secret",
+        },
     }
 
 
 # ============================================================================
 # Model Fixtures
 # ============================================================================
+
 
 @pytest.fixture
 def platform_config():
@@ -132,12 +112,12 @@ def platform_config():
         enabled=True,
         credentials={
             "client_secrets_file": "secrets/youtube_client_secrets.json",
-            "credentials_file": "secrets/youtube_credentials.json"
+            "credentials_file": "secrets/youtube_credentials.json",
         },
         metadata={
             "default_privacy": "unlisted",
-            "max_file_size": 128 * 1024 * 1024 * 1024  # 128GB
-        }
+            "max_file_size": 128 * 1024 * 1024 * 1024,  # 128GB
+        },
     )
 
 
@@ -152,8 +132,8 @@ def sample_task_result():
             "facebook_post_id": "123456789",
             "total_duration": 600.5,
             "file_size": 1024000,
-            "processed_platforms": 2
-        }
+            "processed_platforms": 2,
+        },
     )
 
 
@@ -167,8 +147,8 @@ def failed_task_result():
         failed_platform="youtube",
         results={
             "failure_reason": "file_too_large",
-            "attempted_platforms": ["youtube"]
-        }
+            "attempted_platforms": ["youtube"],
+        },
     )
 
 
@@ -181,7 +161,7 @@ def sample_media_metadata():
         file_size=1024000,
         duration=120,
         privacy="unlisted",
-        tags=["test", "video"]
+        tags=["test", "video"],
     )
 
 
@@ -190,19 +170,14 @@ def sample_exceptions():
     """Provide sample exceptions for testing."""
     return {
         "config_error": ConfigError(
-            "Configuration file not found",
-            config_file="missing_config.json"
+            "Configuration file not found", config_file="missing_config.json"
         ),
         "upload_error": UploadError(
-            "Upload failed",
-            platform="youtube",
-            media_file="test.mp4"
+            "Upload failed", platform="youtube", media_file="test.mp4"
         ),
         "publish_error": PublishError(
-            "Publish failed",
-            platform="facebook",
-            post_content="Test post"
-        )
+            "Publish failed", platform="facebook", post_content="Test post"
+        ),
     }
 
 
@@ -210,17 +185,17 @@ def sample_exceptions():
 # Factory Fixtures
 # ============================================================================
 
+
 class TaskResultFactory:
     """Factory for creating TaskResult instances."""
-    
+
     @staticmethod
     def create_pending(task_id: str = None) -> TaskResult:
         """Create a pending task result."""
         return TaskResult(
-            task_id=task_id or "medusa_task_pending",
-            status=TaskStatus.PENDING
+            task_id=task_id or "medusa_task_pending", status=TaskStatus.PENDING
         )
-    
+
     @staticmethod
     def create_in_progress(task_id: str = None, progress: float = 0.5) -> TaskResult:
         """Create an in-progress task result."""
@@ -228,12 +203,9 @@ class TaskResultFactory:
             task_id=task_id or "medusa_task_in_progress",
             status=TaskStatus.IN_PROGRESS,
             message=f"Processing... {int(progress * 100)}% complete",
-            results={
-                "progress": progress,
-                "current_platform": "youtube"
-            }
+            results={"progress": progress, "current_platform": "youtube"},
         )
-    
+
     @staticmethod
     def create_completed(task_id: str = None) -> TaskResult:
         """Create a completed task result."""
@@ -244,10 +216,10 @@ class TaskResultFactory:
                 "youtube_url": "https://youtube.com/watch?v=abc123",
                 "facebook_post_id": "123456789",
                 "total_duration": 600.5,
-                "processed_platforms": 2
-            }
+                "processed_platforms": 2,
+            },
         )
-    
+
     @staticmethod
     def create_failed(task_id: str = None, platform: str = "youtube") -> TaskResult:
         """Create a failed task result."""
@@ -258,26 +230,26 @@ class TaskResultFactory:
             failed_platform=platform,
             results={
                 "failure_reason": "upload_error",
-                "attempted_platforms": [platform]
-            }
+                "attempted_platforms": [platform],
+            },
         )
 
 
 class MediaMetadataFactory:
     """Factory for creating MediaMetadata instances."""
-    
+
     @staticmethod
     def create_video(filename: str = "test.mp4", size: int = 1024000) -> MediaMetadata:
         """Create video metadata."""
         return MediaMetadata(
-            title=filename.replace('.mp4', '').replace('_', ' ').title(),
+            title=filename.replace(".mp4", "").replace("_", " ").title(),
             description=f"Test video: {filename}",
             file_size=size,
             duration=120,
             privacy="unlisted",
-            tags=["test"]
+            tags=["test"],
         )
-    
+
     @staticmethod
     def create_large_video() -> MediaMetadata:
         """Create large video metadata."""
@@ -287,7 +259,7 @@ class MediaMetadataFactory:
             file_size=100 * 1024 * 1024,  # 100MB
             duration=1800,  # 30 minutes
             privacy="public",
-            tags=["large", "test"]
+            tags=["large", "test"],
         )
 
 
@@ -306,6 +278,7 @@ def media_factory():
 # ============================================================================
 # Mock API Fixtures
 # ============================================================================
+
 
 @pytest.fixture
 def mock_youtube_api():
@@ -328,6 +301,7 @@ def mock_vimeo_api():
 # ============================================================================
 # Async Fixtures
 # ============================================================================
+
 
 @pytest.fixture
 def async_mock():
@@ -353,14 +327,15 @@ def async_test_timeout():
 # Test Isolation Fixtures
 # ============================================================================
 
+
 @pytest.fixture(autouse=True)
 def isolate_tests():
     """Automatically isolate tests from each other."""
     # Store original environment
     original_env = dict(os.environ)
-    
+
     yield
-    
+
     # Restore environment
     os.environ.clear()
-    os.environ.update(original_env) 
+    os.environ.update(original_env)

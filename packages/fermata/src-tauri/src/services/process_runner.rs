@@ -27,9 +27,9 @@ impl ProcessRunner {
     pub async fn run_beatrix_analyze(&self, recording_path: &Path, audio_file: &str) -> anyhow::Result<ProcessResult> {
         let audio_path = recording_path.join("extracted").join(audio_file);
         let analysis_dir = recording_path.join("analysis");
-        
+
         log::info!("🎵 Running beatrix analyze: audio={}, output={}", audio_path.display(), analysis_dir.display());
-        
+
         let mut cmd = AsyncCommand::new(&self.uv_path);
         cmd.args(&["run", "--package", "beatrix", "beatrix"])
             .arg(&audio_path)
@@ -44,16 +44,16 @@ impl ProcessRunner {
         // Step 1: Generate YAML configuration
         log::info!("🎬 Generating cinemon config: preset={}, main_audio={:?}", preset, main_audio);
         let config_result = self.run_cinemon_generate_config(recording_path, preset, main_audio).await?;
-        
+
         if !config_result.success {
             log::error!("❌ Config generation failed: {}", config_result.stderr);
             return Ok(config_result);
         }
-        
+
         // Step 2: Setup Blender project with generated config
         let config_filename = format!("animation_config_{}.yaml", preset);
         let config_path = recording_path.join(&config_filename);
-        
+
         if !config_path.exists() {
             return Ok(ProcessResult {
                 success: false,
@@ -62,14 +62,14 @@ impl ProcessRunner {
                 exit_code: Some(1),
             });
         }
-        
+
         log::info!("🎬 Setting up Blender project with config: {}", config_path.display());
         let mut cmd = AsyncCommand::new(&self.uv_path);
         cmd.args(&["run", "--package", "cinemon", "cinemon-blend-setup"])
             .arg(recording_path)
             .args(&["--config", &config_path.to_string_lossy()])
             .current_dir(&self.workspace_root);
-        
+
         self.execute_command(cmd).await
     }
 
@@ -79,11 +79,11 @@ impl ProcessRunner {
         cmd.args(&["run", "--package", "cinemon", "cinemon-generate-config"])
             .arg(recording_path)
             .args(&["--preset", preset]);
-        
+
         if let Some(audio_file) = main_audio {
             cmd.args(&["--main-audio", audio_file]);
         }
-        
+
         cmd.current_dir(&self.workspace_root);
         self.execute_command(cmd).await
     }
@@ -93,7 +93,7 @@ impl ProcessRunner {
         let mut cmd = AsyncCommand::new(&self.uv_path);
         cmd.args(&["run", "--package", "cinemon", "cinemon-generate-config", "--list-presets"])
             .current_dir(&self.workspace_root);
-        
+
         self.execute_command(cmd).await
     }
 
@@ -102,11 +102,11 @@ impl ProcessRunner {
         // Map legacy animation modes to presets
         let preset = match animation_mode {
             "beat-switch" => "beat-switch",
-            "energy-pulse" => "music-video", 
+            "energy-pulse" => "music-video",
             "multi-pip" => "vintage",
             _ => "beat-switch", // Default fallback
         };
-        
+
         log::warn!("🔄 Using legacy animation mode '{}', mapping to preset '{}'", animation_mode, preset);
         self.run_cinemon_render(recording_path, preset, main_audio).await
     }
@@ -125,9 +125,9 @@ impl ProcessRunner {
     /// Execute a command and capture output
     async fn execute_command(&self, mut cmd: AsyncCommand) -> anyhow::Result<ProcessResult> {
         log::info!("Executing command: {:?}", cmd);
-        
+
         let output = cmd.output().await?;
-        
+
         let stdout = String::from_utf8_lossy(&output.stdout).to_string();
         let stderr = String::from_utf8_lossy(&output.stderr).to_string();
         let success = output.status.success();
@@ -154,7 +154,7 @@ impl ProcessRunner {
         // Check if uv is available
         let mut cmd = AsyncCommand::new(&self.uv_path);
         cmd.arg("--version");
-        
+
         let output = cmd.output().await?;
         if !output.status.success() {
             return Err(anyhow::anyhow!("UV tool not found at: {}", self.uv_path));
@@ -166,7 +166,7 @@ impl ProcessRunner {
             let mut cmd = AsyncCommand::new(&self.uv_path);
             cmd.args(&["run", "--package", package, "--help"])
                 .current_dir(&self.workspace_root);
-            
+
             let output = cmd.output().await?;
             if !output.status.success() {
                 return Err(anyhow::anyhow!("Package '{}' not available in workspace", package));
@@ -196,7 +196,7 @@ mod tests {
     async fn test_process_runner_creation() {
         let workspace = PathBuf::from("/test/workspace");
         let runner = ProcessRunner::new(workspace.clone(), "uv".to_string());
-        
+
         assert_eq!(runner.workspace_root, workspace);
         assert_eq!(runner.uv_path, "uv");
     }
@@ -204,12 +204,12 @@ mod tests {
     #[tokio::test]
     async fn test_execute_command_success() {
         let (runner, _temp_dir) = create_test_runner();
-        
+
         let mut cmd = AsyncCommand::new("echo");
         cmd.arg("test output");
-        
+
         let result = runner.execute_command(cmd).await.unwrap();
-        
+
         assert!(result.success);
         assert_eq!(result.stdout.trim(), "test output");
         assert!(result.stderr.is_empty());
@@ -219,11 +219,11 @@ mod tests {
     #[tokio::test]
     async fn test_execute_command_failure() {
         let (runner, _temp_dir) = create_test_runner();
-        
+
         let mut cmd = AsyncCommand::new("false"); // Command that always fails
-        
+
         let result = runner.execute_command(cmd).await.unwrap();
-        
+
         assert!(!result.success);
         assert_eq!(result.exit_code, Some(1));
     }
@@ -231,18 +231,18 @@ mod tests {
     #[tokio::test]
     async fn test_beatrix_analyze_command_structure() {
         let (runner, temp_dir) = create_test_runner();
-        
+
         // Create test directory structure
         let recording_path = temp_dir.path().join("test_recording");
         let extracted_dir = recording_path.join("extracted");
         fs::create_dir_all(&extracted_dir).unwrap();
-        
+
         let audio_file = "audio.m4a";
         fs::write(extracted_dir.join(audio_file), "test audio").unwrap();
-        
+
         // This will fail because we're using echo instead of uv, but we can test the structure
         let result = runner.run_beatrix_analyze(&recording_path, audio_file).await;
-        
+
         // Should not panic and should return some result
         assert!(result.is_ok());
     }
@@ -250,12 +250,12 @@ mod tests {
     #[tokio::test]
     async fn test_cinemon_render_command_structure() {
         let (runner, temp_dir) = create_test_runner();
-        
+
         let recording_path = temp_dir.path().join("test_recording");
         fs::create_dir_all(&recording_path).unwrap();
-        
+
         let result = runner.run_cinemon_render(&recording_path, "beat-switch").await;
-        
+
         // Should not panic and should return some result
         assert!(result.is_ok());
     }
@@ -263,16 +263,16 @@ mod tests {
     #[tokio::test]
     async fn test_medusa_upload_command_structure() {
         let (runner, temp_dir) = create_test_runner();
-        
+
         let video_path = temp_dir.path().join("video.mp4");
         let config_path = temp_dir.path().join("config.json");
-        
+
         fs::write(&video_path, "test video").unwrap();
         fs::write(&config_path, "{}").unwrap();
-        
+
         let result = runner.run_medusa_upload(&video_path, &config_path).await;
-        
+
         // Should not panic and should return some result
         assert!(result.is_ok());
     }
-} 
+}

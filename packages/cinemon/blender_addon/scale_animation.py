@@ -18,6 +18,7 @@ except ImportError:
     # Fallback for background mode
     try:
         import base_effect_animation
+
         BaseEffectAnimation = base_effect_animation.BaseEffectAnimation
     except ImportError:
         # If still failing, use a minimal base class
@@ -40,12 +41,14 @@ class ScaleAnimation(BaseEffectAnimation):
         easing: Easing type (currently only "linear" supported)
     """
 
-    def __init__(self,
-                 trigger: str = "bass",
-                 intensity: float = 0.3,
-                 duration_frames: int = 2,
-                 easing: str = "linear",
-                 target_strips: Optional[List[str]] = None):
+    def __init__(
+        self,
+        trigger: str = "bass",
+        intensity: float = 0.3,
+        duration_frames: int = 2,
+        easing: str = "linear",
+        target_strips: Optional[List[str]] = None,
+    ):
         """
         Initialize ScaleAnimation.
 
@@ -75,7 +78,7 @@ class ScaleAnimation(BaseEffectAnimation):
         Returns:
             True if animation was applied successfully
         """
-        if not hasattr(strip, 'transform'):
+        if not hasattr(strip, "transform"):
             return False
 
         # Get base scale
@@ -115,4 +118,4 @@ class ScaleAnimation(BaseEffectAnimation):
         Returns:
             List containing 'transform' property requirement
         """
-        return ['transform']
+        return ["transform"]

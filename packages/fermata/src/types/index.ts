@@ -7,9 +7,9 @@ export interface Recording {
   file_sizes: Record<string, number>;
 }
 
-export type RecordingStatus = 
+export type RecordingStatus =
   | 'Recorded'
-  | 'Extracted' 
+  | 'Extracted'
   | 'Analyzed'
   | 'SetupRendered'
   | 'Rendered'
@@ -35,7 +35,7 @@ export interface ProcessResult {
   exit_code: number | null;
 }
 
-export type NextStep = 
+export type NextStep =
   | 'Extract'
   | 'Analyze'
   | 'Render'
@@ -117,9 +117,9 @@ export const AVAILABLE_PRESETS: PresetOption[] = [
 ];
 
 // Sorting and Filtering types
-export type SortOption = 
+export type SortOption =
   | 'date-desc'    // Newest First (default)
-  | 'date-asc'     // Oldest First  
+  | 'date-asc'     // Oldest First
   | 'status'       // By Status
   | 'name-asc'     // Name A→Z
   | 'name-desc'    // Name Z→A
@@ -151,4 +151,4 @@ export interface ResultsCounterProps {
   filteredCount: number;
   totalCount: number;
   hasActiveFilters: boolean;
-} 
+}

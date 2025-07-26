@@ -16,7 +16,7 @@ pub struct Recording {
 pub enum RecordingStatus {
     Recorded,       // .mkv exists
     Extracted,      // extracted/ exists
-    Analyzed,       // analysis/ exists  
+    Analyzed,       // analysis/ exists
     SetupRendered,  // blender/*.blend exists (cinemon done)
     Rendered,       // blender/render/*.mp4 exists (blender rendering done)
     Uploaded,       // uploads/ exists
@@ -74,11 +74,11 @@ impl Recording {
     /// Get list of available steps for this recording
     pub fn get_available_steps(&self) -> Vec<String> {
         let mut steps = Vec::new();
-        
+
         if let Some(next_step) = self.get_next_step() {
             steps.push(next_step.to_string());
         }
-        
+
         // Add manual step options based on current status
         match &self.status {
             RecordingStatus::Extracted => {
@@ -95,7 +95,7 @@ impl Recording {
             }
             _ => {}
         }
-        
+
         steps
     }
 }
@@ -145,7 +145,7 @@ mod tests {
     fn test_recording_creation_from_valid_path() {
         let path = PathBuf::from("/test/stream_20240115_120000");
         let recording = Recording::from_path(path.clone()).unwrap();
-        
+
         assert_eq!(recording.name, "stream_20240115_120000");
         assert_eq!(recording.path, path);
         assert_eq!(recording.status, RecordingStatus::Recorded);
@@ -156,7 +156,7 @@ mod tests {
     fn test_recording_creation_from_invalid_path() {
         let path = PathBuf::from("/");
         let result = Recording::from_path(path);
-        
+
         assert!(result.is_err());
     }
 
@@ -253,4 +253,4 @@ mod tests {
         assert_eq!(NextStep::Upload.to_string(), "Upload");
         assert_eq!(NextStep::Retry.to_string(), "Retry");
     }
-} 
+}

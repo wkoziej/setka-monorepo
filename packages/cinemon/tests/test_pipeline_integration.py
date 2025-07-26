@@ -3,7 +3,6 @@
 
 """Integration tests for CinemonConfigGenerator pipeline."""
 
-
 import pytest
 import yaml
 
@@ -64,7 +63,7 @@ class TestPipelineIntegration:
         assert config_path.name == "animation_config_vintage.yaml"
 
         # 4. Verify generated config structure
-        with config_path.open('r') as f:
+        with config_path.open("r") as f:
             config_data = yaml.safe_load(f)
 
         assert "project" in config_data
@@ -90,11 +89,7 @@ class TestPipelineIntegration:
         # Define custom configuration
         layout = {
             "type": "random",
-            "config": {
-                "overlap_allowed": False,
-                "seed": 123,
-                "margin": 0.08
-            }
+            "config": {"overlap_allowed": False, "seed": 123, "margin": 0.08},
         }
 
         animations = [
@@ -103,15 +98,15 @@ class TestPipelineIntegration:
                 "trigger": "bass",
                 "intensity": 0.4,
                 "duration_frames": 3,
-                "target_strips": ["Camera1"]
+                "target_strips": ["Camera1"],
             },
             {
                 "type": "vintage_color",
                 "trigger": "one_time",
                 "sepia_amount": 0.5,
                 "contrast_boost": 0.4,
-                "target_strips": ["Camera2"]
-            }
+                "target_strips": ["Camera2"],
+            },
         ]
 
         # Generate custom configuration
@@ -120,14 +115,14 @@ class TestPipelineIntegration:
             recording_dir,
             layout=layout,
             animations=animations,
-            main_audio="microphone.wav"
+            main_audio="microphone.wav",
         )
 
         assert config_path.exists()
         assert config_path.name == "animation_config.yaml"
 
         # Verify configuration content
-        with config_path.open('r') as f:
+        with config_path.open("r") as f:
             config_data = yaml.safe_load(f)
 
         assert config_data["project"]["main_audio"] == "microphone.wav"
@@ -135,8 +130,14 @@ class TestPipelineIntegration:
         assert len(config_data["animations"]) == 2
 
         # Verify targeting
-        scale_anim = next(anim for anim in config_data["animations"] if anim["type"] == "scale")
-        vintage_anim = next(anim for anim in config_data["animations"] if anim["type"] == "vintage_color")
+        scale_anim = next(
+            anim for anim in config_data["animations"] if anim["type"] == "scale"
+        )
+        vintage_anim = next(
+            anim
+            for anim in config_data["animations"]
+            if anim["type"] == "vintage_color"
+        )
 
         assert scale_anim["target_strips"] == ["Camera1"]
         assert vintage_anim["target_strips"] == ["Camera2"]
@@ -166,12 +167,10 @@ class TestPipelineIntegration:
 
         # Test explicit main audio specification
         config_path = generator.generate_preset(
-            recording_dir,
-            "vintage",
-            main_audio="microphone.wav"
+            recording_dir, "vintage", main_audio="microphone.wav"
         )
 
-        with config_path.open('r') as f:
+        with config_path.open("r") as f:
             config_data = yaml.safe_load(f)
 
         assert config_data["project"]["main_audio"] == "microphone.wav"
@@ -194,7 +193,7 @@ class TestPipelineIntegration:
             assert config_path.exists()
             assert config_path.name == f"animation_config_{preset_name}.yaml"
 
-            with config_path.open('r') as f:
+            with config_path.open("r") as f:
                 config_data = yaml.safe_load(f)
 
             assert config_data["project"]["main_audio"] == "main_audio.m4a"
@@ -227,10 +226,13 @@ class TestPipelineIntegration:
         generator = CinemonConfigGenerator()
         config_path = generator.generate_preset(recording_dir, "vintage")
 
-        with config_path.open('r', encoding='utf-8') as f:
+        with config_path.open("r", encoding="utf-8") as f:
             config_data = yaml.safe_load(f)
 
-        assert config_data["project"]["main_audio"] == "Przechwytywanie wejścia dźwięku.m4a"
+        assert (
+            config_data["project"]["main_audio"]
+            == "Przechwytywanie wejścia dźwięku.m4a"
+        )
 
     def test_error_handling_pipeline(self, tmp_path):
         """Test pipeline error handling scenarios."""
@@ -289,7 +291,7 @@ class TestPipelineIntegration:
         # Generate first config
         config_path1 = generator.generate_preset(recording_dir, "vintage", seed=100)
 
-        with config_path1.open('r') as f:
+        with config_path1.open("r") as f:
             config_data1 = yaml.safe_load(f)
         assert config_data1["layout"]["config"]["seed"] == 100
 
@@ -300,6 +302,6 @@ class TestPipelineIntegration:
         assert config_path1 == config_path2
 
         # But content should be updated
-        with config_path2.open('r') as f:
+        with config_path2.open("r") as f:
             config_data2 = yaml.safe_load(f)
         assert config_data2["layout"]["config"]["seed"] == 200

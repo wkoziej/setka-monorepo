@@ -225,7 +225,7 @@ coverage/
 # Dependency directories
 packages/*/node_modules/
 
-# IDE specific to Tauri/JS projects  
+# IDE specific to Tauri/JS projects
 .vscode/settings.json
 .vscode/launch.json
 *.code-workspace
@@ -241,4 +241,4 @@ yarn.lock
 pnpm-lock.yaml
 
 # Tauri bundle outputs
-packages/fermata/src-tauri/bundle/ 
+packages/fermata/src-tauri/bundle/

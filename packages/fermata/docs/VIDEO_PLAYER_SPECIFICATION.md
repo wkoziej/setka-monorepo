@@ -15,7 +15,7 @@ recording_name/
 ├── extracted/              # Wyekstraktowane źródła
 │   ├── source1.mp4         # Poszczególne źródła wideo
 │   └── source2.m4v         # Inne formaty wideo
-├── blender/               
+├── blender/
 │   └── render/             # Wyrenderowane pliki
 │       └── final.mp4       # Ostateczne wideo
 └── analysis/
@@ -108,7 +108,7 @@ interface VideoFile {
 #[tauri::command]
 pub fn open_video_external(file_path: String) -> Result<(), String>
 
-#[tauri::command] 
+#[tauri::command]
 pub fn get_video_files(recording_path: String) -> Result<Vec<VideoFile>, String>
 
 #[tauri::command]
@@ -156,11 +156,11 @@ const WEB_COMPATIBLE: &[&str] = &[".mp4", ".webm"];
 **Sekcja Video Files (nowa, po Actions):**
 ```typescript
 {/* Video Files */}
-<div style={{ 
-  border: '1px solid #e5e7eb', 
-  borderRadius: '8px', 
-  padding: '20px', 
-  marginBottom: '30px' 
+<div style={{
+  border: '1px solid #e5e7eb',
+  borderRadius: '8px',
+  padding: '20px',
+  marginBottom: '30px'
 }}>
   <h2 style={{ margin: '0 0 15px 0', fontSize: '18px' }}>Video Files</h2>
   <div style={{ display: 'grid', gap: '15px' }}>
@@ -180,12 +180,12 @@ const WEB_COMPATIBLE: &[&str] = &[".mp4", ".webm"];
           <div>
             <div style={{ fontWeight: 'bold' }}>🎬 {video.name}</div>
             <div style={{ fontSize: '12px', color: '#6b7280' }}>
-              {video.format} • {formatFileSize(video.size)} 
+              {video.format} • {formatFileSize(video.size)}
               {video.duration && ` • ${formatDuration(video.duration)}`}
             </div>
           </div>
         </div>
-        
+
         <div style={{ display: 'flex', gap: '8px' }}>
           <button onClick={() => handlePlayVideo(video.path, false)}>
             ▶️ Play
@@ -223,18 +223,18 @@ export function VideoPlayer({ videoPath, onClose }: VideoPlayerProps) {
       display: 'flex',
       flexDirection: 'column'
     }}>
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'space-between', 
+      <div style={{
+        display: 'flex',
+        justifyContent: 'space-between',
         padding: '20px',
         color: 'white'
       }}>
         <h2>{path.basename(videoPath)}</h2>
         <button onClick={onClose} style={{ color: 'white', fontSize: '24px' }}>×</button>
       </div>
-      
-      <video 
-        controls 
+
+      <video
+        controls
         autoPlay
         style={{ flex: 1, width: '100%' }}
         src={getVideoUrl(videoPath)}
@@ -406,4 +406,4 @@ mime_guess = "2.0"
 ```json
 // package.json - już dostępne w Tauri
 // Nie potrzeba dodatkowych dependencies
-``` 
+```

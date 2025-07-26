@@ -20,7 +20,9 @@ from ..config.media_discovery import MediaDiscovery
 from ..project_manager import BlenderProjectManager
 
 
-def open_blender_with_video_editing(blend_file_path: Path, preset_name: str = None) -> None:
+def open_blender_with_video_editing(
+    blend_file_path: Path, preset_name: str = None
+) -> None:
     """
     Open Blender GUI with the blend file using Video_Editing app template.
     Preset auto-loading is handled by the addon via metadata JSON.
@@ -31,10 +33,7 @@ def open_blender_with_video_editing(blend_file_path: Path, preset_name: str = No
     """
     try:
         # Simple Blender execution - .blend file now has Video Editing workspace built-in
-        cmd = [
-            "snap", "run", "blender",
-            str(blend_file_path)
-        ]
+        cmd = ["snap", "run", "blender", str(blend_file_path)]
 
         print("🎬 Otwieranie Blender z wbudowanym workspace Video Editing...")
         print(f"📁 Plik: {blend_file_path}")
@@ -142,9 +141,11 @@ def validate_recording_directory(recording_dir: Path) -> None:
     # Check for metadata.json
     metadata_path = recording_dir / "metadata.json"
     if not metadata_path.exists():
-        raise ValueError(f"❌ Stare nagranie bez metadata.json: {recording_dir}\n"
-                        f"💡 To nagranie pochodzi sprzed aktualizacji OBS script.\n"
-                        f"🔧 Przenieś je do osobnego katalogu lub wygeneruj metadata.json ręcznie.")
+        raise ValueError(
+            f"❌ Stare nagranie bez metadata.json: {recording_dir}\n"
+            f"💡 To nagranie pochodzi sprzed aktualizacji OBS script.\n"
+            f"🔧 Przenieś je do osobnego katalogu lub wygeneruj metadata.json ręcznie."
+        )
 
     # Check for extracted directory
     extracted_dir = recording_dir / "extracted"
@@ -157,10 +158,6 @@ def validate_recording_directory(recording_dir: Path) -> None:
     # Check if extracted directory has any files
     if not any(extracted_dir.iterdir()):
         raise ValueError(f"Katalog extracted/ jest pusty w: {recording_dir}")
-
-
-
-
 
 
 def load_yaml_config(config_path: Path) -> BlenderYAMLConfig:
@@ -188,8 +185,6 @@ def load_yaml_config(config_path: Path) -> BlenderYAMLConfig:
         raise ValueError(f"Failed to load YAML configuration: {e}")
 
 
-
-
 def main() -> int:
     """
     Main CLI entry point.
@@ -209,9 +204,7 @@ def main() -> int:
 
             # Use addon preset files directly (new strip_animations format)
             config_path = generate_config_from_addon_preset(
-                args.recording_dir,
-                args.preset,
-                args.main_audio
+                args.recording_dir, args.preset, args.main_audio
             )
 
             logger.info(f"Generated configuration: {config_path}")
@@ -229,10 +222,12 @@ def main() -> int:
                 args.recording_dir,
                 yaml_config,
                 preset_name=args.preset,
-                original_config_path=config_path  # Pass original config file
+                original_config_path=config_path,  # Pass original config file
             )
 
-            print(f"✅ Projekt Blender VSE utworzony z presetu {args.preset}: {project_path}")
+            print(
+                f"✅ Projekt Blender VSE utworzony z presetu {args.preset}: {project_path}"
+            )
 
             # Auto-open Blender if requested
             if args.open_blender:
@@ -252,8 +247,7 @@ def main() -> int:
             # Create VSE project with YAML config
             logger.info("Creating Blender VSE project with YAML configuration...")
             project_path = manager.create_vse_project_with_config(
-                args.recording_dir,
-                yaml_config
+                args.recording_dir, yaml_config
             )
 
             print(f"✅ Projekt Blender VSE utworzony z YAML config: {project_path}")
@@ -261,7 +255,9 @@ def main() -> int:
             # Auto-open Blender if requested
             if args.open_blender:
                 logger.info("Opening Blender...")
-                open_blender_with_video_editing(project_path, None)  # No preset for YAML config
+                open_blender_with_video_editing(
+                    project_path, None
+                )  # No preset for YAML config
 
             return 0
 
@@ -285,7 +281,9 @@ def main() -> int:
         return 1
 
 
-def generate_config_from_addon_preset(recording_dir: Path, preset_name: str, main_audio: Optional[str] = None) -> Path:
+def generate_config_from_addon_preset(
+    recording_dir: Path, preset_name: str, main_audio: Optional[str] = None
+) -> Path:
     """
     Generate configuration from addon preset file (new strip_animations format).
 
@@ -301,14 +299,16 @@ def generate_config_from_addon_preset(recording_dir: Path, preset_name: str, mai
         ValueError: If preset not found or validation fails
     """
     # Find addon preset file
-    addon_presets_dir = Path(__file__).parent.parent.parent.parent / "blender_addon" / "example_presets"
+    addon_presets_dir = (
+        Path(__file__).parent.parent.parent.parent / "blender_addon" / "example_presets"
+    )
     preset_file = addon_presets_dir / f"{preset_name}.yaml"
 
     if not preset_file.exists():
         raise ValueError(f"Preset '{preset_name}' not found at: {preset_file}")
 
     # Load preset template
-    with open(preset_file, 'r', encoding='utf-8') as f:
+    with open(preset_file, "r", encoding="utf-8") as f:
         preset_data = yaml.safe_load(f)
 
     # Discover and validate media files
@@ -338,9 +338,13 @@ def generate_config_from_addon_preset(recording_dir: Path, preset_name: str, mai
     config_data = preset_data.copy()
 
     # Update project section
-    config_data["project"]["video_files"] = [f.name if hasattr(f, 'name') else str(f) for f in video_files]
+    config_data["project"]["video_files"] = [
+        f.name if hasattr(f, "name") else str(f) for f in video_files
+    ]
     if main_audio:
-        config_data["project"]["main_audio"] = main_audio if isinstance(main_audio, str) else main_audio.name
+        config_data["project"]["main_audio"] = (
+            main_audio if isinstance(main_audio, str) else main_audio.name
+        )
 
     # Update audio analysis file path
     if main_audio and "audio_analysis" in config_data:
@@ -358,7 +362,9 @@ def generate_config_from_addon_preset(recording_dir: Path, preset_name: str, mai
 
             # If there's animation config for this Video_X, map it to filename
             if video_key in config_data["strip_animations"]:
-                new_strip_animations[filename_stem] = config_data["strip_animations"][video_key]
+                new_strip_animations[filename_stem] = config_data["strip_animations"][
+                    video_key
+                ]
 
         # Replace with mapped animations
         config_data["strip_animations"] = new_strip_animations
@@ -370,8 +376,14 @@ def generate_config_from_addon_preset(recording_dir: Path, preset_name: str, mai
     output_path = recording_dir / f"animation_config_{preset_name}.yaml"
 
     # Write generated config
-    with open(output_path, 'w', encoding='utf-8') as f:
-        yaml.dump(config_data, f, default_flow_style=False, allow_unicode=True, sort_keys=False)
+    with open(output_path, "w", encoding="utf-8") as f:
+        yaml.dump(
+            config_data,
+            f,
+            default_flow_style=False,
+            allow_unicode=True,
+            sort_keys=False,
+        )
 
     return output_path
 

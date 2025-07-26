@@ -31,7 +31,10 @@ class TestCinemonGenerateConfigCLI:
         (extracted_dir / "main_audio.m4a").touch()
         (recording_dir / "metadata.json").write_text('{"recording_info": "test"}')
 
-        with patch('sys.argv', ['cinemon-generate-config', str(recording_dir), '--preset', 'vintage']):
+        with patch(
+            "sys.argv",
+            ["cinemon-generate-config", str(recording_dir), "--preset", "vintage"],
+        ):
             result = main()
 
         assert result == 0
@@ -41,7 +44,7 @@ class TestCinemonGenerateConfigCLI:
         assert config_file.exists()
 
         # Verify config content
-        with config_file.open('r') as f:
+        with config_file.open("r") as f:
             config_data = yaml.safe_load(f)
 
         assert "project" in config_data
@@ -58,13 +61,23 @@ class TestCinemonGenerateConfigCLI:
         (extracted_dir / "Camera1.mp4").touch()
         (extracted_dir / "main_audio.m4a").touch()
 
-        with patch('sys.argv', ['cinemon-generate-config', str(recording_dir), '--preset', 'vintage', '--seed', '42']):
+        with patch(
+            "sys.argv",
+            [
+                "cinemon-generate-config",
+                str(recording_dir),
+                "--preset",
+                "vintage",
+                "--seed",
+                "42",
+            ],
+        ):
             result = main()
 
         assert result == 0
 
         config_file = recording_dir / "animation_config_vintage.yaml"
-        with config_file.open('r') as f:
+        with config_file.open("r") as f:
             config_data = yaml.safe_load(f)
 
         assert config_data["layout"]["config"]["seed"] == 42
@@ -79,20 +92,30 @@ class TestCinemonGenerateConfigCLI:
         (extracted_dir / "audio1.m4a").touch()
         (extracted_dir / "audio2.wav").touch()
 
-        with patch('sys.argv', ['cinemon-generate-config', str(recording_dir), '--preset', 'music-video', '--main-audio', 'audio2.wav']):
+        with patch(
+            "sys.argv",
+            [
+                "cinemon-generate-config",
+                str(recording_dir),
+                "--preset",
+                "music-video",
+                "--main-audio",
+                "audio2.wav",
+            ],
+        ):
             result = main()
 
         assert result == 0
 
         config_file = recording_dir / "animation_config_music-video.yaml"
-        with config_file.open('r') as f:
+        with config_file.open("r") as f:
             config_data = yaml.safe_load(f)
 
         assert config_data["project"]["main_audio"] == "audio2.wav"
 
     def test_main_list_presets_command(self, capsys):
         """Test main function with --list-presets argument."""
-        with patch('sys.argv', ['cinemon-generate-config', '--list-presets']):
+        with patch("sys.argv", ["cinemon-generate-config", "--list-presets"]):
             result = main()
 
         assert result == 0
@@ -106,7 +129,10 @@ class TestCinemonGenerateConfigCLI:
 
     def test_main_missing_recording_directory(self):
         """Test main function with missing recording directory."""
-        with patch('sys.argv', ['cinemon-generate-config', '/nonexistent/path', '--preset', 'vintage']):
+        with patch(
+            "sys.argv",
+            ["cinemon-generate-config", "/nonexistent/path", "--preset", "vintage"],
+        ):
             result = main()
 
         assert result == 1
@@ -116,14 +142,17 @@ class TestCinemonGenerateConfigCLI:
         recording_dir = tmp_path / "test_recording"
         recording_dir.mkdir()
 
-        with patch('sys.argv', ['cinemon-generate-config', str(recording_dir), '--preset', 'nonexistent']):
+        with patch(
+            "sys.argv",
+            ["cinemon-generate-config", str(recording_dir), "--preset", "nonexistent"],
+        ):
             result = main()
 
         assert result == 1
 
     def test_main_missing_required_arguments(self):
         """Test main function with missing required arguments."""
-        with patch('sys.argv', ['cinemon-generate-config']):
+        with patch("sys.argv", ["cinemon-generate-config"]):
             result = main()
 
         assert result == 2  # argparse returns 2 for missing required arguments
@@ -137,7 +166,10 @@ class TestCinemonGenerateConfigCLI:
         # Only audio file, no video
         (extracted_dir / "audio_only.m4a").touch()
 
-        with patch('sys.argv', ['cinemon-generate-config', str(recording_dir), '--preset', 'vintage']):
+        with patch(
+            "sys.argv",
+            ["cinemon-generate-config", str(recording_dir), "--preset", "vintage"],
+        ):
             result = main()
 
         assert result == 1
@@ -151,7 +183,10 @@ class TestCinemonGenerateConfigCLI:
         # Only video file, no audio
         (extracted_dir / "video_only.mp4").touch()
 
-        with patch('sys.argv', ['cinemon-generate-config', str(recording_dir), '--preset', 'vintage']):
+        with patch(
+            "sys.argv",
+            ["cinemon-generate-config", str(recording_dir), "--preset", "vintage"],
+        ):
             result = main()
 
         assert result == 1
@@ -166,14 +201,17 @@ class TestCinemonGenerateConfigCLI:
         (extracted_dir / "audio1.m4a").touch()
         (extracted_dir / "audio2.wav").touch()
 
-        with patch('sys.argv', ['cinemon-generate-config', str(recording_dir), '--preset', 'vintage']):
+        with patch(
+            "sys.argv",
+            ["cinemon-generate-config", str(recording_dir), "--preset", "vintage"],
+        ):
             result = main()
 
         assert result == 1  # Should fail without --main-audio
 
     def test_main_help_argument(self, capsys):
         """Test main function with --help argument."""
-        with patch('sys.argv', ['cinemon-generate-config', '--help']):
+        with patch("sys.argv", ["cinemon-generate-config", "--help"]):
             result = main()
 
         assert result == 0  # Help should return 0
@@ -229,7 +267,7 @@ class TestGenerateConfigCommand:
         assert result == 0
 
         config_file = recording_dir / "animation_config_music-video.yaml"
-        with config_file.open('r') as f:
+        with config_file.open("r") as f:
             config_data = yaml.safe_load(f)
 
         assert config_data["layout"]["config"]["seed"] == 123
@@ -306,7 +344,10 @@ class TestCLIIntegration:
         (extracted_dir / "Camera1.mp4").touch()
         (extracted_dir / "main_audio.m4a").touch()
 
-        with patch('sys.argv', ['cinemon-generate-config', str(recording_dir), '--preset', 'vintage']):
+        with patch(
+            "sys.argv",
+            ["cinemon-generate-config", str(recording_dir), "--preset", "vintage"],
+        ):
             main()
 
         assert Path.cwd() == original_cwd
@@ -320,13 +361,16 @@ class TestCLIIntegration:
         (extracted_dir / "Kamera główna.mp4").touch()
         (extracted_dir / "Przechwytywanie dźwięku.m4a").touch()
 
-        with patch('sys.argv', ['cinemon-generate-config', str(recording_dir), '--preset', 'vintage']):
+        with patch(
+            "sys.argv",
+            ["cinemon-generate-config", str(recording_dir), "--preset", "vintage"],
+        ):
             result = main()
 
         assert result == 0
 
         config_file = recording_dir / "animation_config_vintage.yaml"
-        with config_file.open('r', encoding='utf-8') as f:
+        with config_file.open("r", encoding="utf-8") as f:
             config_data = yaml.safe_load(f)
 
         assert config_data["project"]["main_audio"] == "Przechwytywanie dźwięku.m4a"
@@ -344,13 +388,16 @@ class TestCLIIntegration:
         config_file = recording_dir / "animation_config_vintage.yaml"
         config_file.write_text("existing: config")
 
-        with patch('sys.argv', ['cinemon-generate-config', str(recording_dir), '--preset', 'vintage']):
+        with patch(
+            "sys.argv",
+            ["cinemon-generate-config", str(recording_dir), "--preset", "vintage"],
+        ):
             result = main()
 
         assert result == 0
 
         # Verify file was overwritten
-        with config_file.open('r') as f:
+        with config_file.open("r") as f:
             config_data = yaml.safe_load(f)
 
         assert "existing" not in config_data

@@ -1,9 +1,9 @@
 # Multi-PiP Layout Issue - Critical Bug Report
 
-**Date:** 2025-07-20  
-**Reporter:** Claude Code + Wojtas  
-**Priority:** HIGH  
-**Component:** Cinemon Blender VSE Integration  
+**Date:** 2025-07-20
+**Reporter:** Claude Code + Wojtas
+**Priority:** HIGH
+**Component:** Cinemon Blender VSE Integration
 **Status:** UNRESOLVED
 
 ## Problem Summary
@@ -14,15 +14,15 @@ Multi-PiP layout is not working in any system (VSE script, addon, or CLI). Video
 
 When using multi-pip preset or main-pip layout:
 - **Video_1, Video_2**: Position (0,0), Scale (1.0) - fullscreen main cameras
-- **Video_3**: Position (644, 362), Scale (0.25) - top-right PiP  
+- **Video_3**: Position (644, 362), Scale (0.25) - top-right PiP
 - **Video_4**: Position (-644, 362), Scale (0.25) - top-left PiP
 - **Video_5**: Position (644, -362), Scale (0.25) - bottom-right PiP
 
 ## Actual Behavior
 
 All video strips remain at:
-- **Position**: (0, 0)  
-- **Scale**: (1.0, 1.0)  
+- **Position**: (0, 0)
+- **Scale**: (1.0, 1.0)
 - All strips appear in center, overlapping
 
 ## Systems Tested
@@ -33,9 +33,9 @@ cd "/home/wojtas/Wideo/obs/2025-07-10 19-39-29"
 blender --background --python "/path/to/vse_script.py" -- --config animation_config_multi-pip.yaml
 ```
 
-**Result**: 
+**Result**:
 - ✅ Layout calculated correctly during execution
-- ✅ Positions applied to strips during execution  
+- ✅ Positions applied to strips during execution
 - ❌ Strips not saved to blend file (0 sequences after reload)
 
 ### 2. Addon System (Post-Load Application)
@@ -64,7 +64,7 @@ cinemon-blend-setup ./recording_dir --preset multi-pip
 🎬 AnimationCompositor._apply_layout: 5 strips, 5 positions
 🎬 Strip 0 (Video_1): pos=(0, 0), scale=1.0
 🎬 Applied to Video_1: offset=(0.0, 0.0), scale=(1.0, 1.0)
-🎬 Strip 1 (Video_2): pos=(0, 0), scale=1.0  
+🎬 Strip 1 (Video_2): pos=(0, 0), scale=1.0
 🎬 Applied to Video_2: offset=(0.0, 0.0), scale=(1.0, 1.0)
 🎬 Strip 2 (Video_3): pos=(644, 362), scale=0.25
 🎬 Applied to Video_3: offset=(644.0, 362.0), scale=(0.25, 0.25)
@@ -105,7 +105,7 @@ Found 0 video strips:
 
 **Evidence**:
 - Strips exist during execution (6 sequences reported)
-- Blend file size is reasonable (781KB)  
+- Blend file size is reasonable (781KB)
 - Blend file is valid Blender format
 - After reload: 0 sequences found
 - Issue occurs with both Video_Editing template and default scene
@@ -130,7 +130,7 @@ Found 0 video strips:
 project:
   video_files:
   - RPI_FRONT.mp4
-  - RPI_RIGHT.mp4  
+  - RPI_RIGHT.mp4
   - Urządzenie przechwytujące obraz (V4L2) 2.mp4
   - Urządzenie przechwytujące obraz (V4L2) 3.mp4
   - Urządzenie przechwytujące obraz (V4L2).mp4
@@ -159,26 +159,26 @@ strip_animations:
 ```python
 def calculate_positions(self, strip_count: int, resolution: Tuple[int, int]) -> List[LayoutPosition]:
     """Calculate main-pip positions: first 2 strips fullscreen, rest as corner PiPs."""
-    
+
     positions = []
-    
+
     # First 2 strips: fullscreen at center
     for i in range(min(2, strip_count)):
         positions.append(LayoutPosition(x=0, y=0, scale=1.0))
-    
+
     # Remaining strips: corner PiPs
     pip_positions = self._calculate_pip_positions(resolution)
     for i in range(2, strip_count):
         pip_index = (i - 2) % len(pip_positions)
         positions.append(pip_positions[pip_index])
-    
+
     return positions
 ```
 
 ## Environment
 
 - **OS**: Linux 6.14.0-24-generic
-- **Blender**: 4.5.0 (hash 8cb6b388974a built 2025-07-15 01:36:28)  
+- **Blender**: 4.5.0 (hash 8cb6b388974a built 2025-07-15 01:36:28)
 - **Python**: Blender embedded Python
 - **Working Directory**: `/home/wojtas/Wideo/obs/2025-07-10 19-39-29`
 - **Execution Mode**: Background (`--background`)
@@ -226,7 +226,7 @@ def calculate_positions(self, strip_count: int, resolution: Tuple[int, int]) -> 
    seq = bpy.context.scene.sequence_editor
    print(f'Sequences: {len(seq.sequences) if seq else 0}')
    "
-   # Expected: > 0 sequences  
+   # Expected: > 0 sequences
    # Actual: 0 sequences
    ```
 
@@ -257,7 +257,7 @@ def calculate_positions(self, strip_count: int, resolution: Tuple[int, int]) -> 
 
 3. **Hybrid Approach**:
    - VSE script creates project structure
-   - Addon applies layout post-load  
+   - Addon applies layout post-load
    - Manual save after addon layout application
 
 ### Investigation Tasks
@@ -277,7 +277,7 @@ def calculate_positions(self, strip_count: int, resolution: Tuple[int, int]) -> 
 
 1. **PRIORITY 1**: Fix VSE script strip persistence issue
 2. **PRIORITY 2**: Fix addon layout application as fallback
-3. **PRIORITY 3**: Choose unified system architecture  
+3. **PRIORITY 3**: Choose unified system architecture
 
 ---
 

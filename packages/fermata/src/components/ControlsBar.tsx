@@ -22,11 +22,11 @@ const STATUS_OPTIONS: { value: RecordingStatus | 'all'; label: string }[] = [
   { value: { Failed: '' }, label: '❌ Failed' }
 ];
 
-export function ControlsBar({ 
-  filterConfig, 
-  onUpdateFilter, 
-  onClearFilters, 
-  hasActiveFilters 
+export function ControlsBar({
+  filterConfig,
+  onUpdateFilter,
+  onClearFilters,
+  hasActiveFilters
 }: ControlsBarProps) {
   const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     onUpdateFilter('searchTerm', event.target.value);
@@ -56,7 +56,7 @@ export function ControlsBar({
     <div className="controls-bar">
       <div className="controls-group">
         <label htmlFor="sort-select">Sort by:</label>
-        <select 
+        <select
           id="sort-select"
           className="filter-select"
           value={filterConfig.sortOption}
@@ -71,7 +71,7 @@ export function ControlsBar({
       </div>
 
       <div className="controls-group">
-        <input 
+        <input
           type="search"
           className="search-input"
           placeholder="🔍 Search recordings..."
@@ -83,7 +83,7 @@ export function ControlsBar({
 
       <div className="controls-group">
         <label htmlFor="status-select">Status:</label>
-        <select 
+        <select
           id="status-select"
           className="filter-select"
           value={getStatusValue(filterConfig.status)}
@@ -102,7 +102,7 @@ export function ControlsBar({
 
       {hasActiveFilters && (
         <div className="controls-group">
-          <button 
+          <button
             className="btn btn-secondary"
             onClick={onClearFilters}
           >
@@ -112,4 +112,4 @@ export function ControlsBar({
       )}
     </div>
   );
-} 
+}

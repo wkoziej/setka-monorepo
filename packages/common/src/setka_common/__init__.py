@@ -8,8 +8,8 @@ from .config import BlenderYAMLConfig, AnimationSpec, YAMLConfigLoader, ConfigVa
 
 __all__ = [
     "RecordingStructureManager",
-    "BlenderYAMLConfig", 
-    "AnimationSpec", 
-    "YAMLConfigLoader", 
-    "ConfigValidator"
+    "BlenderYAMLConfig",
+    "AnimationSpec",
+    "YAMLConfigLoader",
+    "ConfigValidator",
 ]

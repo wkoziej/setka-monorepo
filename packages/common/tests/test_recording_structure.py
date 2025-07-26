@@ -2,15 +2,10 @@
 Testy dla modułu recording structure.
 """
 
-import json
-from pathlib import Path
-import pytest
-
 from setka_common.file_structure.specialized.recording import (
     RecordingStructure,
     RecordingStructureManager,
 )
-from setka_common.file_structure.types import MediaType
 
 
 class TestRecordingStructure:
@@ -345,7 +340,9 @@ class TestRecordingStructureManager:
         project_dir = tmp_path / "test_recording"
         video_file = project_dir / "recording.mkv"
 
-        analysis_file_path = RecordingStructureManager.get_analysis_file_path(video_file)
+        analysis_file_path = RecordingStructureManager.get_analysis_file_path(
+            video_file
+        )
 
         expected_path = project_dir / "analysis" / "recording_analysis.json"
         assert analysis_file_path == expected_path
@@ -355,7 +352,9 @@ class TestRecordingStructureManager:
         project_dir = tmp_path / "test_recording"
         video_file = project_dir / "recording.mp4"
 
-        analysis_file_path = RecordingStructureManager.get_analysis_file_path(video_file)
+        analysis_file_path = RecordingStructureManager.get_analysis_file_path(
+            video_file
+        )
 
         expected_path = project_dir / "analysis" / "recording_analysis.json"
         assert analysis_file_path == expected_path

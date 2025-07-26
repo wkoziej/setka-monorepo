@@ -75,6 +75,6 @@ disallow_untyped_defs = true
 [dependency-groups]
 dev = [
     "pytest>=8.4.1",
-    "pytest-cov>=6.2.1", 
+    "pytest-cov>=6.2.1",
     "pytest-xdist>=3.8.0",
 ]

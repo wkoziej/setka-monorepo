@@ -16,13 +16,15 @@ try:
             @staticmethod
             def register_class(cls):
                 pass
+
             @staticmethod
             def unregister_class(cls):
                 pass
+
         utils = Utils()
 
     # Ensure bpy.utils exists for registration
-    if not hasattr(bpy, 'utils'):
+    if not hasattr(bpy, "utils"):
         bpy.utils = MockBpy.Utils()
 
 except ImportError:
@@ -31,25 +33,27 @@ except ImportError:
         pass
 
     def StringProperty(**kwargs):
-        return kwargs.get('default', '')
+        return kwargs.get("default", "")
 
     def FloatProperty(**kwargs):
-        return kwargs.get('default', 0.0)
+        return kwargs.get("default", 0.0)
 
     def BoolProperty(**kwargs):
-        return kwargs.get('default', False)
+        return kwargs.get("default", False)
 
     def EnumProperty(**kwargs):
-        return kwargs.get('default', '')
+        return kwargs.get("default", "")
 
     class MockBpy:
         class Utils:
             @staticmethod
             def register_class(cls):
                 pass
+
             @staticmethod
             def unregister_class(cls):
                 pass
+
         utils = Utils()
 
     bpy = MockBpy()
@@ -69,16 +73,16 @@ class AnimationPropertyGroup(PropertyGroup):
         name="Type",
         description="Type of animation",
         items=[
-            ('scale', 'Scale', 'Scale animation on beats/bass'),
-            ('shake', 'Shake', 'Position shake on energy peaks'),
-            ('rotation', 'Rotation', 'Rotation animation on beats'),
-            ('jitter', 'Jitter', 'Continuous random position changes'),
-            ('brightness_flicker', 'Brightness Flicker', 'Brightness modulation'),
-            ('vintage_color', 'Vintage Color', 'Sepia and vintage effects'),
-            ('black_white', 'Black & White', 'Desaturation effects'),
-            ('film_grain', 'Film Grain', 'Grain overlay effects')
+            ("scale", "Scale", "Scale animation on beats/bass"),
+            ("shake", "Shake", "Position shake on energy peaks"),
+            ("rotation", "Rotation", "Rotation animation on beats"),
+            ("jitter", "Jitter", "Continuous random position changes"),
+            ("brightness_flicker", "Brightness Flicker", "Brightness modulation"),
+            ("vintage_color", "Vintage Color", "Sepia and vintage effects"),
+            ("black_white", "Black & White", "Desaturation effects"),
+            ("film_grain", "Film Grain", "Grain overlay effects"),
         ],
-        default='scale'
+        default="scale",
     )
 
     # Trigger dropdown
@@ -86,20 +90,18 @@ class AnimationPropertyGroup(PropertyGroup):
         name="Trigger",
         description="What triggers this animation",
         items=[
-            ('beat', 'Beat', 'Trigger on beat events'),
-            ('bass', 'Bass', 'Trigger on bass events'),
-            ('energy_peaks', 'Energy Peaks', 'Trigger on energy peak events'),
-            ('one_time', 'One Time', 'Apply once at start'),
-            ('continuous', 'Continuous', 'Apply continuously')
+            ("beat", "Beat", "Trigger on beat events"),
+            ("bass", "Bass", "Trigger on bass events"),
+            ("energy_peaks", "Energy Peaks", "Trigger on energy peak events"),
+            ("one_time", "One Time", "Apply once at start"),
+            ("continuous", "Continuous", "Apply continuously"),
         ],
-        default='beat'
+        default="beat",
     )
 
     # Common parameters
     enabled: BoolProperty(
-        name="Enabled",
-        description="Enable this animation",
-        default=True
+        name="Enabled", description="Enable this animation", default=True
     )
 
     intensity: FloatProperty(
@@ -107,7 +109,7 @@ class AnimationPropertyGroup(PropertyGroup):
         description="Animation intensity",
         default=0.3,
         min=0.0,
-        max=10.0
+        max=10.0,
     )
 
     duration_frames: FloatProperty(
@@ -115,7 +117,7 @@ class AnimationPropertyGroup(PropertyGroup):
         description="Animation duration in frames",
         default=3.0,
         min=1.0,
-        max=30.0
+        max=30.0,
     )
 
     # Specific parameters for different animation types
@@ -124,7 +126,7 @@ class AnimationPropertyGroup(PropertyGroup):
         description="Rotation degrees (for rotation animation)",
         default=5.0,
         min=0.0,
-        max=360.0
+        max=360.0,
     )
 
     return_frames: FloatProperty(
@@ -132,7 +134,7 @@ class AnimationPropertyGroup(PropertyGroup):
         description="Frames to return to original position (for shake)",
         default=2.0,
         min=1.0,
-        max=10.0
+        max=10.0,
     )
 
     sepia_amount: FloatProperty(
@@ -140,7 +142,7 @@ class AnimationPropertyGroup(PropertyGroup):
         description="Amount of sepia effect (for vintage_color)",
         default=0.4,
         min=0.0,
-        max=1.0
+        max=1.0,
     )
 
     contrast_boost: FloatProperty(
@@ -148,7 +150,7 @@ class AnimationPropertyGroup(PropertyGroup):
         description="Contrast boost amount (for vintage_color)",
         default=0.3,
         min=0.0,
-        max=2.0
+        max=2.0,
     )
 
     grain_intensity: FloatProperty(
@@ -156,7 +158,7 @@ class AnimationPropertyGroup(PropertyGroup):
         description="Film grain intensity (for vintage_color/film_grain)",
         default=0.2,
         min=0.0,
-        max=1.0
+        max=1.0,
     )
 
 
@@ -169,14 +171,14 @@ class AnimationUIManager:
 
         # Map animation types to their specific parameters
         self.type_parameters = {
-            'scale': ['intensity', 'duration_frames'],
-            'shake': ['intensity', 'return_frames'],
-            'rotation': ['degrees', 'duration_frames'],
-            'jitter': ['intensity'],
-            'brightness_flicker': ['intensity', 'duration_frames'],
-            'vintage_color': ['sepia_amount', 'contrast_boost', 'grain_intensity'],
-            'black_white': ['intensity'],
-            'film_grain': ['grain_intensity']
+            "scale": ["intensity", "duration_frames"],
+            "shake": ["intensity", "return_frames"],
+            "rotation": ["degrees", "duration_frames"],
+            "jitter": ["intensity"],
+            "brightness_flicker": ["intensity", "duration_frames"],
+            "vintage_color": ["sepia_amount", "contrast_boost", "grain_intensity"],
+            "black_white": ["intensity"],
+            "film_grain": ["grain_intensity"],
         }
 
     def populate_from_animations(self, scene, animations: List[Dict[str, Any]]) -> None:
@@ -190,9 +192,9 @@ class AnimationUIManager:
                 anim_prop = scene.cinemon_animations.add()
 
                 # Set basic properties
-                anim_prop.animation_type = anim_data.get('type', 'scale')
-                anim_prop.trigger = anim_data.get('trigger', 'beat')
-                anim_prop.enabled = anim_data.get('enabled', True)
+                anim_prop.animation_type = anim_data.get("type", "scale")
+                anim_prop.trigger = anim_data.get("trigger", "beat")
+                anim_prop.enabled = anim_data.get("enabled", True)
 
                 # Set parameters based on animation type
                 self._set_animation_parameters(anim_prop, anim_data)
@@ -204,22 +206,22 @@ class AnimationUIManager:
     def _set_animation_parameters(self, anim_prop, anim_data: Dict[str, Any]) -> None:
         """Set animation-specific parameters on property group."""
         # Common parameters
-        if 'intensity' in anim_data:
-            anim_prop.intensity = anim_data['intensity']
-        if 'duration_frames' in anim_data:
-            anim_prop.duration_frames = anim_data['duration_frames']
+        if "intensity" in anim_data:
+            anim_prop.intensity = anim_data["intensity"]
+        if "duration_frames" in anim_data:
+            anim_prop.duration_frames = anim_data["duration_frames"]
 
         # Type-specific parameters
-        if 'degrees' in anim_data:
-            anim_prop.degrees = anim_data['degrees']
-        if 'return_frames' in anim_data:
-            anim_prop.return_frames = anim_data['return_frames']
-        if 'sepia_amount' in anim_data:
-            anim_prop.sepia_amount = anim_data['sepia_amount']
-        if 'contrast_boost' in anim_data:
-            anim_prop.contrast_boost = anim_data['contrast_boost']
-        if 'grain_intensity' in anim_data:
-            anim_prop.grain_intensity = anim_data['grain_intensity']
+        if "degrees" in anim_data:
+            anim_prop.degrees = anim_data["degrees"]
+        if "return_frames" in anim_data:
+            anim_prop.return_frames = anim_data["return_frames"]
+        if "sepia_amount" in anim_data:
+            anim_prop.sepia_amount = anim_data["sepia_amount"]
+        if "contrast_boost" in anim_data:
+            anim_prop.contrast_boost = anim_data["contrast_boost"]
+        if "grain_intensity" in anim_data:
+            anim_prop.grain_intensity = anim_data["grain_intensity"]
 
     def extract_animations_from_ui(self, scene) -> List[Dict[str, Any]]:
         """Extract animations from UI property groups."""
@@ -231,8 +233,8 @@ class AnimationUIManager:
                     continue  # Skip disabled animations
 
                 anim_dict = {
-                    'type': anim_prop.animation_type,
-                    'trigger': anim_prop.trigger
+                    "type": anim_prop.animation_type,
+                    "trigger": anim_prop.trigger,
                 }
 
                 # Add relevant parameters based on animation type
@@ -246,20 +248,22 @@ class AnimationUIManager:
 
         return animations
 
-    def _extract_animation_parameters(self, anim_dict: Dict[str, Any], anim_prop) -> None:
+    def _extract_animation_parameters(
+        self, anim_dict: Dict[str, Any], anim_prop
+    ) -> None:
         """Extract animation-specific parameters from property group."""
-        anim_type = anim_dict['type']
+        anim_type = anim_dict["type"]
 
         # Get relevant parameters for this animation type
         relevant_params = self.type_parameters.get(anim_type, [])
 
         # Always include intensity if it's used by this type
-        if 'intensity' in relevant_params:
-            anim_dict['intensity'] = anim_prop.intensity
+        if "intensity" in relevant_params:
+            anim_dict["intensity"] = anim_prop.intensity
 
         # Include other relevant parameters
         for param in relevant_params:
-            if param != 'intensity':  # Already handled above
+            if param != "intensity":  # Already handled above
                 if hasattr(anim_prop, param):
                     anim_dict[param] = getattr(anim_prop, param)
 
@@ -272,7 +276,9 @@ class AnimationUIManager:
             anim_prop.enabled = True
 
             # Set default parameters
-            defaults = self.context_manager.get_default_animation_parameters(animation_type)
+            defaults = self.context_manager.get_default_animation_parameters(
+                animation_type
+            )
             self._set_animation_parameters(anim_prop, defaults)
 
             return anim_prop
@@ -291,17 +297,17 @@ class AnimationUIManager:
     def validate_animation_params(self, params: Dict[str, Any]) -> bool:
         """Validate animation parameters."""
         # Check required fields
-        if 'type' not in params or 'trigger' not in params:
+        if "type" not in params or "trigger" not in params:
             return False
 
         # Check valid animation type
         valid_types = self.get_available_animation_types()
-        if params['type'] not in valid_types:
+        if params["type"] not in valid_types:
             return False
 
         # Check valid trigger
         valid_triggers = self.get_available_triggers()
-        if params['trigger'] not in valid_triggers:
+        if params["trigger"] not in valid_triggers:
             return False
 
         return True
@@ -335,9 +341,7 @@ class AnimationUIManager:
 
 
 # Registration
-classes = [
-    AnimationPropertyGroup
-]
+classes = [AnimationPropertyGroup]
 
 
 def register():

@@ -15,7 +15,11 @@ from setka_common.exceptions import (
 )
 from setka_common.file_structure.base import StructureManager
 from setka_common.file_structure.specialized.recording import RecordingStructureManager
-from setka_common.utils.files import find_files_by_type, find_media_files, sanitize_filename
+from setka_common.utils.files import (
+    find_files_by_type,
+    find_media_files,
+    sanitize_filename,
+)
 from setka_common.file_structure.types import MediaType
 
 
@@ -25,7 +29,7 @@ class TestExceptions:
     def test_exception_hierarchy(self):
         """Test hierarchii wyjątków."""
         from setka_common.exceptions import SetkaCommonError
-        
+
         # Test inheritance
         assert issubclass(InvalidPathError, SetkaCommonError)
         assert issubclass(DirectoryCreationError, SetkaCommonError)
@@ -37,10 +41,10 @@ class TestExceptions:
     def test_exception_messages(self):
         """Test wiadomości wyjątków."""
         message = "Test error message"
-        
+
         error = InvalidPathError(message)
         assert str(error) == message
-        
+
         error = DirectoryCreationError(message)
         assert str(error) == message
 
@@ -66,13 +70,13 @@ class TestBaseStructureManagerErrorHandling:
     def test_create_structure_permission_error(self, tmp_path, monkeypatch):
         """Test create_structure() z błędem uprawnień."""
         media_file = tmp_path / "test.mp4"
-        
+
         # Mock mkdir to raise PermissionError
         def mock_mkdir(*args, **kwargs):
             raise PermissionError("Permission denied")
-        
+
         monkeypatch.setattr(Path, "mkdir", mock_mkdir)
-        
+
         with pytest.raises(DirectoryCreationError, match="Failed to create structure"):
             StructureManager.create_structure(media_file)
 
@@ -89,7 +93,7 @@ class TestBaseStructureManagerErrorHandling:
     def test_ensure_directory_nonexistent_base(self, tmp_path):
         """Test ensure_directory() z nieistniejącą ścieżką bazową."""
         nonexistent = tmp_path / "nonexistent"
-        
+
         with pytest.raises(InvalidPathError, match="Base path does not exist"):
             StructureManager.ensure_directory(nonexistent, "test")
 
@@ -97,18 +101,19 @@ class TestBaseStructureManagerErrorHandling:
         """Test ensure_directory() z plikiem jako ścieżką bazową."""
         file_path = tmp_path / "test.txt"
         file_path.touch()
-        
+
         with pytest.raises(InvalidPathError, match="Base path is not a directory"):
             StructureManager.ensure_directory(file_path, "test")
 
     def test_ensure_directory_permission_error(self, tmp_path, monkeypatch):
         """Test ensure_directory() z błędem uprawnień."""
+
         # Mock mkdir to raise PermissionError
         def mock_mkdir(*args, **kwargs):
             raise PermissionError("Permission denied")
-        
+
         monkeypatch.setattr(Path, "mkdir", mock_mkdir)
-        
+
         with pytest.raises(DirectoryCreationError, match="Failed to create directory"):
             StructureManager.ensure_directory(tmp_path, "test")
 
@@ -129,14 +134,16 @@ class TestRecordingStructureManagerErrorHandling:
     def test_create_structure_permission_error(self, tmp_path, monkeypatch):
         """Test create_structure() z błędem uprawnień."""
         video_file = tmp_path / "test.mkv"
-        
+
         # Mock mkdir to raise PermissionError
         def mock_mkdir(*args, **kwargs):
             raise PermissionError("Permission denied")
-        
+
         monkeypatch.setattr(Path, "mkdir", mock_mkdir)
-        
-        with pytest.raises(DirectoryCreationError, match="Failed to create recording structure"):
+
+        with pytest.raises(
+            DirectoryCreationError, match="Failed to create recording structure"
+        ):
             RecordingStructureManager.create_structure(video_file)
 
     def test_find_recording_structure_empty_path(self):
@@ -151,49 +158,61 @@ class TestRecordingStructureManagerErrorHandling:
 
     def test_ensure_blender_dir_empty_path(self):
         """Test ensure_blender_dir() z pustą ścieżką."""
-        with pytest.raises(InvalidPathError, match="Recording directory cannot be empty"):
+        with pytest.raises(
+            InvalidPathError, match="Recording directory cannot be empty"
+        ):
             RecordingStructureManager.ensure_blender_dir("")
 
     def test_ensure_blender_dir_nonexistent(self, tmp_path):
         """Test ensure_blender_dir() z nieistniejącą ścieżką."""
         nonexistent = tmp_path / "nonexistent"
-        
-        with pytest.raises(InvalidPathError, match="Recording directory does not exist"):
+
+        with pytest.raises(
+            InvalidPathError, match="Recording directory does not exist"
+        ):
             RecordingStructureManager.ensure_blender_dir(nonexistent)
 
     def test_ensure_blender_dir_file_path(self, tmp_path):
         """Test ensure_blender_dir() z plikiem jako ścieżką."""
         file_path = tmp_path / "test.txt"
         file_path.touch()
-        
+
         with pytest.raises(InvalidPathError, match="Recording path is not a directory"):
             RecordingStructureManager.ensure_blender_dir(file_path)
 
     def test_ensure_blender_dir_permission_error(self, tmp_path, monkeypatch):
         """Test ensure_blender_dir() z błędem uprawnień."""
+
         # Mock mkdir to raise PermissionError
         def mock_mkdir(*args, **kwargs):
             raise PermissionError("Permission denied")
-        
+
         monkeypatch.setattr(Path, "mkdir", mock_mkdir)
-        
-        with pytest.raises(DirectoryCreationError, match="Failed to create blender directory"):
+
+        with pytest.raises(
+            DirectoryCreationError, match="Failed to create blender directory"
+        ):
             RecordingStructureManager.ensure_blender_dir(tmp_path)
 
     def test_ensure_analysis_dir_empty_path(self):
         """Test ensure_analysis_dir() z pustą ścieżką."""
-        with pytest.raises(InvalidPathError, match="Recording directory cannot be empty"):
+        with pytest.raises(
+            InvalidPathError, match="Recording directory cannot be empty"
+        ):
             RecordingStructureManager.ensure_analysis_dir("")
 
     def test_ensure_analysis_dir_permission_error(self, tmp_path, monkeypatch):
         """Test ensure_analysis_dir() z błędem uprawnień."""
+
         # Mock mkdir to raise PermissionError
         def mock_mkdir(*args, **kwargs):
             raise PermissionError("Permission denied")
-        
+
         monkeypatch.setattr(Path, "mkdir", mock_mkdir)
-        
-        with pytest.raises(DirectoryCreationError, match="Failed to create analysis directory"):
+
+        with pytest.raises(
+            DirectoryCreationError, match="Failed to create analysis directory"
+        ):
             RecordingStructureManager.ensure_analysis_dir(tmp_path)
 
     def test_get_analysis_file_path_empty_path(self):
@@ -233,12 +252,13 @@ class TestFileUtilsErrorHandling:
 
     def test_find_files_by_type_permission_error(self, tmp_path, monkeypatch):
         """Test find_files_by_type() z błędem uprawnień."""
+
         # Mock iterdir to raise PermissionError
         def mock_iterdir(*args, **kwargs):
             raise PermissionError("Permission denied")
-        
+
         monkeypatch.setattr(Path, "iterdir", mock_iterdir)
-        
+
         # Should return empty list instead of raising exception
         result = find_files_by_type(tmp_path, MediaType.VIDEO)
         assert result == []

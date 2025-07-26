@@ -1,10 +1,10 @@
 # Cinemon --open-blender Layout Application Issue
 
-**Date:** 2025-07-20  
-**Reporter:** Claude Code + Wojtas  
-**Priority:** MEDIUM  
-**Component:** Cinemon CLI --open-blender flag  
-**Status:** OPEN  
+**Date:** 2025-07-20
+**Reporter:** Claude Code + Wojtas
+**Priority:** MEDIUM
+**Component:** Cinemon CLI --open-blender flag
+**Status:** OPEN
 **Affects:** Multi-PiP and potentially other layout presets
 
 ## Problem Summary
@@ -20,7 +20,7 @@ cinemon-blend-setup /path/to/recording --preset multi-pip --open-blender
 
 Should create a blend file with:
 - **Video_1, Video_2**: Position (0,0), Scale (1.0) - fullscreen main cameras
-- **Video_3**: Position (644, 362), Scale (0.25) - top-right PiP  
+- **Video_3**: Position (644, 362), Scale (0.25) - top-right PiP
 - **Video_4**: Position (-644, 362), Scale (0.25) - top-left PiP
 - **Video_5**: Position (644, -362), Scale (0.25) - bottom-right PiP
 
@@ -29,8 +29,8 @@ And then open in Blender GUI for further editing.
 ## Actual Behavior
 
 All video strips remain at:
-- **Position**: (0, 0)  
-- **Scale**: (1.0, 1.0)  
+- **Position**: (0, 0)
+- **Scale**: (1.0, 1.0)
 - All strips appear overlapping in center of canvas
 
 ## Reproduction Steps
@@ -63,8 +63,8 @@ All video strips remain at:
        print(f'{strip.name}: pos=({strip.transform.offset_x}, {strip.transform.offset_y}), scale={strip.transform.scale_x}')
    "
    ```
-   
-   **Expected**: Different positions for different strips  
+
+   **Expected**: Different positions for different strips
    **Actual**: All strips at (0.0, 0.0), scale=1.0
 
 ## Working Workaround
@@ -89,7 +89,7 @@ Use the VSE script directly instead of `--open-blender` flag:
    ```bash
    # Layout is correctly applied:
    # Video_1: pos=(0.0, 0.0), scale=1.0      -> Main camera
-   # Video_2: pos=(0.0, 0.0), scale=1.0      -> Main camera  
+   # Video_2: pos=(0.0, 0.0), scale=1.0      -> Main camera
    # Video_3: pos=(644.0, 362.0), scale=0.25 -> Top-right PiP
    # Video_4: pos=(-644.0, 362.0), scale=0.25 -> Top-left PiP
    # Video_5: pos=(644.0, -362.0), scale=0.25 -> Bottom-right PiP
@@ -104,7 +104,7 @@ Use the VSE script directly instead of `--open-blender` flag:
 YAML Config → VSE Script → AnimationCompositor → Layout Application → Single Save
 ```
 
-#### Broken Path (--open-blender Flag)  
+#### Broken Path (--open-blender Flag)
 ```
 Preset → YAML Generation → Project Manager → VSE Script → ??? → GUI Launch
 ```
@@ -170,7 +170,7 @@ Animation mode: compositional with 0 animations
 ## Test Cases for Fix
 
 1. **Basic multi-pip**: `--preset multi-pip --open-blender` should apply correct layout
-2. **Other presets**: Test vintage, music-video presets with `--open-blender` 
+2. **Other presets**: Test vintage, music-video presets with `--open-blender`
 3. **Custom config**: Test `--config custom.yaml --open-blender` with layout specified
 4. **Verification**: All test cases should have strip positions verifiable in GUI
 5. **Backwards compatibility**: Existing workflows without `--open-blender` should continue working

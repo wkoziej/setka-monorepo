@@ -17,6 +17,11 @@ description = "Setka media processing and automation workspace"
 readme = "README.md"
 requires-python = ">=3.10"
 
+[dependency-groups]
+dev = [
+    "ruff>=0.12.5",
+]
+
 [tool.uv.sources]
 setka-common = { workspace = true }
 obsession = { workspace = true }

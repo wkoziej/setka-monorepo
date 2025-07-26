@@ -12,5 +12,5 @@ __all__ = [
     "ValidationResult",
     "PresetManager",
     "PresetConfig",
-    "CinemonConfigGenerator"
+    "CinemonConfigGenerator",
 ]

@@ -14,7 +14,7 @@ def create_parser() -> argparse.ArgumentParser:
     """Create argument parser for cinemon-generate-config CLI."""
     parser = argparse.ArgumentParser(
         prog="cinemon-generate-config",
-        description="Generate YAML configuration for cinemon"
+        description="Generate YAML configuration for cinemon",
     )
 
     # Add mutually exclusive group for main commands
@@ -22,36 +22,25 @@ def create_parser() -> argparse.ArgumentParser:
 
     # Preset generation command
     group.add_argument(
-        "recording_dir",
-        nargs="?",
-        type=Path,
-        help="Path to recording directory"
+        "recording_dir", nargs="?", type=Path, help="Path to recording directory"
     )
 
     # List presets command
     group.add_argument(
-        "--list-presets",
-        action="store_true",
-        help="List all available presets"
+        "--list-presets", action="store_true", help="List all available presets"
     )
 
     # Preset generation parameters
     parser.add_argument(
-        "--preset",
-        type=str,
-        help="Preset name to use for configuration generation"
+        "--preset", type=str, help="Preset name to use for configuration generation"
     )
 
-    parser.add_argument(
-        "--seed",
-        type=int,
-        help="Override layout seed value"
-    )
+    parser.add_argument("--seed", type=int, help="Override layout seed value")
 
     parser.add_argument(
         "--main-audio",
         type=str,
-        help="Specify main audio file (required if multiple audio files exist)"
+        help="Specify main audio file (required if multiple audio files exist)",
     )
 
     return parser
@@ -83,11 +72,7 @@ def generate_config_command(args) -> int:
 
         # Generate configuration
         generator = CinemonConfigGenerator()
-        config_path = generator.generate_preset(
-            recording_dir,
-            args.preset,
-            **overrides
-        )
+        config_path = generator.generate_preset(recording_dir, args.preset, **overrides)
 
         print(f"✅ Configuration generated: {config_path}")
         print(f"   Preset: {args.preset}")

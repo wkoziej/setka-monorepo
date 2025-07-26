@@ -23,12 +23,12 @@ impl Default for RenderOptions {
 #[tauri::command]
 pub async fn run_next_step(recording_name: String, config: State<'_, AppConfig>) -> Result<String, String> {
     log::info!("🚀 [run_next_step] Called for recording: {}", recording_name);
-    
+
     // Get the recording details first
     log::info!("📁 [run_next_step] Scanning recordings from: {}", config.recordings_path.display());
     let recordings = FileScanner::scan_recordings(&config.recordings_path);
     log::info!("🔍 [run_next_step] Found {} recordings total", recordings.len());
-    
+
     let recording = recordings
         .into_iter()
         .find(|r| r.name == recording_name)
@@ -36,7 +36,7 @@ pub async fn run_next_step(recording_name: String, config: State<'_, AppConfig>)
             log::error!("❌ [run_next_step] Recording '{}' not found", recording_name);
             format!("Recording '{}' not found", recording_name)
         })?;
-    
+
     log::info!("✅ [run_next_step] Found recording: {}, status: {:?}", recording.name, recording.status);
 
     // Determine next step
@@ -48,7 +48,7 @@ pub async fn run_next_step(recording_name: String, config: State<'_, AppConfig>)
 
     // Execute the step
     let result = execute_step(&recording, &next_step, &config).await?;
-    
+
     if result.success {
         Ok(format!("Successfully completed {} for {}", next_step.to_string().to_lowercase(), recording_name))
     } else {
@@ -59,12 +59,12 @@ pub async fn run_next_step(recording_name: String, config: State<'_, AppConfig>)
 /// Run a specific step for a recording
 #[tauri::command]
 pub async fn run_specific_step(
-    recording_name: String, 
-    step: String, 
+    recording_name: String,
+    step: String,
     config: State<'_, AppConfig>
 ) -> Result<String, String> {
     log::info!("🚀 [run_specific_step] Called for recording: {}, step: {}", recording_name, step);
-    
+
     // Get the recording details first
     let recordings = FileScanner::scan_recordings(&config.recordings_path);
     let recording = recordings
@@ -74,7 +74,7 @@ pub async fn run_specific_step(
 
     // Validate that the step can be run
     if !recording.can_run_step(&step) {
-        return Err(format!("Step '{}' cannot be run for recording '{}' in current status: {:?}", 
+        return Err(format!("Step '{}' cannot be run for recording '{}' in current status: {:?}",
                           step, recording_name, recording.status));
     }
 
@@ -111,7 +111,7 @@ pub async fn run_specific_step(
 
     // Execute the step
     let result = execute_step(&recording, &next_step, &config).await?;
-    
+
     if result.success {
         Ok(format!("Successfully completed {} for {}", step, recording_name))
     } else {
@@ -121,8 +121,8 @@ pub async fn run_specific_step(
 
 /// Execute a specific pipeline step
 async fn execute_step(
-    recording: &Recording, 
-    step: &NextStep, 
+    recording: &Recording,
+    step: &NextStep,
     config: &AppConfig
 ) -> Result<ProcessResult, String> {
     let runner = ProcessRunner::new(
@@ -294,13 +294,13 @@ async fn execute_step(
 
 #[tauri::command]
 pub async fn run_specific_step_with_options(
-    recording_name: String, 
-    step: String, 
+    recording_name: String,
+    step: String,
     options: Option<RenderOptions>,
     config: State<'_, AppConfig>
 ) -> Result<String, String> {
     log::info!("🚀 [run_specific_step_with_options] Called for recording: {}, step: {}, options: {:?}", recording_name, step, options);
-    
+
     // Get the recording details first
     let recordings = FileScanner::scan_recordings(&config.recordings_path);
     let recording = recordings
@@ -312,7 +312,7 @@ pub async fn run_specific_step_with_options(
         "setuprender" => {
             let opts = options.unwrap_or_default();
             let result = execute_step_with_preset(&recording, &NextStep::SetupRender, &config, &opts.preset, opts.main_audio.as_deref()).await?;
-            
+
             if result.success {
                 Ok(format!("✅ Render setup completed with preset: {}", opts.preset))
             } else {
@@ -333,7 +333,7 @@ pub async fn list_animation_presets(config: State<'_, AppConfig>) -> Result<Vec<
         config.cli_paths.uv_path.clone()
     );
     let result = runner.list_cinemon_presets().await.map_err(|e| e.to_string())?;
-    
+
     if result.success {
         // Parse preset names from output
         let presets: Vec<String> = result.stdout
@@ -354,8 +354,8 @@ pub async fn list_animation_presets(config: State<'_, AppConfig>) -> Result<Vec<
 
 /// Execute a specific pipeline step with preset options
 async fn execute_step_with_preset(
-    recording: &Recording, 
-    step: &NextStep, 
+    recording: &Recording,
+    step: &NextStep,
     config: &AppConfig,
     preset: &str,
     main_audio: Option<&str>
@@ -443,10 +443,10 @@ mod tests {
     async fn test_run_next_step_for_extracted_recording() {
         let temp_dir = TempDir::new().unwrap();
         let config = create_test_config(&temp_dir);
-        
+
         // Create extracted recording
         create_test_recording(&temp_dir, "test_recording", RecordingStatus::Extracted);
-        
+
         // This will use echo instead of real uv, so it should succeed
         let result = execute_step(
             &Recording {
@@ -469,13 +469,13 @@ mod tests {
     async fn test_run_specific_step_validation() {
         let temp_dir = TempDir::new().unwrap();
         let _config = create_test_config(&temp_dir);
-        
+
         let recording = create_test_recording(&temp_dir, "test_recording", RecordingStatus::Recorded);
-        
+
         // Should not be able to run render on recorded status
         assert!(!recording.can_run_step("render"));
-        
-        // Should be able to run analyze on extracted status  
+
+        // Should be able to run analyze on extracted status
         let extracted_recording = create_test_recording(&temp_dir, "test_recording2", RecordingStatus::Extracted);
         assert!(extracted_recording.can_run_step("analyze"));
     }
@@ -484,12 +484,12 @@ mod tests {
     async fn test_missing_dependencies() {
         let temp_dir = TempDir::new().unwrap();
         let config = create_test_config(&temp_dir);
-        
+
         // Try to analyze without extracted directory
         let recording = create_test_recording(&temp_dir, "test_recording", RecordingStatus::Recorded);
-        
+
         let result = execute_step(&recording, &NextStep::Analyze, &config).await;
         assert!(result.is_err());
         assert!(result.unwrap_err().contains("Extracted directory not found"));
     }
-} 
+}

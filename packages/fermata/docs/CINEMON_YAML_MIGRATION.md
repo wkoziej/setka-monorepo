@@ -38,7 +38,7 @@ graph LR
     A[User wybiera preset] --> B[Generate Config]
     B --> C[Setup Render]
     C --> D[Manual Render]
-    
+
     B --> E[animation_config_preset.yaml]
     E --> C
 ```
@@ -67,16 +67,16 @@ impl ProcessRunner {
         // Step 1: Generate YAML configuration
         log::info!("🎬 Generating cinemon config: preset={}, main_audio={:?}", preset, main_audio);
         let config_result = self.run_cinemon_generate_config(recording_path, preset, main_audio).await?;
-        
+
         if !config_result.success {
             log::error!("❌ Config generation failed: {}", config_result.stderr);
             return Ok(config_result);
         }
-        
+
         // Step 2: Setup Blender project with generated config
         let config_filename = format!("animation_config_{}.yaml", preset);
         let config_path = recording_path.join(&config_filename);
-        
+
         if !config_path.exists() {
             return Ok(ProcessResult {
                 success: false,
@@ -85,38 +85,38 @@ impl ProcessRunner {
                 exit_code: Some(1),
             });
         }
-        
+
         log::info!("🎬 Setting up Blender project with config: {}", config_path.display());
         let mut cmd = AsyncCommand::new(&self.uv_path);
         cmd.args(&["run", "--package", "cinemon", "cinemon-blend-setup"])
             .arg(recording_path)
             .args(&["--config", &config_path.to_string_lossy()])
             .current_dir(&self.workspace_root);
-        
+
         self.execute_command(cmd).await
     }
-    
+
     /// Generate cinemon YAML configuration
     pub async fn run_cinemon_generate_config(&self, recording_path: &Path, preset: &str, main_audio: Option<&str>) -> anyhow::Result<ProcessResult> {
         let mut cmd = AsyncCommand::new(&self.uv_path);
         cmd.args(&["run", "--package", "cinemon", "cinemon-generate-config"])
             .arg(recording_path)
             .args(&["--preset", preset]);
-        
+
         if let Some(audio_file) = main_audio {
             cmd.args(&["--main-audio", audio_file]);
         }
-        
+
         cmd.current_dir(&self.workspace_root);
         self.execute_command(cmd).await
     }
-    
+
     /// List available cinemon presets
     pub async fn list_cinemon_presets(&self) -> anyhow::Result<ProcessResult> {
         let mut cmd = AsyncCommand::new(&self.uv_path);
         cmd.args(&["run", "--package", "cinemon", "cinemon-generate-config", "--list-presets"])
             .current_dir(&self.workspace_root);
-        
+
         self.execute_command(cmd).await
     }
 }
@@ -151,22 +151,22 @@ impl Default for RenderOptions {
 
 #[tauri::command]
 pub async fn run_specific_step_with_options(
-    recording_name: String, 
-    step: String, 
+    recording_name: String,
+    step: String,
     options: Option<RenderOptions>
 ) -> Result<String, String> {
     let runner = get_process_runner().await?;
     let recording_path = get_recording_path(&recording_name).await?;
-    
+
     match step.as_str() {
         "setuprender" => {
             let opts = options.unwrap_or_default();
             let result = runner.run_cinemon_render(
-                &recording_path, 
-                &opts.preset, 
+                &recording_path,
+                &opts.preset,
                 opts.main_audio.as_deref()
             ).await.map_err(|e| e.to_string())?;
-            
+
             if result.success {
                 Ok(format!("✅ Render setup completed with preset: {}", opts.preset))
             } else {
@@ -184,7 +184,7 @@ pub async fn run_specific_step_with_options(
 pub async fn list_animation_presets() -> Result<Vec<String>, String> {
     let runner = get_process_runner().await?;
     let result = runner.list_cinemon_presets().await.map_err(|e| e.to_string())?;
-    
+
     if result.success {
         // Parse preset names from output
         let presets: Vec<String> = result.stdout
@@ -264,20 +264,20 @@ interface PresetSelectorProps {
   className?: string;
 }
 
-export function PresetSelector({ 
-  selectedPreset, 
-  onPresetChange, 
-  disabled, 
-  className 
+export function PresetSelector({
+  selectedPreset,
+  onPresetChange,
+  disabled,
+  className
 }: PresetSelectorProps) {
   return (
     <div className={`space-y-2 ${className}`}>
       <label className="text-sm font-medium text-gray-700">
         Animation Preset
       </label>
-      <Select 
-        value={selectedPreset} 
-        onValueChange={onPresetChange} 
+      <Select
+        value={selectedPreset}
+        onValueChange={onPresetChange}
         disabled={disabled}
       >
         <SelectTrigger className="w-full">
@@ -326,20 +326,20 @@ export function RecordingDetails({ recordingName, onBack, onRecordingRenamed }: 
       setShowPresetConfig(true);
       return;
     }
-    
+
     if (action === 'Setup Render') {
       const options: RenderOptions = {
         preset: selectedPreset,
         main_audio: recording?.main_audio || undefined
       };
-      
+
       try {
         await invoke('run_specific_step_with_options', {
           recordingName,
           step: 'setuprender',
           options
         });
-        
+
         // Refresh recording details
         setTimeout(() => {
           loadRecordingDetails();
@@ -350,14 +350,14 @@ export function RecordingDetails({ recordingName, onBack, onRecordingRenamed }: 
       }
       return;
     }
-    
+
     // Existing logic for other actions
     if (action === 'Next Step') {
       await runNextStep(recordingName);
     } else {
       await runSpecificStep(recordingName, action.toLowerCase());
     }
-    
+
     setTimeout(() => {
       loadRecordingDetails();
     }, 2000);
@@ -368,20 +368,20 @@ export function RecordingDetails({ recordingName, onBack, onRecordingRenamed }: 
   return (
     <div className="p-6">
       {/* ... existing content */}
-      
+
       {/* Preset Configuration Dialog */}
       {showPresetConfig && recording?.status === 'Analyzed' && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
             <h3 className="text-lg font-semibold mb-4">Configure Animation</h3>
-            
+
             <PresetSelector
               selectedPreset={selectedPreset}
               onPresetChange={setSelectedPreset}
               disabled={running}
               className="mb-6"
             />
-            
+
             {recording.main_audio && (
               <div className="mb-4 p-3 bg-gray-50 rounded">
                 <p className="text-sm text-gray-600">
@@ -389,7 +389,7 @@ export function RecordingDetails({ recordingName, onBack, onRecordingRenamed }: 
                 </p>
               </div>
             )}
-            
+
             <div className="flex gap-3">
               <button
                 onClick={() => setShowPresetConfig(false)}
@@ -421,7 +421,7 @@ export function RecordingDetails({ recordingName, onBack, onRecordingRenamed }: 
             {running ? 'Running...' : `Next Step: ${recording.next_step}`}
           </button>
         )}
-        
+
         {/* Individual step buttons - existing logic */}
       </div>
     </div>
@@ -455,7 +455,7 @@ export function useRecordingOperations() {
         step: 'setuprender',
         options
       });
-      
+
       setOutput(result as string);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
@@ -487,7 +487,7 @@ export function useRecordingOperations() {
 2. **Dzień 3:** TypeScript types i basic API integration
 3. **Dzień 4-5:** Testing i debugging podstawowej funkcjonalności
 
-### Etap 2 - GUI Enhancement (Tydzień 2)  
+### Etap 2 - GUI Enhancement (Tydzień 2)
 1. **Dzień 1-2:** `PresetSelector` component
 2. **Dzień 3-4:** `RecordingDetails` integration
 3. **Dzień 5:** UI/UX polish i testing
@@ -500,7 +500,7 @@ export function useRecordingOperations() {
 
 ### Success Criteria
 1. ✅ Fermata może wykonać pełny workflow z każdym presetem
-2. ✅ GUI umożliwia łatwy wybór presetów animacji  
+2. ✅ GUI umożliwia łatwy wybór presetów animacji
 3. ✅ Error handling jest comprehensivny i user-friendly
 4. ✅ Performance nie uległ pogorszeniu
 5. ✅ Backwards compatibility zachowana (domyślnie beat-switch)
@@ -510,7 +510,7 @@ export function useRecordingOperations() {
 ## Risk Mitigation
 
 
-### Risk 1: Complex GUI  
+### Risk 1: Complex GUI
 **Mitigation:** Implementować progressive disclosure - zaawansowane opcje ukryte początkowo
 
 ### Risk 2: Error Handling

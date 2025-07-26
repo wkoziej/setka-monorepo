@@ -24,5 +24,5 @@ __all__ = [
     "BlackWhiteAnimation",
     "FilmGrainAnimation",
     "VintageColorGradeAnimation",
-    "VisibilityAnimation"
+    "VisibilityAnimation",
 ]

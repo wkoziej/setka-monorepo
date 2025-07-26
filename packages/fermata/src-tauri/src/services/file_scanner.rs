@@ -18,7 +18,7 @@ impl FileScanner {
             Ok(entries) => {
                 for entry in entries.flatten() {
                     let path = entry.path();
-                    
+
                     if path.is_dir() && Self::is_valid_recording_dir(&path) {
                         match Recording::from_path(path) {
                             Ok(mut recording) => {
@@ -88,7 +88,7 @@ impl FileScanner {
             .filter(|recording| {
                 matches!(
                     recording.status,
-                    crate::models::RecordingStatus::Failed(_) | 
+                    crate::models::RecordingStatus::Failed(_) |
                     crate::models::RecordingStatus::Recorded |
                     crate::models::RecordingStatus::Extracted |
                     crate::models::RecordingStatus::Analyzed |
@@ -119,15 +119,15 @@ mod tests {
         ] {
             let recording_path = root_path.join(name);
             fs::create_dir_all(&recording_path).unwrap();
-            
+
             // Create main video file (test with .mp4 like real OBS recordings)
             fs::write(recording_path.join(format!("{}.mp4", name)), b"dummy content").unwrap();
-            
+
             if has_extracted {
                 fs::create_dir_all(recording_path.join("extracted")).unwrap();
                 fs::write(recording_path.join("extracted/audio.m4a"), b"audio").unwrap();
             }
-            
+
             if has_analysis {
                 fs::create_dir_all(recording_path.join("analysis")).unwrap();
                 fs::write(recording_path.join("analysis/audio_analysis.json"), b"{}").unwrap();
@@ -238,10 +238,10 @@ mod tests {
         // Since we created them in sequence, the order might vary based on filesystem timing
         // Just check that we have the expected count and they have last_updated times
         assert_eq!(recordings.len(), 3);
-        
+
         for recording in &recordings {
             // last_updated is Unix timestamp in seconds, should be reasonable
             assert!(recording.last_updated > 1000000000); // After year 2001
         }
     }
-} 
+}

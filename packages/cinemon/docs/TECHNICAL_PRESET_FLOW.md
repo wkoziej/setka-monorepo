@@ -143,18 +143,18 @@ strip_context.py
 def load_preset(self, context, preset_name):
     # Znajdź recording directory
     recording_dir = self.get_recording_directory(context)
-    
+
     # Użyj CinemonConfigGenerator jak cinemon-blend-setup
     from blender.config import CinemonConfigGenerator
     generator = CinemonConfigGenerator()
-    
+
     # Generuj config z prawidłowymi ścieżkami
     config_path = generator.generate_preset(recording_dir, preset_name)
-    
+
     # Załaduj wygenerowany config
     with open(config_path, 'r') as f:
         config_data = yaml.safe_load(f)
-    
+
     # Teraz config_data ma prawidłowe ścieżki!
     self.store_config_in_scene(context, config_data, config_path, preset_name)
 ```
@@ -164,7 +164,7 @@ def load_preset(self, context, preset_name):
 ```python
 def auto_load_handler(dummy):
     metadata = load_metadata()
-    
+
     # Użyj config path zamiast preset name
     config_path = metadata.get('config', {}).get('path')
     if config_path and Path(config_path).exists():
@@ -182,15 +182,15 @@ def auto_load_handler(dummy):
 # example_presets/minimal.yaml
 audio_analysis:
   file: "${AUDIO_ANALYSIS_PATH}"  # Placeholder
-  
+
 # Addon podmienia podczas ładowania
 def load_preset(preset_path, recording_dir):
     config = load_yaml(preset_path)
-    
+
     # Podmień placeholdery
     main_audio = discover_main_audio(recording_dir)
     analysis_path = f"analysis/{main_audio.stem}_analysis.json"
-    
+
     config['audio_analysis']['file'] = analysis_path
     return config
 ```
@@ -200,7 +200,7 @@ def load_preset(preset_path, recording_dir):
 **Użyj Rozwiązania 1** - niech addon używa `CinemonConfigGenerator`:
 
 1. **DRY** - jedna logika generowania config
-2. **Spójność** - addon i CLI działają identycznie  
+2. **Spójność** - addon i CLI działają identycznie
 3. **Poprawność** - automatyczne wykrywanie ścieżek
 4. **Prostota** - nie trzeba duplikować logiki discovery
 
@@ -220,13 +220,13 @@ def setup_cinemon_paths():
     """Setup paths for importing cinemon modules."""
     addon_path = Path(__file__).parent
     cinemon_src_path = addon_path.parent / "src"
-    
+
     # Add paths if not already present
     paths_to_add = [
         str(cinemon_src_path),
         str(addon_path.parent.parent.parent / "common" / "src")  # For setka_common
     ]
-    
+
     for path in paths_to_add:
         if path not in sys.path:
             sys.path.insert(0, path)
@@ -236,12 +236,12 @@ def get_recording_directory(context) -> Optional[Path]:
     blend_path = bpy.data.filepath
     if not blend_path:
         return None
-        
+
     # Assume structure: recording_dir/blender/project.blend
     blend_path = Path(blend_path)
     if blend_path.parent.name == "blender":
         return blend_path.parent.parent
-    
+
     return None
 ```
 
@@ -256,10 +256,10 @@ def execute(self, context):
     if not selected_preset or selected_preset == 'NONE':
         self.report({'WARNING'}, "No preset selected")
         return {'CANCELLED'}
-    
+
     # Remove .yaml extension if present
     preset_name = selected_preset.replace('.yaml', '')
-    
+
     print(f"DEBUG: Loading selected preset: {preset_name}")
     try:
         # Get recording directory
@@ -267,14 +267,14 @@ def execute(self, context):
         if not recording_dir:
             self.report({'ERROR'}, "Cannot determine recording directory from Blender file")
             return {'CANCELLED'}
-        
+
         # Setup paths for import
         setup_cinemon_paths()
-        
+
         # Import and use CinemonConfigGenerator
         from blender.config import CinemonConfigGenerator
         generator = CinemonConfigGenerator()
-        
+
         # Generate config with proper paths (like cinemon-blend-setup does)
         try:
             config_path = generator.generate_preset(recording_dir, preset_name)
@@ -286,19 +286,19 @@ def execute(self, context):
                 self.report({'ERROR'}, f"Failed to generate config: {e}")
                 return {'CANCELLED'}
             print(f"DEBUG: Using existing config: {config_path}")
-        
+
         # Load generated config
         config_data = self.load_preset_yaml(config_path)
         if not config_data:
             return {'CANCELLED'}
-        
+
         # Store configuration in scene
         self.store_config_in_scene(context, config_data, config_path, preset_name)
-        
+
         preset_display = preset_name.replace('-', ' ').replace('_', ' ').title()
         self.report({'INFO'}, f"Loaded {preset_display} preset")
         return {'FINISHED'}
-        
+
     except Exception as e:
         print(f"DEBUG: Preset loading exception: {e}")
         import traceback
@@ -319,82 +319,82 @@ def auto_load_handler(dummy):
         blend_path = bpy.data.filepath
         if not blend_path:
             return
-        
+
         # Look for metadata file
         metadata_file = Path(blend_path).with_suffix('.cinemon.json')
         if not metadata_file.exists():
             return
-        
+
         print(f"🔍 Found Cinemon metadata: {metadata_file}")
-        
+
         # Load metadata
         with open(metadata_file, 'r', encoding='utf-8') as f:
             metadata = json.load(f)
-        
+
         if not metadata.get('auto_load', False):
             print("ℹ Auto-loading disabled in metadata")
             return
-        
+
         # PRIORITY 1: Use config path from metadata (if exists)
         config_path = metadata.get('config', {}).get('path')
         if config_path and Path(config_path).exists():
             print(f"🎯 Auto-loading from config path: {config_path}")
-            
+
             # Load config directly
             config_data = None
             with open(config_path, 'r', encoding='utf-8') as f:
                 vendor_path = Path(__file__).parent / "vendor"
                 if str(vendor_path) not in sys.path:
                     sys.path.insert(0, str(vendor_path))
-                
+
                 import yaml
                 config_data = yaml.safe_load(f)
-            
+
             if config_data:
                 # Store in scene
                 bpy.context.scene.cinemon_config_path = str(config_path)
                 bpy.context.scene.cinemon_current_preset = metadata.get('preset_name', 'custom')
-                
+
                 # Use load operator's methods
                 operator = CINEMON_OT_load_selected_preset()
                 config_data = operator.map_video_names_to_strips(bpy.context, config_data)
                 operator.store_config_in_scene(bpy.context, config_data, Path(config_path), metadata.get('preset_name', 'custom'))
-                
+
                 print(f"✅ Auto-loaded config from: {config_path}")
                 return
-        
+
         # PRIORITY 2: Generate from preset name (fallback)
         preset_name = metadata.get('preset_name')
         if preset_name:
             print(f"🎯 Auto-loading preset (generating config): {preset_name}")
-            
+
             # Get recording directory
             recording_dir = get_recording_directory(bpy.context)
             if recording_dir:
                 # Setup paths and generate config
                 setup_cinemon_paths()
-                
+
                 try:
                     from blender.config import CinemonConfigGenerator
                     generator = CinemonConfigGenerator()
-                    
+
                     # Generate config
                     config_path = generator.generate_preset(recording_dir, preset_name)
-                    
+
                     # Load generated config
                     with open(config_path, 'r', encoding='utf-8') as f:
                         import yaml
                         config_data = yaml.safe_load(f)
-                    
+
                     # Store in scene
                     operator = CINEMON_OT_load_selected_preset()
                     config_data = operator.map_video_names_to_strips(bpy.context, config_data)
                     operator.store_config_in_scene(bpy.context, config_data, config_path, preset_name)
-                    
+
                     print(f"✅ Auto-loaded preset: {preset_name}")
                 except Exception as e:
                     print(f"⚠ Failed to generate/load preset: {e}")
-            
+
     except Exception as e:
         print(f"⚠ Auto-load handler error: {e}")
         import traceback

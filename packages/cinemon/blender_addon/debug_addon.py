@@ -32,6 +32,7 @@ def test_addon_import():
         print(f"✗ setka_common import failed: {e}")
         traceback.print_exc()
 
+
 def test_preset_loading():
     """Test loading preset files."""
     print("\n=== Testing preset loading ===")
@@ -57,7 +58,8 @@ def test_preset_loading():
                 sys.path.insert(0, str(addon_dir))
 
             import yaml
-            with open(preset_path, 'r', encoding='utf-8') as f:
+
+            with open(preset_path, "r", encoding="utf-8") as f:
                 config_data = yaml.safe_load(f)
 
             print("✓ Preset loaded successfully")
@@ -73,6 +75,7 @@ def test_preset_loading():
         print(f"✗ Preset test setup failed: {e}")
         traceback.print_exc()
 
+
 def test_ui_errors():
     """Test UI panel drawing."""
     print("\n=== Testing UI panel ===")
@@ -86,14 +89,15 @@ def test_ui_errors():
 
         # Test setting cinemon properties
         scene.cinemon_config_path = "test.yaml"
-        scene['cinemon_fps'] = 30
-        scene['cinemon_layout_type'] = "random"
+        scene["cinemon_fps"] = 30
+        scene["cinemon_layout_type"] = "random"
 
         print("✓ Scene properties set successfully")
 
     except Exception as e:
         print(f"✗ UI test failed: {e}")
         traceback.print_exc()
+
 
 if __name__ == "__main__":
     print("Starting Cinemon addon debug...")

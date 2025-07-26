@@ -23,7 +23,7 @@ class TestActiveStripDetection:
         # Setup mock VSE sequence with selected strip
         mock_strip = Mock()
         mock_strip.name = "Camera1"
-        mock_strip.type = 'MOVIE'
+        mock_strip.type = "MOVIE"
         mock_bpy.context.scene.sequence_editor.active_strip = mock_strip
 
         manager = StripContextManager()
@@ -61,14 +61,18 @@ class TestActiveStripDetection:
 
         # Mock config with strip animations
         test_config = {
-            'strip_animations': {
-                'Camera1': [
-                    {'type': 'scale', 'trigger': 'beat', 'intensity': 0.3},
-                    {'type': 'shake', 'trigger': 'energy_peaks', 'intensity': 2.0}
+            "strip_animations": {
+                "Camera1": [
+                    {"type": "scale", "trigger": "beat", "intensity": 0.3},
+                    {"type": "shake", "trigger": "energy_peaks", "intensity": 2.0},
                 ],
-                'Camera2': [
-                    {'type': 'vintage_color', 'trigger': 'one_time', 'sepia_amount': 0.4}
-                ]
+                "Camera2": [
+                    {
+                        "type": "vintage_color",
+                        "trigger": "one_time",
+                        "sepia_amount": 0.4,
+                    }
+                ],
             }
         }
 
@@ -83,16 +87,16 @@ class TestActiveStripDetection:
         animations = manager.get_active_strip_animations()
 
         assert len(animations) == 2
-        assert animations[0]['type'] == 'scale'
-        assert animations[1]['type'] == 'shake'
+        assert animations[0]["type"] == "scale"
+        assert animations[1]["type"] == "shake"
 
     def test_get_strips_animations_no_active(self, mock_bpy):
         """Test getting animations when no strip is active."""
         from strip_context import StripContextManager
 
         test_config = {
-            'strip_animations': {
-                'Camera1': [{'type': 'scale', 'trigger': 'beat', 'intensity': 0.3}]
+            "strip_animations": {
+                "Camera1": [{"type": "scale", "trigger": "beat", "intensity": 0.3}]
             }
         }
 
@@ -111,10 +115,8 @@ class TestActiveStripDetection:
         from strip_context import StripContextManager
 
         test_config = {
-            'strip_animations': {
-                'Camera1': [
-                    {'type': 'scale', 'trigger': 'beat', 'intensity': 0.3}
-                ]
+            "strip_animations": {
+                "Camera1": [{"type": "scale", "trigger": "beat", "intensity": 0.3}]
             }
         }
 
@@ -126,7 +128,7 @@ class TestActiveStripDetection:
         manager = StripContextManager()
         manager.load_config(test_config)
 
-        new_animation = {'type': 'shake', 'trigger': 'energy_peaks', 'intensity': 2.0}
+        new_animation = {"type": "shake", "trigger": "energy_peaks", "intensity": 2.0}
         manager.add_animation_to_active_strip(new_animation)
 
         animations = manager.get_active_strip_animations()
@@ -138,10 +140,10 @@ class TestActiveStripDetection:
         from strip_context import StripContextManager
 
         test_config = {
-            'strip_animations': {
-                'Camera1': [
-                    {'type': 'scale', 'trigger': 'beat', 'intensity': 0.3},
-                    {'type': 'shake', 'trigger': 'energy_peaks', 'intensity': 2.0}
+            "strip_animations": {
+                "Camera1": [
+                    {"type": "scale", "trigger": "beat", "intensity": 0.3},
+                    {"type": "shake", "trigger": "energy_peaks", "intensity": 2.0},
                 ]
             }
         }
@@ -159,17 +161,15 @@ class TestActiveStripDetection:
 
         animations = manager.get_active_strip_animations()
         assert len(animations) == 1
-        assert animations[0]['type'] == 'shake'
+        assert animations[0]["type"] == "shake"
 
     def test_update_animation_parameter(self, mock_bpy):
         """Test updating animation parameter for active strip."""
         from strip_context import StripContextManager
 
         test_config = {
-            'strip_animations': {
-                'Camera1': [
-                    {'type': 'scale', 'trigger': 'beat', 'intensity': 0.3}
-                ]
+            "strip_animations": {
+                "Camera1": [{"type": "scale", "trigger": "beat", "intensity": 0.3}]
             }
         }
 
@@ -182,10 +182,10 @@ class TestActiveStripDetection:
         manager.load_config(test_config)
 
         # Update intensity of first animation
-        manager.update_animation_parameter(0, 'intensity', 0.5)
+        manager.update_animation_parameter(0, "intensity", 0.5)
 
         animations = manager.get_active_strip_animations()
-        assert animations[0]['intensity'] == 0.5
+        assert animations[0]["intensity"] == 0.5
 
     def test_get_available_animation_types(self):
         """Test getting list of available animation types."""
@@ -195,8 +195,12 @@ class TestActiveStripDetection:
         animation_types = manager.get_available_animation_types()
 
         expected_types = [
-            'scale', 'shake', 'rotation', 'jitter',
-            'brightness_flicker', 'visibility'
+            "scale",
+            "shake",
+            "rotation",
+            "jitter",
+            "brightness_flicker",
+            "visibility",
         ]
 
         for atype in expected_types:
@@ -209,7 +213,7 @@ class TestActiveStripDetection:
         manager = StripContextManager()
         triggers = manager.get_available_triggers()
 
-        expected_triggers = ['beat', 'bass', 'energy_peaks', 'one_time', 'continuous']
+        expected_triggers = ["beat", "bass", "energy_peaks", "one_time", "continuous"]
 
         for trigger in expected_triggers:
             assert trigger in triggers

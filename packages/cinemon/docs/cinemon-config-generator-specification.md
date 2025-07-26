@@ -8,7 +8,7 @@ CinemonConfigGenerator is a utility class that simplifies the creation of YAML c
 
 Currently, creating YAML configuration for cinemon requires:
 1. Manual YAML writing with complex syntax
-2. Manual discovery of video/audio files in recording directories  
+2. Manual discovery of video/audio files in recording directories
 3. Manual path resolution and validation
 4. Deep knowledge of animation parameters and layout options
 5. Understanding of strip targeting syntax
@@ -26,32 +26,32 @@ This creates barriers for:
 ```python
 class CinemonConfigGenerator:
     """Main generator class with multiple generation methods."""
-    
+
     # High-level preset generation
     def generate_preset(recording_dir, preset_name, **overrides) -> Path
-    
+
     # Custom configuration generation
     def generate_config(recording_dir, **params) -> Path
-    
+
     # Template generation for manual editing
     def generate_template(recording_dir, **params) -> Path
-    
+
     # Validation and auto-discovery
     def discover_media_files(recording_dir) -> MediaDiscovery
     def validate_recording_structure(recording_dir) -> ValidationResult
 
 class PresetManager:
     """Manages built-in configuration presets."""
-    
+
     def get_preset(name) -> PresetConfig
     def list_presets() -> List[str]
     def create_custom_preset(name, config) -> None
 
 class MediaDiscovery:
     """Auto-discovery of media files in recording directory."""
-    
+
     video_files: List[str]
-    audio_files: List[str] 
+    audio_files: List[str]
     main_audio: Optional[str]
     analysis_files: List[str]
 ```
@@ -70,7 +70,7 @@ config_path = CinemonConfigGenerator.generate_preset(
 
 # Generate energetic music video style
 config_path = CinemonConfigGenerator.generate_preset(
-    recording_dir="./recording_20250105_143022", 
+    recording_dir="./recording_20250105_143022",
     preset="music-video",
     seed=42  # Override default seed
 )
@@ -102,7 +102,7 @@ config_path = CinemonConfigGenerator.generate_config(
     animations=[
         {
             "type": "scale",
-            "trigger": "bass", 
+            "trigger": "bass",
             "target_strips": ["Camera1", "Camera2"],
             "intensity": 0.3,
             "duration_frames": 2
@@ -196,7 +196,7 @@ animations:
     return_frames: 5
     target_strips: []
 ```
- 
+
 ## CLI Integration
 
 ### New CLI Commands

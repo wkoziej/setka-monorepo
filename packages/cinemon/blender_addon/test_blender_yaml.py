@@ -21,6 +21,7 @@ if str(addon_path) not in sys.path:
 # Test import
 try:
     from vendor import yaml
+
     print("✓ Successfully imported vendored YAML")
 
     # Test basic functionality
@@ -44,4 +45,5 @@ try:
 except Exception as e:
     print(f"❌ Error: {e}")
     import traceback
+
     traceback.print_exc()

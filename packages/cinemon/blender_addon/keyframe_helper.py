@@ -15,7 +15,9 @@ except ImportError:
 class KeyframeHelper:
     """Helper class for inserting keyframes into Blender strips."""
 
-    def insert_transform_position_keyframes(self, strip, frame: int, offset_x: float, offset_y: float):
+    def insert_transform_position_keyframes(
+        self, strip, frame: int, offset_x: float, offset_y: float
+    ):
         """Insert position keyframes for strip transform.
 
         Args:
@@ -24,7 +26,7 @@ class KeyframeHelper:
             offset_x: X offset value
             offset_y: Y offset value
         """
-        if not hasattr(strip, 'transform'):
+        if not hasattr(strip, "transform"):
             return
 
         # Set current values
@@ -35,7 +37,9 @@ class KeyframeHelper:
         strip.transform.keyframe_insert(data_path="offset_x", frame=frame)
         strip.transform.keyframe_insert(data_path="offset_y", frame=frame)
 
-    def insert_transform_scale_keyframes(self, strip, frame: int, scale_x: float, scale_y: float):
+    def insert_transform_scale_keyframes(
+        self, strip, frame: int, scale_x: float, scale_y: float
+    ):
         """Insert scale keyframes for strip transform.
 
         Args:
@@ -44,7 +48,7 @@ class KeyframeHelper:
             scale_x: X scale value
             scale_y: Y scale value
         """
-        if not hasattr(strip, 'transform'):
+        if not hasattr(strip, "transform"):
             return
 
         # Set current values
@@ -63,7 +67,7 @@ class KeyframeHelper:
             frame: Frame number for keyframe
             rotation: Rotation value in radians
         """
-        if not hasattr(strip, 'transform'):
+        if not hasattr(strip, "transform"):
             return
 
         # Set current value
@@ -80,7 +84,7 @@ class KeyframeHelper:
             frame: Frame number for keyframe
             alpha: Alpha value (0.0 to 1.0)
         """
-        if not hasattr(strip, 'blend_alpha'):
+        if not hasattr(strip, "blend_alpha"):
             return
 
         # Set current value
@@ -106,7 +110,7 @@ class KeyframeCleaner:
 
         try:
             # Clear strip fcurves (including transform fcurves which are stored here in Blender 4.3+)
-            if hasattr(strip, 'animation_data') and strip.animation_data:
+            if hasattr(strip, "animation_data") and strip.animation_data:
                 if strip.animation_data.action:
                     fcurves_to_remove = []
                     transform_fcurves_removed = 0
@@ -116,7 +120,7 @@ class KeyframeCleaner:
                     for fcurve in strip.animation_data.action.fcurves:
                         fcurves_to_remove.append(fcurve)
                         # Check if it's a transform fcurve
-                        if fcurve.data_path.startswith('transform.'):
+                        if fcurve.data_path.startswith("transform."):
                             transform_fcurves_removed += 1
                         else:
                             other_fcurves_removed += 1
@@ -126,7 +130,9 @@ class KeyframeCleaner:
                         strip.animation_data.action.fcurves.remove(fcurve)
 
                     if transform_fcurves_removed > 0:
-                        cleared_items.append(f"{transform_fcurves_removed} transform fcurves")
+                        cleared_items.append(
+                            f"{transform_fcurves_removed} transform fcurves"
+                        )
                     if other_fcurves_removed > 0:
                         cleared_items.append(f"{other_fcurves_removed} strip fcurves")
 
@@ -153,8 +159,13 @@ class KeyframeCleaner:
 
         # Strip properties that might have keyframes
         clearable_properties = [
-            'blend_alpha', 'volume', 'pitch', 'pan',
-            'use_translation', 'use_crop', 'use_mirror'
+            "blend_alpha",
+            "volume",
+            "pitch",
+            "pan",
+            "use_translation",
+            "use_crop",
+            "use_mirror",
         ]
 
         for prop_name in clearable_properties:
@@ -184,7 +195,10 @@ class KeyframeCleaner:
         cleared_items = []
 
         cinemon_modifier_names = [
-            "Brightness Flicker", "Color Effect", "Desaturate Pulse", "Contrast Flash"
+            "Brightness Flicker",
+            "Color Effect",
+            "Desaturate Pulse",
+            "Contrast Flash",
         ]
 
         modifiers_to_remove = []
@@ -196,7 +210,7 @@ class KeyframeCleaner:
             modifier_name = modifier.name
 
             # Clear modifier animation data if it exists
-            if hasattr(modifier, 'animation_data') and modifier.animation_data:
+            if hasattr(modifier, "animation_data") and modifier.animation_data:
                 if modifier.animation_data.action:
                     fcurves_to_remove = list(modifier.animation_data.action.fcurves)
                     for fcurve in fcurves_to_remove:
@@ -218,7 +232,7 @@ class KeyframeCleaner:
         cleared_items = []
 
         try:
-            if bpy and hasattr(bpy, 'context') and hasattr(bpy.context, 'scene'):
+            if bpy and hasattr(bpy, "context") and hasattr(bpy.context, "scene"):
                 bpy.context.scene.frame_set(bpy.context.scene.frame_current)
                 cleared_items.append("timeline refresh")
         except Exception as e:
@@ -242,7 +256,9 @@ class KeyframeCleaner:
             all_cleared_items.extend(self.refresh_timeline())
 
             if all_cleared_items:
-                print(f"Cleared for strip '{strip.name}': {', '.join(all_cleared_items)}")
+                print(
+                    f"Cleared for strip '{strip.name}': {', '.join(all_cleared_items)}"
+                )
             else:
                 print(f"No animations to clear for strip '{strip.name}'")
 

@@ -32,17 +32,16 @@ class TestVSEScriptYAMLIntegration:
 
         # Create mock YAML config (internal format - already converted)
         mock_config = {
-            "project": {
-                "video_files": ["Camera1.mp4", "Camera2.mp4"],
-                "fps": 30
-            },
+            "project": {"video_files": ["Camera1.mp4", "Camera2.mp4"], "fps": 30},
             "layout": {"type": "random"},
             "animations": [],
-            "audio_analysis": {"file": "./analysis/audio.json"}
+            "audio_analysis": {"file": "./analysis/audio.json"},
         }
 
         # Create temporary YAML file
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False) as temp_file:
+        with tempfile.NamedTemporaryFile(
+            mode="w", suffix=".yaml", delete=False
+        ) as temp_file:
             yaml.dump(mock_config, temp_file, default_flow_style=False)
             temp_path = temp_file.name
 
@@ -72,7 +71,9 @@ class TestVSEScriptYAMLIntegration:
         }
 
         # Create temporary YAML file
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False) as temp_file:
+        with tempfile.NamedTemporaryFile(
+            mode="w", suffix=".yaml", delete=False
+        ) as temp_file:
             yaml.dump(invalid_config, temp_file, default_flow_style=False)
             temp_path = temp_file.name
 
@@ -97,17 +98,23 @@ class TestVSEScriptYAMLIntegration:
             "strip_animations": {
                 "Camera1": [
                     {"type": "scale", "trigger": "beat", "intensity": 0.5},
-                    {"type": "shake", "trigger": "energy_peaks", "intensity": 1.0}
+                    {"type": "shake", "trigger": "energy_peaks", "intensity": 1.0},
                 ],
                 "Camera2": [
-                    {"type": "vintage_color", "trigger": "one_time", "sepia_amount": 0.6}
-                ]
+                    {
+                        "type": "vintage_color",
+                        "trigger": "one_time",
+                        "sepia_amount": 0.6,
+                    }
+                ],
             },
-            "audio_analysis": {"file": "./analysis/audio.json"}
+            "audio_analysis": {"file": "./analysis/audio.json"},
         }
 
         # Create temporary YAML file
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False) as temp_file:
+        with tempfile.NamedTemporaryFile(
+            mode="w", suffix=".yaml", delete=False
+        ) as temp_file:
             yaml.dump(grouped_config, temp_file, default_flow_style=False)
             temp_path = temp_file.name
 
@@ -147,17 +154,19 @@ class TestVSEScriptYAMLIntegration:
             "project": {"video_files": [], "fps": 30},
             "layout": {"type": "random"},
             "animations": [],
-            "audio_analysis": {"file": "./analysis/audio.json"}
+            "audio_analysis": {"file": "./analysis/audio.json"},
         }
 
         # Create temporary YAML file
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False) as temp_file:
+        with tempfile.NamedTemporaryFile(
+            mode="w", suffix=".yaml", delete=False
+        ) as temp_file:
             yaml.dump(mock_config, temp_file, default_flow_style=False)
             temp_path = temp_file.name
 
         try:
             # Mock sys.argv with YAML config
-            with patch('vse_script.sys.argv', ['script.py', '--config', temp_path]):
+            with patch("vse_script.sys.argv", ["script.py", "--config", temp_path]):
                 # Should accept .yaml file without issues
                 configurator = BlenderVSEConfigurator()
                 assert configurator.fps == 30
@@ -172,32 +181,43 @@ class TestVSEScriptYAMLIntegration:
         vintage_config = {
             "project": {
                 "video_files": ["Camera1.mp4"],  # Add video files for validation
-                "fps": 30
+                "fps": 30,
             },
-            "layout": {
-                "type": "random",
-                "config": {
-                    "margin": 0.1,
-                    "seed": 1950
-                }
-            },
+            "layout": {"type": "random", "config": {"margin": 0.1, "seed": 1950}},
             "strip_animations": {
                 "Camera1": [
-                    {"type": "scale", "trigger": "beat", "intensity": 0.3, "easing": "EASE_OUT"},
-                    {"type": "vintage_color", "trigger": "one_time", "sepia_amount": 0.6, "contrast_boost": 0.2}
+                    {
+                        "type": "scale",
+                        "trigger": "beat",
+                        "intensity": 0.3,
+                        "easing": "EASE_OUT",
+                    },
+                    {
+                        "type": "vintage_color",
+                        "trigger": "one_time",
+                        "sepia_amount": 0.6,
+                        "contrast_boost": 0.2,
+                    },
                 ],
                 "Camera2": [
-                    {"type": "shake", "trigger": "energy_peaks", "intensity": 2.0, "return_frames": 2}
-                ]
+                    {
+                        "type": "shake",
+                        "trigger": "energy_peaks",
+                        "intensity": 2.0,
+                        "return_frames": 2,
+                    }
+                ],
             },
             "audio_analysis": {
                 "file": "./analysis/main_audio_analysis.json",
-                "beat_division": 4
-            }
+                "beat_division": 4,
+            },
         }
 
         # Create temporary YAML file
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False) as temp_file:
+        with tempfile.NamedTemporaryFile(
+            mode="w", suffix=".yaml", delete=False
+        ) as temp_file:
             yaml.dump(vintage_config, temp_file, default_flow_style=False)
             temp_path = temp_file.name
 
@@ -213,7 +233,9 @@ class TestVSEScriptYAMLIntegration:
             assert len(animations) == 3
 
             # Check vintage-specific animation
-            vintage_anim = next((a for a in animations if a["type"] == "vintage_color"), None)
+            vintage_anim = next(
+                (a for a in animations if a["type"] == "vintage_color"), None
+            )
             assert vintage_anim is not None
             assert vintage_anim["sepia_amount"] == 0.6
         finally:
@@ -224,16 +246,22 @@ class TestVSEScriptYAMLIntegration:
         from vse_script import BlenderVSEConfigurator
 
         # Create malformed YAML content
-        malformed_yaml = "project:\n  video_files: [\n  fps: 30\nlayout:\n  type: random\n"
+        malformed_yaml = (
+            "project:\n  video_files: [\n  fps: 30\nlayout:\n  type: random\n"
+        )
 
         # Create temporary file with malformed YAML
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False) as temp_file:
+        with tempfile.NamedTemporaryFile(
+            mode="w", suffix=".yaml", delete=False
+        ) as temp_file:
             temp_file.write(malformed_yaml)
             temp_path = temp_file.name
 
         try:
             # Should raise an exception when trying to load malformed YAML
-            with pytest.raises(Exception):  # Could be yaml.YAMLError or other parsing error
+            with pytest.raises(
+                Exception
+            ):  # Could be yaml.YAMLError or other parsing error
                 BlenderVSEConfigurator(temp_path)
         finally:
             os.unlink(temp_path)
@@ -247,18 +275,27 @@ class TestVSEScriptYAMLIntegration:
             "project": {
                 "video_files": ["Przechwytywanie wejścia dźwięku.mp4"],
                 "main_audio": "Audio główne.m4a",
-                "fps": 30
+                "fps": 30,
             },
             "layout": {"type": "random"},
             "animations": [
-                {"type": "scale", "trigger": "beat", "intensity": 0.3, "target_strips": ["🎥 Camera główna"]}
+                {
+                    "type": "scale",
+                    "trigger": "beat",
+                    "intensity": 0.3,
+                    "target_strips": ["🎥 Camera główna"],
+                }
             ],
-            "audio_analysis": {"file": "./analysis/analiza_główna.json"}
+            "audio_analysis": {"file": "./analysis/analiza_główna.json"},
         }
 
         # Create temporary YAML file with Unicode content
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False, encoding='utf-8') as temp_file:
-            yaml.dump(unicode_config, temp_file, default_flow_style=False, allow_unicode=True)
+        with tempfile.NamedTemporaryFile(
+            mode="w", suffix=".yaml", delete=False, encoding="utf-8"
+        ) as temp_file:
+            yaml.dump(
+                unicode_config, temp_file, default_flow_style=False, allow_unicode=True
+            )
             temp_path = temp_file.name
 
         try:

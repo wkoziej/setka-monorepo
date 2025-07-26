@@ -31,10 +31,10 @@ class TestApplySystem:
         mock_strip.name = "Camera1"
         mock_bpy.context.scene.sequence_editor.active_strip = mock_strip
 
-        manager.load_config({'strip_animations': {}})
+        manager.load_config({"strip_animations": {}})
 
         # Add animation - should create pending change
-        new_anim = {'type': 'scale', 'trigger': 'beat', 'intensity': 0.5}
+        new_anim = {"type": "scale", "trigger": "beat", "intensity": 0.5}
         manager.add_animation_to_active_strip(new_anim)
 
         assert manager.has_pending_changes()
@@ -48,9 +48,9 @@ class TestApplySystem:
 
         # Initial config
         initial_config = {
-            'strip_animations': {
-                'Camera1': [
-                    {'type': 'shake', 'trigger': 'energy_peaks', 'intensity': 1.0}
+            "strip_animations": {
+                "Camera1": [
+                    {"type": "shake", "trigger": "energy_peaks", "intensity": 1.0}
                 ]
             }
         }
@@ -62,13 +62,13 @@ class TestApplySystem:
         mock_bpy.context.scene.sequence_editor.active_strip = mock_strip
 
         # Update animation parameter
-        manager.update_animation_parameter(0, 'intensity', 2.0)
+        manager.update_animation_parameter(0, "intensity", 2.0)
 
         # Apply changes
         updated_config = manager.apply_changes()
 
         # Verify changes were applied
-        assert updated_config['strip_animations']['Camera1'][0]['intensity'] == 2.0
+        assert updated_config["strip_animations"]["Camera1"][0]["intensity"] == 2.0
 
         # Buffer should be cleared
         assert not manager.has_pending_changes()
@@ -78,14 +78,14 @@ class TestApplySystem:
         from strip_context import StripContextManager
 
         manager = StripContextManager()
-        manager.load_config({'strip_animations': {}})
+        manager.load_config({"strip_animations": {}})
 
         # Mock active strip and add animation
         mock_strip = Mock()
         mock_strip.name = "Camera1"
         mock_bpy.context.scene.sequence_editor.active_strip = mock_strip
 
-        new_anim = {'type': 'scale', 'trigger': 'beat', 'intensity': 0.5}
+        new_anim = {"type": "scale", "trigger": "beat", "intensity": 0.5}
         manager.add_animation_to_active_strip(new_anim)
 
         # Should have pending changes
@@ -106,9 +106,9 @@ class TestApplySystem:
 
         # Initial config
         initial_config = {
-            'strip_animations': {
-                'Camera1': [
-                    {'type': 'shake', 'trigger': 'energy_peaks', 'intensity': 1.0}
+            "strip_animations": {
+                "Camera1": [
+                    {"type": "shake", "trigger": "energy_peaks", "intensity": 1.0}
                 ]
             }
         }
@@ -120,22 +120,22 @@ class TestApplySystem:
         mock_bpy.context.scene.sequence_editor.active_strip = mock_strip
 
         # Add new animation (buffered)
-        new_anim = {'type': 'scale', 'trigger': 'beat', 'intensity': 0.5}
+        new_anim = {"type": "scale", "trigger": "beat", "intensity": 0.5}
         manager.add_animation_to_active_strip(new_anim)
 
         # Get current config (should include buffered changes)
         current_config = manager.get_current_config()
 
         # Should have both original and new animation
-        camera1_anims = current_config['strip_animations']['Camera1']
+        camera1_anims = current_config["strip_animations"]["Camera1"]
         assert len(camera1_anims) == 2
-        assert any(anim['type'] == 'shake' for anim in camera1_anims)
-        assert any(anim['type'] == 'scale' for anim in camera1_anims)
+        assert any(anim["type"] == "shake" for anim in camera1_anims)
+        assert any(anim["type"] == "scale" for anim in camera1_anims)
 
         # Original config should be unchanged
-        original_camera1_anims = manager.config['strip_animations']['Camera1']
+        original_camera1_anims = manager.config["strip_animations"]["Camera1"]
         assert len(original_camera1_anims) == 1
-        assert original_camera1_anims[0]['type'] == 'shake'
+        assert original_camera1_anims[0]["type"] == "shake"
 
     def test_apply_operator_integration(self, mock_bpy):
         """Test Apply operator that regenerates animations."""
@@ -148,22 +148,26 @@ class TestApplySystem:
         mock_context.scene = Mock()
 
         # Mock strip context manager with changes
-        with patch('apply_system.get_strip_context_manager') as mock_get_manager:
+        with patch("apply_system.get_strip_context_manager") as mock_get_manager:
             mock_manager = Mock()
             mock_manager.has_pending_changes.return_value = True
-            mock_manager.get_changed_strips.return_value = ['Camera1', 'Camera2']
-            mock_manager.apply_changes.return_value = {'strip_animations': {'Camera1': []}}
+            mock_manager.get_changed_strips.return_value = ["Camera1", "Camera2"]
+            mock_manager.apply_changes.return_value = {
+                "strip_animations": {"Camera1": []}
+            }
             mock_get_manager.return_value = mock_manager
 
             # Mock animation regenerator
-            with patch('apply_system.regenerate_animations_for_strips') as mock_regen:
+            with patch("apply_system.regenerate_animations_for_strips") as mock_regen:
                 result = operator.execute(mock_context)
 
                 # Should succeed
-                assert result == {'FINISHED'}
+                assert result == {"FINISHED"}
 
                 # Should regenerate only changed strips
-                mock_regen.assert_called_once_with(['Camera1', 'Camera2'], {'strip_animations': {'Camera1': []}})
+                mock_regen.assert_called_once_with(
+                    ["Camera1", "Camera2"], {"strip_animations": {"Camera1": []}}
+                )
 
     def test_apply_operator_no_changes(self, mock_bpy):
         """Test Apply operator when no changes pending."""
@@ -174,7 +178,7 @@ class TestApplySystem:
         mock_context = Mock()
 
         # Mock strip context manager with no changes
-        with patch('apply_system.get_strip_context_manager') as mock_get_manager:
+        with patch("apply_system.get_strip_context_manager") as mock_get_manager:
             mock_manager = Mock()
             mock_manager.has_pending_changes.return_value = False
             mock_get_manager.return_value = mock_manager
@@ -182,7 +186,7 @@ class TestApplySystem:
             result = operator.execute(mock_context)
 
             # Should still succeed but do nothing
-            assert result == {'FINISHED'}
+            assert result == {"FINISHED"}
 
     def test_ui_sync_with_apply_system(self, mock_bpy):
         """Test UI synchronization with apply system."""
@@ -192,10 +196,10 @@ class TestApplySystem:
         Mock()
 
         # Mock pending changes indicator
-        with patch('apply_system.get_strip_context_manager') as mock_get_manager:
+        with patch("apply_system.get_strip_context_manager") as mock_get_manager:
             mock_manager = Mock()
             mock_manager.has_pending_changes.return_value = True
-            mock_manager.get_changed_strips.return_value = ['Camera1']
+            mock_manager.get_changed_strips.return_value = ["Camera1"]
             mock_get_manager.return_value = mock_manager
 
             # Should indicate pending changes
@@ -203,7 +207,7 @@ class TestApplySystem:
             changed_strips = ui_manager.get_changed_strips()
 
             assert has_changes
-            assert 'Camera1' in changed_strips
+            assert "Camera1" in changed_strips
 
     def test_error_handling_in_apply(self, mock_bpy):
         """Test error handling during apply operation."""
@@ -214,7 +218,7 @@ class TestApplySystem:
         mock_context = Mock()
 
         # Mock strip context manager that raises exception
-        with patch('apply_system.get_strip_context_manager') as mock_get_manager:
+        with patch("apply_system.get_strip_context_manager") as mock_get_manager:
             mock_manager = Mock()
             mock_manager.has_pending_changes.return_value = True
             mock_manager.apply_changes.side_effect = Exception("Test error")
@@ -223,4 +227,4 @@ class TestApplySystem:
             result = operator.execute(mock_context)
 
             # Should handle error gracefully
-            assert result == {'CANCELLED'}
+            assert result == {"CANCELLED"}

@@ -14,6 +14,7 @@ from .device_names import DeviceNames
 @dataclass
 class PresetConfig:
     """Configuration preset for cinemon."""
+
     name: str
     description: str
     layout: Dict[str, Any]
@@ -44,8 +45,8 @@ class PresetManager:
                     "margin": 0.1,
                     "min_scale": 0.5,
                     "max_scale": 0.8,
-                    "seed": 1950
-                }
+                    "seed": 1950,
+                },
             },
             "animations": [
                 {
@@ -53,7 +54,7 @@ class PresetManager:
                     "trigger": "beat",
                     "intensity": 2.0,
                     "return_frames": 2,
-                    "target_strips": []
+                    "target_strips": [],
                 },
                 {
                     "type": "jitter",
@@ -61,35 +62,35 @@ class PresetManager:
                     "intensity": 1.0,
                     "min_interval": 3,
                     "max_interval": 8,
-                    "target_strips": []
+                    "target_strips": [],
                 },
                 {
                     "type": "brightness_flicker",
                     "trigger": "beat",
                     "intensity": 0.1,
                     "return_frames": 1,
-                    "target_strips": []
+                    "target_strips": [],
                 },
                 {
                     "type": "black_white",
                     "trigger": "one_time",
                     "intensity": 0.6,
-                    "target_strips": []
+                    "target_strips": [],
                 },
                 {
                     "type": "film_grain",
                     "trigger": "one_time",
                     "intensity": 0.15,
-                    "target_strips": []
+                    "target_strips": [],
                 },
                 {
                     "type": "vintage_color",
                     "trigger": "one_time",
                     "sepia_amount": 0.4,
                     "contrast_boost": 0.3,
-                    "target_strips": []
-                }
-            ]
+                    "target_strips": [],
+                },
+            ],
         },
         "minimal": {
             "description": "Clean, simple animation with basic scale on bass only",
@@ -100,8 +101,8 @@ class PresetManager:
                     "margin": 0.1,
                     "min_scale": 0.6,
                     "max_scale": 0.9,
-                    "seed": 1
-                }
+                    "seed": 1,
+                },
             },
             "animations": [
                 {
@@ -109,32 +110,29 @@ class PresetManager:
                     "trigger": "energy_peaks",
                     "intensity": 0.2,
                     "duration_frames": 3,
-                    "target_strips": []
+                    "target_strips": [],
                 }
-            ]
+            ],
         },
         "multi-pip": {
             "description": "Two main cameras fullscreen with corner PiPs, replicating legacy multi-pip behavior",
             "layout": {
                 "type": "main-pip",
-                "config": {
-                    "pip_scale": 0.25,
-                    "margin_percent": 0.05
-                }
+                "config": {"pip_scale": 0.25, "margin_percent": 0.05},
             },
             "animations": [
                 {
                     "type": "visibility",
                     "trigger": "sections",
                     "pattern": "alternate",
-                    "target_strips": DeviceNames.MAIN_CAMERAS
+                    "target_strips": DeviceNames.MAIN_CAMERAS,
                 },
                 {
                     "type": "vintage_color",
                     "trigger": "one_time",
                     "sepia_amount": 0.4,
                     "contrast_boost": 0.3,
-                    "target_strips": DeviceNames.MAIN_CAMERAS
+                    "target_strips": DeviceNames.MAIN_CAMERAS,
                 },
                 {
                     "type": "jitter",
@@ -142,24 +140,24 @@ class PresetManager:
                     "intensity": 1.0,
                     "min_interval": 3,
                     "max_interval": 8,
-                    "target_strips": DeviceNames.MAIN_CAMERAS
+                    "target_strips": DeviceNames.MAIN_CAMERAS,
                 },
                 {
                     "type": "scale",
                     "trigger": "energy_peaks",
                     "intensity": 0.5,
                     "duration_frames": 3,
-                    "target_strips": DeviceNames.PIP_CAMERAS
+                    "target_strips": DeviceNames.PIP_CAMERAS,
                 },
                 {
                     "type": "shake",
                     "trigger": "beat",
                     "intensity": 8.0,
                     "return_frames": 2,
-                    "target_strips": DeviceNames.PIP_CAMERAS
-                }
-            ]
-        }
+                    "target_strips": DeviceNames.PIP_CAMERAS,
+                },
+            ],
+        },
     }
 
     def __init__(self):
@@ -186,7 +184,7 @@ class PresetManager:
                 name=name,
                 description=preset_data["description"],
                 layout=preset_data["layout"],
-                animations=preset_data["animations"]
+                animations=preset_data["animations"],
             )
 
         # Check custom presets
@@ -197,7 +195,7 @@ class PresetManager:
                 name=name,
                 description=preset_data["description"],
                 layout=preset_data["layout"],
-                animations=preset_data["animations"]
+                animations=preset_data["animations"],
             )
 
         raise ValueError(f"Preset '{name}' not found")
@@ -213,7 +211,9 @@ class PresetManager:
         custom_names = list(self._load_custom_presets().keys())
         return sorted(builtin_names + custom_names)
 
-    def create_custom_preset(self, name: str, config: Dict[str, Any], description: str = "") -> None:
+    def create_custom_preset(
+        self, name: str, config: Dict[str, Any], description: str = ""
+    ) -> None:
         """
         Create and save custom preset.
 
@@ -236,7 +236,7 @@ class PresetManager:
         preset_data = {
             "description": description,
             "layout": config["layout"],
-            "animations": config["animations"]
+            "animations": config["animations"],
         }
 
         # Save to custom presets directory
@@ -244,7 +244,7 @@ class PresetManager:
         custom_presets_dir.mkdir(parents=True, exist_ok=True)
 
         preset_file = custom_presets_dir / f"{name}.json"
-        with preset_file.open('w', encoding='utf-8') as f:
+        with preset_file.open("w", encoding="utf-8") as f:
             json.dump(preset_data, f, indent=2, ensure_ascii=False)
 
         # Clear cache to reload on next access
@@ -264,28 +264,42 @@ class PresetManager:
 
         for field in required_fields:
             if field not in config:
-                raise ValueError(f"Invalid preset configuration: missing '{field}' field")
+                raise ValueError(
+                    f"Invalid preset configuration: missing '{field}' field"
+                )
 
         # Validate layout structure
         if not isinstance(config["layout"], dict):
-            raise ValueError("Invalid preset configuration: 'layout' must be a dictionary")
+            raise ValueError(
+                "Invalid preset configuration: 'layout' must be a dictionary"
+            )
 
         if "type" not in config["layout"]:
-            raise ValueError("Invalid preset configuration: 'layout' missing 'type' field")
+            raise ValueError(
+                "Invalid preset configuration: 'layout' missing 'type' field"
+            )
 
         # Validate animations structure
         if not isinstance(config["animations"], list):
-            raise ValueError("Invalid preset configuration: 'animations' must be a list")
+            raise ValueError(
+                "Invalid preset configuration: 'animations' must be a list"
+            )
 
         for i, animation in enumerate(config["animations"]):
             if not isinstance(animation, dict):
-                raise ValueError(f"Invalid preset configuration: animation {i} must be a dictionary")
+                raise ValueError(
+                    f"Invalid preset configuration: animation {i} must be a dictionary"
+                )
 
             if "type" not in animation:
-                raise ValueError(f"Invalid preset configuration: animation {i} missing 'type' field")
+                raise ValueError(
+                    f"Invalid preset configuration: animation {i} missing 'type' field"
+                )
 
             if "trigger" not in animation:
-                raise ValueError(f"Invalid preset configuration: animation {i} missing 'trigger' field")
+                raise ValueError(
+                    f"Invalid preset configuration: animation {i} missing 'trigger' field"
+                )
 
     def _load_custom_presets(self) -> Dict[str, Dict[str, Any]]:
         """
@@ -307,7 +321,7 @@ class PresetManager:
         # Load all JSON files in custom presets directory
         for preset_file in custom_presets_dir.glob("*.json"):
             try:
-                with preset_file.open('r', encoding='utf-8') as f:
+                with preset_file.open("r", encoding="utf-8") as f:
                     preset_data = json.load(f)
 
                 preset_name = preset_file.stem

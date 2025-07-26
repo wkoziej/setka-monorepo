@@ -25,7 +25,9 @@ class TestParseArgs:
 
     def test_parse_args_with_preset(self):
         """Test parsing with preset parameter."""
-        with patch("sys.argv", ["blend_setup.py", "/path/to/recording", "--preset", "vintage"]):
+        with patch(
+            "sys.argv", ["blend_setup.py", "/path/to/recording", "--preset", "vintage"]
+        ):
             args = parse_args()
             assert args.recording_dir == Path("/path/to/recording")
             assert args.preset == "vintage"
@@ -36,7 +38,10 @@ class TestParseArgs:
 
     def test_parse_args_with_config(self):
         """Test parsing with config parameter."""
-        with patch("sys.argv", ["blend_setup.py", "/path/to/recording", "--config", "config.yaml"]):
+        with patch(
+            "sys.argv",
+            ["blend_setup.py", "/path/to/recording", "--config", "config.yaml"],
+        ):
             args = parse_args()
             assert args.recording_dir == Path("/path/to/recording")
             assert args.config == Path("config.yaml")
@@ -72,13 +77,26 @@ class TestParseArgs:
 
     def test_parse_args_preset_and_config_mutually_exclusive(self):
         """Test that --preset and --config are mutually exclusive."""
-        with patch("sys.argv", ["blend_setup.py", "/path/to/recording", "--preset", "vintage", "--config", "config.yaml"]):
+        with patch(
+            "sys.argv",
+            [
+                "blend_setup.py",
+                "/path/to/recording",
+                "--preset",
+                "vintage",
+                "--config",
+                "config.yaml",
+            ],
+        ):
             with pytest.raises(SystemExit):
                 parse_args()
 
     def test_parse_args_short_flags(self):
         """Test parsing short flag versions."""
-        with patch("sys.argv", ["blend_setup.py", "/path/to/recording", "--preset", "minimal", "-v", "-f"]):
+        with patch(
+            "sys.argv",
+            ["blend_setup.py", "/path/to/recording", "--preset", "minimal", "-v", "-f"],
+        ):
             args = parse_args()
             assert args.verbose is True
             assert args.force is True
@@ -221,7 +239,9 @@ class TestMain:
     @patch("blender.cli.blend_setup.CinemonConfigGenerator")
     @patch("blender.cli.blend_setup.load_yaml_config")
     @patch("blender.cli.blend_setup.parse_args")
-    def test_main_with_preset_success(self, mock_parse_args, mock_load_yaml, mock_generator_class, mock_manager_class):
+    def test_main_with_preset_success(
+        self, mock_parse_args, mock_load_yaml, mock_generator_class, mock_manager_class
+    ):
         """Test successful main execution with preset."""
         # Setup mocks
         mock_args = Mock()
@@ -251,19 +271,19 @@ class TestMain:
         # Verify calls
         assert result == 0
         mock_generator.generate_preset.assert_called_once_with(
-            mock_args.recording_dir,
-            "vintage"
+            mock_args.recording_dir, "vintage"
         )
         mock_load_yaml.assert_called_once_with(mock_config_path)
         mock_manager.create_vse_project_with_config.assert_called_once_with(
-            mock_args.recording_dir,
-            mock_yaml_config
+            mock_args.recording_dir, mock_yaml_config
         )
 
     @patch("blender.cli.blend_setup.BlenderProjectManager")
     @patch("blender.cli.blend_setup.load_yaml_config")
     @patch("blender.cli.blend_setup.parse_args")
-    def test_main_with_config_success(self, mock_parse_args, mock_load_yaml, mock_manager_class):
+    def test_main_with_config_success(
+        self, mock_parse_args, mock_load_yaml, mock_manager_class
+    ):
         """Test successful main execution with config file."""
         # Setup mocks
         mock_args = Mock()
@@ -288,8 +308,7 @@ class TestMain:
         assert result == 0
         mock_load_yaml.assert_called_once_with(mock_args.config)
         mock_manager.create_vse_project_with_config.assert_called_once_with(
-            mock_args.recording_dir,
-            mock_yaml_config
+            mock_args.recording_dir, mock_yaml_config
         )
 
     @patch("blender.cli.blend_setup.parse_args")
@@ -301,9 +320,13 @@ class TestMain:
         mock_args.verbose = False
         mock_parse_args.return_value = mock_args
 
-        with patch("blender.cli.blend_setup.CinemonConfigGenerator") as mock_generator_class:
+        with patch(
+            "blender.cli.blend_setup.CinemonConfigGenerator"
+        ) as mock_generator_class:
             mock_generator = Mock()
-            mock_generator.generate_preset.side_effect = AudioValidationError("Audio error")
+            mock_generator.generate_preset.side_effect = AudioValidationError(
+                "Audio error"
+            )
             mock_generator_class.return_value = mock_generator
 
             result = main()
@@ -319,7 +342,9 @@ class TestMain:
         mock_args.verbose = False
         mock_parse_args.return_value = mock_args
 
-        with patch("blender.cli.blend_setup.CinemonConfigGenerator") as mock_generator_class:
+        with patch(
+            "blender.cli.blend_setup.CinemonConfigGenerator"
+        ) as mock_generator_class:
             mock_generator = Mock()
             mock_generator.generate_preset.side_effect = ValueError("Validation error")
             mock_generator_class.return_value = mock_generator
@@ -337,7 +362,9 @@ class TestMain:
         mock_args.verbose = False
         mock_parse_args.return_value = mock_args
 
-        with patch("blender.cli.blend_setup.CinemonConfigGenerator") as mock_generator_class:
+        with patch(
+            "blender.cli.blend_setup.CinemonConfigGenerator"
+        ) as mock_generator_class:
             mock_generator = Mock()
             mock_generator.generate_preset.side_effect = Exception("Unexpected error")
             mock_generator_class.return_value = mock_generator
@@ -354,7 +381,9 @@ class TestMainWithPresetOverrides:
     @patch("blender.cli.blend_setup.CinemonConfigGenerator")
     @patch("blender.cli.blend_setup.load_yaml_config")
     @patch("blender.cli.blend_setup.parse_args")
-    def test_main_with_preset_and_main_audio_override(self, mock_parse_args, mock_load_yaml, mock_generator_class, mock_manager_class):
+    def test_main_with_preset_and_main_audio_override(
+        self, mock_parse_args, mock_load_yaml, mock_generator_class, mock_manager_class
+    ):
         """Test main with preset and main audio override."""
         # Setup mocks
         mock_args = Mock()
@@ -384,7 +413,5 @@ class TestMainWithPresetOverrides:
         # Verify calls with overrides
         assert result == 0
         mock_generator.generate_preset.assert_called_once_with(
-            mock_args.recording_dir,
-            "multi-pip",
-            main_audio="custom_audio.m4a"
+            mock_args.recording_dir, "multi-pip", main_audio="custom_audio.m4a"
         )

@@ -30,6 +30,7 @@ if str(addon_path) not in sys.path:
 # Import Animation API for unified animation system
 try:
     from unified_api import get_animation_api
+
     print("✓ Animation API imported successfully")
 except ImportError as e:
     print(f"⚠ Warning: Could not import Animation API: {e}")
@@ -67,18 +68,23 @@ class BlenderVSEConfigurator:
         self.config_path = Path(config_path)
 
         # Add vendor path for PyYAML (Blender doesn't have it)
-        addon_vendor_path = Path(__file__).parent.parent.parent / "blender_addon" / "vendor"
+        addon_vendor_path = (
+            Path(__file__).parent.parent.parent / "blender_addon" / "vendor"
+        )
         if str(addon_vendor_path) not in sys.path:
             sys.path.insert(0, str(addon_vendor_path))
 
         import yaml
-        with open(config_path, 'r', encoding='utf-8') as f:
+
+        with open(config_path, "r", encoding="utf-8") as f:
             raw_config = yaml.safe_load(f)
 
         # Detect format and convert if needed
         if "strip_animations" in raw_config:
             # This is grouped format (preset file) - need to convert to internal
-            common_path = Path(__file__).parent.parent.parent.parent.parent / "common" / "src"
+            common_path = (
+                Path(__file__).parent.parent.parent.parent.parent / "common" / "src"
+            )
             if str(common_path) not in sys.path:
                 sys.path.insert(0, str(common_path))
 
@@ -87,31 +93,41 @@ class BlenderVSEConfigurator:
             loader = YAMLConfigLoader()
             # Write temp file and load through standard pipeline
             import tempfile
-            with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False) as temp_file:
-                yaml.dump(raw_config, temp_file, default_flow_style=False, allow_unicode=True)
+
+            with tempfile.NamedTemporaryFile(
+                mode="w", suffix=".yaml", delete=False
+            ) as temp_file:
+                yaml.dump(
+                    raw_config, temp_file, default_flow_style=False, allow_unicode=True
+                )
                 temp_path = temp_file.name
 
             try:
                 config_obj = loader.load_config(Path(temp_path))
-                print(f"🔍 DEBUG: Loaded config has {len(getattr(config_obj, 'strip_animations', {}))} strip_animations")
+                print(
+                    f"🔍 DEBUG: Loaded config has {len(getattr(config_obj, 'strip_animations', {}))} strip_animations"
+                )
                 # Convert to internal format
                 self.config_data = loader.convert_to_internal(config_obj)
-                print(f"🔍 DEBUG: After conversion has {len(self.config_data.get('animations', []))} animations")
+                print(
+                    f"🔍 DEBUG: After conversion has {len(self.config_data.get('animations', []))} animations"
+                )
             finally:
                 import os
+
                 os.unlink(temp_path)
         else:
             # This is already internal format (from project_manager.py)
             self.config_data = raw_config
 
         # Set attributes from config (maintaining compatibility)
-        project = self.config_data['project']
+        project = self.config_data["project"]
         print(f"🎬 VSE script received video_files: {project['video_files']}")
 
         # Resolve relative paths to absolute paths relative to config file directory
         config_dir = self.config_path.parent
         resolved_video_files = []
-        for video_file in project['video_files']:
+        for video_file in project["video_files"]:
             video_path = Path(video_file)
             if not video_path.is_absolute():
                 # Try relative to config directory first
@@ -122,17 +138,23 @@ class BlenderVSEConfigurator:
                 if resolved_path.exists():
                     resolved_video_files.append(resolved_path.resolve())
                 else:
-                    print(f"❌ Video file not found: {video_path} (tried {config_dir / video_path} and {config_dir / 'extracted' / video_path})")
-                    resolved_video_files.append(video_path)  # Keep original if not found
+                    print(
+                        f"❌ Video file not found: {video_path} (tried {config_dir / video_path} and {config_dir / 'extracted' / video_path})"
+                    )
+                    resolved_video_files.append(
+                        video_path
+                    )  # Keep original if not found
             else:
                 resolved_video_files.append(Path(video_file))
 
         self.video_files = resolved_video_files
-        print(f"🎬 VSE script resolved video_files: {[str(p) + ' (absolute: ' + str(p.is_absolute()) + ', exists: ' + str(p.exists()) + ')' for p in self.video_files]}")
+        print(
+            f"🎬 VSE script resolved video_files: {[str(p) + ' (absolute: ' + str(p.is_absolute()) + ', exists: ' + str(p.exists()) + ')' for p in self.video_files]}"
+        )
 
         # Resolve main_audio path similar to video files
-        if project.get('main_audio'):
-            main_audio_path = Path(project['main_audio'])
+        if project.get("main_audio"):
+            main_audio_path = Path(project["main_audio"])
             if not main_audio_path.is_absolute():
                 # Try relative to config directory first
                 resolved_audio = config_dir / main_audio_path
@@ -146,23 +168,29 @@ class BlenderVSEConfigurator:
                     self.main_audio = main_audio_path
             else:
                 self.main_audio = main_audio_path
-            print(f"🎬 VSE script resolved main_audio: {self.main_audio} (absolute: {self.main_audio.is_absolute()}, exists: {self.main_audio.exists()})")
+            print(
+                f"🎬 VSE script resolved main_audio: {self.main_audio} (absolute: {self.main_audio.is_absolute()}, exists: {self.main_audio.exists()})"
+            )
         else:
             self.main_audio = None
         # Set output_blend - if not specified, generate default path based on config location
-        if project.get('output_blend'):
-            self.output_blend = Path(project['output_blend'])
+        if project.get("output_blend"):
+            self.output_blend = Path(project["output_blend"])
         else:
             # Generate default output path: config_dir/blender/{config_name}.blend
-            config_name = self.config_path.stem.replace('animation_config_', '').replace('animation_config', 'project')
+            config_name = self.config_path.stem.replace(
+                "animation_config_", ""
+            ).replace("animation_config", "project")
             self.output_blend = config_dir / "blender" / f"{config_name}.blend"
             print(f"🎬 Generated default output_blend: {self.output_blend}")
-        self.render_output = Path(project['render_output']) if project.get('render_output') else None
-        self.fps = project.get('fps', 30)
-        resolution = project.get('resolution', {})
-        self.resolution_x = resolution.get('width', 1920)
-        self.resolution_y = resolution.get('height', 1080)
-        self.beat_division = project.get('beat_division', 8)
+        self.render_output = (
+            Path(project["render_output"]) if project.get("render_output") else None
+        )
+        self.fps = project.get("fps", 30)
+        resolution = project.get("resolution", {})
+        self.resolution_x = resolution.get("width", 1920)
+        self.resolution_y = resolution.get("height", 1080)
+        self.beat_division = project.get("beat_division", 8)
 
         # Animation mode is always compositional with JSON config
         self.animation_mode = "compositional"
@@ -188,14 +216,16 @@ class BlenderVSEConfigurator:
         """
         # Look for --config argument in sys.argv
         for i, arg in enumerate(sys.argv):
-            if arg == '--config' and i + 1 < len(sys.argv):
+            if arg == "--config" and i + 1 < len(sys.argv):
                 return sys.argv[i + 1]
 
         # Fallback - look for CONFIG_PATH constant (for Blender GUI usage)
-        if 'CONFIG_PATH' in globals():
+        if "CONFIG_PATH" in globals():
             return CONFIG_PATH
 
-        raise ValueError("No YAML config file specified. Use --config argument or set CONFIG_PATH variable.")
+        raise ValueError(
+            "No YAML config file specified. Use --config argument or set CONFIG_PATH variable."
+        )
 
     def validate_parameters(self) -> Tuple[bool, List[str]]:
         """
@@ -206,16 +236,16 @@ class BlenderVSEConfigurator:
         """
         # Validation for internal format (converted from YAML)
         errors = []
-        required_keys = ['project', 'audio_analysis', 'layout', 'animations']
+        required_keys = ["project", "audio_analysis", "layout", "animations"]
         for key in required_keys:
             if key not in self.config_data:
                 errors.append(f"Missing required key: {key}")
 
         # Additional validation
-        project = self.config_data.get('project', {})
+        project = self.config_data.get("project", {})
         # Empty video_files is allowed for auto-discovery in presets
 
-        if not project.get('fps'):
+        if not project.get("fps"):
             errors.append("FPS not specified in project")
 
         return len(errors) == 0, errors
@@ -244,13 +274,19 @@ class BlenderVSEConfigurator:
             return False
 
         # Apply compositional animations if configured
-        print(f"🎭 Checking animations: config has {len(self.config_data.get('animations', []))} animations")
-        print(f"🎭 Checking strip_animations: config has {len(self.config_data.get('strip_animations', {}))} strips with animations")
+        print(
+            f"🎭 Checking animations: config has {len(self.config_data.get('animations', []))} animations"
+        )
+        print(
+            f"🎭 Checking strip_animations: config has {len(self.config_data.get('strip_animations', {}))} strips with animations"
+        )
         print(f"🎭 Config keys: {list(self.config_data.keys())}")
         animation_success = True
 
         # Use unified Animation API - no fallbacks!
-        if self.config_data.get('animations') or self.config_data.get('strip_animations'):
+        if self.config_data.get("animations") or self.config_data.get(
+            "strip_animations"
+        ):
             if not get_animation_api:
                 print("❌ Animation API not available - cannot apply animations")
                 return False
@@ -268,31 +304,42 @@ class BlenderVSEConfigurator:
                 sequencer = bpy.context.scene.sequence_editor
                 if sequencer:
                     strips_count = len(sequencer.sequences)
-                    video_strips = [s for s in sequencer.sequences if s.type == 'MOVIE']
+                    video_strips = [s for s in sequencer.sequences if s.type == "MOVIE"]
                     video_strips_count = len(video_strips)
-                    print(f"🎬 Before final save: {strips_count} total sequences, {video_strips_count} video strips")
+                    print(
+                        f"🎬 Before final save: {strips_count} total sequences, {video_strips_count} video strips"
+                    )
 
                     # Verify layout positions for debugging
                     if video_strips_count > 0:
                         print("🎬 Layout verification:")
                         for i, strip in enumerate(video_strips):
-                            if hasattr(strip, 'transform'):
+                            if hasattr(strip, "transform"):
                                 pos_x = strip.transform.offset_x
                                 pos_y = strip.transform.offset_y
                                 scale = strip.transform.scale_x
-                                print(f"  Strip {i+1} ({strip.name}): pos=({pos_x}, {pos_y}), scale={scale}")
+                                print(
+                                    f"  Strip {i + 1} ({strip.name}): pos=({pos_x}, {pos_y}), scale={scale}"
+                                )
                             else:
-                                print(f"  Strip {i+1} ({strip.name}): No transform property")
+                                print(
+                                    f"  Strip {i + 1} ({strip.name}): No transform property"
+                                )
 
                     if video_strips_count == 0:
-                        print("⚠ Warning: No video strips found before save - this indicates a problem!")
+                        print(
+                            "⚠ Warning: No video strips found before save - this indicates a problem!"
+                        )
                 else:
                     print("🎬 Before final save: No sequence editor found")
                     return False
 
-
                 bpy.ops.wm.save_as_mainfile(filepath=str(self.output_blend))
-                success_msg = "z animacjami" if animation_success and self.config_data.get('animations') else "podstawowy"
+                success_msg = (
+                    "z animacjami"
+                    if animation_success and self.config_data.get("animations")
+                    else "podstawowy"
+                )
                 print(f"✓ Zapisano projekt {success_msg}: {self.output_blend}")
 
                 # Save metadata JSON for addon auto-loading
@@ -342,8 +389,8 @@ class BlenderVSEConfigurator:
             return False
 
         print(f"✓ Found {len(video_strips)} video strips for animation")
-        layout = self.config_data.get('layout', {})
-        animations = self.config_data.get('animations', [])
+        layout = self.config_data.get("layout", {})
+        animations = self.config_data.get("animations", [])
         print(f"✓ Layout type: {layout.get('type', 'unknown')}")
         print(f"✓ Animations configured: {len(animations)}")
 
@@ -365,10 +412,12 @@ class BlenderVSEConfigurator:
             Optional[Dict]: Animation data with events or None if not available
         """
         # Load audio analysis data from file specified in YAML config
-        audio_analysis = self.config_data.get('audio_analysis', {})
-        print(f"🎵 Audio analysis section: {audio_analysis.keys() if audio_analysis else 'None'}")
+        audio_analysis = self.config_data.get("audio_analysis", {})
+        print(
+            f"🎵 Audio analysis section: {audio_analysis.keys() if audio_analysis else 'None'}"
+        )
 
-        analysis_file = audio_analysis.get('file')
+        analysis_file = audio_analysis.get("file")
         print(f"🎵 Loading from file: {analysis_file}")
 
         if not analysis_file:
@@ -380,39 +429,50 @@ class BlenderVSEConfigurator:
             analysis_path = Path(analysis_file)
             if not analysis_path.is_absolute():
                 # Try relative to config directory first
-                if hasattr(self, 'config_path') and self.config_path:
+                if hasattr(self, "config_path") and self.config_path:
                     config_dir = self.config_path.parent
                     resolved_path = config_dir / analysis_file
                     if resolved_path.exists():
                         analysis_path = resolved_path
                     else:
-                        print(f"🎵 Analysis file not found relative to config: {resolved_path}")
+                        print(
+                            f"🎵 Analysis file not found relative to config: {resolved_path}"
+                        )
                         # Try relative to recording directory (parent of config directory)
                         recording_dir = config_dir
                         resolved_path = recording_dir / analysis_file
                         if resolved_path.exists():
                             analysis_path = resolved_path
                         else:
-                            print(f"🎵 Analysis file not found relative to recording: {resolved_path}")
+                            print(
+                                f"🎵 Analysis file not found relative to recording: {resolved_path}"
+                            )
                             return None
                 else:
                     # Fallback: try relative to first video file directory
                     if self.video_files:
-                        video_dir = self.video_files[0].parent.parent  # Go up from extracted/ to recording/
+                        video_dir = self.video_files[
+                            0
+                        ].parent.parent  # Go up from extracted/ to recording/
                         resolved_path = video_dir / analysis_file
                         if resolved_path.exists():
                             analysis_path = resolved_path
                         else:
-                            print(f"🎵 Analysis file not found relative to video directory: {resolved_path}")
+                            print(
+                                f"🎵 Analysis file not found relative to video directory: {resolved_path}"
+                            )
                             return None
                     else:
-                        print(f"🎵 Cannot resolve relative path {analysis_file} - no config_path or video files")
+                        print(
+                            f"🎵 Cannot resolve relative path {analysis_file} - no config_path or video files"
+                        )
                         return None
 
             print(f"🎵 Resolved analysis file path: {analysis_path}")
 
             import json
-            with open(analysis_path, 'r', encoding='utf-8') as f:
+
+            with open(analysis_path, "r", encoding="utf-8") as f:
                 full_data = json.load(f)
                 print(f"🎵 Loaded from file successfully: {len(full_data)} keys")
         except Exception as e:
@@ -477,19 +537,25 @@ class BlenderVSEConfigurator:
 
             # Extract preset name from config path
             preset_name = "custom"
-            if hasattr(self, 'config_path') and self.config_path:
+            if hasattr(self, "config_path") and self.config_path:
                 config_name = self.config_path.name
-                if config_name.startswith('animation_config_'):
-                    preset_name = config_name.replace('animation_config_', '').replace('.yaml', '')
+                if config_name.startswith("animation_config_"):
+                    preset_name = config_name.replace("animation_config_", "").replace(
+                        ".yaml", ""
+                    )
 
             print(f"🎭 Applying preset '{preset_name}' via Animation API")
 
             # Get recording path from the first video file or output blend path
             recording_path = None
             if self.video_files:
-                recording_path = self.video_files[0].parent.parent  # Go up from extracted/video.mp4
+                recording_path = self.video_files[
+                    0
+                ].parent.parent  # Go up from extracted/video.mp4
             elif self.output_blend:
-                recording_path = self.output_blend.parent.parent  # Go up from blender/project.blend
+                recording_path = (
+                    self.output_blend.parent.parent
+                )  # Go up from blender/project.blend
 
             if not recording_path:
                 print("❌ Could not determine recording path")
@@ -500,10 +566,10 @@ class BlenderVSEConfigurator:
             result = api.apply_preset(
                 recording_path=recording_path,
                 preset_config=self.config_data,
-                audio_analysis_data=audio_data
+                audio_analysis_data=audio_data,
             )
 
-            if result['success']:
+            if result["success"]:
                 print(f"✅ Successfully applied preset '{preset_name}'")
                 print(f"   Layout applied: {result['layout_applied']}")
                 print(f"   Animations applied: {result['animations_applied']}")
@@ -511,17 +577,20 @@ class BlenderVSEConfigurator:
                 return True
             else:
                 print(f"❌ Failed to apply preset '{preset_name}'")
-                for error in result['errors']:
+                for error in result["errors"]:
                     print(f"   Error: {error}")
                 return False
 
         except Exception as e:
             print(f"❌ Error in _apply_animations_via_api: {e}")
             import traceback
+
             traceback.print_exc()
             return False
 
-    def _apply_yaml_layout_and_animations(self, video_strips: List, animation_data: Dict) -> bool:
+    def _apply_yaml_layout_and_animations(
+        self, video_strips: List, animation_data: Dict
+    ) -> bool:
         """
         Apply layout and animations using YAML configuration.
 
@@ -560,7 +629,9 @@ class BlenderVSEConfigurator:
         print(f"🎨 Created {len(animations)} animations total")
 
         # Create and apply compositor
-        print(f"🎭 Creating compositor with {len(animations)} animations and {len(video_strips)} strips")
+        print(
+            f"🎭 Creating compositor with {len(animations)} animations and {len(video_strips)} strips"
+        )
         compositor = AnimationCompositor(layout, animations)
         success = compositor.apply(video_strips, animation_data, self.fps)
         print(f"🎭 Compositor apply result: {success}")
@@ -581,22 +652,22 @@ class BlenderVSEConfigurator:
             sys.path.append(str(Path(__file__).parent))
             from vse.layouts import MainPipLayout, RandomLayout
 
-        layout = self.config_data.get('layout', {})
-        layout_type = layout.get('type', 'random')
-        layout_config = layout.get('config', {})
+        layout = self.config_data.get("layout", {})
+        layout_type = layout.get("type", "random")
+        layout_config = layout.get("config", {})
 
         if layout_type == "random":
             return RandomLayout(
-                overlap_allowed=layout_config.get('overlap_allowed', True),
-                margin=layout_config.get('margin', 0.05),
-                min_scale=layout_config.get('min_scale', 0.3),
-                max_scale=layout_config.get('max_scale', 0.8),
-                seed=layout_config.get('seed', None)
+                overlap_allowed=layout_config.get("overlap_allowed", True),
+                margin=layout_config.get("margin", 0.05),
+                min_scale=layout_config.get("min_scale", 0.3),
+                max_scale=layout_config.get("max_scale", 0.8),
+                seed=layout_config.get("seed", None),
             )
         elif layout_type == "main-pip":
             return MainPipLayout(
-                pip_scale=layout_config.get('pip_scale', 0.25),
-                margin_percent=layout_config.get('margin_percent', 0.1)
+                pip_scale=layout_config.get("pip_scale", 0.25),
+                margin_percent=layout_config.get("margin_percent", 0.1),
             )
         else:
             # Default to random layout
@@ -632,104 +703,100 @@ class BlenderVSEConfigurator:
 
         animations = []
 
-        print(f"🎨 _create_animations_from_yaml: Found {len(self.config_data.get('animations', []))} animation specs")
-        for anim_spec in self.config_data.get('animations', []):
-            anim_type = anim_spec.get('type')
-            trigger = anim_spec.get('trigger')
+        print(
+            f"🎨 _create_animations_from_yaml: Found {len(self.config_data.get('animations', []))} animation specs"
+        )
+        for anim_spec in self.config_data.get("animations", []):
+            anim_type = anim_spec.get("type")
+            trigger = anim_spec.get("trigger")
 
             # Create animation based on type
             if anim_type == "scale":
-                intensity = anim_spec.get('intensity', 0.3)
-                duration_frames = anim_spec.get('duration_frames', 2)
-                target_strips = anim_spec.get('target_strips', [])
+                intensity = anim_spec.get("intensity", 0.3)
+                duration_frames = anim_spec.get("duration_frames", 2)
+                target_strips = anim_spec.get("target_strips", [])
                 animation = ScaleAnimation(
                     trigger=trigger,
                     intensity=intensity,
                     duration_frames=duration_frames,
-                    target_strips=target_strips
+                    target_strips=target_strips,
                 )
-                print(f"🎨 Created ScaleAnimation: trigger={trigger}, intensity={intensity}, target_strips={target_strips}")
+                print(
+                    f"🎨 Created ScaleAnimation: trigger={trigger}, intensity={intensity}, target_strips={target_strips}"
+                )
                 animations.append(animation)
 
             elif anim_type == "shake":
-                intensity = anim_spec.get('intensity', 10.0)
-                return_frames = anim_spec.get('return_frames', 2)
+                intensity = anim_spec.get("intensity", 10.0)
+                return_frames = anim_spec.get("return_frames", 2)
                 animation = ShakeAnimation(
-                    trigger=trigger,
-                    intensity=intensity,
-                    return_frames=return_frames
+                    trigger=trigger, intensity=intensity, return_frames=return_frames
                 )
                 animations.append(animation)
 
             elif anim_type == "rotation":
-                wobble_degrees = anim_spec.get('wobble_degrees', 1.0)
-                return_frames = anim_spec.get('return_frames', 3)
+                wobble_degrees = anim_spec.get("wobble_degrees", 1.0)
+                return_frames = anim_spec.get("return_frames", 3)
                 animation = RotationWobbleAnimation(
                     trigger=trigger,
                     wobble_degrees=wobble_degrees,
-                    return_frames=return_frames
+                    return_frames=return_frames,
                 )
                 animations.append(animation)
 
             elif anim_type == "jitter":
-                intensity = anim_spec.get('intensity', 2.0)
-                min_interval = anim_spec.get('min_interval', 3)
-                max_interval = anim_spec.get('max_interval', 8)
+                intensity = anim_spec.get("intensity", 2.0)
+                min_interval = anim_spec.get("min_interval", 3)
+                max_interval = anim_spec.get("max_interval", 8)
                 animation = JitterAnimation(
                     trigger=trigger,
                     intensity=intensity,
                     min_interval=min_interval,
-                    max_interval=max_interval
+                    max_interval=max_interval,
                 )
                 animations.append(animation)
 
             elif anim_type == "brightness_flicker":
-                intensity = anim_spec.get('intensity', 0.15)
-                return_frames = anim_spec.get('return_frames', 1)
+                intensity = anim_spec.get("intensity", 0.15)
+                return_frames = anim_spec.get("return_frames", 1)
                 animation = BrightnessFlickerAnimation(
-                    trigger=trigger,
-                    intensity=intensity,
-                    return_frames=return_frames
+                    trigger=trigger, intensity=intensity, return_frames=return_frames
                 )
                 animations.append(animation)
 
             elif anim_type == "black_white":
-                intensity = anim_spec.get('intensity', 0.8)
-                animation = BlackWhiteAnimation(
-                    trigger=trigger,
-                    intensity=intensity
-                )
+                intensity = anim_spec.get("intensity", 0.8)
+                animation = BlackWhiteAnimation(trigger=trigger, intensity=intensity)
                 animations.append(animation)
 
             elif anim_type == "film_grain":
-                intensity = anim_spec.get('intensity', 0.1)
-                animation = FilmGrainAnimation(
-                    trigger=trigger,
-                    intensity=intensity
-                )
+                intensity = anim_spec.get("intensity", 0.1)
+                animation = FilmGrainAnimation(trigger=trigger, intensity=intensity)
                 animations.append(animation)
 
             elif anim_type == "vintage_color":
-                sepia_amount = anim_spec.get('sepia_amount', 0.3)
-                contrast_boost = anim_spec.get('contrast_boost', 0.2)
+                sepia_amount = anim_spec.get("sepia_amount", 0.3)
+                contrast_boost = anim_spec.get("contrast_boost", 0.2)
                 animation = VintageColorGradeAnimation(
                     trigger=trigger,
                     sepia_amount=sepia_amount,
-                    contrast_boost=contrast_boost
+                    contrast_boost=contrast_boost,
                 )
                 animations.append(animation)
 
             elif anim_type == "visibility":
-                pattern = anim_spec.get('pattern', 'alternate')
-                duration_frames = anim_spec.get('duration_frames', 10)
-                target_strips = anim_spec.get('target_strips', [])
+                pattern = anim_spec.get("pattern", "alternate")
+                duration_frames = anim_spec.get("duration_frames", 10)
+                target_strips = anim_spec.get("target_strips", [])
                 animation = VisibilityAnimation(
                     trigger=trigger,
                     pattern=pattern,
                     duration_frames=duration_frames,
-                    target_strips=target_strips
+                    target_strips=target_strips,
                 )
-                print(f"🎨 Created VisibilityAnimation: trigger={trigger}, pattern={pattern}, target_strips={target_strips}")
+                print(
+                    f"🎨 Created VisibilityAnimation: trigger={trigger}, pattern={pattern}, target_strips={target_strips}"
+                )
                 animations.append(animation)
 
         return animations
@@ -738,21 +805,27 @@ class BlenderVSEConfigurator:
         """Save metadata JSON file for addon auto-loading."""
         try:
             # Save metadata next to .blend file
-            metadata_file = self.output_blend.with_suffix('.cinemon.json')
+            metadata_file = self.output_blend.with_suffix(".cinemon.json")
 
             # Debug: Print config_data content
             print(f"🔍 DEBUG: config_data keys: {list(self.config_data.keys())}")
-            print(f"🔍 DEBUG: preset_name in config: {self.config_data.get('preset_name', 'NOT FOUND')}")
+            print(
+                f"🔍 DEBUG: preset_name in config: {self.config_data.get('preset_name', 'NOT FOUND')}"
+            )
 
             # Get preset name from config (passed from CLI)
-            preset_name = self.config_data.get('preset_name')
+            preset_name = self.config_data.get("preset_name")
             if not preset_name:
                 # Fallback: try to extract from config path
-                if hasattr(self, 'config_path') and self.config_path:
+                if hasattr(self, "config_path") and self.config_path:
                     config_name = self.config_path.name
-                    if config_name.startswith('animation_config_'):
-                        preset_name = config_name.replace('animation_config_', '').replace('.yaml', '')
-                        print(f"🔍 DEBUG: Fallback preset_name from path: {preset_name}")
+                    if config_name.startswith("animation_config_"):
+                        preset_name = config_name.replace(
+                            "animation_config_", ""
+                        ).replace(".yaml", "")
+                        print(
+                            f"🔍 DEBUG: Fallback preset_name from path: {preset_name}"
+                        )
 
             metadata = {
                 "version": "1.0",
@@ -764,16 +837,21 @@ class BlenderVSEConfigurator:
                     "main_audio": str(self.main_audio) if self.main_audio else None,
                     "output_blend": str(self.output_blend),
                     "fps": self.fps,
-                    "resolution": {"width": self.resolution_x, "height": self.resolution_y}
+                    "resolution": {
+                        "width": self.resolution_x,
+                        "height": self.resolution_y,
+                    },
                 },
                 "config": {
                     "path": str(self.config_path),
-                    "animations": len(self.config_data.get('animations', [])),
-                    "layout_type": self.config_data.get('layout', {}).get('type', 'unknown')
-                }
+                    "animations": len(self.config_data.get("animations", [])),
+                    "layout_type": self.config_data.get("layout", {}).get(
+                        "type", "unknown"
+                    ),
+                },
             }
 
-            with open(metadata_file, 'w', encoding='utf-8') as f:
+            with open(metadata_file, "w", encoding="utf-8") as f:
                 json.dump(metadata, f, indent=2, ensure_ascii=False)
 
             print(f"📄 Zapisano metadata dla add-on: {metadata_file}")
@@ -783,6 +861,7 @@ class BlenderVSEConfigurator:
         except Exception as e:
             print(f"⚠ Błąd zapisywania metadata dla add-on: {e}")
             import traceback
+
             traceback.print_exc()
 
 
@@ -803,7 +882,9 @@ def main() -> int:
         print(f"Renderowanie: {configurator.render_output}")
         print(f"Rozdzielczość: {configurator.resolution_x}x{configurator.resolution_y}")
         print(f"FPS: {configurator.fps}")
-        print(f"Layout: {configurator.config_data.get('layout', {}).get('type', 'unknown')}")
+        print(
+            f"Layout: {configurator.config_data.get('layout', {}).get('type', 'unknown')}"
+        )
         print(f"Animations: {len(configurator.config_data.get('animations', []))}")
         print()
 

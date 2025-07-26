@@ -20,6 +20,7 @@ except ImportError:
     # Fallback for background mode
     try:
         import base_effect_animation
+
         BaseEffectAnimation = base_effect_animation.BaseEffectAnimation
     except ImportError:
         # If still failing, use a minimal base class
@@ -44,12 +45,14 @@ class RotationWobbleAnimation(BaseEffectAnimation):
         oscillate: Whether to alternate wobble direction
     """
 
-    def __init__(self,
-                 trigger: str = "beat",
-                 wobble_degrees: float = 1.0,
-                 return_frames: int = 3,
-                 oscillate: bool = True,
-                 target_strips: Optional[List[str]] = None):
+    def __init__(
+        self,
+        trigger: str = "beat",
+        wobble_degrees: float = 1.0,
+        return_frames: int = 3,
+        oscillate: bool = True,
+        target_strips: Optional[List[str]] = None,
+    ):
         """
         Initialize RotationWobbleAnimation.
 
@@ -82,7 +85,7 @@ class RotationWobbleAnimation(BaseEffectAnimation):
         Returns:
             True if animation was applied successfully
         """
-        if not hasattr(strip, 'transform'):
+        if not hasattr(strip, "transform"):
             return False
 
         # Set initial rotation keyframe at frame 1
@@ -99,10 +102,15 @@ class RotationWobbleAnimation(BaseEffectAnimation):
             if self.oscillate and i > 0:
                 direction *= -1  # Alternate direction
                 # Use VintageFilmEffects range but with direction
-                wobble_rotation = random.uniform(-self.wobble_degrees, self.wobble_degrees) * direction
+                wobble_rotation = (
+                    random.uniform(-self.wobble_degrees, self.wobble_degrees)
+                    * direction
+                )
             else:
                 # Original VintageFilmEffects logic: random in full range
-                wobble_rotation = random.uniform(-self.wobble_degrees, self.wobble_degrees)
+                wobble_rotation = random.uniform(
+                    -self.wobble_degrees, self.wobble_degrees
+                )
 
             wobble_radians = math.radians(wobble_rotation)
 
@@ -126,4 +134,4 @@ class RotationWobbleAnimation(BaseEffectAnimation):
         Returns:
             List containing 'transform' property requirement
         """
-        return ['transform']
+        return ["transform"]

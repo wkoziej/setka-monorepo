@@ -164,7 +164,7 @@ class TestBlenderProjectManager:
             project=ProjectConfig(video_files=["test.mp4"]),
             audio_analysis=AudioAnalysisConfig(),
             layout=LayoutConfig(),
-            animations=[]
+            animations=[],
         )
 
         with pytest.raises(ValueError, match="Invalid recording structure"):
@@ -206,7 +206,9 @@ class TestBlenderProjectManager:
         assert kwargs["check"] is True
 
     @patch("subprocess.run")
-    def test_execute_blender_with_yaml_config_custom_executable(self, mock_run, tmp_path):
+    def test_execute_blender_with_yaml_config_custom_executable(
+        self, mock_run, tmp_path
+    ):
         """Test execution with custom Blender executable."""
         mock_run.return_value = Mock(stdout="Success", stderr="")
 
@@ -288,24 +290,21 @@ class TestBlenderProjectManager:
                 video_files=["camera1.mp4", "screen.mkv"],
                 main_audio="main_audio.m4a",
                 fps=30,
-                resolution={"width": 1920, "height": 1080}
+                resolution={"width": 1920, "height": 1080},
             ),
             audio_analysis=AudioAnalysisConfig(
                 file="analysis/main_audio_analysis.json"
             ),
-            layout=LayoutConfig(
-                type="random",
-                config={"seed": 42, "margin": 0.1}
-            ),
+            layout=LayoutConfig(type="random", config={"seed": 42, "margin": 0.1}),
             animations=[
                 AnimationSpec(
                     type="scale",
                     trigger="beat",
                     target_strips=[],
                     intensity=0.3,
-                    duration_frames=2
+                    duration_frames=2,
                 )
-            ]
+            ],
         )
 
         # Should not raise exception and return blend path
@@ -333,6 +332,7 @@ class TestBlenderProjectManager:
 
         # Create structure object
         from types import SimpleNamespace
+
         structure = SimpleNamespace()
         structure.extracted_dir = sample_recording_structure / "extracted"
         structure.blender_dir = sample_recording_structure / "blender"
@@ -342,13 +342,13 @@ class TestBlenderProjectManager:
             project=ProjectConfig(
                 video_files=["camera1.mp4", "screen.mkv"],
                 main_audio="main_audio.m4a",
-                fps=30
+                fps=30,
             ),
             audio_analysis=AudioAnalysisConfig(
                 file="analysis/main_audio_analysis.json"
             ),
             layout=LayoutConfig(),
-            animations=[]
+            animations=[],
         )
 
         resolved_config = manager._create_resolved_config(
@@ -371,24 +371,19 @@ class TestBlenderProjectManager:
                 video_files=["video1.mp4", "video2.mp4"],
                 main_audio="audio.m4a",
                 fps=25,
-                resolution={"width": 1920, "height": 1080}
+                resolution={"width": 1920, "height": 1080},
             ),
-            audio_analysis=AudioAnalysisConfig(
-                file="analysis.json"
-            ),
-            layout=LayoutConfig(
-                type="random",
-                config={"seed": 123}
-            ),
+            audio_analysis=AudioAnalysisConfig(file="analysis.json"),
+            layout=LayoutConfig(type="random", config={"seed": 123}),
             animations=[
                 AnimationSpec(
                     type="shake",
                     trigger="beat",
                     target_strips=["strip_0"],
                     intensity=5.0,
-                    return_frames=2
+                    return_frames=2,
                 )
-            ]
+            ],
         )
 
         config_dict = manager._convert_config_to_dict(yaml_config)

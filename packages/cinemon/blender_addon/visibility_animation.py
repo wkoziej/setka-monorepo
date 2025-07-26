@@ -21,11 +21,13 @@ class VisibilityAnimation(BaseEffectAnimation):
         duration_frames: How many frames visibility change lasts (for pulse mode)
     """
 
-    def __init__(self,
-                 trigger: str = "beat",
-                 pattern: str = "alternate",
-                 duration_frames: int = 10,
-                 target_strips: Optional[List[str]] = None):
+    def __init__(
+        self,
+        trigger: str = "beat",
+        pattern: str = "alternate",
+        duration_frames: int = 10,
+        target_strips: Optional[List[str]] = None,
+    ):
         """
         Initialize VisibilityAnimation.
 
@@ -58,14 +60,16 @@ class VisibilityAnimation(BaseEffectAnimation):
         Returns:
             True if animation was applied successfully
         """
-        print(f"    👁 VisibilityAnimation.apply_to_strip: strip={strip.name}, events={len(events)}, pattern={self.pattern}")
+        print(
+            f"    👁 VisibilityAnimation.apply_to_strip: strip={strip.name}, events={len(events)}, pattern={self.pattern}"
+        )
 
-        if not hasattr(strip, 'blend_alpha'):
+        if not hasattr(strip, "blend_alpha"):
             print(f"    ❌ Strip {strip.name} has no blend_alpha property")
             return False
 
         # Get strip index for alternating pattern
-        strip_index = kwargs.get('strip_index', 0)
+        strip_index = kwargs.get("strip_index", 0)
 
         # Set initial visibility at frame 1
         if self.pattern == "alternate":
@@ -81,8 +85,8 @@ class VisibilityAnimation(BaseEffectAnimation):
         print(f"    🎯 Adding visibility keyframes for {len(events)} events")
         for i, event in enumerate(events):
             # Handle both time values (beats, energy_peaks) and section objects
-            if isinstance(event, dict) and 'start' in event:
-                event_time = event['start']
+            if isinstance(event, dict) and "start" in event:
+                event_time = event["start"]
             else:
                 event_time = event
             frame = int(event_time * fps)
@@ -109,7 +113,9 @@ class VisibilityAnimation(BaseEffectAnimation):
                 # Brief pulse: show for duration_frames, then hide
                 target_alpha = 1.0
 
-            print(f"    📍 Event {i+1}: time={event_time:.2f}s, frame={frame}, strip_index={strip_index}, alpha={target_alpha}")
+            print(
+                f"    📍 Event {i + 1}: time={event_time:.2f}s, frame={frame}, strip_index={strip_index}, alpha={target_alpha}"
+            )
 
             self.keyframe_helper.insert_blend_alpha_keyframe(strip, frame, target_alpha)
 
@@ -117,12 +123,14 @@ class VisibilityAnimation(BaseEffectAnimation):
             if self.pattern == "pulse":
                 return_frame = frame + self.duration_frames
                 return_alpha = 0.0 if target_alpha == 1.0 else 1.0
-                self.keyframe_helper.insert_blend_alpha_keyframe(strip, return_frame, return_alpha)
+                self.keyframe_helper.insert_blend_alpha_keyframe(
+                    strip, return_frame, return_alpha
+                )
                 print(f"    📍 Return frame: {return_frame}, alpha={return_alpha}")
 
             # Only show first 3 events to avoid spam
             if i >= 2:
-                print(f"    📍 ... and {len(events)-3} more events")
+                print(f"    📍 ... and {len(events) - 3} more events")
                 break
 
         return True
@@ -134,4 +142,4 @@ class VisibilityAnimation(BaseEffectAnimation):
         Returns:
             List containing 'blend_alpha' property requirement
         """
-        return ['blend_alpha']
+        return ["blend_alpha"]

@@ -29,12 +29,14 @@ class AudioTimingManager:
             audio_analysis_data: Beatrix audio analysis data with animation_events
         """
         self._audio_data = audio_analysis_data
-        if audio_analysis_data and 'animation_events' in audio_analysis_data:
-            events = audio_analysis_data['animation_events']
-            beat_count = len(events.get('beats', []))
-            energy_count = len(events.get('energy_peaks', []))
-            sections_count = len(events.get('sections', []))
-            logger.info(f"Audio timing loaded: {beat_count} beats, {energy_count} energy peaks, {sections_count} sections")
+        if audio_analysis_data and "animation_events" in audio_analysis_data:
+            events = audio_analysis_data["animation_events"]
+            beat_count = len(events.get("beats", []))
+            energy_count = len(events.get("energy_peaks", []))
+            sections_count = len(events.get("sections", []))
+            logger.info(
+                f"Audio timing loaded: {beat_count} beats, {energy_count} energy peaks, {sections_count} sections"
+            )
 
     def set_fps(self, fps: int):
         """Set project FPS for frame calculations.
@@ -53,21 +55,23 @@ class AudioTimingManager:
         Returns:
             List of frame numbers where events occur
         """
-        if not self._audio_data or 'animation_events' not in self._audio_data:
-            logger.warning(f"No audio data available for trigger '{trigger}', using fallback")
+        if not self._audio_data or "animation_events" not in self._audio_data:
+            logger.warning(
+                f"No audio data available for trigger '{trigger}', using fallback"
+            )
             return self._get_fallback_frames(trigger)
 
-        events = self._audio_data['animation_events']
+        events = self._audio_data["animation_events"]
 
         # Map trigger names to event types
         trigger_map = {
-            'beat': 'beats',
-            'bass': 'energy_peaks',
-            'energy_peaks': 'energy_peaks',
-            'sections': 'sections'
+            "beat": "beats",
+            "bass": "energy_peaks",
+            "energy_peaks": "energy_peaks",
+            "sections": "sections",
         }
 
-        event_type = trigger_map.get(trigger, 'beats')
+        event_type = trigger_map.get(trigger, "beats")
         timestamps = events.get(event_type, [])
 
         if not timestamps:
@@ -79,7 +83,7 @@ class AudioTimingManager:
         for timestamp in timestamps:
             if isinstance(timestamp, dict):
                 # Section format: {"start": float, "end": float, "label": string}
-                frame = int(timestamp.get('start', 0) * self._fps)
+                frame = int(timestamp.get("start", 0) * self._fps)
             else:
                 # Simple timestamp format
                 frame = int(timestamp * self._fps)
@@ -87,7 +91,9 @@ class AudioTimingManager:
             if frame >= 0:
                 frames.append(frame)
 
-        logger.info(f"Converted {len(timestamps)} {event_type} events to frames: {frames[:5]}{'...' if len(frames) > 5 else ''}")
+        logger.info(
+            f"Converted {len(timestamps)} {event_type} events to frames: {frames[:5]}{'...' if len(frames) > 5 else ''}"
+        )
         return frames
 
     def _get_fallback_frames(self, trigger: str) -> List[int]:
@@ -102,26 +108,26 @@ class AudioTimingManager:
         # Default timeline range (should come from Blender context)
         try:
             import bpy
+
             frame_start = bpy.context.scene.frame_start
             frame_end = bpy.context.scene.frame_end
         except:
             frame_start, frame_end = 1, 250
 
         # Fixed intervals based on trigger type (legacy behavior)
-        intervals = {
-            'beat': 30,
-            'bass': 30,
-            'energy_peaks': 60,
-            'sections': 120
-        }
+        intervals = {"beat": 30, "bass": 30, "energy_peaks": 60, "sections": 120}
 
         interval = intervals.get(trigger, 45)
         frames = list(range(frame_start, frame_end + 1, interval))
 
-        logger.info(f"Using fallback timing for '{trigger}': interval={interval}, frames={len(frames)}")
+        logger.info(
+            f"Using fallback timing for '{trigger}': interval={interval}, frames={len(frames)}"
+        )
         return frames
 
-    def get_keyframe_timing(self, trigger: str, duration_frames: int = 3) -> List[Dict[str, int]]:
+    def get_keyframe_timing(
+        self, trigger: str, duration_frames: int = 3
+    ) -> List[Dict[str, int]]:
         """Get keyframe timing data for animations.
 
         Args:
@@ -135,10 +141,7 @@ class AudioTimingManager:
 
         keyframes = []
         for frame in event_frames:
-            keyframes.append({
-                'start': frame,
-                'end': frame + duration_frames
-            })
+            keyframes.append({"start": frame, "end": frame + duration_frames})
 
         return keyframes
 
@@ -148,9 +151,11 @@ class AudioTimingManager:
         Returns:
             True if audio data is loaded and valid
         """
-        return (self._audio_data is not None and
-                'animation_events' in self._audio_data and
-                bool(self._audio_data['animation_events']))
+        return (
+            self._audio_data is not None
+            and "animation_events" in self._audio_data
+            and bool(self._audio_data["animation_events"])
+        )
 
 
 # Global instance for use throughout the addon

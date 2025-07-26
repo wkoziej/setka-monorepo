@@ -38,10 +38,9 @@ class CinemonConfigGenerator:
         """Initialize CinemonConfigGenerator."""
         self.preset_manager = PresetManager()
 
-    def generate_preset(self,
-                       recording_dir: Union[str, Path],
-                       preset_name: str,
-                       **overrides) -> Path:
+    def generate_preset(
+        self, recording_dir: Union[str, Path], preset_name: str, **overrides
+    ) -> Path:
         """
         Generate configuration from preset template.
 
@@ -84,7 +83,9 @@ class CinemonConfigGenerator:
                     )
 
         # Build configuration from preset
-        config_data = self._build_config_from_preset(preset_config, main_audio, overrides, discovery)
+        config_data = self._build_config_from_preset(
+            preset_config, main_audio, overrides, discovery
+        )
 
         # Generate output file path
         output_file = recording_dir / f"animation_config_{preset_name}.yaml"
@@ -94,13 +95,15 @@ class CinemonConfigGenerator:
 
         return output_file
 
-    def generate_config(self,
-                       recording_dir: Union[str, Path],
-                       layout: Dict[str, Any],
-                       animations: List[Dict[str, Any]],
-                       main_audio: Optional[str] = None,
-                       project_overrides: Optional[Dict[str, Any]] = None,
-                       **kwargs) -> Path:
+    def generate_config(
+        self,
+        recording_dir: Union[str, Path],
+        layout: Dict[str, Any],
+        animations: List[Dict[str, Any]],
+        main_audio: Optional[str] = None,
+        project_overrides: Optional[Dict[str, Any]] = None,
+        **kwargs,
+    ) -> Path:
         """
         Generate custom configuration from parameters.
 
@@ -153,9 +156,7 @@ class CinemonConfigGenerator:
 
         return output_file
 
-    def generate_template(self,
-                         recording_dir: Union[str, Path],
-                         **params) -> Path:
+    def generate_template(self, recording_dir: Union[str, Path], **params) -> Path:
         """
         Generate template configuration for manual editing.
 
@@ -194,11 +195,13 @@ class CinemonConfigGenerator:
         discovery = MediaDiscovery(Path(recording_dir))
         return discovery.validate_structure()
 
-    def _build_config_from_preset(self,
-                                 preset_config,
-                                 main_audio: str,
-                                 overrides: Dict[str, Any],
-                                 discovery: 'MediaDiscovery') -> Dict[str, Any]:
+    def _build_config_from_preset(
+        self,
+        preset_config,
+        main_audio: str,
+        overrides: Dict[str, Any],
+        discovery: "MediaDiscovery",
+    ) -> Dict[str, Any]:
         """
         Build configuration from preset template.
 
@@ -241,27 +244,29 @@ class CinemonConfigGenerator:
                 "fps": overrides.get("fps", 30),
                 "resolution": {
                     "width": overrides.get("width", 752),
-                    "height": overrides.get("height", 564)
-                }
+                    "height": overrides.get("height", 564),
+                },
             },
             "audio_analysis": {
                 "beat_division": overrides.get("beat_division", 4),
                 "min_onset_interval": overrides.get("min_onset_interval", 0.5),
-                "file": analysis_file
+                "file": analysis_file,
             },
             "layout": layout,
-            "animations": animations
+            "animations": animations,
         }
 
         return config_data
 
-    def _build_custom_config(self,
-                            layout: Dict[str, Any],
-                            animations: List[Dict[str, Any]],
-                            main_audio: str,
-                            project_overrides: Optional[Dict[str, Any]] = None,
-                            discovery: 'MediaDiscovery' = None,
-                            **kwargs) -> Dict[str, Any]:
+    def _build_custom_config(
+        self,
+        layout: Dict[str, Any],
+        animations: List[Dict[str, Any]],
+        main_audio: str,
+        project_overrides: Optional[Dict[str, Any]] = None,
+        discovery: "MediaDiscovery" = None,
+        **kwargs,
+    ) -> Dict[str, Any]:
         """
         Build custom configuration from parameters.
 
@@ -291,10 +296,7 @@ class CinemonConfigGenerator:
             "video_files": video_files,
             "main_audio": main_audio,
             "fps": 30,
-            "resolution": {
-                "width": 752,
-                "height": 564
-            }
+            "resolution": {"width": 752, "height": 564},
         }
 
         # Apply project overrides
@@ -305,19 +307,21 @@ class CinemonConfigGenerator:
         audio_analysis = {
             "beat_division": kwargs.get("beat_division", 4),
             "min_onset_interval": kwargs.get("min_onset_interval", 0.5),
-            "file": analysis_file
+            "file": analysis_file,
         }
 
         config_data = {
             "project": project_settings,
             "audio_analysis": audio_analysis,
             "layout": layout,
-            "animations": animations
+            "animations": animations,
         }
 
         return config_data
 
-    def _write_yaml_config(self, config_data: Dict[str, Any], output_file: Path) -> None:
+    def _write_yaml_config(
+        self, config_data: Dict[str, Any], output_file: Path
+    ) -> None:
         """
         Write configuration to YAML file.
 
@@ -325,12 +329,12 @@ class CinemonConfigGenerator:
             config_data: Configuration data
             output_file: Output file path
         """
-        with output_file.open('w', encoding='utf-8') as f:
+        with output_file.open("w", encoding="utf-8") as f:
             yaml.dump(
                 config_data,
                 f,
                 default_flow_style=False,
                 allow_unicode=True,
                 indent=2,
-                sort_keys=False
+                sort_keys=False,
             )

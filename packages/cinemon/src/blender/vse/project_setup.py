@@ -51,13 +51,17 @@ class BlenderProjectSetup:
         try:
             # DON'T use Video_Editing template - it causes problems with strip saving in background mode
             # Load default scene instead
-            print("🎬 Loading default scene (avoiding Video_Editing template issues)...")
+            print(
+                "🎬 Loading default scene (avoiding Video_Editing template issues)..."
+            )
             bpy.ops.wm.read_factory_settings()
             print("🎬 Default scene loaded")
 
             # Configure basic scene settings
             scene = bpy.context.scene
-            print(f"🎬 Scene: {scene.name}, has sequence_editor: {scene.sequence_editor is not None}")
+            print(
+                f"🎬 Scene: {scene.name}, has sequence_editor: {scene.sequence_editor is not None}"
+            )
             scene.render.fps = self.config.get("fps", 30)
             scene.render.resolution_x = self.config.get("resolution_x", 1280)
             scene.render.resolution_y = self.config.get("resolution_y", 720)
@@ -165,7 +169,9 @@ class BlenderProjectSetup:
                 # Use filename (without extension) for clear identification
                 strip_name = Path(video_file).stem
 
-                print(f"🎬 Adding video strip: {strip_name} from {video_file} to channel {channel}")
+                print(
+                    f"🎬 Adding video strip: {strip_name} from {video_file} to channel {channel}"
+                )
                 new_strip = sequencer.sequences.new_movie(
                     name=strip_name,
                     filepath=str(video_file),
@@ -221,8 +227,12 @@ class BlenderProjectSetup:
             sequencer = bpy.context.scene.sequence_editor
             if sequencer:
                 strips_count = len(sequencer.sequences)
-                video_strips_count = len([s for s in sequencer.sequences if s.type == 'MOVIE'])
-                print(f"🎬 Before save: {strips_count} total sequences, {video_strips_count} video strips")
+                video_strips_count = len(
+                    [s for s in sequencer.sequences if s.type == "MOVIE"]
+                )
+                print(
+                    f"🎬 Before save: {strips_count} total sequences, {video_strips_count} video strips"
+                )
             else:
                 print("🎬 Before save: No sequence editor found")
 

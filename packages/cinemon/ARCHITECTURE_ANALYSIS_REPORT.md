@@ -119,7 +119,7 @@ class CinemonExecutor:
         self.mode = mode
         self.config_manager = UnifiedConfigManager()
         self.animation_engine = AnimationEngine()
-    
+
     def execute(self, config_path: Path):
         config = self.config_manager.load(config_path)
         if self.mode == 'cli':
@@ -157,7 +157,7 @@ class DependencyManager:
             lambda: importlib.import_module(module_name),
             lambda: __import__(module_name)
         ]
-        
+
         for strategy in strategies:
             try:
                 return strategy()
@@ -194,7 +194,7 @@ class BlenderBridge:
         config_b64 = base64.b64encode(
             json.dumps(config).encode()
         ).decode()
-        
+
         subprocess.run([
             "blender", "--python", "script.py",
             "--", "--config-b64", config_b64
@@ -212,12 +212,12 @@ class VendorManager:
         'yaml': '6.0',
         'numpy': '1.24.0'
     }
-    
+
     @classmethod
     def ensure_dependencies(cls):
         vendor_path = Path(__file__).parent / 'vendor'
         sys.path.insert(0, str(vendor_path))
-        
+
         for dep, version in cls.VENDOR_DEPS.items():
             cls._verify_import(dep, version)
 ```

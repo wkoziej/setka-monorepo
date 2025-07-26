@@ -11,6 +11,7 @@ from typing import List, Optional
 @dataclass
 class ValidationResult:
     """Result of directory structure validation."""
+
     is_valid: bool
     errors: List[str]
     has_video_files: bool
@@ -32,9 +33,9 @@ class MediaDiscovery:
         validation = discovery.validate_structure()
     """
 
-    VIDEO_EXTENSIONS = {'.mp4', '.mkv', '.avi', '.mov', '.webm'}
-    AUDIO_EXTENSIONS = {'.m4a', '.wav', '.mp3', '.aac', '.flac'}
-    ANALYSIS_EXTENSIONS = {'.json'}
+    VIDEO_EXTENSIONS = {".mp4", ".mkv", ".avi", ".mov", ".webm"}
+    AUDIO_EXTENSIONS = {".m4a", ".wav", ".mp3", ".aac", ".flac"}
+    ANALYSIS_EXTENSIONS = {".json"}
 
     def __init__(self, recording_dir: Path):
         """
@@ -53,7 +54,9 @@ class MediaDiscovery:
 
         self.extracted_dir = self.recording_dir / "extracted"
         if not self.extracted_dir.exists():
-            raise FileNotFoundError(f"Extracted directory not found: {self.extracted_dir}")
+            raise FileNotFoundError(
+                f"Extracted directory not found: {self.extracted_dir}"
+            )
 
         self.analysis_dir = self.recording_dir / "analysis"
 
@@ -179,5 +182,5 @@ class MediaDiscovery:
             errors=errors,
             has_video_files=has_video_files,
             has_audio_files=has_audio_files,
-            has_analysis_files=has_analysis_files
+            has_analysis_files=has_analysis_files,
         )

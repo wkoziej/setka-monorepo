@@ -19,6 +19,7 @@ except ImportError:
     # Fallback for background mode
     try:
         import base_effect_animation
+
         BaseEffectAnimation = base_effect_animation.BaseEffectAnimation
     except ImportError:
         # If still failing, use a minimal base class
@@ -43,12 +44,14 @@ class ShakeAnimation(BaseEffectAnimation):
         random_direction: Whether shake direction is random or deterministic
     """
 
-    def __init__(self,
-                 trigger: str = "beat",
-                 intensity: float = 10.0,
-                 return_frames: int = 2,
-                 random_direction: bool = True,
-                 target_strips: Optional[List[str]] = None):
+    def __init__(
+        self,
+        trigger: str = "beat",
+        intensity: float = 10.0,
+        return_frames: int = 2,
+        random_direction: bool = True,
+        target_strips: Optional[List[str]] = None,
+    ):
         """
         Initialize ShakeAnimation.
 
@@ -78,7 +81,7 @@ class ShakeAnimation(BaseEffectAnimation):
         Returns:
             True if animation was applied successfully
         """
-        if not hasattr(strip, 'transform'):
+        if not hasattr(strip, "transform"):
             return False
 
         # Get base position
@@ -131,4 +134,4 @@ class ShakeAnimation(BaseEffectAnimation):
         Returns:
             List containing 'transform' property requirement
         """
-        return ['transform']
+        return ["transform"]

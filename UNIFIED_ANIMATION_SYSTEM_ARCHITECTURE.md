@@ -1,6 +1,6 @@
 # Unified Animation System Architecture
 
-**Created:** 2025-07-22  
+**Created:** 2025-07-22
 **Status:** Implemented with issues to resolve
 
 ## Overview

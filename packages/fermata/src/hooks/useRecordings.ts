@@ -32,7 +32,7 @@ const mockRecordings: Recording[] = [
     }
   },
   {
-    name: 'stream_20240115_140000', 
+    name: 'stream_20240115_140000',
     path: '/path/to/stream_20240115_140000',
     status: 'Analyzed',
     last_updated: Date.now() - 1800000, // 30 min ago
@@ -44,7 +44,7 @@ const mockRecordings: Recording[] = [
   },
   {
     name: 'stream_20240115_160000',
-    path: '/path/to/stream_20240115_160000', 
+    path: '/path/to/stream_20240115_160000',
     status: { Failed: 'Audio analysis failed: No audio tracks found' },
     last_updated: Date.now() - 3600000, // 1 hour ago
     file_sizes: {
@@ -55,7 +55,7 @@ const mockRecordings: Recording[] = [
   {
     name: 'stream_20240115_180000',
     path: '/path/to/stream_20240115_180000',
-    status: 'Extracted', 
+    status: 'Extracted',
     last_updated: Date.now() - 600000, // 10 min ago
     file_sizes: {
       'recording.mkv': 2200000000,
@@ -73,10 +73,10 @@ export function useRecordings() {
 
   const refreshRecordings = useCallback(async () => {
     setState(prev => ({ ...prev, loading: true, error: null }));
-    
+
     try {
       const recordings = await invokeCommand('get_recordings') as Recording[];
-      
+
       setState({
         recordings,
         loading: false,
@@ -140,19 +140,19 @@ export function useRecordingOperations() {
 
   const runNextStep = useCallback(async (recordingName: string) => {
     console.log(`🚀 Starting runNextStep for: ${recordingName}`);
-    setOperationState(prev => ({ 
-      ...prev, 
-      running: { ...prev.running, [recordingName]: true }, 
-      output: '', 
-      error: null 
+    setOperationState(prev => ({
+      ...prev,
+      running: { ...prev.running, [recordingName]: true },
+      output: '',
+      error: null
     }));
-    
+
     try {
       // Always try to use Tauri command first
       console.log(`📞 Invoking run_next_step for: ${recordingName}`);
       const result = await invokeCommand('run_next_step', { recordingName });
       console.log(`✅ runNextStep result:`, result);
-      
+
       setOperationState(prev => ({
         ...prev,
         running: { ...prev.running, [recordingName]: false },
@@ -172,19 +172,19 @@ export function useRecordingOperations() {
 
   const runSpecificStep = useCallback(async (recordingName: string, step: string) => {
     console.log(`🚀 Starting runSpecificStep for: ${recordingName}, step: ${step}`);
-    setOperationState(prev => ({ 
-      ...prev, 
-      running: { ...prev.running, [recordingName]: true }, 
-      output: '', 
-      error: null 
+    setOperationState(prev => ({
+      ...prev,
+      running: { ...prev.running, [recordingName]: true },
+      output: '',
+      error: null
     }));
-    
+
     try {
       // Always try to use Tauri command first
       console.log(`📞 Invoking run_specific_step for: ${recordingName}, step: ${step}`);
       const result = await invokeCommand('run_specific_step', { recordingName, step });
       console.log(`✅ runSpecificStep result:`, result);
-      
+
       setOperationState(prev => ({
         ...prev,
         running: { ...prev.running, [recordingName]: false },
@@ -204,11 +204,11 @@ export function useRecordingOperations() {
 
   const runSetupRenderWithPreset = useCallback(async (recordingName: string, preset: string, mainAudio?: string) => {
     console.log(`🚀 Starting runSetupRenderWithPreset for: ${recordingName}, preset: ${preset}, mainAudio: ${mainAudio}`);
-    setOperationState(prev => ({ 
-      ...prev, 
-      running: { ...prev.running, [recordingName]: true }, 
-      output: '', 
-      error: null 
+    setOperationState(prev => ({
+      ...prev,
+      running: { ...prev.running, [recordingName]: true },
+      output: '',
+      error: null
     }));
 
     try {
@@ -218,7 +218,7 @@ export function useRecordingOperations() {
         step: 'setuprender',
         options
       });
-      
+
       setOperationState(prev => ({
         ...prev,
         running: { ...prev.running, [recordingName]: false },
@@ -276,22 +276,22 @@ export function useRenameRecording() {
     setRenameState(prev => ({ ...prev, isRenaming: true }));
 
     try {
-      await invokeCommand('rename_recording', { 
-        oldName: recording.name, 
-        newName: newName 
+      await invokeCommand('rename_recording', {
+        oldName: recording.name,
+        newName: newName
       });
-      
+
       console.log(`✅ Successfully renamed recording to '${newName}'`);
-      
+
       // Close dialog
       hideRenameDialog();
-      
+
       // Note: Caller should refresh recordings list
       return true;
     } catch (error) {
       console.error(`❌ Failed to rename recording:`, error);
       setRenameState(prev => ({ ...prev, isRenaming: false }));
-      
+
       // Re-throw error so caller can handle it
       throw error;
     }
@@ -303,4 +303,4 @@ export function useRenameRecording() {
     hideRenameDialog,
     renameRecording,
   };
-} 
+}

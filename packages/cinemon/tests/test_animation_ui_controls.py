@@ -21,22 +21,22 @@ class TestAnimationUIControls:
 
         # Mock property group with animation data
         prop_group = Mock()
-        prop_group.animation_type = 'scale'
-        prop_group.trigger = 'beat'
+        prop_group.animation_type = "scale"
+        prop_group.trigger = "beat"
         prop_group.intensity = 0.3
         prop_group.enabled = True
 
         # Property should map to dict
         animation_dict = {
-            'type': prop_group.animation_type,
-            'trigger': prop_group.trigger,
-            'intensity': prop_group.intensity,
-            'enabled': prop_group.enabled
+            "type": prop_group.animation_type,
+            "trigger": prop_group.trigger,
+            "intensity": prop_group.intensity,
+            "enabled": prop_group.enabled,
         }
 
-        assert animation_dict['type'] == 'scale'
-        assert animation_dict['trigger'] == 'beat'
-        assert animation_dict['intensity'] == 0.3
+        assert animation_dict["type"] == "scale"
+        assert animation_dict["trigger"] == "beat"
+        assert animation_dict["intensity"] == 0.3
 
     def test_populate_ui_from_strip_animations(self, mock_bpy):
         """Test populating UI controls from strip animations data."""
@@ -48,14 +48,14 @@ class TestAnimationUIControls:
 
         # Create mock animation items
         anim1 = Mock()
-        anim1.animation_type = 'scale'
-        anim1.trigger = 'beat'
+        anim1.animation_type = "scale"
+        anim1.trigger = "beat"
         anim1.intensity = 0.3
         anim1.enabled = True
 
         anim2 = Mock()
-        anim2.animation_type = 'shake'
-        anim2.trigger = 'energy_peaks'
+        anim2.animation_type = "shake"
+        anim2.trigger = "energy_peaks"
         anim2.intensity = 2.0
         anim2.enabled = True
 
@@ -63,8 +63,8 @@ class TestAnimationUIControls:
 
         # Test data
         strip_animations = [
-            {'type': 'scale', 'trigger': 'beat', 'intensity': 0.3},
-            {'type': 'shake', 'trigger': 'energy_peaks', 'intensity': 2.0}
+            {"type": "scale", "trigger": "beat", "intensity": 0.3},
+            {"type": "shake", "trigger": "energy_peaks", "intensity": 2.0},
         ]
 
         ui_manager = AnimationUIManager()
@@ -82,15 +82,15 @@ class TestAnimationUIControls:
 
         mock_scene = Mock()
         new_anim = Mock()
-        new_anim.animation_type = 'rotation'
-        new_anim.trigger = 'beat'
+        new_anim.animation_type = "rotation"
+        new_anim.trigger = "beat"
         new_anim.degrees = 5.0
         new_anim.enabled = True
 
         mock_scene.cinemon_animations.add.return_value = new_anim
 
         ui_manager = AnimationUIManager()
-        result = ui_manager.add_new_animation(mock_scene, 'rotation', 'beat')
+        result = ui_manager.add_new_animation(mock_scene, "rotation", "beat")
 
         assert result is not None
         mock_scene.cinemon_animations.add.assert_called_once()
@@ -116,16 +116,16 @@ class TestAnimationUIControls:
         mock_scene = Mock()
 
         anim1 = Mock()
-        anim1.animation_type = 'scale'
-        anim1.trigger = 'beat'
+        anim1.animation_type = "scale"
+        anim1.trigger = "beat"
         anim1.intensity = 0.5  # Changed from default
         anim1.enabled = True
 
         anim2 = Mock()
-        anim2.animation_type = 'shake'
-        anim2.trigger = 'energy_peaks'
+        anim2.animation_type = "shake"
+        anim2.trigger = "energy_peaks"
         anim2.intensity = 3.0  # Changed from default
-        anim2.enabled = False   # Disabled
+        anim2.enabled = False  # Disabled
 
         mock_scene.cinemon_animations = [anim1, anim2]
 
@@ -137,8 +137,8 @@ class TestAnimationUIControls:
 
         # Should extract enabled animations with their parameters
         assert len(animations) == 1  # Only enabled ones
-        assert animations[0]['type'] == 'scale'
-        assert animations[0]['intensity'] == 0.5
+        assert animations[0]["type"] == "scale"
+        assert animations[0]["intensity"] == 0.5
 
     def test_animation_parameter_validation(self, mock_bpy):
         """Test validation of animation parameters."""
@@ -147,27 +147,19 @@ class TestAnimationUIControls:
         ui_manager = AnimationUIManager()
 
         # Test valid parameters
-        valid_params = {
-            'type': 'scale',
-            'trigger': 'beat',
-            'intensity': 0.3
-        }
+        valid_params = {"type": "scale", "trigger": "beat", "intensity": 0.3}
         assert ui_manager.validate_animation_params(valid_params)
 
         # Test invalid trigger
         invalid_trigger = {
-            'type': 'scale',
-            'trigger': 'invalid_trigger',
-            'intensity': 0.3
+            "type": "scale",
+            "trigger": "invalid_trigger",
+            "intensity": 0.3,
         }
         assert not ui_manager.validate_animation_params(invalid_trigger)
 
         # Test invalid animation type
-        invalid_type = {
-            'type': 'invalid_type',
-            'trigger': 'beat',
-            'intensity': 0.3
-        }
+        invalid_type = {"type": "invalid_type", "trigger": "beat", "intensity": 0.3}
         assert not ui_manager.validate_animation_params(invalid_type)
 
     def test_parameter_defaults_by_animation_type(self, mock_bpy):
@@ -177,14 +169,14 @@ class TestAnimationUIControls:
         ui_manager = AnimationUIManager()
 
         # Test scale animation defaults
-        scale_defaults = ui_manager.get_parameter_defaults('scale')
-        assert 'intensity' in scale_defaults
-        assert 'duration_frames' in scale_defaults
+        scale_defaults = ui_manager.get_parameter_defaults("scale")
+        assert "intensity" in scale_defaults
+        assert "duration_frames" in scale_defaults
 
         # Test brightness_flicker animation defaults
-        flicker_defaults = ui_manager.get_parameter_defaults('brightness_flicker')
-        assert 'intensity' in flicker_defaults
-        assert 'duration_frames' in flicker_defaults
+        flicker_defaults = ui_manager.get_parameter_defaults("brightness_flicker")
+        assert "intensity" in flicker_defaults
+        assert "duration_frames" in flicker_defaults
 
     def test_dynamic_parameter_ui_generation(self, mock_bpy):
         """Test generating UI elements based on animation type."""
@@ -198,7 +190,7 @@ class TestAnimationUIControls:
 
         # Mock animation property
         mock_anim = Mock()
-        mock_anim.animation_type = 'scale'
+        mock_anim.animation_type = "scale"
 
         # Should generate appropriate UI controls
         ui_manager.draw_animation_parameters(mock_layout, mock_anim)
@@ -213,7 +205,7 @@ class TestAnimationUIControls:
         ui_manager = AnimationUIManager()
         triggers = ui_manager.get_available_triggers()
 
-        expected_triggers = ['beat', 'bass', 'energy_peaks', 'one_time', 'continuous']
+        expected_triggers = ["beat", "bass", "energy_peaks", "one_time", "continuous"]
         for trigger in expected_triggers:
             assert trigger in triggers
 
@@ -224,6 +216,13 @@ class TestAnimationUIControls:
         ui_manager = AnimationUIManager()
         types = ui_manager.get_available_animation_types()
 
-        expected_types = ['scale', 'shake', 'rotation', 'jitter', 'brightness_flicker', 'visibility']
+        expected_types = [
+            "scale",
+            "shake",
+            "rotation",
+            "jitter",
+            "brightness_flicker",
+            "visibility",
+        ]
         for atype in expected_types:
             assert atype in types

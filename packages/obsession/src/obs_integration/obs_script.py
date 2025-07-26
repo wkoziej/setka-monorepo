@@ -410,6 +410,7 @@ def find_latest_recording_file(output_dir):
     try:
         # Szukaj plików wideo w katalogu
         from setka_common.file_structure.types import FileExtensions
+
         video_files = []
 
         for file in os.listdir(output_dir):

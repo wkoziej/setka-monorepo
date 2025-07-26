@@ -163,9 +163,9 @@ Expected recording structure (managed by setka-common):
 recording_name/
 ├── metadata.json                    # OBS metadata
 ├── extracted/                       # Video/audio files
-│   ├── Camera1.mp4        
+│   ├── Camera1.mp4
 │   ├── Camera2.mp4
-│   └── main_audio.m4a     
+│   └── main_audio.m4a
 ├── analysis/                        # Audio analysis JSON
 │   └── audio_analysis.json
 ├── animation_config_vintage.yaml    # Generated YAML config (preset-based)
@@ -329,11 +329,11 @@ generator = CinemonConfigGenerator()
 
 # Generate from preset with overrides
 config_path = generator.generate_preset(
-    './recording', 'vintage', 
+    './recording', 'vintage',
     seed=42, fps=60, main_audio='audio.m4a'
 )
 
-# Generate completely custom configuration  
+# Generate completely custom configuration
 layout = {'type': 'random', 'config': {'seed': 123}}
 animations = [
     {'type': 'scale', 'trigger': 'bass', 'intensity': 0.8, 'target_strips': ['Camera1']},

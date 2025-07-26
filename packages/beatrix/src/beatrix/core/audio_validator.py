@@ -11,7 +11,7 @@ import logging
 
 from setka_common.file_structure.types import FileExtensions, MediaType
 from setka_common.utils.files import find_files_by_type
-from ..exceptions import AudioValidationError, NoAudioFileError, MultipleAudioFilesError
+from ..exceptions import NoAudioFileError, MultipleAudioFilesError
 
 logger = logging.getLogger(__name__)
 

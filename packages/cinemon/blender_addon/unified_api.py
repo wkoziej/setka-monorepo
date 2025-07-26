@@ -54,6 +54,7 @@ class AnimationAPI:
             print(f"DEBUG: Some components not available: {e}")
             print(f"DEBUG: ImportError details: {e}")
             import traceback
+
             traceback.print_exc()
             logger.warning(f"Some components not available: {e}")
             # Set fallback methods for testing
@@ -64,7 +65,7 @@ class AnimationAPI:
         recording_path: Union[str, Path],
         preset_name: str = None,
         preset_config: Dict[str, Any] = None,
-        audio_analysis_data: Optional[Dict[str, Any]] = None
+        audio_analysis_data: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
         """Apply a complete preset including layout and animations.
 
@@ -85,23 +86,25 @@ class AnimationAPI:
             }
         """
         result = {
-            'success': False,
-            'layout_applied': False,
-            'animations_applied': False,
-            'strips_affected': 0,
-            'errors': []
+            "success": False,
+            "layout_applied": False,
+            "animations_applied": False,
+            "strips_affected": 0,
+            "errors": [],
         }
 
         try:
             # Use provided config or load from preset name
             if preset_config is None:
                 if preset_name is None:
-                    result['errors'].append("Either preset_name or preset_config must be provided")
+                    result["errors"].append(
+                        "Either preset_name or preset_config must be provided"
+                    )
                     return result
 
                 preset_config = self._load_preset_config(preset_name)
                 if not preset_config:
-                    result['errors'].append(f"Failed to load preset: {preset_name}")
+                    result["errors"].append(f"Failed to load preset: {preset_name}")
                     return result
             else:
                 # If config provided, ensure it's properly mapped
@@ -110,56 +113,54 @@ class AnimationAPI:
 
             # Get video strips from current scene
             if not bpy or not bpy.context.scene.sequence_editor:
-                result['errors'].append("No sequence editor found")
+                result["errors"].append("No sequence editor found")
                 return result
 
             sequences = bpy.context.scene.sequence_editor.sequences
-            video_strips = [s for s in sequences if s.type == 'MOVIE']
+            video_strips = [s for s in sequences if s.type == "MOVIE"]
 
             if not video_strips:
-                result['errors'].append("No video strips found in project")
+                result["errors"].append("No video strips found in project")
                 return result
 
             # Apply layout if specified
-            layout_config = preset_config.get('layout', {})
+            layout_config = preset_config.get("layout", {})
             if layout_config:
                 layout_success = self.apply_layout(video_strips, layout_config)
-                result['layout_applied'] = layout_success
+                result["layout_applied"] = layout_success
                 if not layout_success:
-                    result['errors'].append("Failed to apply layout")
+                    result["errors"].append("Failed to apply layout")
 
             # Apply animations if specified
-            animations_config = preset_config.get('strip_animations', {})
+            animations_config = preset_config.get("strip_animations", {})
             if animations_config:
                 # Convert strip_animations to flat animations list for compatibility
-                animations_list = self._convert_strip_animations_to_list(animations_config, video_strips)
+                animations_list = self._convert_strip_animations_to_list(
+                    animations_config, video_strips
+                )
 
                 anim_success = self.apply_animations(
-                    video_strips,
-                    animations_list,
-                    audio_analysis_data
+                    video_strips, animations_list, audio_analysis_data
                 )
-                result['animations_applied'] = anim_success
-                result['strips_affected'] = len(video_strips) if anim_success else 0
+                result["animations_applied"] = anim_success
+                result["strips_affected"] = len(video_strips) if anim_success else 0
                 if not anim_success:
-                    result['errors'].append("Failed to apply animations")
+                    result["errors"].append("Failed to apply animations")
 
             # Overall success if at least one operation succeeded
-            result['success'] = result['layout_applied'] or result['animations_applied']
+            result["success"] = result["layout_applied"] or result["animations_applied"]
 
-            if result['success']:
+            if result["success"]:
                 logger.info(f"Successfully applied preset '{preset_name}'")
 
         except Exception as e:
             logger.error(f"Error applying preset: {e}")
-            result['errors'].append(str(e))
+            result["errors"].append(str(e))
 
         return result
 
     def apply_layout(
-        self,
-        video_strips: List[Any],
-        layout_config: Dict[str, Any]
+        self, video_strips: List[Any], layout_config: Dict[str, Any]
     ) -> bool:
         """Apply layout to video strips.
 
@@ -171,8 +172,8 @@ class AnimationAPI:
             bool: True if layout applied successfully
         """
         try:
-            layout_type = layout_config.get('type', 'random')
-            layout_config.get('config', {})
+            layout_type = layout_config.get("type", "random")
+            layout_config.get("config", {})
 
             logger.info(f"Applying layout type: {layout_type}")
 
@@ -182,12 +183,15 @@ class AnimationAPI:
             except ImportError:
                 # Fallback for testing environment
                 import layout_applicators
+
                 apply_layout_to_strips = layout_applicators.apply_layout_to_strips
 
             success = apply_layout_to_strips(layout_config)
 
             if success:
-                logger.info(f"Layout '{layout_type}' applied to {len(video_strips)} strips")
+                logger.info(
+                    f"Layout '{layout_type}' applied to {len(video_strips)} strips"
+                )
             else:
                 logger.error(f"Failed to apply layout '{layout_type}'")
 
@@ -201,7 +205,7 @@ class AnimationAPI:
         self,
         video_strips: List[Any],
         animations_config: List[Dict[str, Any]],
-        audio_analysis_data: Optional[Dict[str, Any]] = None
+        audio_analysis_data: Optional[Dict[str, Any]] = None,
     ) -> bool:
         """Apply animations to video strips with optional audio timing.
 
@@ -227,7 +231,7 @@ class AnimationAPI:
             audio_events = {}
             fps = 30
             if audio_analysis_data:
-                audio_events = audio_analysis_data.get('animation_events', {})
+                audio_events = audio_analysis_data.get("animation_events", {})
                 # Get FPS from scene if available
                 if bpy:
                     fps = bpy.context.scene.render.fps
@@ -237,8 +241,7 @@ class AnimationAPI:
             for strip in video_strips:
                 # Get animations for this strip from config
                 strip_animations = self._get_animations_for_strip(
-                    strip.name,
-                    animations_config
+                    strip.name, animations_config
                 )
 
                 if strip_animations:
@@ -246,10 +249,7 @@ class AnimationAPI:
                         if self.apply_animation_to_strip:
                             # Use the new events-based approach
                             self.apply_animation_to_strip(
-                                strip,
-                                strip_animations,
-                                audio_events,
-                                fps
+                                strip, strip_animations, audio_events, fps
                             )
                             success_count += 1
                         else:
@@ -284,7 +284,7 @@ class AnimationAPI:
 
             # Check user presets first
             user_presets_dir = Path.home() / ".config" / "blender" / "cinemon_presets"
-            preset_filename = preset_name + '.yaml'
+            preset_filename = preset_name + ".yaml"
             preset_path = user_presets_dir / preset_filename
 
             # If not found, check built-in presets
@@ -296,6 +296,7 @@ class AnimationAPI:
 
             # Load YAML
             import sys
+
             vendor_path = Path(__file__).parent / "vendor"
             if str(vendor_path) not in sys.path:
                 sys.path.insert(0, str(vendor_path))
@@ -305,7 +306,7 @@ class AnimationAPI:
             except ImportError:
                 logger.error(f"PyYAML not found in vendor path: {vendor_path}")
                 return None
-            with open(preset_path, 'r', encoding='utf-8') as f:
+            with open(preset_path, "r", encoding="utf-8") as f:
                 config = yaml.safe_load(f)
 
             # Map Video_X names to actual strip names if needed
@@ -319,9 +320,7 @@ class AnimationAPI:
             return None
 
     def _convert_strip_animations_to_list(
-        self,
-        strip_animations: Dict[str, List[Dict]],
-        video_strips: List[Any]
+        self, strip_animations: Dict[str, List[Dict]], video_strips: List[Any]
     ) -> List[Dict[str, Any]]:
         """Convert strip_animations format to flat animations list.
 
@@ -338,15 +337,13 @@ class AnimationAPI:
             for animation in animations:
                 # Create a copy and add target_strips
                 anim_copy = animation.copy()
-                anim_copy['target_strips'] = [strip_name]
+                anim_copy["target_strips"] = [strip_name]
                 animations_list.append(anim_copy)
 
         return animations_list
 
     def _get_animations_for_strip(
-        self,
-        strip_name: str,
-        animations_config: List[Dict[str, Any]]
+        self, strip_name: str, animations_config: List[Dict[str, Any]]
     ) -> List[Dict[str, Any]]:
         """Get animations that target a specific strip.
 
@@ -360,14 +357,13 @@ class AnimationAPI:
         strip_animations = []
 
         for animation in animations_config:
-            target_strips = animation.get('target_strips', [])
+            target_strips = animation.get("target_strips", [])
 
             # If no target strips specified, apply to all
             if not target_strips or strip_name in target_strips:
                 strip_animations.append(animation)
 
         return strip_animations
-
 
     def _map_video_names_to_strips(self, config: Dict[str, Any]) -> Dict[str, Any]:
         """Map Video_X names to actual strip names in the scene.
@@ -383,18 +379,18 @@ class AnimationAPI:
 
         # Get all video strips sorted by channel
         sequences = bpy.context.scene.sequence_editor.sequences
-        video_strips = [s for s in sequences if s.type == 'MOVIE']
+        video_strips = [s for s in sequences if s.type == "MOVIE"]
         video_strips.sort(key=lambda s: s.channel)
 
         # Create mapping from Video_X to actual names
         strip_mapping = {}
         for i, strip in enumerate(video_strips):
-            video_key = f"Video_{i+1}"
+            video_key = f"Video_{i + 1}"
             strip_mapping[video_key] = strip.name
 
         # Apply mapping to strip_animations if present
-        if 'strip_animations' in config:
-            strip_animations = config.get('strip_animations', {})
+        if "strip_animations" in config:
+            strip_animations = config.get("strip_animations", {})
             mapped_animations = {}
 
             for video_key, animations in strip_animations.items():
@@ -405,7 +401,7 @@ class AnimationAPI:
                     # Keep non-Video_X names as-is
                     mapped_animations[video_key] = animations
 
-            config['strip_animations'] = mapped_animations
+            config["strip_animations"] = mapped_animations
 
         return config
 

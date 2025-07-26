@@ -120,7 +120,7 @@ beatrix ←┘
 
 - **File Structure**: All packages use `setka-common.file_structure.specialized.RecordingStructureManager`
 - **Audio Processing**: Dedicated audio analysis via `beatrix.core.AudioAnalyzer`
-- **CLI Integration**: 
+- **CLI Integration**:
   - `obs-extract` → extract sources from OBS recordings
   - `beatrix` → analyze audio for animation timing
   - `cinemon-blend-setup` → create Blender projects with animations

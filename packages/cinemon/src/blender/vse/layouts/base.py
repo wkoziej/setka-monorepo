@@ -18,6 +18,7 @@ class LayoutPosition:
         y: Vertical position (0 is center)
         scale: Uniform scale factor (1.0 is original size)
     """
+
     x: int
     y: int
     scale: float
@@ -27,7 +28,9 @@ class BaseLayout(ABC):
     """Abstract base class for all layout implementations."""
 
     @abstractmethod
-    def calculate_positions(self, strip_count: int, resolution: Tuple[int, int]) -> List[LayoutPosition]:
+    def calculate_positions(
+        self, strip_count: int, resolution: Tuple[int, int]
+    ) -> List[LayoutPosition]:
         """
         Calculate positions for all strips in the layout.
 

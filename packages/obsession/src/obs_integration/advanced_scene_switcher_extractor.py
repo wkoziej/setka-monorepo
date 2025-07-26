@@ -20,8 +20,13 @@ try:
     from setka_common.file_structure.specialized import RecordingStructureManager
     from setka_common.file_structure.types import FileExtensions
 except ImportError as e:
-    print(f"[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Import error: {e}")
-    print(f"[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] sys.path: {sys.path[:3]}...")
+    print(
+        f"[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Import error: {e}"
+    )
+    print(
+        f"[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] sys.path: {sys.path[:3]}..."
+    )
+
     # Fallback implementation
     class RecordingStructureManager:
         @staticmethod
@@ -78,7 +83,9 @@ def find_latest_recording():
 
                     # Use FileStructureManager to find valid recording structure
                     try:
-                        structure = RecordingStructureManager.find_recording_structure(item)
+                        structure = RecordingStructureManager.find_recording_structure(
+                            item
+                        )
                         if structure:
                             log_message(
                                 f"    Found valid recording structure: {structure.media_file}"
@@ -124,7 +131,7 @@ def run_extraction(recording_file):
     # Try to find CLI relative to this script
     script_path = Path(__file__).resolve()
     cli_path = script_path.parent.parent / "cli" / "extract.py"
-    
+
     if not cli_path.exists():
         log_message(f"ERROR: CLI not found at {cli_path}")
         return False

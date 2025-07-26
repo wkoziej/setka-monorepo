@@ -25,12 +25,14 @@ class JitterAnimation(BaseEffectAnimation):
         max_interval: Maximum frames between jitter changes
     """
 
-    def __init__(self,
-                 trigger: str = "continuous",
-                 intensity: float = 2.0,
-                 min_interval: int = 3,
-                 max_interval: int = 8,
-                 target_strips: Optional[List[str]] = None):
+    def __init__(
+        self,
+        trigger: str = "continuous",
+        intensity: float = 2.0,
+        min_interval: int = 3,
+        max_interval: int = 8,
+        target_strips: Optional[List[str]] = None,
+    ):
         """
         Initialize JitterAnimation.
 
@@ -60,11 +62,11 @@ class JitterAnimation(BaseEffectAnimation):
         Returns:
             True if animation was applied successfully
         """
-        if not hasattr(strip, 'transform'):
+        if not hasattr(strip, "transform"):
             return False
 
         # Get duration from kwargs or calculate from strip
-        duration_frames = kwargs.get('duration_frames')
+        duration_frames = kwargs.get("duration_frames")
         if duration_frames is None:
             # Calculate duration from strip length
             duration_frames = int(strip.frame_final_duration)
@@ -97,4 +99,4 @@ class JitterAnimation(BaseEffectAnimation):
         Returns:
             List containing 'transform' property requirement
         """
-        return ['transform']
+        return ["transform"]

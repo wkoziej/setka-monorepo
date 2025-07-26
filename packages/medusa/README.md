@@ -75,7 +75,7 @@ Create `medusa_config.json`:
 - 🔄 Vimeo (planned)
 - 🔄 Google Drive (planned)
 
-### Social Platforms  
+### Social Platforms
 - ✅ Facebook (post publishing with links)
 - 🔄 Twitter/X (planned)
 - 🔄 LinkedIn (planned)

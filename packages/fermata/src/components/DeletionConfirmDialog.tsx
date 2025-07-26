@@ -8,12 +8,12 @@ interface DeletionConfirmDialogProps {
   isDeleting: boolean;
 }
 
-export function DeletionConfirmDialog({ 
-  isOpen, 
-  recording, 
-  onConfirm, 
-  onCancel, 
-  isDeleting 
+export function DeletionConfirmDialog({
+  isOpen,
+  recording,
+  onConfirm,
+  onCancel,
+  isDeleting
 }: DeletionConfirmDialogProps) {
   if (!isOpen || !recording) {
     return null;
@@ -57,7 +57,7 @@ export function DeletionConfirmDialog({
         <div style={{ marginBottom: '16px', fontSize: '1rem' }}>
           Czy na pewno chcesz usunąć nagranie:
         </div>
-        
+
         <div style={{
           marginBottom: '20px',
           fontSize: '1rem',
@@ -104,7 +104,7 @@ export function DeletionConfirmDialog({
           >
             Anuluj
           </button>
-          
+
           <button
             onClick={onConfirm}
             disabled={isDeleting}
@@ -138,4 +138,4 @@ export function DeletionConfirmDialog({
       </div>
     </div>
   );
-} 
+}

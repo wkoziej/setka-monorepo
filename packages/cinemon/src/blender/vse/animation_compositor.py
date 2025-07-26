@@ -72,7 +72,9 @@ class AnimationCompositor:
                 if events:  # Only apply if events exist
                     for strip_index, strip in enumerate(video_strips):
                         if animation.should_apply_to_strip(strip):
-                            animation.apply_to_strip(strip, events, fps, strip_index=strip_index)
+                            animation.apply_to_strip(
+                                strip, events, fps, strip_index=strip_index
+                            )
 
             return True
 
@@ -111,17 +113,25 @@ class AnimationCompositor:
             strips: List of video strips
             positions: List of calculated positions
         """
-        print(f"🎬 AnimationCompositor._apply_layout: {len(strips)} strips, {len(positions)} positions")
+        print(
+            f"🎬 AnimationCompositor._apply_layout: {len(strips)} strips, {len(positions)} positions"
+        )
         for i, (strip, position) in enumerate(zip(strips, positions)):
-            if hasattr(strip, 'transform'):
-                print(f"🎬 Strip {i} ({strip.name}): pos=({position.x}, {position.y}), scale={position.scale}")
+            if hasattr(strip, "transform"):
+                print(
+                    f"🎬 Strip {i} ({strip.name}): pos=({position.x}, {position.y}), scale={position.scale}"
+                )
                 strip.transform.offset_x = position.x
                 strip.transform.offset_y = position.y
                 strip.transform.scale_x = position.scale
                 strip.transform.scale_y = position.scale
-                print(f"🎬 Applied to {strip.name}: offset=({strip.transform.offset_x}, {strip.transform.offset_y}), scale=({strip.transform.scale_x}, {strip.transform.scale_y})")
+                print(
+                    f"🎬 Applied to {strip.name}: offset=({strip.transform.offset_x}, {strip.transform.offset_y}), scale=({strip.transform.scale_x}, {strip.transform.scale_y})"
+                )
             else:
-                print(f"🎬 Strip {i} ({getattr(strip, 'name', 'unknown')}): No transform property")
+                print(
+                    f"🎬 Strip {i} ({getattr(strip, 'name', 'unknown')}): No transform property"
+                )
 
     def _extract_events(self, audio_analysis: Dict, trigger: str) -> List:
         """
@@ -141,7 +151,7 @@ class AnimationCompositor:
             "bass": "energy_peaks",
             "beat": "beats",
             "energy_peaks": "energy_peaks",
-            "sections": "sections"
+            "sections": "sections",
         }
 
         event_key = trigger_map.get(trigger, trigger)

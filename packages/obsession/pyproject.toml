@@ -86,7 +86,7 @@ disallow_untyped_defs = true
 
 [[tool.mypy.overrides]]
 module = "ffmpeg.*"
-ignore_missing_imports = true 
+ignore_missing_imports = true
 
 [dependency-groups]
 dev = [

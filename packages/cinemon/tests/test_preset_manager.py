@@ -19,14 +19,18 @@ def isolated_custom_presets(tmp_path, monkeypatch):
     temp_presets_dir.mkdir()
 
     # Mock the custom presets directory method
-    monkeypatch.setattr(PresetManager, '_get_custom_presets_dir', lambda self: temp_presets_dir)
+    monkeypatch.setattr(
+        PresetManager, "_get_custom_presets_dir", lambda self: temp_presets_dir
+    )
 
     # Clear any cached presets to ensure isolation
     original_init = PresetManager.__init__
+
     def patched_init(self):
         original_init(self)
         self._custom_presets_cache = None
-    monkeypatch.setattr(PresetManager, '__init__', patched_init)
+
+    monkeypatch.setattr(PresetManager, "__init__", patched_init)
 
     yield temp_presets_dir
 
@@ -41,7 +45,10 @@ class TestPresetManager:
 
         assert isinstance(vintage_preset, PresetConfig)
         assert vintage_preset.name == "vintage"
-        assert vintage_preset.description == "Classic film effects with jitter, grain, and vintage color"
+        assert (
+            vintage_preset.description
+            == "Classic film effects with jitter, grain, and vintage color"
+        )
 
         # Check layout configuration
         assert vintage_preset.layout["type"] == "random"
@@ -80,7 +87,6 @@ class TestPresetManager:
         assert "shake" in animation_types
         assert "brightness_flicker" in animation_types
 
-
     def test_list_presets(self):
         """Test listing all available presets."""
         preset_manager = PresetManager()
@@ -105,22 +111,21 @@ class TestPresetManager:
 
         # Create custom preset configuration
         custom_config = {
-            "layout": {
-                "type": "random",
-                "config": {"seed": 123, "margin": 0.08}
-            },
+            "layout": {"type": "random", "config": {"seed": 123, "margin": 0.08}},
             "animations": [
                 {
                     "type": "scale",
                     "trigger": "bass",
                     "intensity": 0.2,
-                    "duration_frames": 3
+                    "duration_frames": 3,
                 }
-            ]
+            ],
         }
 
         # Create custom preset
-        preset_manager.create_custom_preset("my-style", custom_config, "My custom style")
+        preset_manager.create_custom_preset(
+            "my-style", custom_config, "My custom style"
+        )
 
         # Verify it can be retrieved
         custom_preset = preset_manager.get_preset("my-style")
@@ -136,14 +141,14 @@ class TestPresetManager:
         # Create first version
         config1 = {
             "layout": {"type": "random", "config": {"seed": 100}},
-            "animations": [{"type": "scale", "trigger": "bass", "intensity": 0.1}]
+            "animations": [{"type": "scale", "trigger": "bass", "intensity": 0.1}],
         }
         preset_manager.create_custom_preset("test-preset", config1, "Test v1")
 
         # Create second version (should overwrite)
         config2 = {
             "layout": {"type": "random", "config": {"seed": 200}},
-            "animations": [{"type": "shake", "trigger": "beat", "intensity": 5.0}]
+            "animations": [{"type": "shake", "trigger": "beat", "intensity": 5.0}],
         }
         preset_manager.create_custom_preset("test-preset", config2, "Test v2")
 
@@ -159,11 +164,15 @@ class TestPresetManager:
 
         custom_config = {
             "layout": {"type": "random", "config": {"seed": 999}},
-            "animations": []
+            "animations": [],
         }
 
-        with pytest.raises(ValueError, match="Cannot overwrite built-in preset 'vintage'"):
-            preset_manager.create_custom_preset("vintage", custom_config, "Modified vintage")
+        with pytest.raises(
+            ValueError, match="Cannot overwrite built-in preset 'vintage'"
+        ):
+            preset_manager.create_custom_preset(
+                "vintage", custom_config, "Modified vintage"
+            )
 
     def test_custom_presets_persist_across_instances(self):
         """Test that custom presets persist across PresetManager instances."""
@@ -171,9 +180,11 @@ class TestPresetManager:
         preset_manager1 = PresetManager()
         custom_config = {
             "layout": {"type": "random", "config": {"seed": 42}},
-            "animations": [{"type": "rotation", "trigger": "beat", "degrees": 1.0}]
+            "animations": [{"type": "rotation", "trigger": "beat", "degrees": 1.0}],
         }
-        preset_manager1.create_custom_preset("persistent-test", custom_config, "Persistent test")
+        preset_manager1.create_custom_preset(
+            "persistent-test", custom_config, "Persistent test"
+        )
 
         # Access with second instance
         preset_manager2 = PresetManager()
@@ -193,7 +204,9 @@ class TestPresetManager:
         }
 
         with pytest.raises(ValueError, match="Invalid preset configuration"):
-            preset_manager.create_custom_preset("invalid", invalid_config, "Invalid preset")
+            preset_manager.create_custom_preset(
+                "invalid", invalid_config, "Invalid preset"
+            )
 
     def test_preset_config_structure(self):
         """Test the structure of PresetConfig objects."""
@@ -201,10 +214,10 @@ class TestPresetManager:
         vintage_preset = preset_manager.get_preset("vintage")
 
         # Test PresetConfig attributes
-        assert hasattr(vintage_preset, 'name')
-        assert hasattr(vintage_preset, 'description')
-        assert hasattr(vintage_preset, 'layout')
-        assert hasattr(vintage_preset, 'animations')
+        assert hasattr(vintage_preset, "name")
+        assert hasattr(vintage_preset, "description")
+        assert hasattr(vintage_preset, "layout")
+        assert hasattr(vintage_preset, "animations")
 
         # Test layout structure
         assert isinstance(vintage_preset.layout, dict)
@@ -218,7 +231,6 @@ class TestPresetManager:
             assert "type" in animation
             assert "trigger" in animation
 
-
     def test_minimal_preset_has_basic_effects(self):
         """Test that minimal preset has only basic effects."""
         preset_manager = PresetManager()
@@ -228,7 +240,6 @@ class TestPresetManager:
         assert len(minimal_preset.animations) == 1
         assert minimal_preset.animations[0]["type"] == "scale"
         assert minimal_preset.animations[0]["trigger"] == "bass"
-
 
     @pytest.fixture
     def temp_presets_dir(self):
@@ -241,15 +252,20 @@ class TestPresetManager:
         # Use temporary directory that doesn't exist yet
         nonexistent_dir = temp_presets_dir / "custom_presets"
 
-        with patch('blender.config.preset_manager.PresetManager._get_custom_presets_dir', return_value=nonexistent_dir):
+        with patch(
+            "blender.config.preset_manager.PresetManager._get_custom_presets_dir",
+            return_value=nonexistent_dir,
+        ):
             preset_manager = PresetManager()
 
             custom_config = {
                 "layout": {"type": "random", "config": {"seed": 123}},
-                "animations": [{"type": "scale", "trigger": "bass", "intensity": 0.2}]
+                "animations": [{"type": "scale", "trigger": "bass", "intensity": 0.2}],
             }
 
-            preset_manager.create_custom_preset("test-creation", custom_config, "Test directory creation")
+            preset_manager.create_custom_preset(
+                "test-creation", custom_config, "Test directory creation"
+            )
 
             # Verify directory was created
             assert nonexistent_dir.exists()
@@ -264,7 +280,10 @@ class TestPresetManager:
         corrupt_file = custom_presets_dir / "corrupt-preset.json"
         corrupt_file.write_text("invalid json content")
 
-        with patch('blender.config.preset_manager.PresetManager._get_custom_presets_dir', return_value=custom_presets_dir):
+        with patch(
+            "blender.config.preset_manager.PresetManager._get_custom_presets_dir",
+            return_value=custom_presets_dir,
+        ):
             preset_manager = PresetManager()
 
             # Should not include corrupt preset in list

@@ -6,7 +6,6 @@
 try:
     from .animation_applicators import apply_animation_to_strip, clear_strip_animations
     from .vse_operators import (
-        ApplyUIManager,
         CINEMON_OT_discard_changes,
         regenerate_animations_for_strips,
     )
@@ -22,9 +21,7 @@ except ImportError:
 
 
 # Export all classes and functions for backward compatibility
-classes = [
-    CINEMON_OT_discard_changes
-]
+classes = [CINEMON_OT_discard_changes]
 
 
 def register():

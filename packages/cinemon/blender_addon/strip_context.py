@@ -18,17 +18,17 @@ class StripContextManager:
 
         # Available animation types and their default parameters
         self.animation_types = {
-            'scale': {'intensity': 0.3, 'duration_frames': 3},
-            'shake': {'intensity': 2.0, 'return_frames': 2},
-            'rotation': {'degrees': 5.0, 'duration_frames': 3},
-            'jitter': {'intensity': 1.0},
-            'brightness_flicker': {'intensity': 0.1, 'duration_frames': 2},
-            'visibility': {'fade_duration': 5},
-            'desaturate_pulse': {'intensity': 0.8, 'duration_frames': 3},
-            'contrast_flash': {'intensity': 0.5, 'duration_frames': 2}
+            "scale": {"intensity": 0.3, "duration_frames": 3},
+            "shake": {"intensity": 2.0, "return_frames": 2},
+            "rotation": {"degrees": 5.0, "duration_frames": 3},
+            "jitter": {"intensity": 1.0},
+            "brightness_flicker": {"intensity": 0.1, "duration_frames": 2},
+            "visibility": {"fade_duration": 5},
+            "desaturate_pulse": {"intensity": 0.8, "duration_frames": 3},
+            "contrast_flash": {"intensity": 0.5, "duration_frames": 2},
         }
 
-        self.triggers = ['beat', 'bass', 'energy_peaks', 'one_time', 'continuous']
+        self.triggers = ["beat", "bass", "energy_peaks", "one_time", "continuous"]
 
     def load_config(self, config: Dict[str, Any]) -> None:
         """Load configuration from YAML data."""
@@ -36,22 +36,22 @@ class StripContextManager:
         self.changes_buffer = {}
 
         # Ensure strip_animations exists
-        if 'strip_animations' not in self.config:
-            self.config['strip_animations'] = {}
+        if "strip_animations" not in self.config:
+            self.config["strip_animations"] = {}
 
     def load_preset_for_apply(self, config: Dict[str, Any]) -> None:
         """Load preset configuration and mark all changes for Apply."""
         self.config = copy.deepcopy(config)
 
         # Mark all strip animations as changed
-        if 'strip_animations' in config:
-            self.changes_buffer = copy.deepcopy(config['strip_animations'])
+        if "strip_animations" in config:
+            self.changes_buffer = copy.deepcopy(config["strip_animations"])
         else:
             self.changes_buffer = {}
 
         # Mark layout as changed
-        if 'layout' in config:
-            self.layout_changes = copy.deepcopy(config['layout'])
+        if "layout" in config:
+            self.layout_changes = copy.deepcopy(config["layout"])
         else:
             self.layout_changes = {}
 
@@ -59,8 +59,11 @@ class StripContextManager:
         """Get name of currently active strip in VSE."""
         try:
             import bpy
-            if (bpy.context.scene.sequence_editor and
-                bpy.context.scene.sequence_editor.active_strip):
+
+            if (
+                bpy.context.scene.sequence_editor
+                and bpy.context.scene.sequence_editor.active_strip
+            ):
                 return bpy.context.scene.sequence_editor.active_strip.name
         except (ImportError, AttributeError):
             # For testing or when bpy not available
@@ -80,35 +83,41 @@ class StripContextManager:
         if active_strip in self.changes_buffer:
             return copy.deepcopy(self.changes_buffer[active_strip])
 
-        strip_animations = self.config.get('strip_animations', {})
+        strip_animations = self.config.get("strip_animations", {})
         result = copy.deepcopy(strip_animations.get(active_strip, []))
         return result
 
     def _ensure_config_loaded(self) -> None:
         """Ensure config is loaded from scene properties if available."""
         # If we already have config with animations, don't reload
-        strip_animations = self.config.get('strip_animations', {})
-        if strip_animations and any(len(anims) > 0 for anims in strip_animations.values()):
+        strip_animations = self.config.get("strip_animations", {})
+        if strip_animations and any(
+            len(anims) > 0 for anims in strip_animations.values()
+        ):
             return
 
         try:
             import bpy
+
             scene = bpy.context.scene
 
             # Try to load strip_animations from scene properties
-            if 'cinemon_strip_animations' in scene:
-                strip_animations_str = scene['cinemon_strip_animations']
+            if "cinemon_strip_animations" in scene:
+                strip_animations_str = scene["cinemon_strip_animations"]
                 if strip_animations_str:
                     # Parse string back to dict
                     import ast
+
                     try:
                         strip_animations = ast.literal_eval(strip_animations_str)
                         if isinstance(strip_animations, dict):
                             # Initialize config if empty
                             if not self.config:
                                 self.config = {}
-                            self.config['strip_animations'] = strip_animations
-                            print(f"✓ Loaded {len(strip_animations)} strips from scene properties")
+                            self.config["strip_animations"] = strip_animations
+                            print(
+                                f"✓ Loaded {len(strip_animations)} strips from scene properties"
+                            )
                         else:
                             print("⚠ Strip animations from scene is not a dict")
                     except (ValueError, SyntaxError) as e:
@@ -145,7 +154,9 @@ class StripContextManager:
             return True
         return False
 
-    def update_animation_parameter(self, animation_index: int, param_name: str, value: Any) -> bool:
+    def update_animation_parameter(
+        self, animation_index: int, param_name: str, value: Any
+    ) -> bool:
         """Update parameter of animation for active strip."""
         active_strip = self.get_active_strip_name()
         if not active_strip:
@@ -170,12 +181,11 @@ class StripContextManager:
         """Get default parameters for animation type."""
         return self.animation_types.get(animation_type, {}).copy()
 
-    def create_default_animation(self, animation_type: str, trigger: str) -> Dict[str, Any]:
+    def create_default_animation(
+        self, animation_type: str, trigger: str
+    ) -> Dict[str, Any]:
         """Create animation with default parameters."""
-        animation = {
-            'type': animation_type,
-            'trigger': trigger
-        }
+        animation = {"type": animation_type, "trigger": trigger}
         # Add default parameters
         defaults = self.get_default_animation_parameters(animation_type)
         animation.update(defaults)
@@ -192,15 +202,15 @@ class StripContextManager:
     def apply_changes(self) -> Dict[str, Any]:
         """Apply all buffered changes to main config and return updated config."""
         # Apply animation changes
-        if 'strip_animations' not in self.config:
-            self.config['strip_animations'] = {}
+        if "strip_animations" not in self.config:
+            self.config["strip_animations"] = {}
 
         for strip_name, animations in self.changes_buffer.items():
-            self.config['strip_animations'][strip_name] = animations
+            self.config["strip_animations"][strip_name] = animations
 
         # Apply layout changes
         if self.layout_changes:
-            self.config['layout'] = copy.deepcopy(self.layout_changes)
+            self.config["layout"] = copy.deepcopy(self.layout_changes)
 
         # Clear all buffers
         self.changes_buffer = {}
@@ -217,10 +227,10 @@ class StripContextManager:
         """
         # Initialize layout changes if needed
         if not self.layout_changes:
-            self.layout_changes = copy.deepcopy(self.config.get('layout', {}))
+            self.layout_changes = copy.deepcopy(self.config.get("layout", {}))
 
         # Handle nested paths
-        path_parts = param_path.split('.')
+        path_parts = param_path.split(".")
         current = self.layout_changes
 
         # Navigate to the parent of the target
@@ -248,12 +258,12 @@ class StripContextManager:
         """Get current config with pending changes applied temporarily."""
         config_copy = copy.deepcopy(self.config)
 
-        if 'strip_animations' not in config_copy:
-            config_copy['strip_animations'] = {}
+        if "strip_animations" not in config_copy:
+            config_copy["strip_animations"] = {}
 
         # Apply buffer changes temporarily
         for strip_name, animations in self.changes_buffer.items():
-            config_copy['strip_animations'][strip_name] = animations
+            config_copy["strip_animations"][strip_name] = animations
 
         return config_copy
 

@@ -32,7 +32,9 @@ class KeyframeHelper:
         if isinstance(strip, str):
             strip_name = strip
             if bpy and bpy.context.scene.sequence_editor:
-                strip_obj = bpy.context.scene.sequence_editor.sequences_all.get(strip_name)
+                strip_obj = bpy.context.scene.sequence_editor.sequences_all.get(
+                    strip_name
+                )
                 if not strip_obj:
                     print(f"Strip '{strip_name}' not found in sequence editor")
                     return None, None
@@ -63,7 +65,9 @@ class KeyframeHelper:
 
             # Set alpha value
             if alpha_value is None:
-                alpha_value = strip_obj.blend_alpha if hasattr(strip_obj, 'blend_alpha') else 1.0
+                alpha_value = (
+                    strip_obj.blend_alpha if hasattr(strip_obj, "blend_alpha") else 1.0
+                )
 
             # Use direct method - blend_alpha is a direct property of the strip
             strip_obj.blend_alpha = alpha_value
@@ -73,6 +77,7 @@ class KeyframeHelper:
         except Exception as e:
             print(f"Error inserting blend_alpha keyframe: {e}")
             import traceback
+
             traceback.print_exc()
             return False
 
@@ -100,13 +105,17 @@ class KeyframeHelper:
             if not strip_obj:
                 return False
 
-            if not hasattr(strip_obj, 'transform'):
+            if not hasattr(strip_obj, "transform"):
                 print(f"Strip '{strip_name}' has no transform property")
                 return False
 
             # Set scale values
             if scale_x is None:
-                scale_x = strip_obj.transform.scale_x if hasattr(strip_obj.transform, 'scale_x') else 1.0
+                scale_x = (
+                    strip_obj.transform.scale_x
+                    if hasattr(strip_obj.transform, "scale_x")
+                    else 1.0
+                )
             if scale_y is None:
                 scale_y = scale_x  # Uniform scaling by default
 
@@ -120,6 +129,7 @@ class KeyframeHelper:
         except Exception as e:
             print(f"Error inserting scale keyframes: {e}")
             import traceback
+
             traceback.print_exc()
             return False
 
@@ -147,15 +157,23 @@ class KeyframeHelper:
             if not strip_obj:
                 return False
 
-            if not hasattr(strip_obj, 'transform'):
+            if not hasattr(strip_obj, "transform"):
                 print(f"Strip '{strip_name}' has no transform property")
                 return False
 
             # Set offset values
             if offset_x is None:
-                offset_x = strip_obj.transform.offset_x if hasattr(strip_obj.transform, 'offset_x') else 0
+                offset_x = (
+                    strip_obj.transform.offset_x
+                    if hasattr(strip_obj.transform, "offset_x")
+                    else 0
+                )
             if offset_y is None:
-                offset_y = strip_obj.transform.offset_y if hasattr(strip_obj.transform, 'offset_y') else 0
+                offset_y = (
+                    strip_obj.transform.offset_y
+                    if hasattr(strip_obj.transform, "offset_y")
+                    else 0
+                )
 
             # Use direct method like addon system
             strip_obj.transform.offset_x = offset_x
@@ -167,6 +185,7 @@ class KeyframeHelper:
         except Exception as e:
             print(f"Error inserting offset keyframes: {e}")
             import traceback
+
             traceback.print_exc()
             return False
 
@@ -229,13 +248,17 @@ class KeyframeHelper:
             if not strip_obj:
                 return False
 
-            if not hasattr(strip_obj, 'transform'):
+            if not hasattr(strip_obj, "transform"):
                 print(f"Strip '{strip_name}' has no transform property")
                 return False
 
             # Set rotation value
             if rotation is None:
-                rotation = strip_obj.transform.rotation if hasattr(strip_obj.transform, 'rotation') else 0.0
+                rotation = (
+                    strip_obj.transform.rotation
+                    if hasattr(strip_obj.transform, "rotation")
+                    else 0.0
+                )
 
             # Use direct method like addon system
             strip_obj.transform.rotation = rotation
@@ -245,5 +268,6 @@ class KeyframeHelper:
         except Exception as e:
             print(f"Error inserting rotation keyframe: {e}")
             import traceback
+
             traceback.print_exc()
             return False

@@ -96,13 +96,13 @@ animations:
     intensity: 0.3
     duration_frames: 2
     target_strips: [Camera1, Camera2]
-    
+
   - type: vintage_color
     trigger: one_time
     sepia_amount: 0.4
     contrast_boost: 0.3
     target_strips: [Camera3]
-    
+
   - type: shake
     trigger: beat
     intensity: 5.0
@@ -224,10 +224,10 @@ class BlenderYAMLConfig:
 class YAMLConfigLoader:
     def load_config(self, config_path: Path) -> BlenderYAMLConfig:
         """Load and validate YAML configuration."""
-        
+
     def validate_config(self, config: BlenderYAMLConfig) -> Tuple[bool, List[str]]:
         """Validate configuration with fail-fast approach."""
-        
+
     def convert_to_env_vars(self, config: BlenderYAMLConfig) -> Dict[str, str]:
         """Convert YAML config to environment variables for backwards compatibility."""
 ```
@@ -246,13 +246,13 @@ from pathlib import Path
 
 class ConfigValidator:
     """Shared validation utilities for configuration files."""
-    
+
     def validate_file_exists(self, path: Path) -> bool:
         """Validate that a file exists."""
-        
+
     def validate_range(self, value: float, min_val: float, max_val: float) -> bool:
         """Validate that a value is within range."""
-        
+
     def validate_strip_targeting(self, target_strips: List[str], available_strips: List[str]) -> List[str]:
         """Validate that target strips exist in available strips."""
 
@@ -273,16 +273,16 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("recording_dir", type=Path)
     parser.add_argument("--config", type=Path, help="YAML configuration file")
-    
+
     args = parser.parse_args()
-    
+
     # Load YAML config
     config_path = args.config
     if not config_path.exists():
         raise FileNotFoundError(f"Configuration file not found: {config_path}")
-    
+
     config = YAMLConfigLoader().load_config(config_path)
-    
+
     # Validate configuration (fail-fast)
     is_valid, errors = YAMLConfigLoader().validate_config(config)
     if not is_valid:
@@ -290,10 +290,10 @@ def main():
         for error in errors:
             print(f"  - {error}")
         sys.exit(1)
-    
+
     # Convert to environment variables for Blender script
     env_vars = YAMLConfigLoader().convert_to_env_vars(config)
-    
+
     # Run Blender with environment
     manager = BlenderProjectManager()
     manager.create_vse_project_with_config(args.recording_dir, config)
@@ -310,7 +310,7 @@ class AnimationCompositor:
             resolution = self._get_scene_resolution()
             positions = self.layout.calculate_positions(len(video_strips), resolution)
             self._apply_layout(video_strips, positions)
-            
+
             # Apply animations with strip targeting
             for animation in self.animations:
                 events = self._extract_events(audio_analysis, animation.trigger)
@@ -318,25 +318,25 @@ class AnimationCompositor:
                     target_strips = self._filter_strips_for_animation(video_strips, animation)
                     for strip in target_strips:
                         animation.apply_to_strip(strip, events, fps)
-                        
+
             return True
         except Exception as e:
             print(f"Error applying compositor: {e}")
             return False
-    
+
     def _filter_strips_for_animation(self, video_strips: List, animation) -> List:
         """Filter strips based on animation targeting."""
         if not animation.target_strips:
             return video_strips  # No targeting = apply to all
-        
+
         filtered_strips = []
         for strip in video_strips:
             strip_name = self._get_strip_name(strip)
             if strip_name in animation.target_strips:
                 filtered_strips.append(strip)
-        
+
         return filtered_strips
-    
+
     def _get_strip_name(self, strip) -> str:
         """Extract strip name from video file path."""
         # Extract filename without extension from strip.filepath
@@ -352,19 +352,19 @@ from setka_common.config import BlenderYAMLConfig, AnimationSpec, YAMLConfigLoad
 
 class CinemonConfigGenerator:
     """Generates YAML configuration for cinemon from high-level parameters."""
-    
-    def generate_config(self, 
+
+    def generate_config(self,
                        recording_dir: Path,
                        animation_mode: str = "beat-switch",
                        main_audio: Optional[str] = None,
                        custom_animations: Optional[List[Dict]] = None) -> Path:
         """Generate YAML config file in recording directory."""
-        
+
         config_path = recording_dir / "animation_config.yaml"
-        
+
         # Discover video files
         video_files = self._discover_video_files(recording_dir)
-        
+
         # Create configuration
         if animation_mode == "beat-switch":
             config = self._create_beat_switch_config(video_files, main_audio)
@@ -372,13 +372,13 @@ class CinemonConfigGenerator:
             config = self._create_compositional_config(video_files, main_audio, custom_animations)
         else:
             config = self._create_legacy_config(video_files, main_audio, animation_mode)
-        
+
         # Write YAML file
         with open(config_path, 'w') as f:
             yaml.dump(config, f, default_flow_style=False)
-        
+
         return config_path
-    
+
     def _create_beat_switch_config(self, video_files: List[str], main_audio: Optional[str]) -> Dict:
         """Create configuration for beat-switch animation (all strips)."""
         return {
@@ -424,30 +424,30 @@ impl ProcessRunner {
     pub async fn run_cinemon_render(&self, recording_path: &Path, animation_mode: &str) -> anyhow::Result<ProcessResult> {
         // Generate YAML config
         let config_path = self.generate_cinemon_config(recording_path, animation_mode, None).await?;
-        
+
         // Run cinemon with config
         let mut cmd = Command::new("uv");
         cmd.args(&["run", "--package", "cinemon", "cinemon-blend-setup"])
             .arg(recording_path)
             .args(&["--config", &config_path.to_string_lossy()]);
-        
+
         self.run_command(cmd).await
     }
-    
+
     /// Generate config and run cinemon render with main audio
     pub async fn run_cinemon_render_with_audio(&self, recording_path: &Path, animation_mode: &str, main_audio: Option<&str>) -> anyhow::Result<ProcessResult> {
         // Generate YAML config
         let config_path = self.generate_cinemon_config(recording_path, animation_mode, main_audio).await?;
-        
+
         // Run cinemon with config
         let mut cmd = Command::new("uv");
         cmd.args(&["run", "--package", "cinemon", "cinemon-blend-setup"])
             .arg(recording_path)
             .args(&["--config", &config_path.to_string_lossy()]);
-        
+
         self.run_command(cmd).await
     }
-    
+
     /// Generate YAML configuration for cinemon
     async fn generate_cinemon_config(&self, recording_path: &Path, animation_mode: &str, main_audio: Option<&str>) -> anyhow::Result<PathBuf> {
         // Call Python config generator
@@ -461,10 +461,10 @@ impl ProcessRunner {
                 animation_mode,
                 main_audio.map(|a| format!("'{}'", a)).unwrap_or_else(|| "None".to_string())
             ));
-        
+
         let output = cmd.output().await?;
         let config_path = String::from_utf8(output.stdout)?.trim().to_string();
-        
+
         Ok(PathBuf::from(config_path))
     }
 }

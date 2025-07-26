@@ -19,6 +19,7 @@ except ImportError:
     # Fallback for background mode
     try:
         import base_effect_animation
+
         BaseEffectAnimation = base_effect_animation.BaseEffectAnimation
     except ImportError:
         # If still failing, use a minimal base class
@@ -42,12 +43,14 @@ class BrightnessFlickerAnimation(BaseEffectAnimation):
         return_frames: How many frames until return to normal brightness
     """
 
-    def __init__(self,
-                 trigger: str = "beat",
-                 intensity: float = 0.1,
-                 duration_frames: int = 2,
-                 return_frames: int = 1,
-                 target_strips: Optional[List[str]] = None):
+    def __init__(
+        self,
+        trigger: str = "beat",
+        intensity: float = 0.1,
+        duration_frames: int = 2,
+        return_frames: int = 1,
+        target_strips: Optional[List[str]] = None,
+    ):
         """
         Initialize BrightnessFlickerAnimation.
 
@@ -94,9 +97,7 @@ class BrightnessFlickerAnimation(BaseEffectAnimation):
 
             # Return to normal brightness
             return_frame = frame + self.return_frames
-            self.keyframe_helper.insert_blend_alpha_keyframe(
-                strip, return_frame, 1.0
-            )
+            self.keyframe_helper.insert_blend_alpha_keyframe(strip, return_frame, 1.0)
 
         return True
 
@@ -107,4 +108,4 @@ class BrightnessFlickerAnimation(BaseEffectAnimation):
         Returns:
             List containing 'blend_alpha' property requirement
         """
-        return ['blend_alpha']
+        return ["blend_alpha"]

@@ -49,35 +49,35 @@ describe('RecordingList Delete Button', () => {
 
   it('should render delete button for each recording', () => {
     render(<RecordingList />);
-    
+
     const deleteButtons = screen.getAllByRole('button', { name: /usuń/i });
     expect(deleteButtons).toHaveLength(1);
   });
 
   it('should call showDeletionDialog when delete button is clicked', () => {
     render(<RecordingList />);
-    
+
     const deleteButton = screen.getByRole('button', { name: /usuń/i });
     fireEvent.click(deleteButton);
-    
+
     expect(mockUseRecordings.showDeletionDialog).toHaveBeenCalledWith(mockRecordings[0]);
   });
 
   it('should disable delete button when operation is running', () => {
     mockUseRecordingOperations.running = { 'test_recording_1': true };
-    
+
     render(<RecordingList />);
-    
+
     const deleteButton = screen.getByRole('button', { name: /usuń/i });
     expect(deleteButton).toBeDisabled();
   });
 
   it('should enable delete button when no operation is running', () => {
     mockUseRecordingOperations.running = {};
-    
+
     render(<RecordingList />);
-    
+
     const deleteButton = screen.getByRole('button', { name: /usuń/i });
     expect(deleteButton).not.toBeDisabled();
   });
-}); 
+});

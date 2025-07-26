@@ -37,6 +37,7 @@ class BaseEffectAnimation(ABC):
             except ImportError:
                 try:
                     import keyframe_helper
+
                     KeyframeHelper = keyframe_helper.KeyframeHelper
                 except ImportError as e:
                     raise ImportError(f"Could not import KeyframeHelper: {e}")
@@ -91,10 +92,10 @@ class BaseEffectAnimation(ABC):
         Returns:
             Strip name (filename without extension)
         """
-        if hasattr(strip, 'filepath') and strip.filepath:
+        if hasattr(strip, "filepath") and strip.filepath:
             # Extract filename without extension from filepath
             return Path(strip.filepath).stem
-        elif hasattr(strip, 'name') and strip.name:
+        elif hasattr(strip, "name") and strip.name:
             # Fallback to strip name
             return strip.name
         else:

@@ -4,12 +4,17 @@ ABOUTME: Contains AudioAnalyzer and AudioValidator classes
 """
 
 from .audio_analyzer import AudioAnalyzer
-from .audio_validator import AudioValidator, AudioValidationError, NoAudioFileError, MultipleAudioFilesError
+from .audio_validator import (
+    AudioValidator,
+    AudioValidationError,
+    NoAudioFileError,
+    MultipleAudioFilesError,
+)
 
 __all__ = [
     "AudioAnalyzer",
     "AudioValidator",
-    "AudioValidationError", 
+    "AudioValidationError",
     "NoAudioFileError",
     "MultipleAudioFilesError",
 ]

@@ -1,9 +1,9 @@
 # Specyfikacja: Unifikacja do Pojedynczej Ścieżki Addon
 
-**Data:** 2025-07-21  
-**Autor:** Claude Code + Wojtas  
-**Priority:** HIGH  
-**Component:** Cinemon Animation System Unification  
+**Data:** 2025-07-21
+**Autor:** Claude Code + Wojtas
+**Priority:** HIGH
+**Component:** Cinemon Animation System Unification
 **Status:** SPECIFICATION
 
 ## Problem
@@ -46,7 +46,7 @@ def register():
     if bpy.context.scene.get('cinemon_auto_preset'):
         preset_name = bpy.context.scene['cinemon_auto_preset']
         auto_load_preset(preset_name)
-        
+
 def auto_load_preset(preset_name):
     # 1. Load preset configuration (multi-pip.yaml)
     # 2. Apply layout (positions strips correctly)
@@ -74,41 +74,41 @@ def _create_animations_from_yaml()
 class BlenderVSEConfigurator:
     def setup_vse_project(self):
         """Create basic VSE project - strips + audio only."""
-        
+
         # Basic project setup
         success = self._setup_basic_project()
         if not success:
             return False
-            
+
         # Add video strips with simple naming
         success = self._add_video_strips_basic()
         if not success:
             return False
-            
+
         # Add audio
         success = self._add_audio_track()
         if not success:
             return False
-            
+
         # Save auto-preset trigger for addon
         preset_name = self._extract_preset_name_from_config()
         if preset_name:
             bpy.context.scene['cinemon_auto_preset'] = preset_name
             print(f"🎯 Set auto-preset for addon: {preset_name}")
-        
+
         # Save project
         success = self.save_project()
         return success
-        
+
     def _add_video_strips_basic(self):
         """Add video strips with Video_1, Video_2 naming."""
         video_files = self.config_data['project']['video_files']
         sequencer = bpy.context.scene.sequence_editor
-        
+
         for i, video_file in enumerate(video_files):
             channel = i + 2
             strip_name = f"Video_{i + 1}"  # Simple naming
-            
+
             new_strip = sequencer.sequences.new_movie(
                 name=strip_name,
                 filepath=str(video_file),
@@ -117,7 +117,7 @@ class BlenderVSEConfigurator:
             )
             # ❌ NO layout positioning
             # ❌ NO animations
-        
+
         return True
 ```
 
@@ -127,55 +127,55 @@ class BlenderVSEConfigurator:
 ```python
 def register():
     """Register addon with auto-preset detection."""
-    
+
     # Register existing components
     register_operators()
     register_panels()
     register_vse_operators()
     register_apply_system()
     register_animation_panel()
-    
+
     # NEW: Auto-detect and load preset
     auto_load_preset_if_needed()
-    
+
 def auto_load_preset_if_needed():
     """Check for auto-preset trigger and load if present."""
     try:
         import bpy
         scene = bpy.context.scene
-        
+
         if 'cinemon_auto_preset' in scene:
             preset_name = scene['cinemon_auto_preset']
             print(f"🎯 Auto-loading preset: {preset_name}")
-            
+
             # Load preset configuration
             load_and_apply_preset(preset_name)
-            
+
             # Clear trigger to prevent re-loading
             del scene['cinemon_auto_preset']
             print(f"✅ Auto-preset {preset_name} loaded successfully")
-            
+
     except Exception as e:
         print(f"❌ Auto-preset loading failed: {e}")
 
 def load_and_apply_preset(preset_name: str):
     """Load preset and apply both layout and animations."""
-    
+
     # Load preset file
     preset_path = get_addon_preset_path(preset_name)  # e.g. multi-pip.yaml
     with open(preset_path, 'r') as f:
         config_data = yaml.safe_load(f)
-    
+
     # Apply layout
     apply_layout_to_strips(config_data['layout'])
-    
+
     # Load animations to strip context manager
     manager = get_strip_context_manager()
     manager.load_preset_for_apply(config_data)
-    
+
     # Apply animations to all strips
     regenerate_animations_for_all_strips()
-    
+
     print(f"Applied preset {preset_name}: layout + animations")
 ```
 
@@ -186,9 +186,9 @@ def load_and_apply_preset(preset_name: str):
 def generate_config_from_addon_preset(...):
     # Current logic stays the same
     # BUT: Also save preset name for VSE script
-    
+
     config_data["cinemon_preset_name"] = preset_name  # NEW
-    
+
     # Write config file
     return output_path
 ```
@@ -200,11 +200,11 @@ def generate_config_from_addon_preset(...):
 def create_vse_project_with_config(self, recording_dir, yaml_config):
     # Create temp config file
     temp_config = self._create_resolved_config(yaml_config)
-    
+
     # NEW: Include preset name if available
     if hasattr(yaml_config, 'preset_name'):
         temp_config["cinemon_preset_name"] = yaml_config.preset_name
-    
+
     # Execute VSE script
     success = self._execute_blender_with_json_config(...)
 ```
@@ -216,7 +216,7 @@ def create_vse_project_with_config(self, recording_dir, yaml_config):
 cinemon-blend-setup --preset multi-pip --open-blender
   ↓
 VSE Script: layout + animations + save + naming conflicts
-  ↓  
+  ↓
 Blender opens: Layout OK, animations missing/conflicted
   ↓
 User: Must manually reload in addon
@@ -248,11 +248,11 @@ Result: Perfect layout + working animations (identical to manual workflow)
 
 ### Phase 1: VSE Script Simplification
 - Usunąć aplikację animacji z VSE script
-- Usunąć aplikację layout z VSE script  
+- Usunąć aplikację layout z VSE script
 - Dodać zapis `cinemon_auto_preset` w scenie
 - Uprościć do podstawowego setup (strips + audio)
 
-### Phase 2: Addon Auto-Loading  
+### Phase 2: Addon Auto-Loading
 - Dodać auto-detection presetu w `register()`
 - Implementować `load_and_apply_preset()`
 - Przetestować auto-loading workflow
@@ -284,7 +284,7 @@ Result: Perfect layout + working animations (identical to manual workflow)
 - ✅ `cinemon-blend-setup --preset multi-pip --open-blender` otwiera Blender z layout + animations
 - ✅ Zachowanie identyczne z manual preset selection
 - ✅ Brak duplikacji kodu animacji
-- ✅ Wszystkie preset typy działają (vintage, minimal, multi-pip, beat-switch)  
+- ✅ Wszystkie preset typy działają (vintage, minimal, multi-pip, beat-switch)
 - ✅ Performance nie jest degraded
 
 ## Conclusion

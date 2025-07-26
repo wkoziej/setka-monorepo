@@ -32,13 +32,15 @@ class TestVSEScriptIntegration:
         assert vintage_path.exists(), f"Vintage preset not found: {vintage_path}"
 
         # Load preset and add mock video files for validation
-        with open(vintage_path, 'r') as f:
+        with open(vintage_path, "r") as f:
             preset_data = yaml.safe_load(f)
 
-        preset_data['project']['video_files'] = ['Camera1.mp4', 'Camera2.mp4']
+        preset_data["project"]["video_files"] = ["Camera1.mp4", "Camera2.mp4"]
 
         # Create temporary file with mock data
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False) as temp_file:
+        with tempfile.NamedTemporaryFile(
+            mode="w", suffix=".yaml", delete=False
+        ) as temp_file:
             yaml.dump(preset_data, temp_file, default_flow_style=False)
             temp_path = temp_file.name
 
@@ -47,6 +49,7 @@ class TestVSEScriptIntegration:
             configurator = BlenderVSEConfigurator(temp_path)
         finally:
             import os
+
             os.unlink(temp_path)
 
         # Verify basic configuration
@@ -74,13 +77,15 @@ class TestVSEScriptIntegration:
         assert preset_path.exists(), f"Music video preset not found: {preset_path}"
 
         # Load preset and add mock video files for validation
-        with open(preset_path, 'r') as f:
+        with open(preset_path, "r") as f:
             preset_data = yaml.safe_load(f)
 
-        preset_data['project']['video_files'] = ['Camera1.mp4', 'Camera2.mp4']
+        preset_data["project"]["video_files"] = ["Camera1.mp4", "Camera2.mp4"]
 
         # Create temporary file with mock data
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False) as temp_file:
+        with tempfile.NamedTemporaryFile(
+            mode="w", suffix=".yaml", delete=False
+        ) as temp_file:
             yaml.dump(preset_data, temp_file, default_flow_style=False)
             temp_path = temp_file.name
 
@@ -89,6 +94,7 @@ class TestVSEScriptIntegration:
             configurator = BlenderVSEConfigurator(temp_path)
         finally:
             import os
+
             os.unlink(temp_path)
 
         # Verify music-video characteristics
@@ -116,13 +122,15 @@ class TestVSEScriptIntegration:
         assert preset_path.exists(), f"Minimal preset not found: {preset_path}"
 
         # Load preset and add mock video files for validation
-        with open(preset_path, 'r') as f:
+        with open(preset_path, "r") as f:
             preset_data = yaml.safe_load(f)
 
-        preset_data['project']['video_files'] = ['Camera1.mp4', 'Camera2.mp4']
+        preset_data["project"]["video_files"] = ["Camera1.mp4", "Camera2.mp4"]
 
         # Create temporary file with mock data
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False) as temp_file:
+        with tempfile.NamedTemporaryFile(
+            mode="w", suffix=".yaml", delete=False
+        ) as temp_file:
             yaml.dump(preset_data, temp_file, default_flow_style=False)
             temp_path = temp_file.name
 
@@ -131,6 +139,7 @@ class TestVSEScriptIntegration:
             configurator = BlenderVSEConfigurator(temp_path)
         finally:
             import os
+
             os.unlink(temp_path)
 
         # Verify minimal characteristics
@@ -159,13 +168,15 @@ class TestVSEScriptIntegration:
         assert preset_path.exists(), f"Beat switch preset not found: {preset_path}"
 
         # Load preset and add mock video files for validation
-        with open(preset_path, 'r') as f:
+        with open(preset_path, "r") as f:
             preset_data = yaml.safe_load(f)
 
-        preset_data['project']['video_files'] = ['Camera1.mp4', 'Camera2.mp4']
+        preset_data["project"]["video_files"] = ["Camera1.mp4", "Camera2.mp4"]
 
         # Create temporary file with mock data
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False) as temp_file:
+        with tempfile.NamedTemporaryFile(
+            mode="w", suffix=".yaml", delete=False
+        ) as temp_file:
             yaml.dump(preset_data, temp_file, default_flow_style=False)
             temp_path = temp_file.name
 
@@ -174,6 +185,7 @@ class TestVSEScriptIntegration:
             configurator = BlenderVSEConfigurator(temp_path)
         finally:
             import os
+
             os.unlink(temp_path)
 
         # Verify beat-switch characteristics
@@ -201,20 +213,22 @@ class TestVSEScriptIntegration:
             "vintage.yaml",
             "music-video.yaml",
             "minimal.yaml",
-            "beat-switch.yaml"
+            "beat-switch.yaml",
         ]
 
         for preset_file in preset_files:
             preset_path = addon_path / "example_presets" / preset_file
 
             # Load preset and add mock video files for validation
-            with open(preset_path, 'r') as f:
+            with open(preset_path, "r") as f:
                 preset_data = yaml.safe_load(f)
 
-            preset_data['project']['video_files'] = ['Camera1.mp4', 'Camera2.mp4']
+            preset_data["project"]["video_files"] = ["Camera1.mp4", "Camera2.mp4"]
 
             # Create temporary file with mock data
-            with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False) as temp_file:
+            with tempfile.NamedTemporaryFile(
+                mode="w", suffix=".yaml", delete=False
+            ) as temp_file:
                 yaml.dump(preset_data, temp_file, default_flow_style=False)
                 temp_path = temp_file.name
 
@@ -231,6 +245,7 @@ class TestVSEScriptIntegration:
                 print(f"✓ {preset_file} passes validation")
             finally:
                 import os
+
                 os.unlink(temp_path)
 
     def test_animation_data_structure(self):
@@ -243,13 +258,15 @@ class TestVSEScriptIntegration:
         preset_path = addon_path / "example_presets" / "vintage.yaml"
 
         # Load preset and add mock video files for validation
-        with open(preset_path, 'r') as f:
+        with open(preset_path, "r") as f:
             preset_data = yaml.safe_load(f)
 
-        preset_data['project']['video_files'] = ['Camera1.mp4', 'Camera2.mp4']
+        preset_data["project"]["video_files"] = ["Camera1.mp4", "Camera2.mp4"]
 
         # Create temporary file with mock data
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False) as temp_file:
+        with tempfile.NamedTemporaryFile(
+            mode="w", suffix=".yaml", delete=False
+        ) as temp_file:
             yaml.dump(preset_data, temp_file, default_flow_style=False)
             temp_path = temp_file.name
 
@@ -257,6 +274,7 @@ class TestVSEScriptIntegration:
             configurator = BlenderVSEConfigurator(temp_path)
         finally:
             import os
+
             os.unlink(temp_path)
 
         animations = configurator.config_data.get("animations", [])
@@ -265,12 +283,18 @@ class TestVSEScriptIntegration:
             # Each animation should have required fields
             assert "type" in animation, f"Animation {i} missing 'type'"
             assert "trigger" in animation, f"Animation {i} missing 'trigger'"
-            assert "target_strips" in animation, f"Animation {i} missing 'target_strips'"
+            assert "target_strips" in animation, (
+                f"Animation {i} missing 'target_strips'"
+            )
 
             # target_strips should be a list
-            assert isinstance(animation["target_strips"], list), f"Animation {i} target_strips not a list"
+            assert isinstance(animation["target_strips"], list), (
+                f"Animation {i} target_strips not a list"
+            )
 
-            print(f"✓ Animation {i}: {animation['type']} -> {animation['target_strips']}")
+            print(
+                f"✓ Animation {i}: {animation['type']} -> {animation['target_strips']}"
+            )
 
     def test_command_line_arg_parsing(self):
         """Test command line argument parsing with real preset."""
@@ -282,22 +306,25 @@ class TestVSEScriptIntegration:
         preset_path = addon_path / "example_presets" / "vintage.yaml"
 
         # Load preset and add mock video files for validation
-        with open(preset_path, 'r') as f:
+        with open(preset_path, "r") as f:
             preset_data = yaml.safe_load(f)
 
-        preset_data['project']['video_files'] = ['Camera1.mp4', 'Camera2.mp4']
+        preset_data["project"]["video_files"] = ["Camera1.mp4", "Camera2.mp4"]
 
         # Create temporary file with mock data
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False) as temp_file:
+        with tempfile.NamedTemporaryFile(
+            mode="w", suffix=".yaml", delete=False
+        ) as temp_file:
             yaml.dump(preset_data, temp_file, default_flow_style=False)
             temp_path = temp_file.name
 
         try:
             # Mock sys.argv
-            with patch('vse_script.sys.argv', ['script.py', '--config', temp_path]):
+            with patch("vse_script.sys.argv", ["script.py", "--config", temp_path]):
                 configurator = BlenderVSEConfigurator()
         finally:
             import os
+
             os.unlink(temp_path)
 
             # Should load vintage preset

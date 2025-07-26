@@ -16,7 +16,7 @@ try:
     )
 except ImportError:
     # Fallback when running in Blender environment
-    sys.path.append('/home/wojtas/dev/setka-monorepo/packages/common/src')
+    sys.path.append("/home/wojtas/dev/setka-monorepo/packages/common/src")
     from setka_common.config.yaml_config import (
         AnimationSpec,
         BlenderYAMLConfig,
@@ -177,13 +177,17 @@ class BlenderYAMLConfigReader:
         if self.config.project.main_audio:
             audio_path = Path(self.config.project.main_audio)
             if not audio_path.exists():
-                errors.append(f"Main audio file not found: {self.config.project.main_audio}")
+                errors.append(
+                    f"Main audio file not found: {self.config.project.main_audio}"
+                )
 
         # Validate audio analysis file exists if specified
         if self.config.audio_analysis.file:
             analysis_path = Path(self.config.audio_analysis.file)
             if not analysis_path.exists():
-                errors.append(f"Audio analysis file not found: {self.config.audio_analysis.file}")
+                errors.append(
+                    f"Audio analysis file not found: {self.config.audio_analysis.file}"
+                )
 
         return len(errors) == 0, errors
 
@@ -202,8 +206,9 @@ class BlenderYAMLConfigReader:
             analysis_path = Path(self.config.audio_analysis.file)
             if analysis_path.exists():
                 try:
-                    with open(analysis_path, 'r', encoding='utf-8') as f:
+                    with open(analysis_path, "r", encoding="utf-8") as f:
                         import json
+
                         return json.load(f)
                 except Exception as e:
                     print(f"Error loading analysis file {analysis_path}: {e}")

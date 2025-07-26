@@ -42,7 +42,7 @@ Przechodzmy z table-based sortowania (clicking headers) na controls-based approa
 ```
 [Header - fermata + actions]
 [Controls Bar - sort + search + filter]  ← NOWE
-[Results Counter - "5 of 12 recordings"] ← NOWE  
+[Results Counter - "5 of 12 recordings"] ← NOWE
 [Cards List]
 ```
 
@@ -77,7 +77,7 @@ Przechodzmy z table-based sortowania (clicking headers) na controls-based approa
 
 **F3.2 LocalStorage Persistence**
 - Save/restore sort selection
-- Save/restore search term  
+- Save/restore search term
 - Save/restore status filter
 - Key: `fermata-filters-v1`
 
@@ -87,9 +87,9 @@ Przechodzmy z table-based sortowania (clicking headers) na controls-based approa
 
 **Updated hook: `useSortingAndFiltering`**
 ```typescript
-type SortOption = 
+type SortOption =
   | 'date-desc'    // Newest First (default)
-  | 'date-asc'     // Oldest First  
+  | 'date-asc'     // Oldest First
   | 'status'       // By Status
   | 'name-asc'     // Name A→Z
   | 'name-desc'    // Name Z→A
@@ -135,7 +135,7 @@ export function useSortingAndFiltering(recordings: Recording[]) {
     processedRecordings,
     filterConfig,
     hasActiveFilters,
-    updateFilter: (key: keyof FilterConfig, value: any) => 
+    updateFilter: (key: keyof FilterConfig, value: any) =>
       setFilterConfig(prev => ({ ...prev, [key]: value })),
     clearFilters: () => setFilterConfig({ ...DEFAULT_FILTERS, sortOption: filterConfig.sortOption })
   };
@@ -225,7 +225,7 @@ const sortingFunctions: Record<SortOption, (a: Recording, b: Recording) => numbe
   'size-asc': (a, b) => getTotalSize(a) - getTotalSize(b),
   'status': (a, b) => {
     const statusPriority = {
-      'Failed': 0, 'Recorded': 1, 'Extracted': 2, 
+      'Failed': 0, 'Recorded': 1, 'Extracted': 2,
       'Analyzed': 3, 'SetupRendered': 4, 'Rendered': 5, 'Uploaded': 6
     };
     return getStatusPriority(a.status) - getStatusPriority(b.status);
@@ -281,7 +281,7 @@ expect(deleteButton).toHaveClass('btn-danger');
 ```typescript
 // Should have all 7 sort options
 expect(sortDropdown).toHaveOptions([
-  'Newest First', 'Oldest First', 'By Status', 
+  'Newest First', 'Oldest First', 'By Status',
   'Name A→Z', 'Name Z→A', 'Largest First', 'Smallest First'
 ]);
 ```
@@ -303,4 +303,4 @@ userEvent.type(searchInput, 'my-search');
 // Reload component
 expect(sortDropdown).toHaveValue('name-asc');
 expect(searchInput).toHaveValue('my-search');
-``` 
+```

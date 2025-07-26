@@ -16,7 +16,7 @@ Automatyczna ekstrakcja źródeł z nagrania canvas OBS wykorzystująca:
   - `determine_source_capabilities()` - OBS API do detekcji audio/video
   - `create_metadata()` - tworzenie struktury metadanych
   - `validate_metadata()` - walidacja struktury
-  
+
 - **`extractor.py`**: Ekstrakcja źródeł przez FFmpeg
   - `extract_sources()` - główna funkcja ekstrakcji
   - `ExtractionResult` - klasa wyników
@@ -28,7 +28,7 @@ Automatyczna ekstrakcja źródeł z nagrania canvas OBS wykorzystująca:
   - Event handlers dla start/stop recording
   - Automatyczne zbieranie metadanych sceny
   - Konfiguracja przez OBS UI
-  
+
 - **`scene_analyzer.py`**: Analiza scen OBS
   - `SceneAnalyzer` - klasa do analizy scen
   - Enumeracja źródeł i ich właściwości
@@ -202,7 +202,7 @@ else:
 ```
 recording_20250105_143022_extracted/
 ├── Camera1.mp4              # Video z Camera1
-├── Camera1.m4a              # Audio z Camera1  
+├── Camera1.m4a              # Audio z Camera1
 ├── Microphone.m4a           # Audio z Microphone (tylko audio)
 ├── ScreenCapture.mp4        # Video z ScreenCapture (tylko video)
 └── ...
@@ -250,7 +250,7 @@ uv run pytest tests/test_obs_script.py tests/test_scene_analyzer.py
 
 ### Główne kategorie testów:
 - **Metadata**: Tworzenie, walidacja, capabilities detection
-- **Extractor**: Ekstrakcja video/audio, crop parameters, error handling  
+- **Extractor**: Ekstrakcja video/audio, crop parameters, error handling
 - **OBS Integration**: Script functionality, scene analysis
 - **CLI**: Argument parsing, file handling, error reporting
 

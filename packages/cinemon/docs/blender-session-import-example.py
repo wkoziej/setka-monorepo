@@ -32,7 +32,7 @@ video_files = [
     EXTRACTED_DIR / "RPI_RIGHT.mp4",
     EXTRACTED_DIR / "Urządzenie przechwytujące obraz (V4L2) 2.mp4",
     EXTRACTED_DIR / "Urządzenie przechwytujące obraz (V4L2) 3.mp4",
-    EXTRACTED_DIR / "Urządzenie przechwytujące obraz (V4L2).mp4"
+    EXTRACTED_DIR / "Urządzenie przechwytujące obraz (V4L2).mp4",
 ]
 
 # Główny plik audio
@@ -46,6 +46,7 @@ render_output = BLENDER_DIR / "render" / "projekt.mp4"
 RESOLUTION_X = 1280
 RESOLUTION_Y = 720
 FPS = 30
+
 
 def setup_vse():
     """Konfiguruje projekt Blender VSE dla sesji OBS Canvas."""
@@ -86,10 +87,7 @@ def setup_vse():
     if main_audio.exists():
         try:
             sequencer.sequences.new_sound(
-                name="Main_Audio",
-                filepath=str(main_audio),
-                channel=1,
-                frame_start=1
+                name="Main_Audio", filepath=str(main_audio), channel=1, frame_start=1
             )
             print(f"✓ Dodano audio: {main_audio.name} (kanał 1)")
         except Exception as e:
@@ -103,12 +101,12 @@ def setup_vse():
         if video_file.exists():
             try:
                 sequencer.sequences.new_movie(
-                    name=f"Video_{i+1}",
+                    name=f"Video_{i + 1}",
                     filepath=str(video_file),
                     channel=i + 2,  # Kanały 2-6
-                    frame_start=1
+                    frame_start=1,
                 )
-                print(f"✓ Dodano wideo {i+1}: {video_file.name} (kanał {i+2})")
+                print(f"✓ Dodano wideo {i + 1}: {video_file.name} (kanał {i + 2})")
                 added_videos += 1
             except Exception as e:
                 print(f"❌ Błąd dodawania wideo {video_file}: {e}")
@@ -121,10 +119,10 @@ def setup_vse():
 
     # 6. Ustawienia renderowania
     render = scene.render
-    render.image_settings.file_format = 'FFMPEG'
-    render.ffmpeg.format = 'MPEG4'
-    render.ffmpeg.codec = 'H264'
-    render.ffmpeg.constant_rate_factor = 'HIGH'
+    render.image_settings.file_format = "FFMPEG"
+    render.ffmpeg.format = "MPEG4"
+    render.ffmpeg.codec = "H264"
+    render.ffmpeg.constant_rate_factor = "HIGH"
     render.filepath = str(render_output)
     print("✓ Skonfigurowano ustawienia renderowania (MP4, H.264)")
 
@@ -158,6 +156,7 @@ def setup_vse():
 
     return True
 
+
 def list_session_files():
     """Wyświetla listę plików w sesji."""
     print("=== Pliki w sesji ===")
@@ -190,6 +189,7 @@ def list_session_files():
             marker = "✓" if video in video_files else " "
             print(f"  {marker} {video.name}")
         print()
+
 
 # ==========================================
 # URUCHOMIENIE SKRYPTU

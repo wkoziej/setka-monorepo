@@ -3,7 +3,6 @@
 
 """Tests for MediaDiscovery class."""
 
-
 import pytest
 
 from blender.config.media_discovery import MediaDiscovery

@@ -36,7 +36,6 @@ class BlenderProjectManager:
         self.blender_executable = blender_executable
         self.script_path = Path(__file__).parent / "vse_script.py"
 
-
     def create_vse_project_with_config(
         self,
         recording_path: Path,
@@ -62,7 +61,9 @@ class BlenderProjectManager:
 
         from setka_common.file_structure.specialized import RecordingStructureManager
 
-        logger.info(f"Creating Blender VSE project with YAML config for: {recording_path}")
+        logger.info(
+            f"Creating Blender VSE project with YAML config for: {recording_path}"
+        )
 
         # 1. Validate recording structure
         structure = RecordingStructureManager.find_recording_structure(recording_path)
@@ -73,7 +74,9 @@ class BlenderProjectManager:
         RecordingStructureManager.ensure_blender_dir(recording_path)
 
         # 3. Resolve paths relative to recording directory and create resolved config
-        resolved_config = self._create_resolved_config(yaml_config, recording_path, structure)
+        resolved_config = self._create_resolved_config(
+            yaml_config, recording_path, structure
+        )
 
         # 4. Create temporary YAML file with resolved paths OR use original if it has preset_name
         config_file_to_use = None
@@ -88,7 +91,10 @@ class BlenderProjectManager:
             try:
                 # Write resolved config to temporary YAML file
                 import yaml
-                temp_config_file = tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False, encoding='utf-8')
+
+                temp_config_file = tempfile.NamedTemporaryFile(
+                    mode="w", suffix=".yaml", delete=False, encoding="utf-8"
+                )
 
                 # Convert to internal format for vse_script.py compatibility
                 loader = YAMLConfigLoader()
@@ -96,10 +102,16 @@ class BlenderProjectManager:
 
                 # Add preset name from parameter (AFTER convert_to_internal which may filter fields)
                 if preset_name:
-                    internal_config['preset_name'] = preset_name
+                    internal_config["preset_name"] = preset_name
                     logger.info(f"Added preset_name to internal_config: {preset_name}")
 
-                yaml.dump(internal_config, temp_config_file, indent=2, allow_unicode=True, default_flow_style=False)
+                yaml.dump(
+                    internal_config,
+                    temp_config_file,
+                    indent=2,
+                    allow_unicode=True,
+                    default_flow_style=False,
+                )
                 temp_config_file.close()
                 config_file_to_use = temp_config_file.name
 
@@ -112,7 +124,9 @@ class BlenderProjectManager:
             logger.info(f"Video files: {resolved_config.project.video_files}")
             if resolved_config.project.main_audio:
                 logger.info(f"Main audio: {resolved_config.project.main_audio}")
-            logger.info(f"Animation mode: compositional with {len(resolved_config.strip_animations) if hasattr(resolved_config, 'strip_animations') else 0} strip animations")
+            logger.info(
+                f"Animation mode: compositional with {len(resolved_config.strip_animations) if hasattr(resolved_config, 'strip_animations') else 0} strip animations"
+            )
 
             # 5. Execute Blender with config file
             output_blend = resolved_config.project.output_blend
@@ -123,10 +137,14 @@ class BlenderProjectManager:
             if original_config_path and preset_name:
                 # When using original config, output_blend will be generated based on config name
                 actual_output_path = recording_path / "blender" / f"{preset_name}.blend"
-                logger.info(f"Using actual output path for preset: {actual_output_path}")
+                logger.info(
+                    f"Using actual output path for preset: {actual_output_path}"
+                )
                 return actual_output_path
             else:
-                logger.info(f"Blender project created successfully with YAML config: {output_blend}")
+                logger.info(
+                    f"Blender project created successfully with YAML config: {output_blend}"
+                )
                 return Path(output_blend)
 
         except Exception as e:
@@ -137,12 +155,13 @@ class BlenderProjectManager:
             if temp_config_file:
                 try:
                     import os
+
                     os.unlink(temp_config_file.name)
-                    logger.debug(f"Cleaned up temporary config file: {temp_config_file.name}")
+                    logger.debug(
+                        f"Cleaned up temporary config file: {temp_config_file.name}"
+                    )
                 except Exception as e:
                     logger.warning(f"Failed to clean up temporary config file: {e}")
-
-
 
     def _execute_blender_with_json_config(self, config_path: str) -> None:
         """
@@ -164,7 +183,8 @@ class BlenderProjectManager:
                 "snap",
                 "run",
                 "blender",
-                "--app-template", "Video_Editing",  # Use Video Editing template for workspace
+                "--app-template",
+                "Video_Editing",  # Use Video Editing template for workspace
                 "--background",
                 "--python",
                 str(self.script_path),
@@ -175,7 +195,8 @@ class BlenderProjectManager:
         else:
             cmd = [
                 self.blender_executable,
-                "--app-template", "Video_Editing",  # Use Video Editing template for workspace
+                "--app-template",
+                "Video_Editing",  # Use Video Editing template for workspace
                 "--background",
                 "--python",
                 str(self.script_path),
@@ -187,9 +208,7 @@ class BlenderProjectManager:
         try:
             logger.debug(f"Executing command: {' '.join(cmd)}")
             logger.debug(f"Working directory: {os.getcwd()}")
-            result = subprocess.run(
-                cmd, capture_output=True, text=True, check=True
-            )
+            result = subprocess.run(cmd, capture_output=True, text=True, check=True)
             # Show any output for debugging
             if result.stdout.strip():
                 logger.debug(f"Blender stdout: {result.stdout}")
@@ -243,7 +262,6 @@ class BlenderProjectManager:
         """
         return find_files_by_type(extracted_dir, MediaType.VIDEO)
 
-
     def _validate_animation_mode(self, mode: str) -> None:
         """
         Validate animation mode parameter.
@@ -287,7 +305,9 @@ class BlenderProjectManager:
                 f"Valid divisions: {', '.join(map(str, sorted(valid_divisions)))}"
             )
 
-    def _create_resolved_config(self, yaml_config: BlenderYAMLConfig, recording_path: Path, structure) -> BlenderYAMLConfig:
+    def _create_resolved_config(
+        self, yaml_config: BlenderYAMLConfig, recording_path: Path, structure
+    ) -> BlenderYAMLConfig:
         """
         Create a new config with all paths resolved to absolute paths.
 
@@ -323,7 +343,11 @@ class BlenderProjectManager:
 
         # Resolve output paths
         project_name = recording_path.name
-        blender_dir = structure.blender_dir if hasattr(structure, 'blender_dir') else recording_path / "blender"
+        blender_dir = (
+            structure.blender_dir
+            if hasattr(structure, "blender_dir")
+            else recording_path / "blender"
+        )
 
         if yaml_config.project.output_blend:
             output_blend = recording_path / yaml_config.project.output_blend
@@ -353,19 +377,18 @@ class BlenderProjectManager:
             render_output=str(render_output.resolve()),
             fps=yaml_config.project.fps,
             resolution=yaml_config.project.resolution,
-            beat_division=yaml_config.project.beat_division
+            beat_division=yaml_config.project.beat_division,
         )
 
         resolved_audio_analysis = AudioAnalysisConfig(
             file=resolved_analysis_file,
             data=yaml_config.audio_analysis.data,
             beat_division=yaml_config.audio_analysis.beat_division,
-            min_onset_interval=yaml_config.audio_analysis.min_onset_interval
+            min_onset_interval=yaml_config.audio_analysis.min_onset_interval,
         )
 
         resolved_layout = LayoutConfig(
-            type=yaml_config.layout.type,
-            config=yaml_config.layout.config
+            type=yaml_config.layout.type, config=yaml_config.layout.config
         )
 
         return BlenderYAMLConfig(
@@ -373,6 +396,5 @@ class BlenderProjectManager:
             audio_analysis=resolved_audio_analysis,
             layout=resolved_layout,
             animations=yaml_config.animations,
-            strip_animations=yaml_config.strip_animations
+            strip_animations=yaml_config.strip_animations,
         )
-

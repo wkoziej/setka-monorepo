@@ -2,13 +2,7 @@
 Testy dla modułu file_structure.
 """
 
-import json
-from pathlib import Path
-
-import pytest
-
 from setka_common.file_structure.base import MediaStructure, StructureManager
-from setka_common.file_structure.types import MediaType
 
 
 class TestMediaStructure:
@@ -200,7 +194,7 @@ class TestStructureManager:
         """Test ensure_directory() gdy katalog już istnieje."""
         base_path = tmp_path / "base"
         base_path.mkdir()
-        
+
         existing_dir = base_path / "existing"
         existing_dir.mkdir()
 

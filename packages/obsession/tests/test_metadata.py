@@ -22,7 +22,7 @@ class TestSourceCapabilitiesDetection:
         import metadata
 
         # Only reload if module is already in sys.modules
-        if 'metadata' in sys.modules:
+        if "metadata" in sys.modules:
             importlib.reload(metadata)
 
     def test_determine_source_capabilities_audio_only(self):
@@ -102,7 +102,7 @@ class TestMetadataWithCapabilities:
         import metadata
 
         # Only reload if module is already in sys.modules
-        if 'metadata' in sys.modules:
+        if "metadata" in sys.modules:
             importlib.reload(metadata)
 
     def test_metadata_has_audio_video_flags(self):
@@ -307,7 +307,7 @@ class TestMetadataIntegration:
         import metadata
 
         # Only reload if module is already in sys.modules
-        if 'metadata' in sys.modules:
+        if "metadata" in sys.modules:
             importlib.reload(metadata)
 
     def test_metadata_json_serialization(self):
