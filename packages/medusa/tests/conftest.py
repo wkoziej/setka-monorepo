@@ -15,16 +15,12 @@ import tempfile
 import json
 import os
 from pathlib import Path
-from typing import Dict, Any, Generator, AsyncGenerator
-from unittest.mock import Mock, MagicMock, AsyncMock, patch
-from datetime import datetime, timedelta
+from unittest.mock import Mock, AsyncMock
 
 # Import Medusa components for fixtures
 from medusa.models import TaskStatus, TaskResult, MediaMetadata, PlatformConfig
 from medusa.exceptions import (
-    MedusaError, ConfigError, UploadError, PublishError, 
-    TaskError, AuthenticationError, ValidationError, 
-    RateLimitError, NetworkError
+    ConfigError, UploadError, PublishError
 )
 
 

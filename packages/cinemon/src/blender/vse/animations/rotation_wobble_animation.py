@@ -3,8 +3,8 @@
 
 """Rotation wobble animation for VSE strips."""
 
-import random
 import math
+import random
 from typing import List
 
 from .base_effect_animation import BaseEffectAnimation
@@ -22,7 +22,7 @@ class RotationWobbleAnimation(BaseEffectAnimation):
         return_frames: How many frames until return to base rotation
         oscillate: Whether to alternate wobble direction
     """
-    
+
     def __init__(self,
                  trigger: str = "beat",
                  wobble_degrees: float = 1.0,
@@ -42,7 +42,7 @@ class RotationWobbleAnimation(BaseEffectAnimation):
         self.wobble_degrees = wobble_degrees
         self.return_frames = return_frames
         self.oscillate = oscillate
-    
+
     def apply_to_strip(self, strip, events: List[float], fps: int, **kwargs) -> bool:
         """
         Apply rotation wobble animation to strip based on events.
@@ -61,17 +61,17 @@ class RotationWobbleAnimation(BaseEffectAnimation):
         """
         if not hasattr(strip, 'transform'):
             return False
-        
+
         # Set initial rotation keyframe at frame 1
         self.keyframe_helper.insert_transform_rotation_keyframe(strip.name, 1, 0.0)
-        
+
         # Track direction for oscillation
         direction = 1
-        
+
         # Apply wobble for each event
         for i, event_time in enumerate(events):
             frame = int(event_time * fps)
-            
+
             # Calculate wobble rotation - use VintageFilmEffects logic with oscillation
             if self.oscillate and i > 0:
                 direction *= -1  # Alternate direction
@@ -80,24 +80,24 @@ class RotationWobbleAnimation(BaseEffectAnimation):
             else:
                 # Original VintageFilmEffects logic: random in full range
                 wobble_rotation = random.uniform(-self.wobble_degrees, self.wobble_degrees)
-            
+
             wobble_radians = math.radians(wobble_rotation)
-            
+
             # Apply wobble
             strip.transform.rotation = wobble_radians
             self.keyframe_helper.insert_transform_rotation_keyframe(
                 strip.name, frame, wobble_radians
             )
-            
+
             # Return to normal rotation (same as VintageFilmEffects: 3 frames)
             return_frame = frame + self.return_frames
             strip.transform.rotation = 0.0
             self.keyframe_helper.insert_transform_rotation_keyframe(
                 strip.name, return_frame, 0.0
             )
-        
+
         return True
-    
+
     def get_required_properties(self) -> List[str]:
         """
         Get list of required strip properties.

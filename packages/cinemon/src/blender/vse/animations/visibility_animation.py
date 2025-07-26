@@ -20,8 +20,8 @@ class VisibilityAnimation(BaseEffectAnimation):
         pattern: Visibility pattern ("alternate", "show", "hide", "pulse")
         duration_frames: How many frames visibility change lasts (for pulse mode)
     """
-    
-    def __init__(self, 
+
+    def __init__(self,
                  trigger: str = "beat",
                  pattern: str = "alternate",
                  duration_frames: int = 10,
@@ -44,7 +44,7 @@ class VisibilityAnimation(BaseEffectAnimation):
         self.pattern = pattern
         self.duration_frames = duration_frames
         self._event_counter = 0  # Track events for alternating
-    
+
     def apply_to_strip(self, strip, events: List[float], fps: int, **kwargs) -> bool:
         """
         Apply visibility animation to strip based on events.
@@ -59,14 +59,14 @@ class VisibilityAnimation(BaseEffectAnimation):
             True if animation was applied successfully
         """
         print(f"    👁 VisibilityAnimation.apply_to_strip: strip={strip.name}, events={len(events)}, pattern={self.pattern}")
-        
+
         if not hasattr(strip, 'blend_alpha'):
             print(f"    ❌ Strip {strip.name} has no blend_alpha property")
             return False
-        
+
         # Get strip index for alternating pattern
         strip_index = kwargs.get('strip_index', 0)
-        
+
         # Set initial visibility at frame 1
         if self.pattern == "alternate":
             # Even-indexed strips start visible, odd start hidden
@@ -74,10 +74,10 @@ class VisibilityAnimation(BaseEffectAnimation):
         else:
             # Other patterns start visible
             initial_alpha = 1.0
-            
+
         strip.blend_alpha = initial_alpha
         self.keyframe_helper.insert_blend_alpha_keyframe(strip.name, 1, initial_alpha)
-        
+
         # Apply visibility changes for each event
         print(f"    🎯 Adding visibility keyframes for {len(events)} events")
         for i, event in enumerate(events):
@@ -87,10 +87,10 @@ class VisibilityAnimation(BaseEffectAnimation):
             else:
                 event_time = event
             frame = int(event_time * fps)
-            
+
             if self.pattern == "alternate":
                 # Alternate visibility: switch which strip is visible on each event
-                # Strip 0: visible on even events (0, 2, 4...)  
+                # Strip 0: visible on even events (0, 2, 4...)
                 # Strip 1: visible on odd events (1, 3, 5...)
                 if strip_index == 0:
                     target_alpha = 1.0 if (i % 2) == 0 else 0.0
@@ -99,22 +99,22 @@ class VisibilityAnimation(BaseEffectAnimation):
                 else:
                     # For strips beyond main cameras, always visible
                     target_alpha = 1.0
-                
+
             elif self.pattern == "show":
                 target_alpha = 1.0
-                
+
             elif self.pattern == "hide":
                 target_alpha = 0.0
-                
+
             elif self.pattern == "pulse":
                 # Brief pulse: show for duration_frames, then hide
                 target_alpha = 1.0
-                
+
             print(f"    📍 Event {i+1}: time={event_time:.2f}s, frame={frame}, strip_index={strip_index}, alpha={target_alpha}")
-            
+
             strip.blend_alpha = target_alpha
             self.keyframe_helper.insert_blend_alpha_keyframe(strip.name, frame, target_alpha)
-            
+
             # For pulse pattern, add return to previous state
             if self.pattern == "pulse":
                 return_frame = frame + self.duration_frames
@@ -122,14 +122,14 @@ class VisibilityAnimation(BaseEffectAnimation):
                 strip.blend_alpha = return_alpha
                 self.keyframe_helper.insert_blend_alpha_keyframe(strip.name, return_frame, return_alpha)
                 print(f"    📍 Return frame: {return_frame}, alpha={return_alpha}")
-            
+
             # Only show first 3 events to avoid spam
             if i >= 2:
                 print(f"    📍 ... and {len(events)-3} more events")
                 break
-        
+
         return True
-    
+
     def get_required_properties(self) -> List[str]:
         """
         Get list of required strip properties.

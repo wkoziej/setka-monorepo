@@ -4,7 +4,7 @@
 import os
 import re
 from enum import Enum
-from typing import Dict, Any, Optional, List, Union
+from typing import Dict, Any, Optional, List
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 

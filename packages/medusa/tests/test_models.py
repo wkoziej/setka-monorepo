@@ -5,12 +5,10 @@ This module tests all data models, enums, and their validation methods,
 ensuring robust handling of task states, metadata, and platform configurations.
 """
 
-import json
 import pytest
 import tempfile
 import os
 from datetime import datetime, timezone
-from typing import Dict, Any, List, Optional
 
 from medusa.models import (
     TaskStatus, TaskResult, MediaMetadata, PlatformConfig, 

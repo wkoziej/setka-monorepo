@@ -5,7 +5,6 @@
 """Generate test audio files for AudioAnalyzer testing."""
 
 import numpy as np
-import os
 from pathlib import Path
 
 

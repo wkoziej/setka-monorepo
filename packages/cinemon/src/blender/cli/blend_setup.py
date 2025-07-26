@@ -11,10 +11,11 @@ import subprocess
 import sys
 from pathlib import Path
 
-from ..project_manager import BlenderProjectManager
-from ..config import CinemonConfigGenerator
 from beatrix import AudioValidationError
 from setka_common.config import BlenderYAMLConfig, YAMLConfigLoader
+
+from ..config import CinemonConfigGenerator
+from ..project_manager import BlenderProjectManager
 
 
 def open_blender_with_video_editing(blend_file_path: Path) -> None:
@@ -30,13 +31,13 @@ def open_blender_with_video_editing(blend_file_path: Path) -> None:
             "snap", "run", "blender",
             str(blend_file_path)
         ]
-        
-        print(f"🎬 Otwieranie Blender (projekt utworzony z Video Editing template)...")
+
+        print("🎬 Otwieranie Blender (projekt utworzony z Video Editing template)...")
         print(f"📁 Plik: {blend_file_path}")
-        
+
         # Start Blender in background (non-blocking) with output visible
         subprocess.Popen(cmd)
-        
+
     except Exception as e:
         print(f"⚠ Nie udało się otworzyć Blender: {e}")
         print(f"💡 Otwórz ręcznie: snap run blender '{blend_file_path}'")
@@ -101,13 +102,13 @@ Przykłady użycia:
 
     # Mutually exclusive group for config sources (required)
     config_group = parser.add_mutually_exclusive_group(required=True)
-    
+
     config_group.add_argument(
         "--config",
         type=Path,
         help="Ścieżka do pliku konfiguracji YAML",
     )
-    
+
     config_group.add_argument(
         "--preset",
         type=str,
@@ -200,68 +201,68 @@ def main() -> int:
         # Handle preset configuration if provided
         if args.preset:
             logger.info(f"Generating configuration from preset: {args.preset}")
-            
+
             # Prepare preset overrides from CLI arguments
             preset_overrides = {}
             if args.main_audio:
                 preset_overrides["main_audio"] = args.main_audio
-            
+
             # Generate configuration from preset
             generator = CinemonConfigGenerator()
             config_path = generator.generate_preset(
-                args.recording_dir, 
-                args.preset, 
+                args.recording_dir,
+                args.preset,
                 **preset_overrides
             )
-            
+
             logger.info(f"Generated configuration: {config_path}")
-            
+
             # Create Blender project manager
             manager = BlenderProjectManager()
-            
+
             # Load generated YAML config
             yaml_config = load_yaml_config(config_path)
-            
+
             # Create VSE project with generated config
             logger.info("Creating Blender VSE project with preset configuration...")
             project_path = manager.create_vse_project_with_config(
                 args.recording_dir,
                 yaml_config
             )
-            
+
             print(f"✅ Projekt Blender VSE utworzony z presetu {args.preset}: {project_path}")
-            
+
             # Auto-open Blender if requested
             if args.open_blender:
                 logger.info("Opening Blender with Video Editing workspace...")
                 open_blender_with_video_editing(project_path)
-            
+
             return 0
-            
+
         # Handle YAML configuration if provided
         elif args.config:
             logger.info(f"Loading YAML configuration: {args.config}")
             yaml_config = load_yaml_config(args.config)
-            
+
             # Create Blender project manager
             manager = BlenderProjectManager()
-            
+
             # Create VSE project with YAML config
             logger.info("Creating Blender VSE project with YAML configuration...")
             project_path = manager.create_vse_project_with_config(
                 args.recording_dir,
                 yaml_config
             )
-            
+
             print(f"✅ Projekt Blender VSE utworzony z YAML config: {project_path}")
-            
+
             # Auto-open Blender if requested
             if args.open_blender:
                 logger.info("Opening Blender with Video Editing workspace...")
                 open_blender_with_video_editing(project_path)
-            
+
             return 0
-        
+
         # This should never happen due to required=True, but just in case
         else:
             raise ValueError("Must specify either --preset or --config parameter")

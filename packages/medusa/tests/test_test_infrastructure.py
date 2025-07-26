@@ -10,12 +10,11 @@ import asyncio
 import json
 import time
 from pathlib import Path
-from unittest.mock import Mock, AsyncMock, patch
+from unittest.mock import AsyncMock
 
 from medusa.models import TaskStatus, TaskResult, MediaMetadata, PlatformConfig
 from medusa.exceptions import (
-    MedusaError, ConfigError, UploadError, PublishError,
-    AuthenticationError, ValidationError, RateLimitError, NetworkError
+    ConfigError, UploadError, PublishError
 )
 
 from test_utils import (

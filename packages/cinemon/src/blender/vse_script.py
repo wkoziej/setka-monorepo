@@ -15,12 +15,11 @@ Użycie w Blenderze:
 5. Uruchom skrypt (Alt+P)
 """
 
-import bpy
-import os
 import sys
 from pathlib import Path
-from pathlib import Path
-from typing import List, Optional, Tuple, Dict
+from typing import Dict, List, Optional, Tuple
+
+import bpy
 
 # Import YAML configuration loader
 addon_path = Path(__file__).parent.parent.parent / "blender_addon"
@@ -39,9 +38,6 @@ try:
 except ImportError:
     # Fallback for when script is run standalone in Blender
     sys.path.append(str(Path(__file__).parent))
-    from vse.constants import AnimationConstants
-    from vse.keyframe_helper import KeyframeHelper
-    from vse.layout_manager import BlenderLayoutManager
     from vse.project_setup import BlenderProjectSetup
 
 
@@ -57,35 +53,35 @@ class BlenderVSEConfigurator:
         # Parse command line arguments if no config path provided
         if config_path is None:
             config_path = self._parse_command_line_args()
-        
-        # Load YAML configuration 
+
+        # Load YAML configuration
         self.config_path = Path(config_path)
-        
+
         # Add vendor path for PyYAML (Blender doesn't have it)
         addon_vendor_path = Path(__file__).parent.parent.parent / "blender_addon" / "vendor"
         if str(addon_vendor_path) not in sys.path:
             sys.path.insert(0, str(addon_vendor_path))
-        
+
         import yaml
         with open(config_path, 'r', encoding='utf-8') as f:
             raw_config = yaml.safe_load(f)
-        
+
         # Detect format and convert if needed
         if "strip_animations" in raw_config:
             # This is grouped format (preset file) - need to convert to internal
             common_path = Path(__file__).parent.parent.parent.parent.parent / "common" / "src"
             if str(common_path) not in sys.path:
                 sys.path.insert(0, str(common_path))
-            
+
             from setka_common.config.yaml_config import YAMLConfigLoader
-            
+
             loader = YAMLConfigLoader()
             # Write temp file and load through standard pipeline
             import tempfile
             with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False) as temp_file:
                 yaml.dump(raw_config, temp_file, default_flow_style=False, allow_unicode=True)
                 temp_path = temp_file.name
-            
+
             try:
                 config_obj = loader.load_config(Path(temp_path))
                 # Convert to internal format
@@ -96,7 +92,7 @@ class BlenderVSEConfigurator:
         else:
             # This is already internal format (from project_manager.py)
             self.config_data = raw_config
-        
+
         # Set attributes from config (maintaining compatibility)
         project = self.config_data['project']
         self.video_files = [Path(f) for f in project['video_files']]
@@ -108,7 +104,7 @@ class BlenderVSEConfigurator:
         self.resolution_x = resolution.get('width', 1920)
         self.resolution_y = resolution.get('height', 1080)
         self.beat_division = project.get('beat_division', 8)
-        
+
         # Animation mode is always compositional with JSON config
         self.animation_mode = "compositional"
 
@@ -124,7 +120,7 @@ class BlenderVSEConfigurator:
                 "render_output": self.render_output,
             }
         )
-    
+
     def _parse_command_line_args(self) -> Optional[str]:
         """Parse command line arguments to find config file.
         
@@ -135,11 +131,11 @@ class BlenderVSEConfigurator:
         for i, arg in enumerate(sys.argv):
             if arg == '--config' and i + 1 < len(sys.argv):
                 return sys.argv[i + 1]
-        
+
         # Fallback - look for CONFIG_PATH constant (for Blender GUI usage)
         if 'CONFIG_PATH' in globals():
             return CONFIG_PATH
-        
+
         raise ValueError("No YAML config file specified. Use --config argument or set CONFIG_PATH variable.")
 
     def validate_parameters(self) -> Tuple[bool, List[str]]:
@@ -155,14 +151,14 @@ class BlenderVSEConfigurator:
         for key in required_keys:
             if key not in self.config_data:
                 errors.append(f"Missing required key: {key}")
-        
+
         # Additional validation
         project = self.config_data.get('project', {})
         # Empty video_files is allowed for auto-discovery in presets
-        
+
         if not project.get('fps'):
             errors.append("FPS not specified in project")
-        
+
         return len(errors) == 0, errors
 
     def setup_vse_project(self) -> bool:
@@ -191,7 +187,7 @@ class BlenderVSEConfigurator:
         # Apply compositional animations if configured
         print(f"🎭 Checking animations: config has {len(self.config_data.get('animations', []))} animations")
         if self.config_data['animations']:
-            print(f"🎭 Applying compositional animations...")
+            print("🎭 Applying compositional animations...")
             sequencer = bpy.context.scene.sequence_editor
             animation_success = self._apply_compositional_animations(sequencer)
             if not animation_success:
@@ -250,10 +246,10 @@ class BlenderVSEConfigurator:
         animations = self.config_data.get('animations', [])
         print(f"✓ Layout type: {layout.get('type', 'unknown')}")
         print(f"✓ Animations configured: {len(animations)}")
-        
+
         # Apply layout using YAML config
         success = self._apply_yaml_layout_and_animations(video_strips, animation_data)
-        
+
         if success:
             print("✓ Compositional animations applied successfully")
         else:
@@ -271,14 +267,14 @@ class BlenderVSEConfigurator:
         # Load audio analysis data from file specified in YAML config
         audio_analysis = self.config_data.get('audio_analysis', {})
         print(f"🎵 Audio analysis section: {audio_analysis.keys() if audio_analysis else 'None'}")
-        
+
         analysis_file = audio_analysis.get('file')
         print(f"🎵 Loading from file: {analysis_file}")
-        
+
         if not analysis_file:
             print("❌ No audio analysis file specified in YAML config")
             return None
-            
+
         try:
             import json
             with open(analysis_file, 'r', encoding='utf-8') as f:
@@ -345,59 +341,57 @@ class BlenderVSEConfigurator:
         """
         try:
             from .vse.animation_compositor import AnimationCompositor
-            from .vse.layouts import RandomLayout
             from .vse.animations import (
-                ScaleAnimation, ShakeAnimation, RotationWobbleAnimation,
-                JitterAnimation, BrightnessFlickerAnimation,
-                BlackWhiteAnimation, FilmGrainAnimation, VintageColorGradeAnimation
+                BlackWhiteAnimation,
+                BrightnessFlickerAnimation,
+                FilmGrainAnimation,
+                JitterAnimation,
+                RotationWobbleAnimation,
+                ScaleAnimation,
+                ShakeAnimation,
+                VintageColorGradeAnimation,
             )
+            from .vse.layouts import RandomLayout
         except ImportError:
             # Fallback for when script is run standalone in Blender
             sys.path.append(str(Path(__file__).parent))
             from vse.animation_compositor import AnimationCompositor
-            from vse.layouts import RandomLayout
-            from vse.animations import (
-                ScaleAnimation, ShakeAnimation, RotationWobbleAnimation,
-                JitterAnimation, BrightnessFlickerAnimation,
-                BlackWhiteAnimation, FilmGrainAnimation, VintageColorGradeAnimation,
-                VisibilityAnimation
-            )
-        
+
         print("=== Applying YAML layout and animations ===")
-        
+
         # Create layout from YAML config
         layout = self._create_layout_from_yaml()
-        
+
         # Create animations from YAML config
         animations = self._create_animations_from_yaml()
         print(f"🎨 Created {len(animations)} animations total")
-        
+
         # Create and apply compositor
         print(f"🎭 Creating compositor with {len(animations)} animations and {len(video_strips)} strips")
         compositor = AnimationCompositor(layout, animations)
         success = compositor.apply(video_strips, animation_data, self.fps)
         print(f"🎭 Compositor apply result: {success}")
-        
+
         if success:
             print("✓ YAML layout and animations applied successfully")
         else:
             print("✗ Failed to apply YAML layout and animations")
-        
+
         return success
-    
+
     def _create_layout_from_yaml(self):
         """Create layout instance from YAML configuration."""
         try:
-            from .vse.layouts import RandomLayout, MainPipLayout
+            from .vse.layouts import MainPipLayout, RandomLayout
         except ImportError:
             # Fallback for when script is run standalone in Blender
             sys.path.append(str(Path(__file__).parent))
-            from vse.layouts import RandomLayout, MainPipLayout
-        
+            from vse.layouts import MainPipLayout, RandomLayout
+
         layout = self.config_data.get('layout', {})
         layout_type = layout.get('type', 'random')
         layout_config = layout.get('config', {})
-        
+
         if layout_type == "random":
             return RandomLayout(
                 overlap_allowed=layout_config.get('overlap_allowed', True),
@@ -414,32 +408,42 @@ class BlenderVSEConfigurator:
         else:
             # Default to random layout
             return RandomLayout()
-    
+
     def _create_animations_from_yaml(self) -> List:
         """Create animation instances from YAML configuration."""
         try:
             from .vse.animations import (
-                ScaleAnimation, ShakeAnimation, RotationWobbleAnimation,
-                JitterAnimation, BrightnessFlickerAnimation,
-                BlackWhiteAnimation, FilmGrainAnimation, VintageColorGradeAnimation
+                BlackWhiteAnimation,
+                BrightnessFlickerAnimation,
+                FilmGrainAnimation,
+                JitterAnimation,
+                RotationWobbleAnimation,
+                ScaleAnimation,
+                ShakeAnimation,
+                VintageColorGradeAnimation,
             )
         except ImportError:
             # Fallback for when script is run standalone in Blender
             sys.path.append(str(Path(__file__).parent))
             from vse.animations import (
-                ScaleAnimation, ShakeAnimation, RotationWobbleAnimation,
-                JitterAnimation, BrightnessFlickerAnimation,
-                BlackWhiteAnimation, FilmGrainAnimation, VintageColorGradeAnimation,
-                VisibilityAnimation
+                BlackWhiteAnimation,
+                BrightnessFlickerAnimation,
+                FilmGrainAnimation,
+                JitterAnimation,
+                RotationWobbleAnimation,
+                ScaleAnimation,
+                ShakeAnimation,
+                VintageColorGradeAnimation,
+                VisibilityAnimation,
             )
-        
+
         animations = []
-        
+
         print(f"🎨 _create_animations_from_yaml: Found {len(self.config_data.get('animations', []))} animation specs")
         for anim_spec in self.config_data.get('animations', []):
             anim_type = anim_spec.get('type')
             trigger = anim_spec.get('trigger')
-            
+
             # Create animation based on type
             if anim_type == "scale":
                 intensity = anim_spec.get('intensity', 0.3)
@@ -453,7 +457,7 @@ class BlenderVSEConfigurator:
                 )
                 print(f"🎨 Created ScaleAnimation: trigger={trigger}, intensity={intensity}, target_strips={target_strips}")
                 animations.append(animation)
-                
+
             elif anim_type == "shake":
                 intensity = anim_spec.get('intensity', 10.0)
                 return_frames = anim_spec.get('return_frames', 2)
@@ -463,7 +467,7 @@ class BlenderVSEConfigurator:
                     return_frames=return_frames
                 )
                 animations.append(animation)
-                
+
             elif anim_type == "rotation":
                 wobble_degrees = anim_spec.get('wobble_degrees', 1.0)
                 return_frames = anim_spec.get('return_frames', 3)
@@ -473,7 +477,7 @@ class BlenderVSEConfigurator:
                     return_frames=return_frames
                 )
                 animations.append(animation)
-                
+
             elif anim_type == "jitter":
                 intensity = anim_spec.get('intensity', 2.0)
                 min_interval = anim_spec.get('min_interval', 3)
@@ -485,7 +489,7 @@ class BlenderVSEConfigurator:
                     max_interval=max_interval
                 )
                 animations.append(animation)
-                
+
             elif anim_type == "brightness_flicker":
                 intensity = anim_spec.get('intensity', 0.15)
                 return_frames = anim_spec.get('return_frames', 1)
@@ -495,7 +499,7 @@ class BlenderVSEConfigurator:
                     return_frames=return_frames
                 )
                 animations.append(animation)
-                
+
             elif anim_type == "black_white":
                 intensity = anim_spec.get('intensity', 0.8)
                 animation = BlackWhiteAnimation(
@@ -503,7 +507,7 @@ class BlenderVSEConfigurator:
                     intensity=intensity
                 )
                 animations.append(animation)
-                
+
             elif anim_type == "film_grain":
                 intensity = anim_spec.get('intensity', 0.1)
                 animation = FilmGrainAnimation(
@@ -511,7 +515,7 @@ class BlenderVSEConfigurator:
                     intensity=intensity
                 )
                 animations.append(animation)
-                
+
             elif anim_type == "vintage_color":
                 sepia_amount = anim_spec.get('sepia_amount', 0.3)
                 contrast_boost = anim_spec.get('contrast_boost', 0.2)
@@ -521,7 +525,7 @@ class BlenderVSEConfigurator:
                     contrast_boost=contrast_boost
                 )
                 animations.append(animation)
-                
+
             elif anim_type == "visibility":
                 pattern = anim_spec.get('pattern', 'alternate')
                 duration_frames = anim_spec.get('duration_frames', 10)
@@ -534,7 +538,7 @@ class BlenderVSEConfigurator:
                 )
                 print(f"🎨 Created VisibilityAnimation: trigger={trigger}, pattern={pattern}, target_strips={target_strips}")
                 animations.append(animation)
-        
+
         return animations
 
 

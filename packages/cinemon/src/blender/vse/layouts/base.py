@@ -25,7 +25,7 @@ class LayoutPosition:
 
 class BaseLayout(ABC):
     """Abstract base class for all layout implementations."""
-    
+
     @abstractmethod
     def calculate_positions(self, strip_count: int, resolution: Tuple[int, int]) -> List[LayoutPosition]:
         """
@@ -39,7 +39,7 @@ class BaseLayout(ABC):
             List of LayoutPosition objects, one for each strip
         """
         raise NotImplementedError
-    
+
     def supports_strip_count(self, count: int) -> bool:
         """
         Check if this layout supports the given number of strips.

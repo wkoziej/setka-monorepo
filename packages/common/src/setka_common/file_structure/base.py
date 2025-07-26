@@ -5,7 +5,6 @@ ABOUTME: Provides base classes for organizing media files and directories
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional, List
 import json
 import logging
 

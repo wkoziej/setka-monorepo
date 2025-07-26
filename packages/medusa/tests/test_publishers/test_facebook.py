@@ -6,10 +6,9 @@ functionality, including text posts, link posts, validation, and error handling.
 """
 
 import pytest
-import asyncio
-from unittest.mock import Mock, patch, AsyncMock, MagicMock
+from unittest.mock import Mock, patch
 from datetime import datetime, timezone
-from typing import Dict, Any, Optional
+from typing import Dict, Any
 
 from medusa.publishers.facebook import FacebookPublisher
 from medusa.publishers.base import PublishResult, PublishProgress
@@ -19,7 +18,6 @@ from medusa.exceptions import (
     AuthenticationError,
     ValidationError,
     NetworkError,
-    ConfigurationError,
     TemplateError
 )
 

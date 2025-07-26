@@ -15,15 +15,14 @@ import time
 import random
 import string
 from pathlib import Path
-from typing import Dict, Any, List, Optional, Callable, Union
-from unittest.mock import Mock, AsyncMock, MagicMock, patch
-from datetime import datetime, timedelta
+from typing import Dict, Any, List, Callable
+from unittest.mock import Mock, AsyncMock
+from datetime import datetime
 import pytest
 
 from medusa.models import TaskStatus, TaskResult, MediaMetadata, PlatformConfig
 from medusa.exceptions import (
-    MedusaError, ConfigError, UploadError, PublishError,
-    AuthenticationError, ValidationError, RateLimitError, NetworkError
+    MedusaError
 )
 
 

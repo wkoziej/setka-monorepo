@@ -5,8 +5,8 @@ Comprehensive test coverage for publisher base functionality.
 
 import pytest
 import asyncio
-from unittest.mock import Mock, AsyncMock, patch
-from datetime import datetime, timezone
+from unittest.mock import patch
+from datetime import datetime
 from typing import Dict, Any, Optional
 
 from medusa.publishers.base import (
@@ -22,8 +22,7 @@ from medusa.exceptions import (
     ValidationError,
     TemplateError,
     RateLimitError,
-    NetworkError,
-    MedusaError
+    NetworkError
 )
 
 
@@ -278,7 +277,7 @@ class MockPublisher(BasePublisher):
         return PublishResult(
             platform=self.platform_name,
             post_id="mock_post_123",
-            post_url=f"https://mock.com/posts/mock_post_123",
+            post_url="https://mock.com/posts/mock_post_123",
             metadata={"test": True}
         )
     

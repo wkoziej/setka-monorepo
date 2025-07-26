@@ -3,7 +3,6 @@
 import pytest
 import tempfile
 from pathlib import Path
-from unittest.mock import patch, mock_open
 
 from setka_common.config.yaml_config import (
     YAMLConfigLoader,

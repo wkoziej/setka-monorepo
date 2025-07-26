@@ -5,9 +5,7 @@ This module provides FacebookPublisher class for publishing text posts
 and link posts to Facebook pages using the Facebook Graph API.
 """
 
-import asyncio
 import logging
-import re
 from datetime import datetime, timezone
 from typing import Dict, Any, Optional, Callable
 from urllib.parse import urlparse
@@ -19,7 +17,6 @@ from ..exceptions import (
     PublishError,
     AuthenticationError,
     ValidationError,
-    NetworkError,
     TemplateError
 )
 

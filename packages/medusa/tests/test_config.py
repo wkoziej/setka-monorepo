@@ -11,7 +11,7 @@ import os
 import tempfile
 import pytest
 from pathlib import Path
-from unittest.mock import patch, mock_open
+from unittest.mock import patch
 
 from medusa.utils.config import ConfigLoader, PlatformConfig, MedusaConfig
 from medusa.exceptions import ConfigurationError

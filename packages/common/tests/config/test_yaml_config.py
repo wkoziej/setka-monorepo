@@ -1,8 +1,6 @@
 """Tests for YAML configuration classes."""
 
-import pytest
 from dataclasses import asdict
-from typing import List, Optional, Dict, Any
 
 from setka_common.config.yaml_config import (
     ProjectConfig,

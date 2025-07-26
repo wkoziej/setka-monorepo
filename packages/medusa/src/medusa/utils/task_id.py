@@ -12,7 +12,7 @@ This module provides task ID generation with:
 import uuid
 import re
 from datetime import datetime
-from typing import Optional, Dict, Any, Union
+from typing import Optional, Dict, Any
 
 from medusa.exceptions import ValidationError
 

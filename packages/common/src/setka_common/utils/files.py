@@ -4,7 +4,7 @@ ABOUTME: Provides functions for finding and organizing media files
 """
 
 from pathlib import Path
-from typing import List, Optional
+from typing import List
 import logging
 
 from ..file_structure.types import MediaType, FileExtensions

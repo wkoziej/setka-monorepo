@@ -6,7 +6,7 @@ covering token management, validation, and permission verification.
 """
 
 import pytest
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import Mock, patch
 import requests
 from datetime import datetime, timedelta
 import json
@@ -199,7 +199,7 @@ class TestFacebookAuth:
         assert result is True
         mock_requests_get.assert_called_once()
         call_args = mock_requests_get.call_args
-        assert f"/123456789/permissions" in call_args[0][0]
+        assert "/123456789/permissions" in call_args[0][0]
 
     def test_check_permissions_missing_required(self, facebook_auth, mock_requests_get):
         """Test permission verification with missing required permissions."""

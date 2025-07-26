@@ -3,9 +3,9 @@ ABOUTME: Layout manager module for Blender VSE - handles PiP positioning and lay
 ABOUTME: Centralizes layout logic for different video arrangement patterns and multi-camera setups.
 """
 
-from typing import List, Dict, Tuple
+from typing import Dict, List, Tuple
 
-from .constants import BlenderConstants, AnimationConstants
+from .constants import AnimationConstants, BlenderConstants
 
 
 class BlenderLayoutManager:

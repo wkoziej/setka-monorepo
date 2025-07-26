@@ -11,13 +11,13 @@ This module provides comprehensive task status management functionality includin
 
 import logging
 import threading
-from datetime import datetime, timezone, timedelta
-from typing import Dict, List, Optional, Any, Union
+from datetime import datetime, timezone
+from typing import Dict, List, Optional, Any
 from dataclasses import dataclass, field
 
 from ..models import TaskResult, TaskStatus
 from ..utils.task_store import TaskStore
-from ..utils.states import TaskStateManager, TaskState, StateTransition
+from ..utils.states import TaskStateManager
 from ..exceptions import MedusaError
 
 # Set up logging
@@ -221,7 +221,7 @@ class TaskStatusManager:
                     include_progress=include_progress
                 )
                 responses.append(response)
-            except TaskStatusError as e:
+            except TaskStatusError:
                 if skip_missing:
                     missing_tasks.append(task_id)
                     continue

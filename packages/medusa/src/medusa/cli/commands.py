@@ -9,7 +9,7 @@ import asyncio
 import sys
 from datetime import datetime
 from pathlib import Path
-from typing import Optional, List
+from typing import Optional
 
 import click
 
@@ -18,10 +18,8 @@ from ..uploaders.youtube import YouTubeUploader
 from ..models import MediaMetadata, PlatformConfig
 from ..utils.config import ConfigLoader
 from ..exceptions import (
-    MedusaError,
     AuthenticationError,
-    NetworkError,
-    UploadError
+    NetworkError
 )
 
 

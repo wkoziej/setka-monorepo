@@ -4,20 +4,15 @@ Tests OAuth flow management, token refresh, and credential validation.
 """
 
 import pytest
-import asyncio
 import json
 import tempfile
-import os
-from unittest.mock import Mock, patch, AsyncMock, MagicMock
-from datetime import datetime, timedelta
+from unittest.mock import Mock, patch
 from pathlib import Path
 
 from medusa.uploaders.youtube_auth import YouTubeAuth
 from medusa.exceptions import (
     AuthenticationError,
-    ConfigError,
-    ValidationError,
-    MedusaError
+    ConfigError
 )
 from medusa.models import PlatformConfig
 

@@ -6,9 +6,8 @@ Comprehensive test coverage for base uploader functionality and interface compli
 import pytest
 import asyncio
 from abc import ABC
-from unittest.mock import Mock, AsyncMock, patch
-from typing import Dict, Any, Optional, Callable
-from pathlib import Path
+from unittest.mock import patch
+from typing import Optional, Callable
 
 from medusa.uploaders.base import (
     BaseUploader,

@@ -3,10 +3,8 @@ Tests for MockUploader implementation.
 Tests configurable success/failure scenarios and realistic behavior simulation.
 """
 
-import asyncio
 import pytest
-from unittest.mock import AsyncMock, MagicMock
-from datetime import datetime, timezone
+from datetime import datetime
 
 from medusa.uploaders.mock import MockUploader, MockConfig
 from medusa.uploaders.base import UploadProgress, UploadResult

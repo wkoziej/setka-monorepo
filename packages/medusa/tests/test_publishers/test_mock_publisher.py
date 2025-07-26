@@ -3,10 +3,8 @@ Tests for MockPublisher implementation.
 Tests configurable success/failure scenarios and template substitution.
 """
 
-import asyncio
 import pytest
-from unittest.mock import AsyncMock, MagicMock
-from datetime import datetime, timezone
+from datetime import datetime
 
 from medusa.publishers.mock import MockPublisher, MockPublishConfig
 from medusa.publishers.base import PublishProgress, PublishResult

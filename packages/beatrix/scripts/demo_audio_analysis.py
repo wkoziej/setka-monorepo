@@ -4,10 +4,8 @@
 
 """Demo script to show audio analysis output."""
 
-import json
 import sys
 from pathlib import Path
-from pprint import pprint
 
 # Add src to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -43,13 +41,13 @@ def demo_analysis(audio_file: Path):
     )
     
     # Display results
-    print(f"\n📊 Basic Info:")
+    print("\n📊 Basic Info:")
     print(f"  Duration: {result['duration']:.2f} seconds")
     print(f"  Sample Rate: {result['sample_rate']} Hz")
     print(f"  Tempo: {result['tempo']['bpm']:.1f} BPM")
     print(f"  Total Beats: {result['tempo']['beat_count']}")
     
-    print(f"\n🎬 Animation Events:")
+    print("\n🎬 Animation Events:")
     events = result['animation_events']
     
     print(f"  Beat Switch Events (every 8 beats): {len(events['beats'])}")
@@ -64,14 +62,14 @@ def demo_analysis(audio_file: Path):
     print(f"\n  Energy Peaks (bass): {len(events['energy_peaks'])}")
     print(f"    Times: {format_time_list(events['energy_peaks'])}")
     
-    print(f"\n📈 Frequency Bands:")
+    print("\n📈 Frequency Bands:")
     bands = result['frequency_bands']
     print(f"  Time points: {len(bands['times'])}")
     print(f"  Update rate: ~{len(bands['times']) / result['duration']:.1f} Hz")
     
     # Show example energy values
     if len(bands['bass_energy']) > 0:
-        print(f"\n  Energy ranges:")
+        print("\n  Energy ranges:")
         print(f"    Bass: {min(bands['bass_energy']):.3f} - {max(bands['bass_energy']):.3f}")
         print(f"    Mid:  {min(bands['mid_energy']):.3f} - {max(bands['mid_energy']):.3f}")
         print(f"    High: {min(bands['high_energy']):.3f} - {max(bands['high_energy']):.3f}")
@@ -82,11 +80,11 @@ def demo_analysis(audio_file: Path):
     print(f"\n💾 Analysis saved to: {output_file}")
     
     # Show how this would be used in Blender
-    print(f"\n🎨 Example Blender Animation Usage:")
+    print("\n🎨 Example Blender Animation Usage:")
     print(f"  - PiP switches at: {format_time_list(events['beats'][:3])}")
     print(f"  - Major transitions at: {format_time_list(events['sections'])}")
     print(f"  - Bass pulse peaks at: {format_time_list(events['energy_peaks'][:3])}")
-    print(f"  - Continuous energy data for smooth animations")
+    print("  - Continuous energy data for smooth animations")
     
     return result
 
@@ -117,7 +115,7 @@ def main():
             else:
                 print(f"⚠️  Skipping {filename} - not found")
         
-        print(f"\n💡 Tip: Run with custom audio file:")
+        print("\n💡 Tip: Run with custom audio file:")
         print(f"   python {sys.argv[0]} path/to/your/audio.wav")
 
 

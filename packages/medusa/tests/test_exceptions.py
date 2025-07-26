@@ -5,10 +5,7 @@ This module tests all custom exceptions, error chaining, context preservation,
 and exception translation utilities.
 """
 
-import pytest
 from datetime import datetime
-from unittest.mock import Mock
-import traceback
 
 from medusa.exceptions import (
     MedusaError,

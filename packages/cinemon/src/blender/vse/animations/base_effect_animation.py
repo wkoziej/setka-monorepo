@@ -4,8 +4,8 @@
 """Base class for VSE effect animations."""
 
 from abc import ABC, abstractmethod
-from typing import List, Optional
 from pathlib import Path
+from typing import List, Optional
 
 from ..keyframe_helper import KeyframeHelper
 
@@ -17,7 +17,7 @@ class BaseEffectAnimation(ABC):
     Provides common interface and keyframe handling for animations
     that can be composed together in the animation system.
     """
-    
+
     def __init__(self, keyframe_helper: KeyframeHelper = None, target_strips: Optional[List[str]] = None):
         """
         Initialize base animation.
@@ -28,7 +28,7 @@ class BaseEffectAnimation(ABC):
         """
         self.keyframe_helper = keyframe_helper or KeyframeHelper()
         self.target_strips = target_strips or []
-    
+
     @abstractmethod
     def apply_to_strip(self, strip, events: List[float], fps: int, **kwargs) -> bool:
         """
@@ -44,7 +44,7 @@ class BaseEffectAnimation(ABC):
             True if animation was applied successfully
         """
         raise NotImplementedError
-    
+
     def should_apply_to_strip(self, strip) -> bool:
         """
         Check if animation should be applied to the given strip.
@@ -58,13 +58,13 @@ class BaseEffectAnimation(ABC):
         # If no targeting specified, apply to all strips
         if not self.target_strips:
             return True
-        
+
         # Get strip name from filepath
         strip_name = self._get_strip_name(strip)
-        
+
         # Check if strip name is in target list
         return strip_name in self.target_strips
-    
+
     def _get_strip_name(self, strip) -> str:
         """
         Extract strip name from video file path.
@@ -83,7 +83,7 @@ class BaseEffectAnimation(ABC):
             return strip.name
         else:
             return ""
-    
+
     @abstractmethod
     def get_required_properties(self) -> List[str]:
         """
@@ -93,7 +93,7 @@ class BaseEffectAnimation(ABC):
             List of property names that strip must have (e.g., 'transform', 'blend_alpha')
         """
         raise NotImplementedError
-    
+
     def can_apply_to_strip(self, strip) -> bool:
         """
         Check if animation can be applied to given strip.

@@ -7,9 +7,7 @@ import os
 import logging
 import asyncio
 import random
-import time
 from typing import Optional, Callable, Dict, Any
-from datetime import datetime, timezone
 
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
@@ -24,8 +22,7 @@ from ..exceptions import (
     AuthenticationError,
     ValidationError,
     NetworkError,
-    RateLimitError,
-    MedusaError
+    RateLimitError
 )
 
 

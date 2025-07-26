@@ -11,7 +11,6 @@ This module tests all aspects of task state management including:
 import pytest
 from datetime import datetime, timezone
 from unittest.mock import Mock, patch
-from typing import List, Callable
 
 from medusa.utils.states import (
     TaskState, 

@@ -2,15 +2,11 @@
 Testy dla modułu recording structure.
 """
 
-import json
-from pathlib import Path
-import pytest
 
 from setka_common.file_structure.specialized.recording import (
     RecordingStructure,
     RecordingStructureManager,
 )
-from setka_common.file_structure.types import MediaType
 
 
 class TestRecordingStructure:

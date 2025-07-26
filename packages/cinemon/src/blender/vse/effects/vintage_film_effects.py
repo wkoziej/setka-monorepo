@@ -3,16 +3,16 @@ ABOUTME: Vintage film effects module for Blender VSE - adds old film style anima
 ABOUTME: Refactored to use compositional animation system - delegates to individual animation classes.
 """
 
-from typing import List, Dict
+from typing import Dict, List
 
 from ..animations import (
-    ShakeAnimation,
-    JitterAnimation,
-    BrightnessFlickerAnimation,
-    RotationWobbleAnimation,
     BlackWhiteAnimation,
+    BrightnessFlickerAnimation,
     FilmGrainAnimation,
-    VintageColorGradeAnimation
+    JitterAnimation,
+    RotationWobbleAnimation,
+    ShakeAnimation,
+    VintageColorGradeAnimation,
 )
 
 
@@ -51,12 +51,12 @@ class VintageFilmEffects:
             bool: True if effect was applied successfully
         """
         print(f"  Applying camera shake to {strip.name} (intensity: {intensity})")
-        
+
         # Configure shake animation with specified intensity
         self.shake_animation.intensity = intensity
         self.shake_animation.return_frames = 2
         self.shake_animation.random_direction = True
-        
+
         # Delegate to ShakeAnimation
         return self.shake_animation.apply_to_strip(strip, beats, fps)
 
@@ -76,12 +76,12 @@ class VintageFilmEffects:
             bool: True if effect was applied successfully
         """
         print(f"  Applying film jitter to {strip.name} (intensity: {jitter_intensity})")
-        
+
         # Configure jitter animation with specified intensity
         self.jitter_animation.intensity = jitter_intensity
         self.jitter_animation.min_interval = 3
         self.jitter_animation.max_interval = 8
-        
+
         # Delegate to JitterAnimation (pass duration_frames via kwargs)
         return self.jitter_animation.apply_to_strip(strip, [], fps, duration_frames=duration_frames)
 
@@ -103,11 +103,11 @@ class VintageFilmEffects:
         print(
             f"  Applying brightness flicker to {strip.name} (amount: {flicker_amount})"
         )
-        
+
         # Configure brightness flicker animation with specified intensity
         self.brightness_flicker_animation.intensity = flicker_amount
         self.brightness_flicker_animation.return_frames = 1
-        
+
         # Delegate to BrightnessFlickerAnimation
         return self.brightness_flicker_animation.apply_to_strip(strip, beats, fps)
 
@@ -127,12 +127,12 @@ class VintageFilmEffects:
             bool: True if effect was applied successfully
         """
         print(f"  Applying rotation wobble to {strip.name} (degrees: {wobble_degrees})")
-        
+
         # Configure rotation wobble animation with specified parameters
         self.rotation_wobble_animation.wobble_degrees = wobble_degrees
         self.rotation_wobble_animation.return_frames = 3
         self.rotation_wobble_animation.oscillate = False  # Original VintageFilmEffects behavior
-        
+
         # Delegate to RotationWobbleAnimation
         return self.rotation_wobble_animation.apply_to_strip(strip, beats, fps)
 
@@ -235,10 +235,10 @@ class VintageFilmEffects:
             bool: True if effect was applied successfully
         """
         print(f"  Applying B&W effect to {strip.name} (intensity: {intensity})")
-        
+
         # Configure black white animation with specified intensity
         self.black_white_animation.intensity = intensity
-        
+
         # Delegate to BlackWhiteAnimation
         return self.black_white_animation.apply_to_strip(strip, [], 0)
 
@@ -256,10 +256,10 @@ class VintageFilmEffects:
         print(
             f"  Applying film grain to {strip.name} (intensity: {noise_intensity})"
         )
-        
+
         # Configure film grain animation with specified intensity
         self.film_grain_animation.intensity = noise_intensity
-        
+
         # Delegate to FilmGrainAnimation
         return self.film_grain_animation.apply_to_strip(strip, [], 0)
 
@@ -280,10 +280,10 @@ class VintageFilmEffects:
         print(
             f"  Applying vintage color grade to {strip.name} (sepia: {sepia_amount}, contrast: {contrast_boost})"
         )
-        
+
         # Configure vintage color grade animation with specified parameters
         self.vintage_color_grade_animation.sepia_amount = sepia_amount
         self.vintage_color_grade_animation.contrast_boost = contrast_boost
-        
+
         # Delegate to VintageColorGradeAnimation
         return self.vintage_color_grade_animation.apply_to_strip(strip, [], 0)

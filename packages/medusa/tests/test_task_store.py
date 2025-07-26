@@ -14,8 +14,7 @@ import pytest
 import threading
 import time
 from datetime import datetime, timezone, timedelta
-from typing import List, Dict, Any
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
 from medusa.utils.task_store import TaskStore, TaskStoreError
 from medusa.models import TaskResult, TaskStatus

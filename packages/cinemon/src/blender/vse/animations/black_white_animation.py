@@ -21,7 +21,7 @@ class BlackWhiteAnimation(BaseEffectAnimation):
         trigger: Event type (ignored for one-time effect)
         intensity: Desaturation intensity (0.0 = color, 1.0 = full B&W)
     """
-    
+
     def __init__(self,
                  trigger: str = "one_time",
                  intensity: float = 0.8):
@@ -35,7 +35,7 @@ class BlackWhiteAnimation(BaseEffectAnimation):
         super().__init__()
         self.trigger = trigger
         self.intensity = intensity
-    
+
     def apply_to_strip(self, strip, events: List[float], fps: int, **kwargs) -> bool:
         """
         Apply black and white desaturation to strip.
@@ -54,13 +54,13 @@ class BlackWhiteAnimation(BaseEffectAnimation):
             # Setting saturation with controlled intensity for pure B&W at high values
             saturation = max(0.0, 1.0 - self.intensity * 1.2)
             strip.color_saturation = saturation
-            
+
             return True
-            
+
         except Exception as e:
             print(f"Warning: Could not apply B&W effect to {strip.name}: {e}")
             return False
-    
+
     def get_required_properties(self) -> List[str]:
         """
         Get list of required strip properties.

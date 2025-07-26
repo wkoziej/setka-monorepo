@@ -6,9 +6,8 @@ including status querying, formatting, history tracking, and performance metrics
 """
 
 import pytest
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import Mock
 from datetime import datetime, timezone, timedelta
-from typing import Dict, List, Any, Optional
 
 from medusa.models import TaskResult, TaskStatus
 from medusa.utils.task_status import TaskStatusManager, TaskStatusError, TaskStatusQuery, TaskStatusResponse
@@ -487,7 +486,6 @@ class TestTaskStatusManager:
     def test_concurrent_status_access(self):
         """Test concurrent access to task status."""
         import threading
-        import time
         
         # Setup
         task_id = "concurrent_task"

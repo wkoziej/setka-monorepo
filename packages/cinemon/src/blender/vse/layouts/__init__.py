@@ -4,7 +4,7 @@
 """Layout module for Blender VSE strip positioning."""
 
 from .base import BaseLayout, LayoutPosition
-from .random_layout import RandomLayout
 from .main_pip_layout import MainPipLayout
+from .random_layout import RandomLayout
 
 __all__ = ["BaseLayout", "LayoutPosition", "RandomLayout", "MainPipLayout"]

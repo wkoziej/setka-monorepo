@@ -5,18 +5,19 @@ This module contains unit tests for the blend_setup CLI module
 after migration to YAML-only configuration.
 """
 
-import pytest
 from pathlib import Path
-from unittest.mock import patch, Mock, MagicMock
+from unittest.mock import Mock, patch
+
+import pytest
+from beatrix import AudioValidationError
 
 from blender.cli.blend_setup import (
-    parse_args,
-    validate_recording_directory,
-    main,
-    setup_logging,
     load_yaml_config,
+    main,
+    parse_args,
+    setup_logging,
+    validate_recording_directory,
 )
-from beatrix import AudioValidationError
 
 
 class TestParseArgs:
@@ -96,7 +97,7 @@ class TestValidateRecordingDirectory:
         """Test validation when path is not a directory."""
         file_path = tmp_path / "not_a_directory.txt"
         file_path.write_text("test")
-        
+
         with pytest.raises(ValueError, match="Ścieżka nie jest katalogiem"):
             validate_recording_directory(file_path)
 
@@ -108,7 +109,7 @@ class TestValidateRecordingDirectory:
     def test_validate_missing_extracted_directory(self, tmp_path):
         """Test validation when extracted directory is missing."""
         (tmp_path / "metadata.json").write_text("{}")
-        
+
         with pytest.raises(ValueError, match="Brak katalogu extracted/"):
             validate_recording_directory(tmp_path)
 
@@ -116,7 +117,7 @@ class TestValidateRecordingDirectory:
         """Test validation when extracted is not a directory."""
         (tmp_path / "metadata.json").write_text("{}")
         (tmp_path / "extracted").write_text("not a directory")
-        
+
         with pytest.raises(ValueError, match="extracted/ nie jest katalogiem"):
             validate_recording_directory(tmp_path)
 
@@ -124,7 +125,7 @@ class TestValidateRecordingDirectory:
         """Test validation when extracted directory is empty."""
         (tmp_path / "metadata.json").write_text("{}")
         (tmp_path / "extracted").mkdir()
-        
+
         with pytest.raises(ValueError, match="Katalog extracted/ jest pusty"):
             validate_recording_directory(tmp_path)
 
@@ -134,7 +135,7 @@ class TestValidateRecordingDirectory:
         extracted_dir = tmp_path / "extracted"
         extracted_dir.mkdir()
         (extracted_dir / "video.mp4").write_text("test video")
-        
+
         # Should not raise exception
         validate_recording_directory(tmp_path)
 
@@ -160,22 +161,22 @@ layout:
 animations: []
 """
         config_file.write_text(config_content)
-        
+
         with patch("blender.cli.blend_setup.YAMLConfigLoader") as mock_loader_class:
             mock_loader = Mock()
             mock_config = Mock()
             mock_loader.load_config.return_value = mock_config
             mock_loader_class.return_value = mock_loader
-            
+
             result = load_yaml_config(config_file)
-            
+
             assert result == mock_config
             mock_loader.load_config.assert_called_once_with(config_file)
 
     def test_load_yaml_config_file_not_found(self, tmp_path):
         """Test YAML config loading with missing file."""
         config_file = tmp_path / "nonexistent.yaml"
-        
+
         with pytest.raises(FileNotFoundError, match="Configuration file not found"):
             load_yaml_config(config_file)
 
@@ -183,12 +184,12 @@ animations: []
         """Test YAML config loading with validation error."""
         config_file = tmp_path / "invalid.yaml"
         config_file.write_text("invalid: yaml: content:")
-        
+
         with patch("blender.cli.blend_setup.YAMLConfigLoader") as mock_loader_class:
             mock_loader = Mock()
             mock_loader.load_config.side_effect = Exception("Invalid YAML")
             mock_loader_class.return_value = mock_loader
-            
+
             with pytest.raises(ValueError, match="Failed to load YAML configuration"):
                 load_yaml_config(config_file)
 
@@ -230,27 +231,27 @@ class TestMain:
         mock_args.main_audio = None
         mock_args.verbose = False
         mock_parse_args.return_value = mock_args
-        
+
         mock_generator = Mock()
         mock_config_path = Path("/tmp/config.yaml")
         mock_generator.generate_preset.return_value = mock_config_path
         mock_generator_class.return_value = mock_generator
-        
+
         mock_yaml_config = Mock()
         mock_load_yaml.return_value = mock_yaml_config
-        
+
         mock_manager = Mock()
         mock_blend_path = Path("/test/recording/blender/project.blend")
         mock_manager.create_vse_project_with_config.return_value = mock_blend_path
         mock_manager_class.return_value = mock_manager
-        
+
         # Run main
         result = main()
-        
+
         # Verify calls
         assert result == 0
         mock_generator.generate_preset.assert_called_once_with(
-            mock_args.recording_dir, 
+            mock_args.recording_dir,
             "vintage"
         )
         mock_load_yaml.assert_called_once_with(mock_config_path)
@@ -271,18 +272,18 @@ class TestMain:
         mock_args.recording_dir = Path("/test/recording")
         mock_args.verbose = False
         mock_parse_args.return_value = mock_args
-        
+
         mock_yaml_config = Mock()
         mock_load_yaml.return_value = mock_yaml_config
-        
+
         mock_manager = Mock()
         mock_blend_path = Path("/test/recording/blender/project.blend")
         mock_manager.create_vse_project_with_config.return_value = mock_blend_path
         mock_manager_class.return_value = mock_manager
-        
+
         # Run main
         result = main()
-        
+
         # Verify calls
         assert result == 0
         mock_load_yaml.assert_called_once_with(mock_args.config)
@@ -299,14 +300,14 @@ class TestMain:
         mock_args.config = None
         mock_args.verbose = False
         mock_parse_args.return_value = mock_args
-        
+
         with patch("blender.cli.blend_setup.CinemonConfigGenerator") as mock_generator_class:
             mock_generator = Mock()
             mock_generator.generate_preset.side_effect = AudioValidationError("Audio error")
             mock_generator_class.return_value = mock_generator
-            
+
             result = main()
-            
+
             assert result == 1
 
     @patch("blender.cli.blend_setup.parse_args")
@@ -317,14 +318,14 @@ class TestMain:
         mock_args.config = None
         mock_args.verbose = False
         mock_parse_args.return_value = mock_args
-        
+
         with patch("blender.cli.blend_setup.CinemonConfigGenerator") as mock_generator_class:
             mock_generator = Mock()
             mock_generator.generate_preset.side_effect = ValueError("Validation error")
             mock_generator_class.return_value = mock_generator
-            
+
             result = main()
-            
+
             assert result == 1
 
     @patch("blender.cli.blend_setup.parse_args")
@@ -335,14 +336,14 @@ class TestMain:
         mock_args.config = None
         mock_args.verbose = False
         mock_parse_args.return_value = mock_args
-        
+
         with patch("blender.cli.blend_setup.CinemonConfigGenerator") as mock_generator_class:
             mock_generator = Mock()
             mock_generator.generate_preset.side_effect = Exception("Unexpected error")
             mock_generator_class.return_value = mock_generator
-            
+
             result = main()
-            
+
             assert result == 1
 
 
@@ -363,27 +364,27 @@ class TestMainWithPresetOverrides:
         mock_args.main_audio = "custom_audio.m4a"
         mock_args.verbose = False
         mock_parse_args.return_value = mock_args
-        
+
         mock_generator = Mock()
         mock_config_path = Path("/tmp/config.yaml")
         mock_generator.generate_preset.return_value = mock_config_path
         mock_generator_class.return_value = mock_generator
-        
+
         mock_yaml_config = Mock()
         mock_load_yaml.return_value = mock_yaml_config
-        
+
         mock_manager = Mock()
         mock_blend_path = Path("/test/recording/blender/project.blend")
         mock_manager.create_vse_project_with_config.return_value = mock_blend_path
         mock_manager_class.return_value = mock_manager
-        
+
         # Run main
         result = main()
-        
+
         # Verify calls with overrides
         assert result == 0
         mock_generator.generate_preset.assert_called_once_with(
-            mock_args.recording_dir, 
+            mock_args.recording_dir,
             "music-video",
             main_audio="custom_audio.m4a"
         )

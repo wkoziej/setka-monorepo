@@ -21,7 +21,7 @@ class ShakeAnimation(BaseEffectAnimation):
         return_frames: How many frames until return to base position
         random_direction: Whether shake direction is random or deterministic
     """
-    
+
     def __init__(self,
                  trigger: str = "beat",
                  intensity: float = 10.0,
@@ -43,7 +43,7 @@ class ShakeAnimation(BaseEffectAnimation):
         self.intensity = intensity
         self.return_frames = return_frames
         self.random_direction = random_direction
-    
+
     def apply_to_strip(self, strip, events: List[float], fps: int, **kwargs) -> bool:
         """
         Apply shake animation to strip based on events.
@@ -59,18 +59,18 @@ class ShakeAnimation(BaseEffectAnimation):
         """
         if not hasattr(strip, 'transform'):
             return False
-        
+
         # Get base position
         base_x = strip.transform.offset_x
         base_y = strip.transform.offset_y
-        
+
         # Set initial keyframe at frame 1
         self.keyframe_helper.insert_transform_position_keyframes(strip.name, 1)
-        
+
         # Apply shake for each event
         for event_time in events:
             frame = int(event_time * fps)
-            
+
             # Calculate shake offset
             if self.random_direction:
                 shake_x = random.uniform(-self.intensity, self.intensity)
@@ -79,12 +79,12 @@ class ShakeAnimation(BaseEffectAnimation):
                 # Deterministic shake (horizontal only)
                 shake_x = self.intensity
                 shake_y = 0
-            
+
             # Apply shake
             strip.transform.offset_x = base_x + shake_x
             strip.transform.offset_y = base_y + shake_y
             self.keyframe_helper.insert_transform_position_keyframes(strip.name, frame)
-            
+
             # Return to base position
             return_frame = frame + self.return_frames
             strip.transform.offset_x = base_x
@@ -92,9 +92,9 @@ class ShakeAnimation(BaseEffectAnimation):
             self.keyframe_helper.insert_transform_position_keyframes(
                 strip.name, return_frame
             )
-        
+
         return True
-    
+
     def get_required_properties(self) -> List[str]:
         """
         Get list of required strip properties.

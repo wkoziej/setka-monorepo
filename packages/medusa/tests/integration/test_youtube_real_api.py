@@ -5,13 +5,10 @@ These tests are skipped if credentials are not available.
 
 import os
 import pytest
-import asyncio
-from pathlib import Path
 from datetime import datetime, timezone
 
 from medusa.uploaders.youtube import YouTubeUploader
 from medusa.models import MediaMetadata, PlatformConfig
-from medusa.exceptions import AuthenticationError
 
 
 # Skip all tests if credentials not available

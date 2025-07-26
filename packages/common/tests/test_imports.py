@@ -2,7 +2,6 @@
 Testy dla importów modułów.
 """
 
-import pytest
 
 
 class TestImports:

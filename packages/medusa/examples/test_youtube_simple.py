@@ -7,8 +7,7 @@ Use this for quick manual testing without pytest complexity.
 import asyncio
 import os
 import sys
-from datetime import datetime, timezone
-from pathlib import Path
+from datetime import datetime
 
 # Add src to path for imports
 sys.path.insert(0, 'src')

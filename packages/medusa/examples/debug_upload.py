@@ -6,7 +6,6 @@ Debug YouTube upload issue
 import asyncio
 import sys
 import os
-from datetime import datetime
 
 # Add src to path
 sys.path.insert(0, 'src')

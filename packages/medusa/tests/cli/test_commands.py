@@ -4,16 +4,12 @@ Tests for CLI commands (TDD Red Phase).
 These tests define the expected behavior of the Click-based upload command.
 """
 
-import json
-import tempfile
-from pathlib import Path
-from unittest.mock import Mock, patch, AsyncMock
+from unittest.mock import patch, AsyncMock
 
 import pytest
 from click.testing import CliRunner
 
 from medusa.cli.commands import upload_command
-from medusa.models import MediaMetadata
 from medusa.uploaders.base import UploadResult
 
 

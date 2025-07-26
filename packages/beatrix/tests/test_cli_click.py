@@ -3,8 +3,6 @@
 
 """Tests for modernized CLI using click."""
 
-import pytest
-from pathlib import Path
 from unittest.mock import Mock, patch
 from click.testing import CliRunner
 

@@ -3,11 +3,8 @@ Tests for YouTubeUploader implementation.
 Tests basic video upload functionality with progress tracking and error handling.
 """
 
-import asyncio
 import pytest
-from unittest.mock import AsyncMock, MagicMock, patch, mock_open
-from pathlib import Path
-import json
+from unittest.mock import MagicMock, patch
 from datetime import datetime, timezone
 
 from medusa.uploaders.youtube import YouTubeUploader
@@ -18,9 +15,7 @@ from medusa.exceptions import (
     UploadError,
     AuthenticationError,
     ValidationError,
-    NetworkError,
-    RateLimitError,
-    ConfigError
+    RateLimitError
 )
 
 
@@ -214,7 +209,6 @@ class TestYouTubeUploaderMetadataValidation:
     def test_scheduled_publish_validation(self):
         """Test validation of scheduled publishing."""
         uploader = YouTubeUploader()
-        from datetime import datetime, timezone
         
         # Valid scheduled time (future)
         future_time = datetime.now(timezone.utc).replace(microsecond=0)
@@ -302,7 +296,6 @@ class TestYouTubeUploaderMetadataEnhancement:
     def test_metadata_conversion_with_all_fields(self):
         """Test comprehensive metadata conversion."""
         uploader = YouTubeUploader()
-        from datetime import datetime, timezone
         
         metadata = MediaMetadata(
             title="Complete Test Video",

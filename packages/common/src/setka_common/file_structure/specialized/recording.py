@@ -10,14 +10,10 @@ import json
 import logging
 
 from ..base import MediaStructure, StructureManager
-from ..types import FileExtensions
 from ...utils.files import find_files_by_type, MediaType
 from ...exceptions import (
     InvalidPathError,
-    StructureValidationError,
-    FileNotFoundError,
     DirectoryCreationError,
-    MetadataError,
 )
 
 logger = logging.getLogger(__name__)

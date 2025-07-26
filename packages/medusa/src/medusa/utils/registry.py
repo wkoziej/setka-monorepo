@@ -414,13 +414,13 @@ class PlatformRegistry:
         if platform_info.platform_type == "uploader":
             if not issubclass(implementation_class, BaseUploader):
                 raise ValidationError(
-                    f"Uploader implementation must inherit from BaseUploader"
+                    "Uploader implementation must inherit from BaseUploader"
                 )
         
         elif platform_info.platform_type == "publisher":
             if not issubclass(implementation_class, BasePublisher):
                 raise ValidationError(
-                    f"Publisher implementation must inherit from BasePublisher"
+                    "Publisher implementation must inherit from BasePublisher"
                 )
         
         else:

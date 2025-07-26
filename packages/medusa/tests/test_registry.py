@@ -4,8 +4,7 @@ Comprehensive test coverage for platform discovery, registration, and validation
 """
 
 import pytest
-from unittest.mock import Mock, patch, MagicMock
-from typing import Dict, Any, List, Type
+from unittest.mock import Mock, patch
 
 from medusa.utils.registry import (
     PlatformRegistry,
@@ -14,7 +13,6 @@ from medusa.utils.registry import (
     RegistryError
 )
 from medusa.uploaders.base import BaseUploader
-from medusa.publishers.base import BasePublisher
 from medusa.uploaders.mock import MockUploader
 from medusa.publishers.mock import MockPublisher
 from medusa.models import PlatformConfig

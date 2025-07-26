@@ -2,8 +2,6 @@
 Testy dla modułu utils.files.
 """
 
-from pathlib import Path
-import pytest
 
 from setka_common.utils.files import (
     find_files_by_type,

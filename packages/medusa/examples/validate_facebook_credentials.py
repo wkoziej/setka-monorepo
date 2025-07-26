@@ -86,28 +86,28 @@ async def validate_credentials():
         error_str = str(e).lower()
         
         if "authentication" in error_str or "access token" in error_str:
-            print(f"\n💡 Problem z tokenem dostępu:")
-            print(f"   • Token może być nieprawidłowy lub wygasły")
-            print(f"   • Wygeneruj nowy token w Graph API Explorer")
-            print(f"   • Sprawdź czy token ma uprawnienia 'pages_manage_posts'")
+            print("\n💡 Problem z tokenem dostępu:")
+            print("   • Token może być nieprawidłowy lub wygasły")
+            print("   • Wygeneruj nowy token w Graph API Explorer")
+            print("   • Sprawdź czy token ma uprawnienia 'pages_manage_posts'")
             
         elif "permission" in error_str:
-            print(f"\n💡 Problem z uprawnieniami:")
-            print(f"   • Dodaj uprawnienie 'pages_manage_posts' w App Review")
-            print(f"   • Sprawdź czy jesteś adminem strony Facebook")
-            print(f"   • Upewnij się, że aplikacja ma dostęp do strony")
+            print("\n💡 Problem z uprawnieniami:")
+            print("   • Dodaj uprawnienie 'pages_manage_posts' w App Review")
+            print("   • Sprawdź czy jesteś adminem strony Facebook")
+            print("   • Upewnij się, że aplikacja ma dostęp do strony")
             
         elif "page" in error_str:
-            print(f"\n💡 Problem ze stroną:")
-            print(f"   • Sprawdź czy Page ID jest prawidłowy")
-            print(f"   • Sprawdź czy masz dostęp do tej strony")
-            print(f"   • Użyj Graph API Explorer: me/accounts aby zobaczyć dostępne strony")
+            print("\n💡 Problem ze stroną:")
+            print("   • Sprawdź czy Page ID jest prawidłowy")
+            print("   • Sprawdź czy masz dostęp do tej strony")
+            print("   • Użyj Graph API Explorer: me/accounts aby zobaczyć dostępne strony")
             
         else:
-            print(f"\n💡 Ogólne wskazówki:")
-            print(f"   • Sprawdź połączenie internetowe")
-            print(f"   • Sprawdź czy Facebook API nie ma problemów")
-            print(f"   • Zobacz pełne instrukcje w FACEBOOK_SETUP.md")
+            print("\n💡 Ogólne wskazówki:")
+            print("   • Sprawdź połączenie internetowe")
+            print("   • Sprawdź czy Facebook API nie ma problemów")
+            print("   • Zobacz pełne instrukcje w FACEBOOK_SETUP.md")
         
         return False
         
@@ -120,11 +120,11 @@ async def main():
         success = await validate_credentials()
         
         if success:
-            print(f"\n🎉 Walidacja zakończona pomyślnie!")
-            print(f"   Twoje credentials Facebook są gotowe do użycia.")
+            print("\n🎉 Walidacja zakończona pomyślnie!")
+            print("   Twoje credentials Facebook są gotowe do użycia.")
         else:
-            print(f"\n❌ Walidacja nie powiodła się.")
-            print(f"   Popraw credentials i spróbuj ponownie.")
+            print("\n❌ Walidacja nie powiodła się.")
+            print("   Popraw credentials i spróbuj ponownie.")
             
     except KeyboardInterrupt:
         print("\n\n⏹️  Walidacja przerwana przez użytkownika")

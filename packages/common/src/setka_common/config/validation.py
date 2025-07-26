@@ -3,7 +3,7 @@ ABOUTME: Configuration validation utilities for setka-common config module.
 ABOUTME: Provides shared validation utilities for configuration files across the monorepo.
 """
 
-from typing import List, Tuple
+from typing import List
 from pathlib import Path
 
 

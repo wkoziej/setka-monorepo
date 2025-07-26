@@ -3,10 +3,11 @@ ABOUTME: Tests for BlenderProjectSetup class - validates Blender VSE project set
 ABOUTME: TDD approach - tests written first to define expected project setup behavior.
 """
 
-import pytest
-from pathlib import Path
 import sys
+from pathlib import Path
 from unittest.mock import Mock, patch
+
+import pytest
 
 # Add src to path for testing
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))

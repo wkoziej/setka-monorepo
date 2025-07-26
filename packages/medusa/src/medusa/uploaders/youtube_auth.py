@@ -16,9 +16,7 @@ from googleapiclient.discovery import build
 from ..models import PlatformConfig
 from ..exceptions import (
     AuthenticationError,
-    ConfigError,
-    ValidationError,
-    MedusaError
+    ConfigError
 )
 
 

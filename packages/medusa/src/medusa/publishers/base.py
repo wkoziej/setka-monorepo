@@ -97,7 +97,7 @@ class TemplateSubstitution:
             TemplateError: If template processing fails
         """
         if not TemplateSubstitution.validate_template(template):
-            raise TemplateError(f"Invalid template syntax", template=template)
+            raise TemplateError("Invalid template syntax", template=template)
         
         try:
             result = template
