@@ -17,3 +17,13 @@ repos:
       - id: check-toml
       - id: check-merge-conflict
       - id: debug-statements
+
+  - repo: local
+    hooks:
+      - id: unit-tests
+        name: Run unit tests for changed packages
+        entry: scripts/run-package-unit-tests.sh
+        language: script
+        pass_filenames: false
+        always_run: false
+        files: ^packages/
