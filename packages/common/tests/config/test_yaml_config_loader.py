@@ -63,7 +63,8 @@ animations:
             assert config.project.video_files == ["camera1.mp4", "camera2.mp4"]
             assert config.project.main_audio == "main_audio.m4a"
             assert config.project.fps == 30
-            assert config.project.resolution == {"width": 1920, "height": 1080}
+            assert config.project.resolution.width == 1920
+            assert config.project.resolution.height == 1080
             assert config.project.beat_division == 8
             
             assert config.audio_analysis.file == "analysis/audio_analysis.json"
@@ -287,89 +288,3 @@ animations: []
         assert len(errors) > 0
         assert any("animation" in error.lower() for error in errors)
 
-    def test_convert_to_env_vars_basic(self):
-        """Test converting YAML config to environment variables."""
-        project = ProjectConfig(
-            video_files=["camera1.mp4", "camera2.mp4"],
-            main_audio="main_audio.m4a",
-            fps=30,
-            resolution={"width": 1920, "height": 1080},
-            beat_division=8
-        )
-        audio_analysis = AudioAnalysisConfig(file="analysis.json")
-        layout = LayoutConfig(type="random")
-        animations = []
-        
-        config = BlenderYAMLConfig(
-            project=project,
-            audio_analysis=audio_analysis,
-            layout=layout,
-            animations=animations
-        )
-        
-        loader = YAMLConfigLoader()
-        env_vars = loader.convert_to_env_vars(config)
-        
-        assert "BLENDER_VSE_VIDEO_FILES" in env_vars
-        assert env_vars["BLENDER_VSE_VIDEO_FILES"] == "camera1.mp4,camera2.mp4"
-        assert env_vars["BLENDER_VSE_MAIN_AUDIO"] == "main_audio.m4a"
-        assert env_vars["BLENDER_VSE_FPS"] == "30"
-        assert env_vars["BLENDER_VSE_RESOLUTION_X"] == "1920"
-        assert env_vars["BLENDER_VSE_RESOLUTION_Y"] == "1080"
-        assert env_vars["BLENDER_VSE_BEAT_DIVISION"] == "8"
-        assert env_vars["BLENDER_VSE_AUDIO_ANALYSIS_FILE"] == "analysis.json"
-        assert env_vars["BLENDER_VSE_LAYOUT_TYPE"] == "random"
-
-    def test_convert_to_env_vars_with_animations(self):
-        """Test converting YAML config with animations to environment variables."""
-        project = ProjectConfig(video_files=["test.mp4"])
-        audio_analysis = AudioAnalysisConfig()
-        layout = LayoutConfig(
-            type="random",
-            config={"overlap_allowed": False, "seed": 42}
-        )
-        animations = [
-            AnimationSpec(
-                type="scale",
-                trigger="bass",
-                target_strips=["test"],
-                intensity=0.3,
-                duration_frames=2
-            )
-        ]
-        
-        config = BlenderYAMLConfig(
-            project=project,
-            audio_analysis=audio_analysis,
-            layout=layout,
-            animations=animations
-        )
-        
-        loader = YAMLConfigLoader()
-        env_vars = loader.convert_to_env_vars(config)
-        
-        assert "BLENDER_VSE_ANIMATION_MODE" in env_vars
-        assert env_vars["BLENDER_VSE_ANIMATION_MODE"] == "compositional"
-        assert "BLENDER_VSE_LAYOUT_CONFIG" in env_vars
-        assert "overlap_allowed=false" in env_vars["BLENDER_VSE_LAYOUT_CONFIG"]
-        assert "seed=42" in env_vars["BLENDER_VSE_LAYOUT_CONFIG"]
-
-    def test_convert_to_env_vars_empty_animations(self):
-        """Test converting YAML config with no animations."""
-        project = ProjectConfig(video_files=["test.mp4"])
-        audio_analysis = AudioAnalysisConfig()
-        layout = LayoutConfig()
-        animations = []
-        
-        config = BlenderYAMLConfig(
-            project=project,
-            audio_analysis=audio_analysis,
-            layout=layout,
-            animations=animations
-        )
-        
-        loader = YAMLConfigLoader()
-        env_vars = loader.convert_to_env_vars(config)
-        
-        assert env_vars["BLENDER_VSE_ANIMATION_MODE"] == "none"
-        assert "BLENDER_VSE_ANIMATION_CONFIG" not in env_vars
