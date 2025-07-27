@@ -121,10 +121,10 @@ async def quick_test():
         credentials={"client_secrets_file": "client_secrets.json"}
     )
     uploader = YouTubeUploader(config=config)
-    
+
     # Authentication
     await uploader.authenticate()
-    
+
     # Test metadata
     metadata = MediaMetadata(
         title="Test Video",
@@ -132,7 +132,7 @@ async def quick_test():
         privacy="private",
         tags=["test"]
     )
-    
+
     # Upload (jeśli masz plik)
     if os.path.exists("test_video.mp4"):
         result = await uploader.upload_media("test_video.mp4", metadata)
@@ -225,4 +225,4 @@ Po pomyślnym teście powinieneś zobaczyć:
 
 ---
 
-**Potrzebujesz pomocy?** Sprawdź logi lub uruchom testy z debug mode! 
+**Potrzebujesz pomocy?** Sprawdź logi lub uruchom testy z debug mode!

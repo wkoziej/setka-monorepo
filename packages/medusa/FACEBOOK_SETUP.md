@@ -104,4 +104,4 @@ Po utworzeniu zaplanowanego postu możesz go zobaczyć w:
 2. **Facebook Business Suite** → Content → Posts
 3. **Strona Facebook** → Publishing Tools → Scheduled Posts
 
-Zaplanowane posty będą oznaczone jako "Scheduled" i będą miały datę publikacji. 
+Zaplanowane posty będą oznaczone jako "Scheduled" i będą miały datę publikacji.

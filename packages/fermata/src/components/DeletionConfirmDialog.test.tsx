@@ -30,7 +30,7 @@ describe('DeletionConfirmDialog', () => {
         isDeleting={false}
       />
     );
-    
+
     expect(screen.queryByText(/usuń nagranie/i)).not.toBeInTheDocument();
   });
 
@@ -44,7 +44,7 @@ describe('DeletionConfirmDialog', () => {
         isDeleting={false}
       />
     );
-    
+
     expect(screen.getByText(/usuń nagranie/i)).toBeInTheDocument();
     expect(screen.getByText(/test_recording_123/i)).toBeInTheDocument();
     expect(screen.getByText(/ta akcja jest nieodwracalna/i)).toBeInTheDocument();
@@ -60,10 +60,10 @@ describe('DeletionConfirmDialog', () => {
         isDeleting={false}
       />
     );
-    
+
     const cancelButton = screen.getByRole('button', { name: /anuluj/i });
     fireEvent.click(cancelButton);
-    
+
     expect(mockOnCancel).toHaveBeenCalledTimes(1);
   });
 
@@ -77,10 +77,10 @@ describe('DeletionConfirmDialog', () => {
         isDeleting={false}
       />
     );
-    
+
     const confirmButton = screen.getByRole('button', { name: /usuń nagranie/i });
     fireEvent.click(confirmButton);
-    
+
     expect(mockOnConfirm).toHaveBeenCalledTimes(1);
   });
 
@@ -94,10 +94,10 @@ describe('DeletionConfirmDialog', () => {
         isDeleting={true}
       />
     );
-    
+
     const cancelButton = screen.getByRole('button', { name: /anuluj/i });
     const confirmButton = screen.getByRole('button', { name: /usuń nagranie/i });
-    
+
     expect(cancelButton).toBeDisabled();
     expect(confirmButton).toBeDisabled();
   });
@@ -112,7 +112,7 @@ describe('DeletionConfirmDialog', () => {
         isDeleting={false}
       />
     );
-    
+
     expect(screen.queryByText(/usuń nagranie/i)).not.toBeInTheDocument();
   });
-}); 
+});

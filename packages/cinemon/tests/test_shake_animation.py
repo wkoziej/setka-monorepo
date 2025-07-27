@@ -3,7 +3,6 @@
 from unittest.mock import Mock, patch
 
 import pytest
-
 from vse.animations.shake_animation import ShakeAnimation
 
 
@@ -24,10 +23,7 @@ class TestShakeAnimation:
     def shake_animation(self):
         """Create ShakeAnimation instance with mocked keyframe helper."""
         animation = ShakeAnimation(
-            trigger="beat",
-            intensity=10.0,
-            return_frames=2,
-            random_direction=True
+            trigger="beat", intensity=10.0, return_frames=2, random_direction=True
         )
         animation.keyframe_helper = Mock()
         return animation
@@ -41,12 +37,15 @@ class TestShakeAnimation:
 
         assert success
         # Should have initial keyframe + 2 events * 2 keyframes each = 5 total
-        assert shake_animation.keyframe_helper.insert_transform_position_keyframes.call_count >= 5
+        assert (
+            shake_animation.keyframe_helper.insert_transform_position_keyframes.call_count
+            >= 5
+        )
         # Final position should return to (0, 0)
         assert mock_strip.transform.offset_x == 0
         assert mock_strip.transform.offset_y == 0
 
-    @patch('random.uniform')
+    @patch("random.uniform")
     def test_shake_animation_intensity(self, mock_random, mock_strip):
         """Test że intensity kontroluje wielkość drgań."""
         mock_random.side_effect = [5.0, -5.0, -8.0, 8.0]  # Kontrolowane wartości
@@ -64,22 +63,22 @@ class TestShakeAnimation:
     def test_shake_animation_deterministic(self, mock_strip):
         """Test deterministycznych drgań (tylko poziome)."""
         animation = ShakeAnimation(
-            intensity=5.0,
-            random_direction=False,
-            return_frames=3
+            intensity=5.0, random_direction=False, return_frames=3
         )
         animation.keyframe_helper = Mock()
 
         events = [1.0, 2.0]
         animation.apply_to_strip(mock_strip, events, 30)
 
-        calls = animation.keyframe_helper.insert_transform_position_keyframes.call_args_list
+        calls = (
+            animation.keyframe_helper.insert_transform_position_keyframes.call_args_list
+        )
 
         # For deterministic shake, all shakes should be horizontal only
         # Check the shake keyframes (not initial or return frames)
         for i in [1, 3]:  # Shake frames
             call = calls[i]
-            strip_arg = call[0][0]
+            call[0][0]
             # In deterministic mode, y should not change
             assert mock_strip.transform.offset_y == 0
 
@@ -93,7 +92,9 @@ class TestShakeAnimation:
 
         animation.apply_to_strip(mock_strip, events, fps)
 
-        calls = animation.keyframe_helper.insert_transform_position_keyframes.call_args_list
+        calls = (
+            animation.keyframe_helper.insert_transform_position_keyframes.call_args_list
+        )
         # Initial keyframe at frame 1
         assert calls[0][0][1] == 1
         # Shake at frame 30 (1 second * 30 fps)
@@ -105,8 +106,8 @@ class TestShakeAnimation:
         """Test animacji na stripie bez transform."""
         strip = Mock()
         strip.name = "no_transform"
-        if hasattr(strip, 'transform'):
-            delattr(strip, 'transform')
+        if hasattr(strip, "transform"):
+            delattr(strip, "transform")
 
         animation = ShakeAnimation()
         animation.keyframe_helper = Mock()
@@ -140,11 +141,14 @@ class TestShakeAnimation:
 
         assert success
         # Only initial keyframe should be set
-        assert shake_animation.keyframe_helper.insert_transform_position_keyframes.call_count == 1
+        assert (
+            shake_animation.keyframe_helper.insert_transform_position_keyframes.call_count
+            == 1
+        )
 
     def test_shake_animation_required_properties(self, shake_animation):
         """Test że animacja wymaga właściwej property."""
         required = shake_animation.get_required_properties()
 
-        assert 'transform' in required
+        assert "transform" in required
         assert len(required) >= 1

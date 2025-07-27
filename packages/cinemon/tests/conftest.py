@@ -68,7 +68,9 @@ def sample_recording_structure(tmp_path):
     # Create analysis directory
     analysis_dir = recording_dir / "analysis"
     analysis_dir.mkdir()
-    (analysis_dir / "main_audio_analysis.json").write_text('{"beats": [], "energy_peaks": []}')
+    (analysis_dir / "main_audio_analysis.json").write_text(
+        '{"beats": [], "energy_peaks": []}'
+    )
 
     # Create blender directory
     blender_dir = recording_dir / "blender"

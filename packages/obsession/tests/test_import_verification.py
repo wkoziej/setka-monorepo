@@ -54,9 +54,7 @@ class TestImportVerification:
     def test_metadata_module_import_without_mocks(self):
         """Test that metadata module can be imported without session-wide mocks."""
         # Remove any cached imports
-        modules_to_remove = [
-            name for name in sys.modules.keys() if "metadata" in name
-        ]
+        modules_to_remove = [name for name in sys.modules.keys() if "metadata" in name]
         for module_name in modules_to_remove:
             del sys.modules[module_name]
 

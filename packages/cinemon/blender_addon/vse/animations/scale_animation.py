@@ -11,7 +11,7 @@ from .base_effect_animation import BaseEffectAnimation
 class ScaleAnimation(BaseEffectAnimation):
     """
     Animation that scales strips based on audio events.
-    
+
     Attributes:
         trigger: Event type to react to ("bass", "beat", "energy_peaks")
         intensity: Scale increase factor (0.3 = 30% larger)
@@ -19,15 +19,17 @@ class ScaleAnimation(BaseEffectAnimation):
         easing: Easing type (currently only "linear" supported)
     """
 
-    def __init__(self,
-                 trigger: str = "bass",
-                 intensity: float = 0.3,
-                 duration_frames: int = 2,
-                 easing: str = "linear",
-                 target_strips: Optional[List[str]] = None):
+    def __init__(
+        self,
+        trigger: str = "bass",
+        intensity: float = 0.3,
+        duration_frames: int = 2,
+        easing: str = "linear",
+        target_strips: Optional[List[str]] = None,
+    ):
         """
         Initialize ScaleAnimation.
-        
+
         Args:
             trigger: Event type to trigger animation
             intensity: How much to scale up (0.1 = 10% increase)
@@ -44,17 +46,17 @@ class ScaleAnimation(BaseEffectAnimation):
     def apply_to_strip(self, strip, events: List[float], fps: int, **kwargs) -> bool:
         """
         Apply scale animation to strip based on events.
-        
+
         Args:
             strip: Blender video strip object
             events: List of event times in seconds
             fps: Frames per second
             **kwargs: Additional parameters (unused)
-            
+
         Returns:
             True if animation was applied successfully
         """
-        if not hasattr(strip, 'transform'):
+        if not hasattr(strip, "transform"):
             return False
 
         # Get base scale
@@ -94,8 +96,8 @@ class ScaleAnimation(BaseEffectAnimation):
     def get_required_properties(self) -> List[str]:
         """
         Get list of required strip properties.
-        
+
         Returns:
             List containing 'transform' property requirement
         """
-        return ['transform']
+        return ["transform"]

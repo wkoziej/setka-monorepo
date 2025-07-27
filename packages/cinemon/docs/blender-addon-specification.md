@@ -53,7 +53,7 @@ strip_animations:
       trigger: "energy_peaks"
       intensity: 2.0
       return_frames: 2
-  
+
   Camera2:
     - type: "vintage_color"
       trigger: "one_time"
@@ -120,19 +120,19 @@ audio_analysis:
 ```python
 class CinemonAddon:
     """Główna klasa add-onu."""
-    
+
     def load_preset(self, preset_name: str):
         """Ładuje preset z ~/.cinemon/presets/."""
-        
+
     def apply_changes(self):
         """Aplikuje wszystkie zmiany z UI do projektu."""
-        
+
     def get_active_strip_animations(self) -> List[dict]:
         """Zwraca animacje dla aktualnie wybranego strip."""
-        
+
     def add_animation_to_strip(self, strip_name: str, animation: dict):
         """Dodaje animację do strip."""
-        
+
     def export_current_config(self, path: Path) -> None:
         """Eksportuje konfigurację do pliku YAML."""
 ```

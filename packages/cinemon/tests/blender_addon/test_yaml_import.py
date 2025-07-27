@@ -20,9 +20,10 @@ class TestYAMLImport:
     def test_yaml_import_from_vendor(self):
         """Test that we can import yaml from vendor directory."""
         from vendor import yaml
+
         assert yaml is not None
-        assert hasattr(yaml, 'safe_load')
-        assert hasattr(yaml, 'dump')
+        assert hasattr(yaml, "safe_load")
+        assert hasattr(yaml, "dump")
 
     def test_yaml_not_in_global_namespace(self):
         """Ensure yaml is not available globally (testing isolation)."""
@@ -31,6 +32,7 @@ class TestYAMLImport:
         # For now, just check we have yaml in our test env
         try:
             import yaml
+
             # We have yaml in test environment, but Blender won't
             assert yaml is not None
         except ImportError:
@@ -54,14 +56,14 @@ class TestYAMLImport:
         """
         data = yaml.safe_load(yaml_string)
 
-        assert data['preset']['name'] == 'test'
-        assert data['layout']['type'] == 'random'
-        assert data['layout']['config']['seed'] == 42
+        assert data["preset"]["name"] == "test"
+        assert data["layout"]["type"] == "random"
+        assert data["layout"]["config"]["seed"] == 42
 
         # Test dumping
         output = yaml.dump(data, default_flow_style=False)
-        assert 'preset:' in output
-        assert 'name: test' in output
+        assert "preset:" in output
+        assert "name: test" in output
 
 
 class TestBlenderEnvironmentSimulation:
@@ -71,14 +73,14 @@ class TestBlenderEnvironmentSimulation:
         """Verify addon doesn't rely on external packages."""
         # Get all imports from addon __init__.py
         init_file = addon_path / "__init__.py"
-        with open(init_file, 'r') as f:
+        with open(init_file, "r") as f:
             content = f.read()
 
         # Check for any suspicious imports
-        forbidden_imports = ['yaml', 'ruamel', 'pip', 'setuptools']
+        forbidden_imports = ["yaml", "ruamel", "pip", "setuptools"]
         for imp in forbidden_imports:
-            assert f'import {imp}' not in content
-            assert f'from {imp}' not in content
+            assert f"import {imp}" not in content
+            assert f"from {imp}" not in content
 
     def test_relative_imports_work(self):
         """Test that relative imports work as in Blender addons."""
@@ -86,10 +88,12 @@ class TestBlenderEnvironmentSimulation:
         # Can't import blender_addon directly in tests
         # Instead, test that vendor is accessible from addon path
         import sys
+
         addon_path = Path(__file__).parent.parent.parent / "blender_addon"
         sys.path.insert(0, str(addon_path))
         try:
             from vendor import yaml
+
             assert yaml is not None
         finally:
             sys.path.remove(str(addon_path))

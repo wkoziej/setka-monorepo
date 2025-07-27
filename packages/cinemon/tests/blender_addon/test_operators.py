@@ -23,8 +23,8 @@ class TestLoadConfigOperator:
         from operators import LoadConfigOperator
 
         # Operator should have bl_idname and bl_label
-        assert hasattr(LoadConfigOperator, 'bl_idname')
-        assert hasattr(LoadConfigOperator, 'bl_label')
+        assert hasattr(LoadConfigOperator, "bl_idname")
+        assert hasattr(LoadConfigOperator, "bl_label")
         assert LoadConfigOperator.bl_idname == "cinemon.load_config"
         assert "Load" in LoadConfigOperator.bl_label
 
@@ -37,7 +37,7 @@ class TestLoadConfigOperator:
         assert operator.filepath == "test.yaml"
 
         # Should have filter_glob as class attribute or be settable
-        if hasattr(LoadConfigOperator, 'filter_glob'):
+        if hasattr(LoadConfigOperator, "filter_glob"):
             assert "*.yaml" in LoadConfigOperator.filter_glob
         else:
             # In test environment, check if it can be set
@@ -62,7 +62,7 @@ class TestLoadConfigOperator:
         mock_wm.fileselect_add.assert_called_once()
 
         # Should return RUNNING_MODAL
-        assert result == {'RUNNING_MODAL'}
+        assert result == {"RUNNING_MODAL"}
 
     def test_load_config_execute_valid_file(self):
         """Test LoadConfigOperator.execute() with valid YAML file."""
@@ -80,7 +80,7 @@ class TestLoadConfigOperator:
         mock_context = Mock()
         mock_context.scene = Mock()
 
-        with patch('operators.YAMLConfigLoader') as mock_loader_class:
+        with patch("operators.YAMLConfigLoader") as mock_loader_class:
             mock_loader = Mock()
             mock_loader_class.return_value = mock_loader
 
@@ -89,7 +89,7 @@ class TestLoadConfigOperator:
                 project=ProjectConfig(video_files=[], fps=30),
                 layout=LayoutConfig(type="random"),
                 strip_animations={},
-                audio_analysis=AudioAnalysisConfig(file="./analysis/audio.json")
+                audio_analysis=AudioAnalysisConfig(file="./analysis/audio.json"),
             )
             mock_loader.load_from_file.return_value = mock_config
 
@@ -99,11 +99,11 @@ class TestLoadConfigOperator:
             mock_loader.load_from_file.assert_called_once_with(operator.filepath)
 
             # Should store config in scene
-            assert hasattr(mock_context.scene, 'cinemon_config')
+            assert hasattr(mock_context.scene, "cinemon_config")
             assert mock_context.scene.cinemon_config == mock_config
 
             # Should return FINISHED
-            assert result == {'FINISHED'}
+            assert result == {"FINISHED"}
 
     def test_load_config_execute_invalid_file(self):
         """Test LoadConfigOperator.execute() with invalid YAML file."""
@@ -116,14 +116,14 @@ class TestLoadConfigOperator:
         mock_context = Mock()
         mock_context.scene = Mock()
 
-        with patch('operators.YAMLConfigLoader') as mock_loader_class:
+        with patch("operators.YAMLConfigLoader") as mock_loader_class:
             mock_loader = Mock()
             mock_loader_class.return_value = mock_loader
 
             # Mock validation error
             mock_loader.load_from_file.side_effect = ValidationError("Test error")
 
-            with patch.object(operator, 'report') as mock_report:
+            with patch.object(operator, "report") as mock_report:
                 result = operator.execute(mock_context)
 
                 # Should report error
@@ -132,17 +132,17 @@ class TestLoadConfigOperator:
                 call_args = mock_report.call_args[0]
                 assert len(call_args) == 2
                 level_set, message = call_args
-                assert 'ERROR' in level_set
+                assert "ERROR" in level_set
 
                 # Should return CANCELLED
-                assert result == {'CANCELLED'}
+                assert result == {"CANCELLED"}
 
     def test_load_config_file_filter(self):
         """Test LoadConfigOperator filters for YAML files."""
         from operators import LoadConfigOperator
 
         # In test environment, filter_glob might be class or instance attribute
-        if hasattr(LoadConfigOperator, 'filter_glob'):
+        if hasattr(LoadConfigOperator, "filter_glob"):
             # filter_glob should only allow YAML files
             assert "*.yaml" in LoadConfigOperator.filter_glob
             assert "*.yml" in LoadConfigOperator.filter_glob
@@ -159,8 +159,8 @@ class TestApplyConfigOperator:
         from operators import ApplyConfigOperator
 
         # Operator should have bl_idname and bl_label
-        assert hasattr(ApplyConfigOperator, 'bl_idname')
-        assert hasattr(ApplyConfigOperator, 'bl_label')
+        assert hasattr(ApplyConfigOperator, "bl_idname")
+        assert hasattr(ApplyConfigOperator, "bl_label")
         assert ApplyConfigOperator.bl_idname == "cinemon.apply_config"
         assert "Apply" in ApplyConfigOperator.bl_label
 
@@ -172,7 +172,7 @@ class TestApplyConfigOperator:
         mock_context = Mock()
         mock_context.scene = Mock(spec=[])  # Empty spec means no attributes
 
-        with patch.object(operator, 'report') as mock_report:
+        with patch.object(operator, "report") as mock_report:
             result = operator.execute(mock_context)
 
             # Should report error about no config
@@ -181,11 +181,11 @@ class TestApplyConfigOperator:
             call_args = mock_report.call_args[0]
             assert len(call_args) == 2
             level_set, message = call_args
-            assert 'ERROR' in level_set
+            assert "ERROR" in level_set
             assert "No config loaded" in message
 
             # Should return CANCELLED
-            assert result == {'CANCELLED'}
+            assert result == {"CANCELLED"}
 
     def test_apply_config_execute_with_config(self):
         """Test ApplyConfigOperator.execute() with loaded config."""
@@ -206,22 +206,24 @@ class TestApplyConfigOperator:
             project=ProjectConfig(video_files=["Camera1.mp4"], fps=30),
             layout=LayoutConfig(type="random"),
             strip_animations={"Camera1": [{"type": "scale", "trigger": "beat"}]},
-            audio_analysis=AudioAnalysisConfig(file="./analysis/audio.json")
+            audio_analysis=AudioAnalysisConfig(file="./analysis/audio.json"),
         )
         mock_context.scene.cinemon_config = mock_config
         mock_context.scene.cinemon_config_path = "/test/path/config.yaml"
 
-        with patch('operators.YAMLConfigLoader') as mock_loader_class:
+        with patch("operators.YAMLConfigLoader") as mock_loader_class:
             mock_loader = Mock()
             mock_loader_class.return_value = mock_loader
             mock_loader.convert_to_internal.return_value = {"test": "config"}
 
-            with patch('operators.BlenderVSEConfiguratorDirect') as mock_configurator_class:
+            with patch(
+                "operators.BlenderVSEConfiguratorDirect"
+            ) as mock_configurator_class:
                 mock_configurator = Mock()
                 mock_configurator_class.return_value = mock_configurator
                 mock_configurator.setup_vse_project.return_value = True
 
-                with patch.object(operator, 'report') as mock_report:
+                with patch.object(operator, "report") as mock_report:
                     result = operator.execute(mock_context)
 
                     # Print what was reported to understand the error
@@ -238,7 +240,7 @@ class TestApplyConfigOperator:
                 mock_configurator.setup_vse_project.assert_called_once()
 
                 # Should return FINISHED
-                assert result == {'FINISHED'}
+                assert result == {"FINISHED"}
 
     def test_apply_config_execute_setup_fails(self):
         """Test ApplyConfigOperator.execute() when VSE setup fails."""
@@ -259,22 +261,24 @@ class TestApplyConfigOperator:
             project=ProjectConfig(video_files=["Camera1.mp4"], fps=30),
             layout=LayoutConfig(type="random"),
             strip_animations={},
-            audio_analysis=AudioAnalysisConfig(file="./analysis/audio.json")
+            audio_analysis=AudioAnalysisConfig(file="./analysis/audio.json"),
         )
         mock_context.scene.cinemon_config = mock_config
         mock_context.scene.cinemon_config_path = "/test/path/config.yaml"
 
-        with patch('operators.YAMLConfigLoader') as mock_loader_class:
+        with patch("operators.YAMLConfigLoader") as mock_loader_class:
             mock_loader = Mock()
             mock_loader_class.return_value = mock_loader
             mock_loader.convert_to_internal.return_value = {"test": "config"}
 
-            with patch('operators.BlenderVSEConfiguratorDirect') as mock_configurator_class:
+            with patch(
+                "operators.BlenderVSEConfiguratorDirect"
+            ) as mock_configurator_class:
                 mock_configurator = Mock()
                 mock_configurator_class.return_value = mock_configurator
                 mock_configurator.setup_vse_project.return_value = False  # Setup fails
 
-                with patch.object(operator, 'report') as mock_report:
+                with patch.object(operator, "report") as mock_report:
                     result = operator.execute(mock_context)
 
                     # Should report error
@@ -283,10 +287,10 @@ class TestApplyConfigOperator:
                     call_args = mock_report.call_args[0]
                     assert len(call_args) == 2
                     level_set, message = call_args
-                    assert 'ERROR' in level_set
+                    assert "ERROR" in level_set
 
                     # Should return CANCELLED
-                    assert result == {'CANCELLED'}
+                    assert result == {"CANCELLED"}
 
 
 class TestOperatorRegistration:
@@ -307,9 +311,9 @@ class TestOperatorRegistration:
         # Both operators should be subclasses of bpy.types.Operator
         # In test environment, we'll check they have the right structure
         for operator_class in [LoadConfigOperator, ApplyConfigOperator]:
-            assert hasattr(operator_class, 'bl_idname')
-            assert hasattr(operator_class, 'bl_label')
-            assert hasattr(operator_class, 'execute')
+            assert hasattr(operator_class, "bl_idname")
+            assert hasattr(operator_class, "bl_label")
+            assert hasattr(operator_class, "execute")
 
 
 if __name__ == "__main__":

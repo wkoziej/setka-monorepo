@@ -11,7 +11,7 @@ from .cli.analyze_audio import analyze_audio_command
 __version__ = "0.1.0"
 __all__ = [
     "AudioAnalyzer",
-    "AudioValidator", 
+    "AudioValidator",
     "AudioValidationError",
     "NoAudioFileError",
     "MultipleAudioFilesError",

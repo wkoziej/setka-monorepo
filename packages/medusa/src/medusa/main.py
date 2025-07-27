@@ -13,7 +13,7 @@ from .cli.commands import upload_command
 @click.version_option()
 def main():
     """Medusa - Media Upload & Social Automation.
-    
+
     Upload videos to YouTube and other platforms with automated social media publishing.
     """
     pass
@@ -24,4 +24,4 @@ main.add_command(upload_command, name="upload")
 
 
 if __name__ == "__main__":
-    main() 
+    main()

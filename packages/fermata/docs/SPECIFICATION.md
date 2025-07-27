@@ -62,7 +62,7 @@ Desktop aplikacja (Tauri) do zarządzania i przeglądania nagrań oraz ich statu
 - File watching
 - Configuration management
 
-**Komunikacja**: 
+**Komunikacja**:
 - Tauri invoke/emit dla frontend ↔ backend
 - Subprocess dla Rust → Python CLI commands
 
@@ -73,7 +73,7 @@ Desktop aplikacja (Tauri) do zarządzania i przeglądania nagrań oraz ich statu
 // Sprawdzanie obecności plików/katalogów:
 recording_dir/
 ├── *.mkv                    → recorded (obsession done)
-├── extracted/               → extracted  
+├── extracted/               → extracted
 ├── analysis/                → analyzed (beatrix done)
 ├── animation_config_*.yaml  → config_generated (cinemon config ready)
 ├── blender/                 → setup_rendered (cinemon created .blend project)
@@ -217,4 +217,4 @@ packages/fermata/
 1. **Functionality**: Użytkownik może przeglądać nagrania i uruchamiać wszystkie etapy pipeline
 2. **Performance**: Aplikacja responsywnie obsługuje 100+ nagrań
 3. **Reliability**: Stabilne uruchamianie CLI commands z właściwym error handling
-4. **Usability**: Intuicyjny interface nie wymagający dokumentacji 
+4. **Usability**: Intuicyjny interface nie wymagający dokumentacji

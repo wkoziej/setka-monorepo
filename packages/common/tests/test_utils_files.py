@@ -2,7 +2,6 @@
 Testy dla modułu utils.files.
 """
 
-
 from setka_common.utils.files import (
     find_files_by_type,
     find_media_files,
@@ -218,15 +217,15 @@ class TestFindMediaFiles:
         video1.touch()
         video2 = test_dir / "video2.mkv"
         video2.touch()
-        
+
         audio1 = test_dir / "audio1.mp3"
         audio1.touch()
         audio2 = test_dir / "audio2.wav"
         audio2.touch()
-        
+
         image1 = test_dir / "image1.jpg"
         image1.touch()
-        
+
         doc1 = test_dir / "doc1.pdf"
         doc1.touch()
 
@@ -311,7 +310,7 @@ class TestSanitizeFilename:
         long_name = "a" * 250
         filename = f"{long_name}.mp4"
         result = sanitize_filename(filename)
-        
+
         assert len(result) <= 255
         assert result.endswith(".mp4")
 
@@ -319,7 +318,7 @@ class TestSanitizeFilename:
         """Test ograniczania długości nazwy pliku bez rozszerzenia."""
         long_filename = "a" * 300
         result = sanitize_filename(long_filename)
-        
+
         assert len(result) <= 255
         assert result == "a" * 255
 

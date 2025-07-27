@@ -19,7 +19,7 @@ from ..animations import (
 class VintageFilmEffects:
     """
     Applies vintage film effects to video strips in Blender VSE.
-    
+
     Refactored to use compositional animation system for better maintainability
     and to enable use of vintage effects in compositional mode.
     """
@@ -83,7 +83,9 @@ class VintageFilmEffects:
         self.jitter_animation.max_interval = 8
 
         # Delegate to JitterAnimation (pass duration_frames via kwargs)
-        return self.jitter_animation.apply_to_strip(strip, [], fps, duration_frames=duration_frames)
+        return self.jitter_animation.apply_to_strip(
+            strip, [], fps, duration_frames=duration_frames
+        )
 
     def apply_brightness_flicker(
         self, strip, beats: List[float], fps: int, flicker_amount: float = 0.15
@@ -131,7 +133,9 @@ class VintageFilmEffects:
         # Configure rotation wobble animation with specified parameters
         self.rotation_wobble_animation.wobble_degrees = wobble_degrees
         self.rotation_wobble_animation.return_frames = 3
-        self.rotation_wobble_animation.oscillate = False  # Original VintageFilmEffects behavior
+        self.rotation_wobble_animation.oscillate = (
+            False  # Original VintageFilmEffects behavior
+        )
 
         # Delegate to RotationWobbleAnimation
         return self.rotation_wobble_animation.apply_to_strip(strip, beats, fps)
@@ -253,9 +257,7 @@ class VintageFilmEffects:
         Returns:
             bool: True if effect was applied successfully
         """
-        print(
-            f"  Applying film grain to {strip.name} (intensity: {noise_intensity})"
-        )
+        print(f"  Applying film grain to {strip.name} (intensity: {noise_intensity})")
 
         # Configure film grain animation with specified intensity
         self.film_grain_animation.intensity = noise_intensity

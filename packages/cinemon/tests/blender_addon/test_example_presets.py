@@ -35,7 +35,9 @@ class TestExamplePresets:
 
         # Verify vintage-specific settings
         camera1_animations = config.strip_animations["Camera1"]
-        has_vintage_color = any(anim["type"] == "vintage_color" for anim in camera1_animations)
+        has_vintage_color = any(
+            anim["type"] == "vintage_color" for anim in camera1_animations
+        )
         assert has_vintage_color, "Vintage preset should have vintage_color animation"
 
     def test_music_video_preset_loads(self):
@@ -55,7 +57,9 @@ class TestExamplePresets:
 
         # Verify music-video specific settings
         camera1_animations = config.strip_animations["Camera1"]
-        has_pip_switch = any(anim["type"] == "pip_switch" for anim in camera1_animations)
+        has_pip_switch = any(
+            anim["type"] == "pip_switch" for anim in camera1_animations
+        )
         assert has_pip_switch, "Music video preset should have pip_switch animation"
 
     def test_minimal_preset_loads(self):
@@ -75,9 +79,13 @@ class TestExamplePresets:
 
         # Verify minimal-specific settings (low intensity)
         camera1_animations = config.strip_animations["Camera1"]
-        scale_animation = next((anim for anim in camera1_animations if anim["type"] == "scale"), None)
+        scale_animation = next(
+            (anim for anim in camera1_animations if anim["type"] == "scale"), None
+        )
         assert scale_animation is not None
-        assert scale_animation["intensity"] <= 0.2, "Minimal preset should have low intensity animations"
+        assert scale_animation["intensity"] <= 0.2, (
+            "Minimal preset should have low intensity animations"
+        )
 
     def test_beat_switch_preset_loads(self):
         """Test that beat-switch preset loads correctly."""
@@ -96,7 +104,9 @@ class TestExamplePresets:
 
         # Verify beat-switch specific settings
         camera1_animations = config.strip_animations["Camera1"]
-        has_pip_switch = any(anim["type"] == "pip_switch" for anim in camera1_animations)
+        has_pip_switch = any(
+            anim["type"] == "pip_switch" for anim in camera1_animations
+        )
         assert has_pip_switch, "Beat switch preset should have pip_switch animation"
 
     def test_all_presets_convert_to_internal(self):
@@ -107,7 +117,7 @@ class TestExamplePresets:
             "vintage.yaml",
             "music-video.yaml",
             "minimal.yaml",
-            "beat-switch.yaml"
+            "beat-switch.yaml",
         ]
 
         loader = YAMLConfigLoader()
@@ -137,15 +147,19 @@ class TestExamplePresets:
             "vintage.yaml",
             "music-video.yaml",
             "minimal.yaml",
-            "beat-switch.yaml"
+            "beat-switch.yaml",
         ]
 
         presets_dir = addon_path / "example_presets"
-        assert presets_dir.exists(), f"Example presets directory not found: {presets_dir}"
+        assert presets_dir.exists(), (
+            f"Example presets directory not found: {presets_dir}"
+        )
 
         for preset_name in expected_presets:
             preset_path = presets_dir / preset_name
-            assert preset_path.exists(), f"Expected preset file not found: {preset_path}"
+            assert preset_path.exists(), (
+                f"Expected preset file not found: {preset_path}"
+            )
 
     def test_presets_have_different_characteristics(self):
         """Test that presets have different characteristics as expected."""
@@ -155,9 +169,13 @@ class TestExamplePresets:
 
         # Load all presets
         vintage = loader.load_from_file(addon_path / "example_presets" / "vintage.yaml")
-        music_video = loader.load_from_file(addon_path / "example_presets" / "music-video.yaml")
+        music_video = loader.load_from_file(
+            addon_path / "example_presets" / "music-video.yaml"
+        )
         minimal = loader.load_from_file(addon_path / "example_presets" / "minimal.yaml")
-        beat_switch = loader.load_from_file(addon_path / "example_presets" / "beat-switch.yaml")
+        beat_switch = loader.load_from_file(
+            addon_path / "example_presets" / "beat-switch.yaml"
+        )
 
         # Verify different FPS settings
         assert vintage.project.fps == 30

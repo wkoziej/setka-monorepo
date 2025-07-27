@@ -18,27 +18,27 @@ Implentuj tylko niezbędne rzeczy w tworzonych klasach.
 - [x] `src/core/blender_vse/constants.py` - Wyciągnięcie magicznych liczb ✅
   - [x] `BlenderConstants` (DEFAULT_FPS, DEFAULT_RESOLUTION_X/Y)
   - [x] `AnimationConstants` (ENERGY_SCALE_FACTOR, PIP_SCALE_FACTOR, PIP_MARGIN)
-  
+
 - [x] `src/core/blender_vse/config.py` - Konfiguracja z walidacją ✅
   - [x] `BlenderVSEConfig` - Parsowanie i walidacja parametrów
-  
+
 - [x] `src/core/blender_vse/project_setup.py` - Podstawowa konfiguracja VSE ✅
   - [x] `BlenderProjectSetup` - Setup sceny, audio, wideo, render
-  
+
 - [x] `src/core/blender_vse/keyframe_helper.py` - Eliminacja duplikacji ✅
   - [x] `KeyframeHelper` - Wspólne metody keyframe'ów (eliminuje 15+ duplikatów)
-  
+
 - [x] `src/core/blender_vse/layout_manager.py` - Pozycjonowanie PiP ✅
   - [x] `BlenderLayoutManager` - Kalkulacje pozycji, layout 2x2, multi-pip
-  
+
 - [x] `src/core/blender_vse/blender_animation_engine.py` - Główna logika animacji ✅
   - [x] `BlenderAnimationEngine` - Delegowanie do animatorów (wzorzec delegacji)
-  
+
 - [x] `src/core/blender_vse/animators/` - Specyficzne animatory ✅
   - [x] `BeatSwitchAnimator` - Animacje przełączania na beat
   - [x] `EnergyPulseAnimator` - Animacje pulsowania na energy peaks
   - [x] `MultiPipAnimator` - Złożone animacje multi-pip z PiP corner effects
-  
+
 - [x] `src/core/blender_vse_script.py` - Zrefaktoryzowana facade ✅
   - [x] `BlenderVSEConfigurator` - Facade pattern zachowujący kompatybilność
 
@@ -93,7 +93,7 @@ Implentuj tylko niezbędne rzeczy w tworzonych klasach.
 - `BlenderVSEConfigurator`: 678 linii (z 892, zmniejszenie o 24%, facade pattern)
 - Nowe komponenty: 9 specjalizowanych klas w modularnej architekturze
   - `BlenderConstants`, `AnimationConstants` - centralizacja stałych
-  - `BlenderVSEConfig` - parsowanie i walidacja parametrów 
+  - `BlenderVSEConfig` - parsowanie i walidacja parametrów
   - `BlenderProjectSetup` - setup projektu VSE
   - `KeyframeHelper` - wspólne operacje keyframe'ów
   - `BlenderLayoutManager` - kalkulacje pozycji PiP

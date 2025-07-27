@@ -8,18 +8,18 @@ echo "=============================="
 if command -v gcloud &> /dev/null; then
     echo "✅ Google Cloud CLI: ZAINSTALOWANE"
     echo "   Wersja: $(gcloud --version | head -n1)"
-    
+
     # Check authentication
     if gcloud auth list --filter=status:ACTIVE --format="value(account)" | head -n1 > /dev/null 2>&1; then
         current_account=$(gcloud auth list --filter=status:ACTIVE --format="value(account)" | head -n1)
         echo "✅ Authentication: AKTYWNE"
         echo "   Konto: $current_account"
-        
+
         # Check current project
         current_project=$(gcloud config get-value project 2>/dev/null)
         if [[ -n "$current_project" ]]; then
             echo "✅ Aktywny projekt: $current_project"
-            
+
             # Check if YouTube API is enabled
             if gcloud services list --enabled --filter="name:youtube.googleapis.com" --format="value(name)" | grep -q youtube; then
                 echo "✅ YouTube Data API v3: WŁĄCZONE"
@@ -44,11 +44,11 @@ echo ""
 echo "📁 Pliki credentials:"
 if [[ -f "client_secrets.json" ]]; then
     echo "✅ client_secrets.json: ISTNIEJE"
-    
+
     # Validate JSON
     if python3 -c "import json; json.load(open('client_secrets.json'))" 2>/dev/null; then
         echo "✅ Format JSON: PRAWIDŁOWY"
-        
+
         # Show client info
         CLIENT_ID=$(python3 -c "import json; data=json.load(open('client_secrets.json')); print(data.get('installed', data.get('web', {})).get('client_id', 'N/A'))" 2>/dev/null)
         echo "   Client ID: ${CLIENT_ID:0:20}..."
@@ -82,4 +82,4 @@ elif [[ ! -f "credentials.json" ]]; then
 else
     echo "1. python test_youtube_simple.py (test upload)"
     echo "2. python -m pytest tests/integration/test_youtube_real_api.py -v"
-fi 
+fi

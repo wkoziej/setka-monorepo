@@ -31,9 +31,9 @@ class TestOBSScript:
         import metadata
 
         # Only reload if modules are already in sys.modules
-        if 'src.obs_integration.obs_script' in sys.modules:
+        if "src.obs_integration.obs_script" in sys.modules:
             importlib.reload(src.obs_integration.obs_script)
-        if 'metadata' in sys.modules:
+        if "metadata" in sys.modules:
             importlib.reload(metadata)
 
     def test_script_description(self):

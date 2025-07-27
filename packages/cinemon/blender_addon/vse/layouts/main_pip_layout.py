@@ -11,22 +11,20 @@ from .base import BaseLayout, LayoutPosition
 class MainPipLayout(BaseLayout):
     """
     Main-PiP layout positioning strips.
-    
+
     Layout strategy:
     - First 2 strips: Main cameras at center, fullscreen (scale 1.0)
     - Remaining strips: Picture-in-Picture in corners (scale 0.25)
-    
+
     Attributes:
         pip_scale: Scale factor for PiP strips
         margin_percent: Margin from edges as percentage (0.0-1.0)
     """
 
-    def __init__(self,
-                 pip_scale: float = 0.25,
-                 margin_percent: float = 0.1):
+    def __init__(self, pip_scale: float = 0.25, margin_percent: float = 0.1):
         """
         Initialize MainPipLayout.
-        
+
         Args:
             pip_scale: Scale factor for PiP strips (default: 0.25)
             margin_percent: Margin from edges as percentage (default: 0.1 = 10%)
@@ -34,14 +32,16 @@ class MainPipLayout(BaseLayout):
         self.pip_scale = pip_scale
         self.margin_percent = margin_percent
 
-    def calculate_positions(self, strip_count: int, resolution: Tuple[int, int]) -> List[LayoutPosition]:
+    def calculate_positions(
+        self, strip_count: int, resolution: Tuple[int, int]
+    ) -> List[LayoutPosition]:
         """
         Calculate main-pip positions for all strips.
-        
+
         Args:
             strip_count: Number of strips to position
             resolution: Canvas resolution (width, height)
-            
+
         Returns:
             List of LayoutPosition objects
         """
@@ -76,16 +76,20 @@ class MainPipLayout(BaseLayout):
         print(f"  Canvas: {width}x{height}")
         print(f"  Half dimensions: {half_width}x{half_height}")
         print(f"  Margin: {margin_x}x{margin_y} ({self.margin_percent * 100:.1f}%)")
-        print(f"  PiP half-size: {pip_half_width}x{pip_half_height} (scale: {self.pip_scale})")
+        print(
+            f"  PiP half-size: {pip_half_width}x{pip_half_height} (scale: {self.pip_scale})"
+        )
         print(f"  Top-right PiP center: ({top_right_x}, {top_right_y})")
-        print(f"  Canvas bounds: left={-half_width}, right={half_width}, top={half_height}, bottom={-half_height}")
+        print(
+            f"  Canvas bounds: left={-half_width}, right={half_width}, top={half_height}, bottom={-half_height}"
+        )
 
         # Corner positions (top-right, top-left, bottom-right, bottom-left)
         corner_positions = [
-            (top_right_x, top_right_y),      # Top-right
-            (top_left_x, top_left_y),        # Top-left
-            (bottom_right_x, bottom_right_y), # Bottom-right
-            (bottom_left_x, bottom_left_y),   # Bottom-left
+            (top_right_x, top_right_y),  # Top-right
+            (top_left_x, top_left_y),  # Top-left
+            (bottom_right_x, bottom_right_y),  # Bottom-right
+            (bottom_left_x, bottom_left_y),  # Bottom-left
         ]
 
         for i in range(strip_count):
@@ -103,10 +107,10 @@ class MainPipLayout(BaseLayout):
     def supports_strip_count(self, count: int) -> bool:
         """
         Check if this layout supports the given number of strips.
-        
+
         Args:
             count: Number of strips
-            
+
         Returns:
             True if layout can handle this strip count (supports any count > 0)
         """

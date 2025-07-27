@@ -3,7 +3,6 @@
 from unittest.mock import Mock
 
 import pytest
-
 from vse.animations import ScaleAnimation
 
 
@@ -26,8 +25,8 @@ class TestScaleAnimation:
         strip = Mock()
         strip.name = "test_strip_no_transform"
         # Explicitly remove transform attribute
-        if hasattr(strip, 'transform'):
-            delattr(strip, 'transform')
+        if hasattr(strip, "transform"):
+            delattr(strip, "transform")
         return strip
 
     @pytest.fixture
@@ -46,7 +45,10 @@ class TestScaleAnimation:
 
         assert success
         # Sprawdź czy keyframes zostały dodane (3 eventy * 2 keyframes każdy = 6)
-        assert scale_animation.keyframe_helper.insert_transform_scale_keyframes.call_count >= 6
+        assert (
+            scale_animation.keyframe_helper.insert_transform_scale_keyframes.call_count
+            >= 6
+        )
         # Końcowa wartość powinna wrócić do 1.0
         assert mock_strip.transform.scale_x == 1.0
         assert mock_strip.transform.scale_y == 1.0
@@ -62,12 +64,16 @@ class TestScaleAnimation:
         animation.apply_to_strip(mock_strip, events, fps)
 
         # Sprawdź czy scale był ustawiony na 1.5 (1.0 + 0.5)
-        calls = animation.keyframe_helper.insert_transform_scale_keyframes.call_args_list
+        calls = (
+            animation.keyframe_helper.insert_transform_scale_keyframes.call_args_list
+        )
         # Drugi call powinien mieć scale 1.5
         assert calls[1][0][2] == 1.5  # scale_x
         assert calls[1][0][3] == 1.5  # scale_y
 
-    def test_scale_animation_without_transform(self, scale_animation, mock_strip_no_transform):
+    def test_scale_animation_without_transform(
+        self, scale_animation, mock_strip_no_transform
+    ):
         """Test animacji na stripie bez transform."""
         events = [1.0]
 
@@ -85,7 +91,10 @@ class TestScaleAnimation:
 
         assert success  # Powinno się udać, ale nic nie zrobić
         # Tylko początkowy keyframe
-        assert scale_animation.keyframe_helper.insert_transform_scale_keyframes.call_count == 1
+        assert (
+            scale_animation.keyframe_helper.insert_transform_scale_keyframes.call_count
+            == 1
+        )
 
     def test_scale_animation_duration_frames(self, mock_strip):
         """Test że duration_frames kontroluje czas powrotu."""
@@ -97,7 +106,9 @@ class TestScaleAnimation:
 
         animation.apply_to_strip(mock_strip, events, fps)
 
-        calls = animation.keyframe_helper.insert_transform_scale_keyframes.call_args_list
+        calls = (
+            animation.keyframe_helper.insert_transform_scale_keyframes.call_args_list
+        )
         # Pierwszy keyframe at frame 1
         assert calls[0][0][1] == 1
         # Scale up at frame 30 (1 second * 30 fps)
@@ -109,10 +120,12 @@ class TestScaleAnimation:
         """Test że animacja wymaga właściwej property."""
         required = scale_animation.get_required_properties()
 
-        assert 'transform' in required
+        assert "transform" in required
         assert len(required) >= 1
 
-    def test_scale_animation_can_apply(self, scale_animation, mock_strip, mock_strip_no_transform):
+    def test_scale_animation_can_apply(
+        self, scale_animation, mock_strip, mock_strip_no_transform
+    ):
         """Test metody can_apply_to_strip."""
         assert scale_animation.can_apply_to_strip(mock_strip) is True
         assert scale_animation.can_apply_to_strip(mock_strip_no_transform) is False
@@ -129,7 +142,9 @@ class TestScaleAnimation:
         events = [1.0]
         animation.apply_to_strip(mock_strip, events, 30)
 
-        calls = animation.keyframe_helper.insert_transform_scale_keyframes.call_args_list
+        calls = (
+            animation.keyframe_helper.insert_transform_scale_keyframes.call_args_list
+        )
         # Powinno skalować od 0.5 do 0.6 (0.5 * 1.2)
         assert calls[1][0][2] == 0.6  # scale_x
         assert calls[1][0][3] == 0.6  # scale_y

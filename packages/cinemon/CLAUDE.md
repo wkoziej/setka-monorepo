@@ -93,7 +93,7 @@ packages/cinemon/
 │   ├── __init__.py
 │   ├── project_manager.py # Calls Blender subprocess
 │   ├── animation_engine.py # Animation delegation (legacy)
-│   ├── cli/              
+│   ├── cli/
 │   │   └── blend_setup.py # CLI interface
 │   └── config/           # YAML configuration generation
 │       ├── __init__.py
@@ -209,9 +209,9 @@ Expected recording structure (managed by setka-common):
 recording_name/
 ├── metadata.json                    # OBS metadata
 ├── extracted/                       # Video/audio files
-│   ├── Camera1.mp4        
+│   ├── Camera1.mp4
 │   ├── Camera2.mp4
-│   └── main_audio.m4a     
+│   └── main_audio.m4a
 ├── analysis/                        # Audio analysis JSON
 │   └── audio_analysis.json
 ├── animation_config_vintage.yaml    # Generated YAML config (preset-based)
@@ -299,12 +299,12 @@ strip_animations:
     - type: vintage_color
       trigger: one_time
       sepia_amount: 0.4
-      
+
   Camera2:
     - type: shake
       trigger: beat
       intensity: 2.0
-      
+
   all:  # Special key for applying to all strips
     - type: film_grain
       trigger: one_time
@@ -315,7 +315,7 @@ strip_animations:
 
 **Transform Animations:**
 - `scale` - Scale changes on audio events
-- `shake` - Position shake effects  
+- `shake` - Position shake effects
 - `rotation` - Rotation wobble effects
 - `jitter` - Continuous random position changes
 
@@ -391,11 +391,11 @@ generator = CinemonConfigGenerator()
 
 # Generate from preset with overrides
 config_path = generator.generate_preset(
-    './recording', 'vintage', 
+    './recording', 'vintage',
     seed=42, fps=60, main_audio='audio.m4a'
 )
 
-# Generate completely custom configuration  
+# Generate completely custom configuration
 layout = {'type': 'random', 'config': {'seed': 123}}
 animations = [
     {'type': 'scale', 'trigger': 'bass', 'intensity': 0.8, 'target_strips': ['Camera1']},

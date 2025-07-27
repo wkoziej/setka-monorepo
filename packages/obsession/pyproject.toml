@@ -73,6 +73,25 @@ markers = [
     "audio: Tests requiring audio processing libraries",
 ]
 
+[tool.ruff.lint]
+ignore = ["E402"]
+
+[tool.ruff.lint.per-file-ignores]
+"src/obs_integration/obs_script.py" = ["E402"]
+
+[tool.coverage.run]
+source = ["src"]
+omit = ["*/tests/*", "*/__init__.py"]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+]
+
 [tool.black]
 line-length = 88
 target-version = ["py39"]
@@ -86,7 +105,7 @@ disallow_untyped_defs = true
 
 [[tool.mypy.overrides]]
 module = "ffmpeg.*"
-ignore_missing_imports = true 
+ignore_missing_imports = true
 
 [dependency-groups]
 dev = [

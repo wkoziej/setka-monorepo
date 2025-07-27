@@ -11,6 +11,7 @@ from typing import List, Optional
 @dataclass
 class ValidationResult:
     """Result of directory structure validation."""
+
     is_valid: bool
     errors: List[str]
     has_video_files: bool
@@ -21,10 +22,10 @@ class ValidationResult:
 class MediaDiscovery:
     """
     Auto-discovery of media files in recording directory.
-    
+
     Discovers video files, audio files, analysis files, and validates
     the recording directory structure for cinemon processing.
-    
+
     Example:
         discovery = MediaDiscovery(Path("./recording_20250105_143022"))
         video_files = discovery.discover_video_files()
@@ -32,17 +33,17 @@ class MediaDiscovery:
         validation = discovery.validate_structure()
     """
 
-    VIDEO_EXTENSIONS = {'.mp4', '.mkv', '.avi', '.mov', '.webm'}
-    AUDIO_EXTENSIONS = {'.m4a', '.wav', '.mp3', '.aac', '.flac'}
-    ANALYSIS_EXTENSIONS = {'.json'}
+    VIDEO_EXTENSIONS = {".mp4", ".mkv", ".avi", ".mov", ".webm"}
+    AUDIO_EXTENSIONS = {".m4a", ".wav", ".mp3", ".aac", ".flac"}
+    ANALYSIS_EXTENSIONS = {".json"}
 
     def __init__(self, recording_dir: Path):
         """
         Initialize MediaDiscovery with recording directory.
-        
+
         Args:
             recording_dir: Path to recording directory
-            
+
         Raises:
             FileNotFoundError: If recording directory or extracted directory doesn't exist
         """
@@ -53,14 +54,16 @@ class MediaDiscovery:
 
         self.extracted_dir = self.recording_dir / "extracted"
         if not self.extracted_dir.exists():
-            raise FileNotFoundError(f"Extracted directory not found: {self.extracted_dir}")
+            raise FileNotFoundError(
+                f"Extracted directory not found: {self.extracted_dir}"
+            )
 
         self.analysis_dir = self.recording_dir / "analysis"
 
     def discover_video_files(self) -> List[str]:
         """
         Discover video files in extracted directory.
-        
+
         Returns:
             List of video filenames (not full paths)
         """
@@ -77,7 +80,7 @@ class MediaDiscovery:
     def discover_audio_files(self) -> List[str]:
         """
         Discover audio files in extracted directory.
-        
+
         Returns:
             List of audio filenames (not full paths)
         """
@@ -94,7 +97,7 @@ class MediaDiscovery:
     def discover_analysis_files(self) -> List[str]:
         """
         Discover analysis files in analysis directory.
-        
+
         Returns:
             List of analysis filenames (not full paths)
         """
@@ -114,12 +117,12 @@ class MediaDiscovery:
     def detect_main_audio(self) -> Optional[str]:
         """
         Detect main audio file from available audio files.
-        
+
         Logic:
         1. If "main_audio.*" exists, use it
         2. If only one audio file exists, use it
         3. If multiple files exist without main_audio, return None
-        
+
         Returns:
             Main audio filename or None if ambiguous
         """
@@ -144,7 +147,7 @@ class MediaDiscovery:
     def validate_structure(self) -> ValidationResult:
         """
         Validate recording directory structure.
-        
+
         Returns:
             ValidationResult with validation status and details
         """
@@ -179,5 +182,5 @@ class MediaDiscovery:
             errors=errors,
             has_video_files=has_video_files,
             has_audio_files=has_audio_files,
-            has_analysis_files=has_analysis_files
+            has_analysis_files=has_analysis_files,
         )

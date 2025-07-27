@@ -235,10 +235,10 @@ import time
 while True:
     status = medusa.get_task_status(task_id)
     print(f"Status: {status['status']}")
-    
+
     if status['status'] in ['completed', 'failed']:
         break
-    
+
     time.sleep(10)  # Check every 10 seconds
 ```
 

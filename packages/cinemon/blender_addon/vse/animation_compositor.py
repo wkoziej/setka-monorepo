@@ -18,12 +18,12 @@ from .layouts.base import BaseLayout, LayoutPosition
 class AnimationCompositor:
     """
     Compositor that combines layouts and animations.
-    
+
     This is the main orchestrator that:
     1. Applies layout positioning to strips
     2. Extracts events from audio analysis
     3. Applies multiple animations independently
-    
+
     Example:
         layout = RandomLayout(overlap_allowed=False, seed=42)
         animations = [
@@ -38,7 +38,7 @@ class AnimationCompositor:
     def __init__(self, layout: BaseLayout, animations: List[BaseEffectAnimation]):
         """
         Initialize compositor with layout and animations.
-        
+
         Args:
             layout: Layout instance for positioning strips
             animations: List of animation instances to apply
@@ -49,12 +49,12 @@ class AnimationCompositor:
     def apply(self, video_strips: List, audio_analysis: Dict, fps: int) -> bool:
         """
         Apply layout and animations to strips.
-        
+
         Args:
             video_strips: List of Blender video strip objects
             audio_analysis: Audio analysis data from beatrix
             fps: Frames per second
-            
+
         Returns:
             True if successfully applied
         """
@@ -72,7 +72,9 @@ class AnimationCompositor:
                 if events:  # Only apply if events exist
                     for strip_index, strip in enumerate(video_strips):
                         if animation.should_apply_to_strip(strip):
-                            animation.apply_to_strip(strip, events, fps, strip_index=strip_index)
+                            animation.apply_to_strip(
+                                strip, events, fps, strip_index=strip_index
+                            )
 
             return True
 
@@ -83,10 +85,10 @@ class AnimationCompositor:
     def _get_scene_resolution(self) -> Tuple[int, int]:
         """
         Get current scene resolution from Blender.
-        
+
         Returns:
             Tuple of (width, height)
-            
+
         Raises:
             AttributeError: If scene resolution not available
         """
@@ -106,13 +108,13 @@ class AnimationCompositor:
     def _apply_layout(self, strips: List, positions: List[LayoutPosition]):
         """
         Apply layout positions to strips.
-        
+
         Args:
             strips: List of video strips
             positions: List of calculated positions
         """
         for strip, position in zip(strips, positions):
-            if hasattr(strip, 'transform'):
+            if hasattr(strip, "transform"):
                 strip.transform.offset_x = position.x
                 strip.transform.offset_y = position.y
                 strip.transform.scale_x = position.scale
@@ -121,11 +123,11 @@ class AnimationCompositor:
     def _extract_events(self, audio_analysis: Dict, trigger: str) -> List:
         """
         Extract events from audio analysis based on trigger type.
-        
+
         Args:
             audio_analysis: Audio analysis data
             trigger: Event trigger type
-            
+
         Returns:
             List of event times or event objects
         """
@@ -136,7 +138,7 @@ class AnimationCompositor:
             "bass": "energy_peaks",
             "beat": "beats",
             "energy_peaks": "energy_peaks",
-            "sections": "sections"
+            "sections": "sections",
         }
 
         event_key = trigger_map.get(trigger, trigger)

@@ -12,7 +12,7 @@ from .base import BaseLayout, LayoutPosition
 class RandomLayout(BaseLayout):
     """
     Random positioning of strips on the canvas.
-    
+
     Attributes:
         overlap_allowed: Whether strips can overlap
         margin: Minimum distance from screen edges (0.0-1.0)
@@ -21,15 +21,17 @@ class RandomLayout(BaseLayout):
         seed: Random seed for reproducibility
     """
 
-    def __init__(self,
-                 overlap_allowed: bool = True,
-                 margin: float = 0.05,
-                 min_scale: float = 0.3,
-                 max_scale: float = 0.8,
-                 seed: Optional[int] = None):
+    def __init__(
+        self,
+        overlap_allowed: bool = True,
+        margin: float = 0.05,
+        min_scale: float = 0.3,
+        max_scale: float = 0.8,
+        seed: Optional[int] = None,
+    ):
         """
         Initialize RandomLayout.
-        
+
         Args:
             overlap_allowed: Whether strips can overlap (default: True)
             margin: Margin from edges as percentage (default: 0.05 = 5%)
@@ -43,14 +45,16 @@ class RandomLayout(BaseLayout):
         self.max_scale = max_scale
         self.seed = seed
 
-    def calculate_positions(self, strip_count: int, resolution: Tuple[int, int]) -> List[LayoutPosition]:
+    def calculate_positions(
+        self, strip_count: int, resolution: Tuple[int, int]
+    ) -> List[LayoutPosition]:
         """
         Calculate random positions for all strips.
-        
+
         Args:
             strip_count: Number of strips to position
             resolution: Canvas resolution (width, height)
-            
+
         Returns:
             List of LayoutPosition objects
         """
@@ -115,19 +119,24 @@ class RandomLayout(BaseLayout):
 
         return positions
 
-    def _check_collision(self, x: int, y: int, scale: float,
-                        occupied_areas: List[Tuple[int, int, float]],
-                        resolution: Tuple[int, int]) -> bool:
+    def _check_collision(
+        self,
+        x: int,
+        y: int,
+        scale: float,
+        occupied_areas: List[Tuple[int, int, float]],
+        resolution: Tuple[int, int],
+    ) -> bool:
         """
         Check if position would collide with existing strips.
-        
+
         Args:
             x: X position to check
             y: Y position to check
             scale: Scale of strip to check
             occupied_areas: List of (x, y, scale) tuples for existing strips
             resolution: Canvas resolution
-            
+
         Returns:
             True if collision detected
         """

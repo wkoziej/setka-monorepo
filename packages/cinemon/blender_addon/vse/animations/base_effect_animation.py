@@ -13,15 +13,19 @@ from ..keyframe_helper import KeyframeHelper
 class BaseEffectAnimation(ABC):
     """
     Base class for all effect animations.
-    
+
     Provides common interface and keyframe handling for animations
     that can be composed together in the animation system.
     """
 
-    def __init__(self, keyframe_helper: KeyframeHelper = None, target_strips: Optional[List[str]] = None):
+    def __init__(
+        self,
+        keyframe_helper: KeyframeHelper = None,
+        target_strips: Optional[List[str]] = None,
+    ):
         """
         Initialize base animation.
-        
+
         Args:
             keyframe_helper: KeyframeHelper instance (creates new if None)
             target_strips: List of strip names to target (None = all strips)
@@ -33,13 +37,13 @@ class BaseEffectAnimation(ABC):
     def apply_to_strip(self, strip, events: List[float], fps: int, **kwargs) -> bool:
         """
         Apply animation to a single strip.
-        
+
         Args:
             strip: Blender video strip object
             events: List of event times in seconds
             fps: Frames per second
             **kwargs: Additional animation parameters
-            
+
         Returns:
             True if animation was applied successfully
         """
@@ -48,10 +52,10 @@ class BaseEffectAnimation(ABC):
     def should_apply_to_strip(self, strip) -> bool:
         """
         Check if animation should be applied to the given strip.
-        
+
         Args:
             strip: Blender video strip object
-            
+
         Returns:
             True if animation should be applied to this strip
         """
@@ -68,17 +72,17 @@ class BaseEffectAnimation(ABC):
     def _get_strip_name(self, strip) -> str:
         """
         Extract strip name from video file path.
-        
+
         Args:
             strip: Blender video strip object
-            
+
         Returns:
             Strip name (filename without extension)
         """
-        if hasattr(strip, 'filepath') and strip.filepath:
+        if hasattr(strip, "filepath") and strip.filepath:
             # Extract filename without extension from filepath
             return Path(strip.filepath).stem
-        elif hasattr(strip, 'name') and strip.name:
+        elif hasattr(strip, "name") and strip.name:
             # Fallback to strip name
             return strip.name
         else:
@@ -88,7 +92,7 @@ class BaseEffectAnimation(ABC):
     def get_required_properties(self) -> List[str]:
         """
         Get list of required strip properties.
-        
+
         Returns:
             List of property names that strip must have (e.g., 'transform', 'blend_alpha')
         """
@@ -97,10 +101,10 @@ class BaseEffectAnimation(ABC):
     def can_apply_to_strip(self, strip) -> bool:
         """
         Check if animation can be applied to given strip.
-        
+
         Args:
             strip: Blender video strip object
-            
+
         Returns:
             True if strip has all required properties
         """

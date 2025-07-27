@@ -15,7 +15,7 @@ pub fn run() {
   tauri::Builder::default()
     .manage(AppConfig::default())
     .invoke_handler(tauri::generate_handler![
-      get_recordings, 
+      get_recordings,
       get_recording_details,
       get_recordings_by_status,
       get_recordings_needing_attention,

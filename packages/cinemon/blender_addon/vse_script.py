@@ -22,9 +22,6 @@ from typing import Dict, List, Optional, Tuple
 import bpy
 
 # Import refactored modules - absolute imports after sys.path setup
-from vse.constants import AnimationConstants
-from vse.keyframe_helper import KeyframeHelper
-from vse.layout_manager import BlenderLayoutManager
 from vse.project_setup import BlenderProjectSetup
 from vse.yaml_config import BlenderYAMLConfigReader
 
@@ -34,7 +31,7 @@ class BlenderVSEConfigurator:
 
     def __init__(self, config_path: Optional[str] = None):
         """Inicjalizuj konfigurator z konfiguracji YAML.
-        
+
         Args:
             config_path: Ścieżka do pliku konfiguracyjnego YAML
         """
@@ -46,15 +43,21 @@ class BlenderVSEConfigurator:
         self.config_path = Path(config_path)
         self.reader = BlenderYAMLConfigReader(config_path)
         self.config = self.reader.config
-        
+
         # Add config_data property for test compatibility
         self.config_data = self.config
 
         # Use reader properties for all attributes
         self.video_files = [Path(f) for f in self.reader.video_files]
-        self.main_audio = Path(self.reader.main_audio) if self.reader.main_audio else None
-        self.output_blend = Path(self.reader.output_blend) if self.reader.output_blend else None
-        self.render_output = Path(self.reader.render_output) if self.reader.render_output else None
+        self.main_audio = (
+            Path(self.reader.main_audio) if self.reader.main_audio else None
+        )
+        self.output_blend = (
+            Path(self.reader.output_blend) if self.reader.output_blend else None
+        )
+        self.render_output = (
+            Path(self.reader.render_output) if self.reader.render_output else None
+        )
         self.fps = self.reader.fps
         self.resolution_x = self.reader.resolution_x
         self.resolution_y = self.reader.resolution_y
@@ -78,20 +81,22 @@ class BlenderVSEConfigurator:
 
     def _parse_command_line_args(self) -> Optional[str]:
         """Parse command line arguments to find config file.
-        
+
         Returns:
             Optional[str]: Path to config file or None
         """
         # Look for --config argument in sys.argv
         for i, arg in enumerate(sys.argv):
-            if arg == '--config' and i + 1 < len(sys.argv):
+            if arg == "--config" and i + 1 < len(sys.argv):
                 return sys.argv[i + 1]
 
         # Fallback - look for CONFIG_PATH constant (for Blender GUI usage)
-        if 'CONFIG_PATH' in globals():
+        if "CONFIG_PATH" in globals():
             return CONFIG_PATH
 
-        raise ValueError("No YAML config file specified. Use --config argument or set CONFIG_PATH variable.")
+        raise ValueError(
+            "No YAML config file specified. Use --config argument or set CONFIG_PATH variable."
+        )
 
     def validate_parameters(self) -> Tuple[bool, List[str]]:
         """
@@ -129,7 +134,9 @@ class BlenderVSEConfigurator:
         # Apply compositional animations if configured
         strip_animations = self.config.strip_animations
         total_animations = sum(len(anims) for anims in strip_animations.values())
-        print(f"🎭 Checking animations: config has {total_animations} animations across {len(strip_animations)} strips")
+        print(
+            f"🎭 Checking animations: config has {total_animations} animations across {len(strip_animations)} strips"
+        )
         if strip_animations:
             print("🎭 Applying compositional animations...")
             sequencer = bpy.context.scene.sequence_editor
@@ -190,7 +197,9 @@ class BlenderVSEConfigurator:
         strip_animations = self.config.strip_animations
         total_animations = sum(len(anims) for anims in strip_animations.values())
         print(f"✓ Layout type: {layout.type}")
-        print(f"✓ Animations configured: {total_animations} animations across {len(strip_animations)} strips")
+        print(
+            f"✓ Animations configured: {total_animations} animations across {len(strip_animations)} strips"
+        )
 
         # Apply layout using YAML config
         success = self._apply_yaml_layout_and_animations(video_strips, animation_data)
@@ -211,7 +220,9 @@ class BlenderVSEConfigurator:
         """
         # Load audio analysis data from file specified in YAML config
         audio_analysis = self.config.audio_analysis
-        print(f"🎵 Audio analysis file: {audio_analysis.file if audio_analysis.file else 'None'}")
+        print(
+            f"🎵 Audio analysis file: {audio_analysis.file if audio_analysis.file else 'None'}"
+        )
 
         analysis_file = audio_analysis.file
         print(f"🎵 Loading from file: {analysis_file}")
@@ -222,7 +233,8 @@ class BlenderVSEConfigurator:
 
         try:
             import json
-            with open(analysis_file, 'r', encoding='utf-8') as f:
+
+            with open(analysis_file, "r", encoding="utf-8") as f:
                 full_data = json.load(f)
                 print(f"🎵 Loaded from file successfully: {len(full_data)} keys")
         except Exception as e:
@@ -272,15 +284,16 @@ class BlenderVSEConfigurator:
             print(f"Error processing animation data: {e}")
             return None
 
-
-    def _apply_yaml_layout_and_animations(self, video_strips: List, animation_data: Dict) -> bool:
+    def _apply_yaml_layout_and_animations(
+        self, video_strips: List, animation_data: Dict
+    ) -> bool:
         """
         Apply layout and animations using YAML configuration.
-        
+
         Args:
             video_strips: List of video strips from Blender VSE
             animation_data: Animation data containing events
-            
+
         Returns:
             bool: True if layout and animations were applied successfully
         """
@@ -296,7 +309,9 @@ class BlenderVSEConfigurator:
         print(f"🎨 Created {len(animations)} animations total")
 
         # Create and apply compositor
-        print(f"🎭 Creating compositor with {len(animations)} animations and {len(video_strips)} strips")
+        print(
+            f"🎭 Creating compositor with {len(animations)} animations and {len(video_strips)} strips"
+        )
         compositor = AnimationCompositor(layout, animations)
         success = compositor.apply(video_strips, animation_data, self.fps)
         print(f"🎭 Compositor apply result: {success}")
@@ -318,16 +333,16 @@ class BlenderVSEConfigurator:
 
         if layout_type == "random":
             return RandomLayout(
-                overlap_allowed=layout_config.get('overlap_allowed', True),
-                margin=layout_config.get('margin', 0.05),
-                min_scale=layout_config.get('min_scale', 0.3),
-                max_scale=layout_config.get('max_scale', 0.8),
-                seed=layout_config.get('seed', None)
+                overlap_allowed=layout_config.get("overlap_allowed", True),
+                margin=layout_config.get("margin", 0.05),
+                min_scale=layout_config.get("min_scale", 0.3),
+                max_scale=layout_config.get("max_scale", 0.8),
+                seed=layout_config.get("seed", None),
             )
         elif layout_type == "main-pip":
             return MainPipLayout(
-                pip_scale=layout_config.get('pip_scale', 0.25),
-                margin_percent=layout_config.get('margin_percent', 0.1)
+                pip_scale=layout_config.get("pip_scale", 0.25),
+                margin_percent=layout_config.get("margin_percent", 0.1),
             )
         else:
             # Default to random layout
@@ -339,11 +354,13 @@ class BlenderVSEConfigurator:
 
         # Use reader.animations which automatically converts strip_animations to flat format
         animation_specs = self.reader.animations
-        print(f"🎨 _create_animations_from_yaml: Found {len(animation_specs)} animation specs")
-        
+        print(
+            f"🎨 _create_animations_from_yaml: Found {len(animation_specs)} animation specs"
+        )
+
         # Use factory to create all animations
         animations = AnimationFactory.create_multiple(animation_specs)
-        
+
         return animations
 
 

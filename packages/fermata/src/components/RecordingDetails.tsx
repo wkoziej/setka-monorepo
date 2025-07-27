@@ -31,7 +31,7 @@ export function RecordingDetails({ recordingName, onBack, onRecordingRenamed }: 
   const loadRecordingDetails = async () => {
     setLoading(true);
     setError(null);
-    
+
     try {
       const result = await invoke('get_recording_details', { name: recordingName });
       setRecording(result as Recording);
@@ -48,18 +48,18 @@ export function RecordingDetails({ recordingName, onBack, onRecordingRenamed }: 
       setShowPresetConfig(true);
       return;
     }
-    
+
     if (action === 'Setup') {
       // Pokaż konfigurację presetów dla manual setup
       setShowPresetConfig(true);
       return;
     }
-    
+
     if (action === 'Setup Render') {
       // Execute setup render with selected preset
       try {
         await runSetupRenderWithPreset(recordingName, selectedPreset);
-        
+
         // Refresh recording details
         setTimeout(() => {
           loadRecordingDetails();
@@ -70,14 +70,14 @@ export function RecordingDetails({ recordingName, onBack, onRecordingRenamed }: 
       }
       return;
     }
-    
+
     // Existing logic for other actions
     if (action === 'Next Step') {
       await runNextStep(recordingName);
     } else {
       await runSpecificStep(recordingName, action.toLowerCase());
     }
-    
+
     // Refresh recording details after operation
     setTimeout(() => {
       loadRecordingDetails();
@@ -87,7 +87,7 @@ export function RecordingDetails({ recordingName, onBack, onRecordingRenamed }: 
   const handleRename = async (newName: string) => {
     try {
       await renameRecording(newName);
-      
+
       // Notify parent about rename
       if (onRecordingRenamed) {
         onRecordingRenamed(recordingName, newName);
@@ -126,7 +126,7 @@ export function RecordingDetails({ recordingName, onBack, onRecordingRenamed }: 
     if (typeof status === 'object' && 'Failed' in status) {
       return '❌';
     }
-    
+
     switch (status) {
       case 'Recorded': return '📹';
       case 'Extracted': return '📁';
@@ -142,7 +142,7 @@ export function RecordingDetails({ recordingName, onBack, onRecordingRenamed }: 
     if (typeof status === 'object' && 'Failed' in status) {
       return 'failed';
     }
-    
+
     switch (status) {
       case 'Recorded': return 'recorded';
       case 'Extracted': return 'extracted';
@@ -177,7 +177,7 @@ export function RecordingDetails({ recordingName, onBack, onRecordingRenamed }: 
       if (path.includes('blender') && !path.includes('render')) currentIndex = 3;
       if (path.includes('render')) currentIndex = 4;
       if (path.includes('uploads')) currentIndex = 5;
-      
+
       steps[currentIndex].status = 'failed';
     } else {
       switch (currentStatus) {
@@ -213,19 +213,19 @@ export function RecordingDetails({ recordingName, onBack, onRecordingRenamed }: 
 
   const getAvailableActions = () => {
     if (!recording) return [];
-    
+
     const actions = [];
-    
+
     // Add next step action
     if (typeof recording.status === 'string' && recording.status !== 'Uploaded') {
       actions.push('Next Step');
     }
-    
+
     // Add specific step actions based on current status
     if (typeof recording.status === 'object' && 'Failed' in recording.status) {
       actions.push('Retry');
     }
-    
+
     // Add manual step options
     switch (recording.status) {
       case 'Extracted':
@@ -244,7 +244,7 @@ export function RecordingDetails({ recordingName, onBack, onRecordingRenamed }: 
         actions.push('Re-render', 'Re-upload');
         break;
     }
-    
+
     return actions;
   };
 
@@ -253,7 +253,7 @@ export function RecordingDetails({ recordingName, onBack, onRecordingRenamed }: 
       <div>
         <header className="app-header">
           <div style={{ display: 'flex', alignItems: 'center' }}>
-            <button 
+            <button
               className="btn btn-secondary"
               onClick={onBack}
               style={{ marginRight: '16px' }}
@@ -278,7 +278,7 @@ export function RecordingDetails({ recordingName, onBack, onRecordingRenamed }: 
       <div>
         <header className="app-header">
           <div style={{ display: 'flex', alignItems: 'center' }}>
-            <button 
+            <button
               className="btn btn-secondary"
               onClick={onBack}
               style={{ marginRight: '16px' }}
@@ -292,7 +292,7 @@ export function RecordingDetails({ recordingName, onBack, onRecordingRenamed }: 
         <div className="content content-error">
           <div className="error-state">
             <strong>Error:</strong> {error}
-            <button 
+            <button
               className="btn btn-primary"
               onClick={loadRecordingDetails}
               style={{ marginTop: '10px' }}
@@ -310,7 +310,7 @@ export function RecordingDetails({ recordingName, onBack, onRecordingRenamed }: 
       <div>
         <header className="app-header">
           <div style={{ display: 'flex', alignItems: 'center' }}>
-            <button 
+            <button
               className="btn btn-secondary"
               onClick={onBack}
               style={{ marginRight: '16px' }}
@@ -338,7 +338,7 @@ export function RecordingDetails({ recordingName, onBack, onRecordingRenamed }: 
       {/* Header */}
       <header className="app-header">
         <div style={{ display: 'flex', alignItems: 'center' }}>
-          <button 
+          <button
             className="btn btn-secondary"
             onClick={onBack}
             style={{ marginRight: '16px' }}
@@ -351,7 +351,7 @@ export function RecordingDetails({ recordingName, onBack, onRecordingRenamed }: 
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <span style={{ fontSize: '1.5rem' }}>{getStatusIcon(recording.status)}</span>
           <div className={`recording-status ${getStatusClassName(recording.status)}`}>
-            {typeof recording.status === 'object' && 'Failed' in recording.status 
+            {typeof recording.status === 'object' && 'Failed' in recording.status
               ? `Failed: ${recording.status.Failed}`
               : recording.status
             }
@@ -409,7 +409,7 @@ export function RecordingDetails({ recordingName, onBack, onRecordingRenamed }: 
                 <div style={{
                   padding: '8px 12px',
                   borderRadius: 'var(--border-radius)',
-                  backgroundColor: 
+                  backgroundColor:
                     step.status === 'completed' ? 'var(--green-success)' :
                     step.status === 'current' ? 'var(--orange-warning)' :
                     step.status === 'failed' ? 'var(--red-danger)' : 'var(--gray-400)',
@@ -419,7 +419,7 @@ export function RecordingDetails({ recordingName, onBack, onRecordingRenamed }: 
                   minWidth: '80px',
                   textAlign: 'center'
                 }}>
-                  {step.status === 'completed' ? '✅' : 
+                  {step.status === 'completed' ? '✅' :
                    step.status === 'current' ? '⏳' :
                    step.status === 'failed' ? '❌' : '⭕'} {step.name}
                 </div>
@@ -455,18 +455,18 @@ export function RecordingDetails({ recordingName, onBack, onRecordingRenamed }: 
         {(Object.values(running).some(Boolean) || output || operationError) && (
           <div className="recording-card" style={{ backgroundColor: 'var(--gray-50)' }}>
             <h2 style={{ margin: '0 0 16px 0', fontSize: '1.125rem', fontWeight: '600' }}>Operation Status</h2>
-            
+
             {Object.values(running).some(Boolean) && (
               <div style={{ color: 'var(--orange-warning)', marginBottom: '12px', fontWeight: '500' }}>
                 🔄 Operation in progress...
               </div>
             )}
-            
+
             {output && (
-              <div style={{ 
-                backgroundColor: 'var(--green-success)', 
-                color: 'white', 
-                padding: '12px', 
+              <div style={{
+                backgroundColor: 'var(--green-success)',
+                color: 'white',
+                padding: '12px',
                 borderRadius: 'var(--border-radius)',
                 marginBottom: '12px',
                 fontFamily: 'monospace',
@@ -475,12 +475,12 @@ export function RecordingDetails({ recordingName, onBack, onRecordingRenamed }: 
                 ✅ {output}
               </div>
             )}
-            
+
             {operationError && (
-              <div style={{ 
-                backgroundColor: 'var(--red-danger)', 
-                color: 'white', 
-                padding: '12px', 
+              <div style={{
+                backgroundColor: 'var(--red-danger)',
+                color: 'white',
+                padding: '12px',
                 borderRadius: 'var(--border-radius)',
                 fontFamily: 'monospace',
                 fontSize: '0.875rem'
@@ -518,21 +518,21 @@ export function RecordingDetails({ recordingName, onBack, onRecordingRenamed }: 
             <h3 style={{ fontSize: '1.125rem', fontWeight: '600', marginBottom: '16px' }}>
               Configure Animation
             </h3>
-            
+
             <PresetSelector
               selectedPreset={selectedPreset}
               onPresetChange={setSelectedPreset}
               disabled={!!running[recordingName]}
               className="mb-6"
             />
-            
+
             {/* Show main audio info if available */}
             <div style={{ marginBottom: '16px', padding: '12px', backgroundColor: 'var(--gray-100)', borderRadius: 'var(--border-radius)' }}>
               <p style={{ fontSize: '0.875rem', color: 'var(--gray-600)', margin: 0 }}>
                 <strong>Path:</strong> {recording.path}
               </p>
             </div>
-            
+
             <div style={{ display: 'flex', gap: '12px' }}>
               <button
                 className="btn btn-secondary"
@@ -581,4 +581,4 @@ export function RecordingDetails({ recordingName, onBack, onRecordingRenamed }: 
       })()}
     </div>
   );
-} 
+}

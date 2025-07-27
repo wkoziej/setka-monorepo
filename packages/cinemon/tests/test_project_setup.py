@@ -3,14 +3,12 @@ ABOUTME: Tests for BlenderProjectSetup class - validates Blender VSE project set
 ABOUTME: TDD approach - tests written first to define expected project setup behavior.
 """
 
-import sys
 from pathlib import Path
 from unittest.mock import Mock, patch
 
 import pytest
 
 # Path already added in conftest.py
-
 from vse.project_setup import BlenderProjectSetup
 
 
@@ -96,7 +94,9 @@ class TestBlenderProjectSetupSceneSetup:
         result = setup.setup_scene()
 
         assert result is True
-        mock_bpy.ops.wm.read_factory_settings.assert_called_once_with(app_template="Video_Editing")
+        mock_bpy.ops.wm.read_factory_settings.assert_called_once_with(
+            app_template="Video_Editing"
+        )
 
     @patch("vse.project_setup.bpy")
     def test_setup_scene_configures_basic_settings(self, mock_bpy):

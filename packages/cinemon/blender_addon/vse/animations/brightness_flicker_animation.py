@@ -12,23 +12,25 @@ from .base_effect_animation import BaseEffectAnimation
 class BrightnessFlickerAnimation(BaseEffectAnimation):
     """
     Animation that creates brightness flicker effect on strips.
-    
+
     Refactored from VintageFilmEffects.apply_brightness_flicker with enhanced options.
-    
+
     Attributes:
         trigger: Event type to react to ("beat", "bass", "energy_peaks")
         intensity: Flicker intensity (0.0 to 1.0, how much dimmer)
         return_frames: How many frames until return to normal brightness
     """
 
-    def __init__(self,
-                 trigger: str = "beat",
-                 intensity: float = 0.15,
-                 return_frames: int = 1,
-                 target_strips: Optional[List[str]] = None):
+    def __init__(
+        self,
+        trigger: str = "beat",
+        intensity: float = 0.15,
+        return_frames: int = 1,
+        target_strips: Optional[List[str]] = None,
+    ):
         """
         Initialize BrightnessFlickerAnimation.
-        
+
         Args:
             trigger: Event type to trigger animation
             intensity: Maximum brightness reduction (0.0 to 1.0)
@@ -43,13 +45,13 @@ class BrightnessFlickerAnimation(BaseEffectAnimation):
     def apply_to_strip(self, strip, events: List[float], fps: int, **kwargs) -> bool:
         """
         Apply brightness flicker animation to strip based on events.
-        
+
         Args:
             strip: Blender video strip object
             events: List of event times in seconds
             fps: Frames per second
             **kwargs: Additional parameters (unused)
-            
+
         Returns:
             True if animation was applied successfully
         """
@@ -82,8 +84,8 @@ class BrightnessFlickerAnimation(BaseEffectAnimation):
     def get_required_properties(self) -> List[str]:
         """
         Get list of required strip properties.
-        
+
         Returns:
             List containing 'blend_alpha' property requirement
         """
-        return ['blend_alpha']
+        return ["blend_alpha"]

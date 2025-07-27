@@ -33,12 +33,14 @@ class TestRandomLayout:
 
     def test_random_layout_no_overlap(self):
         """Test układu bez nakładania się."""
-        layout = RandomLayout(overlap_allowed=False, seed=42, min_scale=0.3, max_scale=0.4)
+        layout = RandomLayout(
+            overlap_allowed=False, seed=42, min_scale=0.3, max_scale=0.4
+        )
         positions = layout.calculate_positions(3, (1920, 1080))
 
         # Sprawdź czy pozycje się nie nakładają
         for i, pos1 in enumerate(positions):
-            for j, pos2 in enumerate(positions[i+1:], i+1):
+            for j, pos2 in enumerate(positions[i + 1 :], i + 1):
                 assert not self._check_overlap(pos1, pos2, (1920, 1080))
 
     def test_random_layout_with_margin(self):
@@ -87,10 +89,12 @@ class TestRandomLayout:
         assert layout.supports_strip_count(100)
         assert not layout.supports_strip_count(0)  # Zero nie jest obsługiwane
 
-    def _check_overlap(self, pos1: LayoutPosition, pos2: LayoutPosition, resolution: tuple) -> bool:
+    def _check_overlap(
+        self, pos1: LayoutPosition, pos2: LayoutPosition, resolution: tuple
+    ) -> bool:
         """
         Helper do sprawdzania czy dwie pozycje się nakładają.
-        
+
         Zakłada że stripy są kwadratowe i używa przybliżonej kalkulacji.
         """
         width, height = resolution

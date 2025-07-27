@@ -18,7 +18,7 @@ function getStatusPriority(status: RecordingStatus): number {
   if (typeof status === 'object' && 'Failed' in status) {
     return 0;
   }
-  
+
   const statusPriority: Record<string, number> = {
     'Failed': 0,
     'Recorded': 1,
@@ -28,7 +28,7 @@ function getStatusPriority(status: RecordingStatus): number {
     'Rendered': 5,
     'Uploaded': 6
   };
-  
+
   return statusPriority[status] || 0;
 }
 
@@ -46,7 +46,7 @@ const sortingFunctions: Record<SortOption, (a: Recording, b: Recording) => numbe
 // Filtering functions
 function applyFilters(recordings: Recording[], filterConfig: FilterConfig): Recording[] {
   let filtered = recordings;
-  
+
   // Search filter
   if (filterConfig.searchTerm) {
     const searchTerm = filterConfig.searchTerm.toLowerCase();
@@ -54,7 +54,7 @@ function applyFilters(recordings: Recording[], filterConfig: FilterConfig): Reco
       recording.name.toLowerCase().includes(searchTerm)
     );
   }
-  
+
   // Status filter
   if (filterConfig.status !== 'all') {
     filtered = filtered.filter(recording => {
@@ -64,7 +64,7 @@ function applyFilters(recordings: Recording[], filterConfig: FilterConfig): Reco
       return recording.status === filterConfig.status;
     });
   }
-  
+
   return filtered;
 }
 
@@ -80,7 +80,7 @@ function loadFiltersFromStorage(): FilterConfig {
     if (saved) {
       const parsed = JSON.parse(saved);
       // Validate parsed data has required fields
-      if (parsed && typeof parsed === 'object' && 
+      if (parsed && typeof parsed === 'object' &&
           'searchTerm' in parsed && 'status' in parsed && 'sortOption' in parsed) {
         return { ...DEFAULT_FILTERS, ...parsed };
       }
@@ -101,7 +101,7 @@ function saveFiltersToStorage(filters: FilterConfig): void {
 }
 
 export function useSortingAndFiltering(recordings: Recording[]) {
-  const [filterConfig, setFilterConfig] = useState<FilterConfig>(() => 
+  const [filterConfig, setFilterConfig] = useState<FilterConfig>(() =>
     loadFiltersFromStorage()
   );
 
@@ -129,9 +129,9 @@ export function useSortingAndFiltering(recordings: Recording[]) {
 
   // Clear filters function (preserve sort option)
   const clearFilters = () => {
-    setFilterConfig(prev => ({ 
-      ...DEFAULT_FILTERS, 
-      sortOption: prev.sortOption 
+    setFilterConfig(prev => ({
+      ...DEFAULT_FILTERS,
+      sortOption: prev.sortOption
     }));
   };
 
@@ -142,4 +142,4 @@ export function useSortingAndFiltering(recordings: Recording[]) {
     updateFilter,
     clearFilters
   };
-} 
+}

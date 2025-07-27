@@ -10,7 +10,7 @@ from ..exceptions import AudioValidationError, NoAudioFileError, MultipleAudioFi
 __all__ = [
     "AudioAnalyzer",
     "AudioValidator",
-    "AudioValidationError", 
+    "AudioValidationError",
     "NoAudioFileError",
     "MultipleAudioFilesError",
 ]

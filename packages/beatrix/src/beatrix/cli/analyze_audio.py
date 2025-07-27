@@ -78,10 +78,11 @@ def analyze_audio_command(
 def main() -> None:
     """
     Main CLI entry point for audio analysis.
-    
+
     This function now delegates to the modernized click-based CLI.
     """
     from .click_cli import main as click_main
+
     click_main()
 
 

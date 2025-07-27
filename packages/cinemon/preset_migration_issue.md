@@ -49,7 +49,7 @@ class PresetManager:
     def __init__(self):
         self.preset_dir = Path(__file__).parent.parent.parent / "blender_addon" / "example_presets"
         self._load_builtin_presets()
-    
+
     def _load_builtin_presets(self):
         """Load all YAML presets from preset directory."""
         self.builtin_presets = {}

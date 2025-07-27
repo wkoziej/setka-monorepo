@@ -76,7 +76,7 @@ strip_animations:
       intensity: 0.5
       easing: "EASE_OUT"
     - type: "shake"
-      trigger: "energy_peaks" 
+      trigger: "energy_peaks"
       intensity: 1.5
       return_frames: 3
 
@@ -85,7 +85,7 @@ strip_animations:
       trigger: "one_time"
       sepia_amount: 0.6
       contrast_boost: 0.4
-  
+
   Screen:
     - type: "pip_switch"
       trigger: "beat"
@@ -137,7 +137,9 @@ audio_analysis:
   file: "./analysis/audio.json"
 """
         loader = YAMLConfigLoader()
-        with pytest.raises(ValidationError, match="Unknown animation type: unknown_animation"):
+        with pytest.raises(
+            ValidationError, match="Unknown animation type: unknown_animation"
+        ):
             loader.load_from_string(invalid_config)
 
     def test_invalid_trigger_type(self):
@@ -158,7 +160,9 @@ audio_analysis:
   file: "./analysis/audio.json"
 """
         loader = YAMLConfigLoader()
-        with pytest.raises(ValidationError, match="Unknown trigger type: unknown_trigger"):
+        with pytest.raises(
+            ValidationError, match="Unknown trigger type: unknown_trigger"
+        ):
             loader.load_from_string(invalid_config)
 
 
@@ -313,7 +317,7 @@ audio_analysis:
   file: "./analysis/audio.json"
 """
 
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
             f.write(config_content)
             temp_path = f.name
 

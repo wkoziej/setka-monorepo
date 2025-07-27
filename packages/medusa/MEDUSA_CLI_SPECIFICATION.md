@@ -86,7 +86,7 @@ packages/medusa/
 @click.argument('video_path', type=click.Path(exists=True, readable=True))
 @click.option('--config', required=True, type=click.Path(exists=True, readable=True))
 @click.option('--title', help='Video title')
-@click.option('--description', help='Video description') 
+@click.option('--description', help='Video description')
 @click.option('--privacy', default='private', type=click.Choice(['private', 'unlisted', 'public']))
 @click.option('--tags', help='Comma-separated tags')
 def upload(video_path, config, title, description, privacy, tags):
@@ -119,7 +119,7 @@ def upload(video_path, config, title, description, privacy, tags):
 ### Unit Tests
 1. **Command Parsing Tests**
    - Valid arguments
-   - Invalid arguments  
+   - Invalid arguments
    - Missing required options
    - Default values
 
@@ -136,7 +136,7 @@ def upload(video_path, config, title, description, privacy, tags):
 
 ### Test Fixtures
 - `test_config.json` - valid config
-- `test_config_invalid.json` - invalid config  
+- `test_config_invalid.json` - invalid config
 - `test_video.mp4` - small test video
 - Mock YouTube API responses
 
@@ -158,7 +158,7 @@ pub async fn run_medusa_upload(&self, video_path: &Path, config_path: &Path) -> 
 
 ### Wymagane zmiany
 1. Aktualizacja `pyproject.toml` z CLI entry point
-2. Implementacja `medusa.main:main` 
+2. Implementacja `medusa.main:main`
 3. Brak zmian w fermata (już gotowe!)
 
 ## ✅ Definition of Done
@@ -168,7 +168,7 @@ pub async fn run_medusa_upload(&self, video_path: &Path, config_path: &Path) -> 
    - 100% coverage dla CLI logic
    - Integration tests przechodzą
 
-2. **CLI działa z fermata**  
+2. **CLI działa z fermata**
    - `ProcessRunner.run_medusa_upload()` działa
    - Upload do YouTube successful
    - Error handling działa
@@ -189,4 +189,4 @@ pub async fn run_medusa_upload(&self, video_path: &Path, config_path: &Path) -> 
 - [ ] Upload działa: video zostaje uploadowany na YouTube
 - [ ] Fermata integracja: pipeline `Rendered → Upload` działa
 - [ ] Error handling: błędy są czytelnie raportowane
-- [ ] Tests pass: wszystkie testy przechodzą 
+- [ ] Tests pass: wszystkie testy przechodzą

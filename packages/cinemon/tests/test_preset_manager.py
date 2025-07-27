@@ -8,8 +8,8 @@ from pathlib import Path
 from unittest.mock import patch
 
 import pytest
-
 from setka_common.config.yaml_config import BlenderYAMLConfig
+
 from cinemon.config.preset_manager import PresetManager
 
 
@@ -20,14 +20,18 @@ def isolated_custom_presets(tmp_path, monkeypatch):
     temp_presets_dir.mkdir()
 
     # Mock the custom presets directory method
-    monkeypatch.setattr(PresetManager, '_get_custom_presets_dir', lambda self: temp_presets_dir)
+    monkeypatch.setattr(
+        PresetManager, "_get_custom_presets_dir", lambda self: temp_presets_dir
+    )
 
     # Clear any cached presets to ensure isolation
     original_init = PresetManager.__init__
+
     def patched_init(self):
         original_init(self)
         self._custom_presets_cache = None
-    monkeypatch.setattr(PresetManager, '__init__', patched_init)
+
+    monkeypatch.setattr(PresetManager, "__init__", patched_init)
 
     yield temp_presets_dir
 
@@ -51,7 +55,7 @@ class TestPresetManager:
         # Check strip_animations
         assert "Camera1" in vintage_preset.strip_animations
         assert "Camera2" in vintage_preset.strip_animations
-        
+
         # Check Camera1 animations
         camera1_anims = vintage_preset.strip_animations["Camera1"]
         assert len(camera1_anims) == 2
@@ -79,7 +83,6 @@ class TestPresetManager:
         assert "pip_switch" in animation_types
         assert "scale" in animation_types
 
-
     def test_list_presets(self):
         """Test listing all available presets."""
         preset_manager = PresetManager()
@@ -99,22 +102,20 @@ class TestPresetManager:
         with pytest.raises(ValueError, match="Preset 'nonexistent' not found"):
             preset_manager.get_preset("nonexistent")
 
-
-    
     def test_preset_config_structure(self):
         """Test the structure of BlenderYAMLConfig objects."""
         preset_manager = PresetManager()
         vintage_preset = preset_manager.get_preset("vintage")
 
         # Test BlenderYAMLConfig attributes
-        assert hasattr(vintage_preset, 'project')
-        assert hasattr(vintage_preset, 'audio_analysis')
-        assert hasattr(vintage_preset, 'layout')
-        assert hasattr(vintage_preset, 'strip_animations')
+        assert hasattr(vintage_preset, "project")
+        assert hasattr(vintage_preset, "audio_analysis")
+        assert hasattr(vintage_preset, "layout")
+        assert hasattr(vintage_preset, "strip_animations")
 
         # Test layout structure
-        assert hasattr(vintage_preset.layout, 'type')
-        assert hasattr(vintage_preset.layout, 'config')
+        assert hasattr(vintage_preset.layout, "type")
+        assert hasattr(vintage_preset.layout, "config")
 
         # Test strip_animations structure
         assert isinstance(vintage_preset.strip_animations, dict)
@@ -125,16 +126,15 @@ class TestPresetManager:
                 assert "type" in animation
                 assert "trigger" in animation
 
-
     def test_minimal_preset_has_basic_effects(self):
         """Test that minimal preset has only basic effects."""
         preset_manager = PresetManager()
         minimal_preset = preset_manager.get_preset("minimal")
 
         # Should have strip_animations
-        assert hasattr(minimal_preset, 'strip_animations')
+        assert hasattr(minimal_preset, "strip_animations")
         strip_anims = minimal_preset.strip_animations
-        
+
         # Check Camera1 has scale animation
         assert "Camera1" in strip_anims
         assert len(strip_anims["Camera1"]) == 1
@@ -159,7 +159,6 @@ class TestPresetManager:
         with tempfile.TemporaryDirectory() as temp_dir:
             yield Path(temp_dir)
 
-
     def test_corrupt_custom_preset_file_handling(self, temp_presets_dir):
         """Test handling of corrupt custom preset files."""
         custom_presets_dir = temp_presets_dir / "custom_presets"
@@ -169,7 +168,10 @@ class TestPresetManager:
         corrupt_file = custom_presets_dir / "corrupt-preset.json"
         corrupt_file.write_text("invalid json content")
 
-        with patch('cinemon.config.preset_manager.PresetManager._get_custom_presets_dir', return_value=custom_presets_dir):
+        with patch(
+            "cinemon.config.preset_manager.PresetManager._get_custom_presets_dir",
+            return_value=custom_presets_dir,
+        ):
             preset_manager = PresetManager()
 
             # Should not include corrupt preset in list

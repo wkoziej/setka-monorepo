@@ -15,12 +15,14 @@ except ImportError:
 
 class ValidationError(Exception):
     """Raised when YAML configuration validation fails."""
+
     pass
 
 
 @dataclass
 class Resolution:
     """Video resolution configuration."""
+
     width: int
     height: int
 
@@ -28,6 +30,7 @@ class Resolution:
 @dataclass
 class ProjectConfig:
     """Project-level configuration."""
+
     video_files: List[str]
     fps: int
     main_audio: Optional[str] = None
@@ -37,6 +40,7 @@ class ProjectConfig:
 @dataclass
 class LayoutConfig:
     """Layout configuration."""
+
     type: str
     config: Optional[Dict[str, Any]] = None
 
@@ -44,6 +48,7 @@ class LayoutConfig:
 @dataclass
 class AudioAnalysisConfig:
     """Audio analysis configuration."""
+
     file: str
     beat_division: Optional[int] = None
     min_onset_interval: Optional[float] = None
@@ -52,6 +57,7 @@ class AudioAnalysisConfig:
 @dataclass
 class CinemonConfig:
     """Complete Cinemon configuration."""
+
     project: ProjectConfig
     layout: LayoutConfig
     strip_animations: Dict[str, List[Dict[str, Any]]]
@@ -63,29 +69,33 @@ class YAMLConfigLoader:
 
     # Valid animation types (synchronized with setka-common AnimationSpec)
     VALID_ANIMATION_TYPES = {
-        "scale", "shake", "rotation", "jitter", "brightness_flicker",
-        "black_white", "film_grain", "vintage_color", "visibility", "pip_switch"
+        "scale",
+        "shake",
+        "rotation",
+        "jitter",
+        "brightness_flicker",
+        "black_white",
+        "film_grain",
+        "vintage_color",
+        "visibility",
+        "pip_switch",
     }
 
     # Valid trigger types
-    VALID_TRIGGER_TYPES = {
-        "beat", "energy_peaks", "one_time", "bass", "treble"
-    }
+    VALID_TRIGGER_TYPES = {"beat", "energy_peaks", "one_time", "bass", "treble"}
 
     # Valid layout types
-    VALID_LAYOUT_TYPES = {
-        "random", "grid", "cascade", "manual"
-    }
+    VALID_LAYOUT_TYPES = {"random", "grid", "cascade", "manual"}
 
     def load_from_file(self, file_path: Union[str, Path]) -> CinemonConfig:
         """Load configuration from YAML file.
-        
+
         Args:
             file_path: Path to YAML configuration file
-            
+
         Returns:
             Parsed and validated configuration
-            
+
         Raises:
             ValidationError: If file doesn't exist or validation fails
         """
@@ -94,7 +104,7 @@ class YAMLConfigLoader:
             raise ValidationError(f"Configuration file not found: {file_path}")
 
         try:
-            with open(path, 'r', encoding='utf-8') as f:
+            with open(path, "r", encoding="utf-8") as f:
                 content = f.read()
             return self.load_from_string(content)
         except Exception as e:
@@ -102,13 +112,13 @@ class YAMLConfigLoader:
 
     def load_from_string(self, yaml_content: str) -> CinemonConfig:
         """Load configuration from YAML string.
-        
+
         Args:
             yaml_content: YAML configuration as string
-            
+
         Returns:
             Parsed and validated configuration
-            
+
         Raises:
             ValidationError: If YAML is invalid or validation fails
         """
@@ -124,13 +134,13 @@ class YAMLConfigLoader:
 
     def _validate_and_parse(self, data: Dict[str, Any]) -> CinemonConfig:
         """Validate YAML data and parse into configuration object.
-        
+
         Args:
             data: Parsed YAML data
-            
+
         Returns:
             Validated configuration object
-            
+
         Raises:
             ValidationError: If validation fails
         """
@@ -161,7 +171,7 @@ class YAMLConfigLoader:
             project=project,
             layout=layout,
             strip_animations=strip_animations,
-            audio_analysis=audio_analysis
+            audio_analysis=audio_analysis,
         )
 
     def _parse_project(self, project_data: Dict[str, Any]) -> ProjectConfig:
@@ -188,16 +198,13 @@ class YAMLConfigLoader:
             res_data = project_data["resolution"]
             if "width" not in res_data or "height" not in res_data:
                 raise ValidationError("Resolution must have width and height")
-            resolution = Resolution(
-                width=res_data["width"],
-                height=res_data["height"]
-            )
+            resolution = Resolution(width=res_data["width"], height=res_data["height"])
 
         return ProjectConfig(
             video_files=video_files,
             fps=fps,
             main_audio=main_audio,
-            resolution=resolution
+            resolution=resolution,
         )
 
     def _parse_layout(self, layout_data: Dict[str, Any]) -> LayoutConfig:
@@ -213,7 +220,9 @@ class YAMLConfigLoader:
 
         return LayoutConfig(type=layout_type, config=config)
 
-    def _parse_strip_animations(self, animations_data: Dict[str, Any]) -> Dict[str, List[Dict[str, Any]]]:
+    def _parse_strip_animations(
+        self, animations_data: Dict[str, Any]
+    ) -> Dict[str, List[Dict[str, Any]]]:
         """Parse strip animations section."""
         if not isinstance(animations_data, dict):
             raise ValidationError("strip_animations must be a dictionary")
@@ -222,7 +231,9 @@ class YAMLConfigLoader:
 
         for strip_name, animations in animations_data.items():
             if not isinstance(animations, list):
-                raise ValidationError(f"Animations for strip '{strip_name}' must be a list")
+                raise ValidationError(
+                    f"Animations for strip '{strip_name}' must be a list"
+                )
 
             validated_strip_animations = []
             for animation in animations:
@@ -233,17 +244,23 @@ class YAMLConfigLoader:
 
         return validated_animations
 
-    def _validate_animation(self, animation: Dict[str, Any], strip_name: str) -> Dict[str, Any]:
+    def _validate_animation(
+        self, animation: Dict[str, Any], strip_name: str
+    ) -> Dict[str, Any]:
         """Validate single animation configuration."""
         if "type" not in animation:
-            raise ValidationError(f"Animation for strip '{strip_name}' missing required field: type")
+            raise ValidationError(
+                f"Animation for strip '{strip_name}' missing required field: type"
+            )
 
         animation_type = animation["type"]
         if animation_type not in self.VALID_ANIMATION_TYPES:
             raise ValidationError(f"Unknown animation type: {animation_type}")
 
         if "trigger" not in animation:
-            raise ValidationError(f"Animation for strip '{strip_name}' missing required field: trigger")
+            raise ValidationError(
+                f"Animation for strip '{strip_name}' missing required field: trigger"
+            )
 
         trigger = animation["trigger"]
         if trigger not in self.VALID_TRIGGER_TYPES:
@@ -259,15 +276,15 @@ class YAMLConfigLoader:
         return AudioAnalysisConfig(
             file=audio_data["file"],
             beat_division=audio_data.get("beat_division"),
-            min_onset_interval=audio_data.get("min_onset_interval")
+            min_onset_interval=audio_data.get("min_onset_interval"),
         )
 
     def convert_to_internal(self, config: CinemonConfig) -> Dict[str, Any]:
         """Convert configuration to internal format expected by vse_script.py.
-        
+
         Args:
             config: Validated configuration object
-            
+
         Returns:
             Dictionary in format expected by existing vse_script.py
         """
@@ -279,12 +296,10 @@ class YAMLConfigLoader:
             },
             "layout": {
                 "type": config.layout.type,
-                "config": config.layout.config or {}
+                "config": config.layout.config or {},
             },
             "animations": {},
-            "audio_analysis": {
-                "file": config.audio_analysis.file
-            }
+            "audio_analysis": {"file": config.audio_analysis.file},
         }
 
         # Add optional project fields
@@ -294,15 +309,19 @@ class YAMLConfigLoader:
         if config.project.resolution:
             internal_format["project"]["resolution"] = {
                 "width": config.project.resolution.width,
-                "height": config.project.resolution.height
+                "height": config.project.resolution.height,
             }
 
         # Add optional audio analysis fields
         if config.audio_analysis.beat_division:
-            internal_format["audio_analysis"]["beat_division"] = config.audio_analysis.beat_division
+            internal_format["audio_analysis"]["beat_division"] = (
+                config.audio_analysis.beat_division
+            )
 
         if config.audio_analysis.min_onset_interval:
-            internal_format["audio_analysis"]["min_onset_interval"] = config.audio_analysis.min_onset_interval
+            internal_format["audio_analysis"]["min_onset_interval"] = (
+                config.audio_analysis.min_onset_interval
+            )
 
         # Convert strip animations to internal format (flat list with target_strips)
         flat_animations = []

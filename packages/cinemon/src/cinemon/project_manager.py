@@ -11,7 +11,7 @@ import subprocess
 from pathlib import Path
 from typing import List
 
-from setka_common.config import BlenderYAMLConfig, YAMLConfigLoader
+from setka_common.config import BlenderYAMLConfig
 from setka_common.file_structure.types import MediaType
 from setka_common.utils.files import find_files_by_type
 
@@ -34,8 +34,9 @@ class BlenderProjectManager:
             blender_executable: Path or command to Blender executable
         """
         self.blender_executable = blender_executable
-        self.script_path = Path(__file__).parent.parent.parent / "blender_addon" / "vse_script.py"
-
+        self.script_path = (
+            Path(__file__).parent.parent.parent / "blender_addon" / "vse_script.py"
+        )
 
     def create_vse_project_with_config(
         self,
@@ -60,7 +61,9 @@ class BlenderProjectManager:
 
         from setka_common.file_structure.specialized import RecordingStructureManager
 
-        logger.info(f"Creating Blender VSE project with YAML config for: {recording_path}")
+        logger.info(
+            f"Creating Blender VSE project with YAML config for: {recording_path}"
+        )
 
         # 1. Validate recording structure
         structure = RecordingStructureManager.find_recording_structure(recording_path)
@@ -68,41 +71,58 @@ class BlenderProjectManager:
             raise ValueError(f"Invalid recording structure in: {recording_path}")
 
         # 2. Ensure blender directory exists
-        blender_dir = RecordingStructureManager.ensure_blender_dir(recording_path)
+        RecordingStructureManager.ensure_blender_dir(recording_path)
 
         # 3. Resolve paths relative to recording directory and create resolved config
-        resolved_config = self._create_resolved_config(yaml_config, recording_path, structure)
+        resolved_config = self._create_resolved_config(
+            yaml_config, recording_path, structure
+        )
 
         # 4. Create temporary YAML file with resolved paths
         temp_config_file = None
         try:
             # Write resolved config to temporary YAML file
             import yaml
-            temp_config_file = tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False, encoding='utf-8')
+
+            temp_config_file = tempfile.NamedTemporaryFile(
+                mode="w", suffix=".yaml", delete=False, encoding="utf-8"
+            )
 
             # Convert config to dict for YAML serialization
             config_dict = {
-                'project': resolved_config.project.__dict__,
-                'audio_analysis': resolved_config.audio_analysis.__dict__,
-                'layout': resolved_config.layout.__dict__,
-                'strip_animations': resolved_config.strip_animations
+                "project": resolved_config.project.__dict__,
+                "audio_analysis": resolved_config.audio_analysis.__dict__,
+                "layout": resolved_config.layout.__dict__,
+                "strip_animations": resolved_config.strip_animations,
             }
 
-            yaml.dump(config_dict, temp_config_file, indent=2, allow_unicode=True, default_flow_style=False)
+            yaml.dump(
+                config_dict,
+                temp_config_file,
+                indent=2,
+                allow_unicode=True,
+                default_flow_style=False,
+            )
             temp_config_file.close()
 
             logger.info(f"Created temporary config file: {temp_config_file.name}")
             logger.info(f"Video files: {resolved_config.project.video_files}")
             if resolved_config.project.main_audio:
                 logger.info(f"Main audio: {resolved_config.project.main_audio}")
-            animation_count = sum(len(anims) for anims in resolved_config.strip_animations.values())
-            logger.info(f"Animation mode: compositional with {animation_count} animations")
+            animation_count = sum(
+                len(anims) for anims in resolved_config.strip_animations.values()
+            )
+            logger.info(
+                f"Animation mode: compositional with {animation_count} animations"
+            )
 
             # 5. Execute Blender with config path
             output_blend = resolved_config.project.output_blend
             self._execute_blender_with_config(temp_config_file.name)
 
-            logger.info(f"Blender project created successfully with YAML config: {output_blend}")
+            logger.info(
+                f"Blender project created successfully with YAML config: {output_blend}"
+            )
             return Path(output_blend)
 
         except Exception as e:
@@ -113,12 +133,13 @@ class BlenderProjectManager:
             if temp_config_file:
                 try:
                     import os
+
                     os.unlink(temp_config_file.name)
-                    logger.debug(f"Cleaned up temporary config file: {temp_config_file.name}")
+                    logger.debug(
+                        f"Cleaned up temporary config file: {temp_config_file.name}"
+                    )
                 except Exception as e:
                     logger.warning(f"Failed to clean up temporary config file: {e}")
-
-
 
     def _execute_blender_with_config(self, config_path: str) -> None:
         """
@@ -161,9 +182,7 @@ class BlenderProjectManager:
         try:
             logger.debug(f"Executing command: {' '.join(cmd)}")
             logger.debug(f"Working directory: {os.getcwd()}")
-            result = subprocess.run(
-                cmd, capture_output=True, text=True, check=True
-            )
+            result = subprocess.run(cmd, capture_output=True, text=True, check=True)
             # Show any output for debugging
             if result.stdout.strip():
                 logger.debug(f"Blender stdout: {result.stdout}")
@@ -217,7 +236,6 @@ class BlenderProjectManager:
         """
         return find_files_by_type(extracted_dir, MediaType.VIDEO)
 
-
     def _validate_animation_mode(self, mode: str) -> None:
         """
         Validate animation mode parameter.
@@ -261,15 +279,17 @@ class BlenderProjectManager:
                 f"Valid divisions: {', '.join(map(str, sorted(valid_divisions)))}"
             )
 
-    def _create_resolved_config(self, yaml_config: BlenderYAMLConfig, recording_path: Path, structure) -> BlenderYAMLConfig:
+    def _create_resolved_config(
+        self, yaml_config: BlenderYAMLConfig, recording_path: Path, structure
+    ) -> BlenderYAMLConfig:
         """
         Create a new config with all paths resolved to absolute paths.
-        
+
         Args:
             yaml_config: Original YAML configuration
             recording_path: Path to the recording directory
             structure: Recording structure manager
-            
+
         Returns:
             BlenderYAMLConfig: New config with resolved paths
         """
@@ -297,7 +317,11 @@ class BlenderProjectManager:
 
         # Resolve output paths
         project_name = recording_path.name
-        blender_dir = structure.blender_dir if hasattr(structure, 'blender_dir') else recording_path / "blender"
+        blender_dir = (
+            structure.blender_dir
+            if hasattr(structure, "blender_dir")
+            else recording_path / "blender"
+        )
 
         if yaml_config.project.output_blend:
             output_blend = recording_path / yaml_config.project.output_blend
@@ -327,23 +351,20 @@ class BlenderProjectManager:
             render_output=str(render_output.resolve()),
             fps=yaml_config.project.fps,
             resolution=yaml_config.project.resolution,
-            beat_division=yaml_config.project.beat_division
+            beat_division=yaml_config.project.beat_division,
         )
 
         resolved_audio_analysis = AudioAnalysisConfig(
-            file=resolved_analysis_file,
-            data=yaml_config.audio_analysis.data
+            file=resolved_analysis_file, data=yaml_config.audio_analysis.data
         )
 
         resolved_layout = LayoutConfig(
-            type=yaml_config.layout.type,
-            config=yaml_config.layout.config
+            type=yaml_config.layout.type, config=yaml_config.layout.config
         )
 
         return BlenderYAMLConfig(
             project=resolved_project,
             audio_analysis=resolved_audio_analysis,
             layout=resolved_layout,
-            strip_animations=yaml_config.strip_animations
+            strip_animations=yaml_config.strip_animations,
         )
-

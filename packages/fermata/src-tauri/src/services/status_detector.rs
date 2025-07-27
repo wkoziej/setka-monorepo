@@ -16,23 +16,23 @@ impl StatusDetector {
         if Self::has_uploads(recording_path) {
             return RecordingStatus::Uploaded;
         }
-        
+
         if Self::has_rendered_video(recording_path) {
             return RecordingStatus::Rendered;
         }
-        
+
         if Self::has_render_setup(recording_path) {
             return RecordingStatus::SetupRendered;
         }
-        
+
         if Self::has_analysis_files(recording_path) {
             return RecordingStatus::Analyzed;
         }
-        
+
         if Self::has_extracted_files(recording_path) {
             return RecordingStatus::Extracted;
         }
-        
+
         // Default to recorded if directory exists
         RecordingStatus::Recorded
     }
@@ -121,7 +121,7 @@ impl StatusDetector {
                 }
             }
         }
-        
+
         false
     }
 
@@ -141,7 +141,7 @@ impl StatusDetector {
                 }
             }
         }
-        
+
         false
     }
 
@@ -232,10 +232,10 @@ mod tests {
         let temp_dir = TempDir::new().unwrap();
         let recording_path = temp_dir.path().join("test_recording");
         fs::create_dir_all(&recording_path).unwrap();
-        
+
         // Create a dummy video file (test with .mp4 like real OBS recordings)
         fs::write(recording_path.join("test_recording.mp4"), b"dummy mp4 content").unwrap();
-        
+
         temp_dir
     }
 
@@ -243,7 +243,7 @@ mod tests {
     fn test_detect_status_recorded() {
         let temp_dir = create_test_recording_structure();
         let recording_path = temp_dir.path().join("test_recording");
-        
+
         let status = StatusDetector::detect_status(&recording_path);
         assert_eq!(status, RecordingStatus::Recorded);
     }
@@ -252,10 +252,10 @@ mod tests {
     fn test_detect_status_extracted() {
         let temp_dir = create_test_recording_structure();
         let recording_path = temp_dir.path().join("test_recording");
-        
+
         // Create extracted directory
         fs::create_dir_all(recording_path.join("extracted")).unwrap();
-        
+
         let status = StatusDetector::detect_status(&recording_path);
         assert_eq!(status, RecordingStatus::Extracted);
     }
@@ -264,12 +264,12 @@ mod tests {
     fn test_detect_status_analyzed() {
         let temp_dir = create_test_recording_structure();
         let recording_path = temp_dir.path().join("test_recording");
-        
+
         // Create extracted and analysis directories
         fs::create_dir_all(recording_path.join("extracted")).unwrap();
         fs::create_dir_all(recording_path.join("analysis")).unwrap();
         fs::write(recording_path.join("analysis/audio_analysis.json"), b"{}").unwrap();
-        
+
         let status = StatusDetector::detect_status(&recording_path);
         assert_eq!(status, RecordingStatus::Analyzed);
     }
@@ -278,14 +278,14 @@ mod tests {
     fn test_detect_status_setup_rendered() {
         let temp_dir = create_test_recording_structure();
         let recording_path = temp_dir.path().join("test_recording");
-        
+
         // Create pipeline up to setup rendered (blend file exists)
         fs::create_dir_all(recording_path.join("extracted")).unwrap();
         fs::create_dir_all(recording_path.join("analysis")).unwrap();
         fs::write(recording_path.join("analysis/audio_analysis.json"), b"{}").unwrap();
         fs::create_dir_all(recording_path.join("blender")).unwrap();
         fs::write(recording_path.join("blender/project.blend"), b"dummy blend").unwrap();
-        
+
         let status = StatusDetector::detect_status(&recording_path);
         assert_eq!(status, RecordingStatus::SetupRendered);
     }
@@ -294,7 +294,7 @@ mod tests {
     fn test_detect_status_rendered() {
         let temp_dir = create_test_recording_structure();
         let recording_path = temp_dir.path().join("test_recording");
-        
+
         // Create full pipeline up to render (video file exists)
         fs::create_dir_all(recording_path.join("extracted")).unwrap();
         fs::create_dir_all(recording_path.join("analysis")).unwrap();
@@ -303,7 +303,7 @@ mod tests {
         fs::write(recording_path.join("blender/project.blend"), b"dummy blend").unwrap();
         fs::create_dir_all(recording_path.join("blender/render")).unwrap();
         fs::write(recording_path.join("blender/render/output.mp4"), b"dummy video").unwrap();
-        
+
         let status = StatusDetector::detect_status(&recording_path);
         assert_eq!(status, RecordingStatus::Rendered);
     }
@@ -312,7 +312,7 @@ mod tests {
     fn test_detect_status_uploaded() {
         let temp_dir = create_test_recording_structure();
         let recording_path = temp_dir.path().join("test_recording");
-        
+
         // Create full pipeline
         fs::create_dir_all(recording_path.join("extracted")).unwrap();
         fs::create_dir_all(recording_path.join("analysis")).unwrap();
@@ -321,7 +321,7 @@ mod tests {
         fs::write(recording_path.join("blender/render/output.mp4"), b"dummy video").unwrap();
         fs::create_dir_all(recording_path.join("uploads")).unwrap();
         fs::write(recording_path.join("uploads/upload_results.json"), b"{}").unwrap();
-        
+
         let status = StatusDetector::detect_status(&recording_path);
         assert_eq!(status, RecordingStatus::Uploaded);
     }
@@ -330,10 +330,10 @@ mod tests {
     fn test_detect_status_failed() {
         let temp_dir = create_test_recording_structure();
         let recording_path = temp_dir.path().join("test_recording");
-        
+
         // Create error indicator
         fs::write(recording_path.join("error.log"), b"Audio analysis failed").unwrap();
-        
+
         let status = StatusDetector::detect_status(&recording_path);
         if let RecordingStatus::Failed(error) = status {
             assert_eq!(error, "Audio analysis failed");
@@ -346,9 +346,9 @@ mod tests {
     fn test_get_file_info() {
         let temp_dir = create_test_recording_structure();
         let recording_path = temp_dir.path().join("test_recording");
-        
+
         let file_info = StatusDetector::get_file_info(&recording_path);
-        
+
         assert!(file_info.contains_key("recording.video"));
         assert!(file_info["recording.video"] > 0); // Should have size from dummy content
     }
@@ -357,7 +357,7 @@ mod tests {
     fn test_validate_recording_structure_valid() {
         let temp_dir = create_test_recording_structure();
         let recording_path = temp_dir.path().join("test_recording");
-        
+
         let result = StatusDetector::validate_recording_structure(&recording_path);
         assert!(result.is_ok());
     }
@@ -366,7 +366,7 @@ mod tests {
     fn test_validate_recording_structure_invalid() {
         let temp_dir = TempDir::new().unwrap();
         let invalid_path = temp_dir.path().join("nonexistent");
-        
+
         let result = StatusDetector::validate_recording_structure(&invalid_path);
         assert!(result.is_err());
         assert!(result.unwrap_err().contains("does not exist"));
@@ -376,7 +376,7 @@ mod tests {
     fn test_update_recording_status() {
         let temp_dir = create_test_recording_structure();
         let recording_path = temp_dir.path().join("test_recording");
-        
+
         let mut recording = Recording {
             name: "test_recording".to_string(),
             path: recording_path,
@@ -384,10 +384,10 @@ mod tests {
             last_updated: std::time::SystemTime::now().duration_since(std::time::SystemTime::UNIX_EPOCH).unwrap().as_secs(),
             file_sizes: HashMap::new(),
         };
-        
+
         update_recording_status(&mut recording);
-        
+
         assert_eq!(recording.status, RecordingStatus::Recorded);
         assert!(!recording.file_sizes.is_empty());
     }
-} 
+}

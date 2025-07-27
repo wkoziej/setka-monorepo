@@ -11,5 +11,5 @@ __all__ = [
     "MediaDiscovery",
     "ValidationResult",
     "PresetManager",
-    "CinemonConfigGenerator"
+    "CinemonConfigGenerator",
 ]

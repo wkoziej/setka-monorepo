@@ -11,24 +11,26 @@ from .base_effect_animation import BaseEffectAnimation
 class FilmGrainAnimation(BaseEffectAnimation):
     """
     Animation that adds film grain noise effect to strips.
-    
+
     Refactored from VintageFilmEffects.apply_film_grain_noise.
-    
+
     This is a one-time effect that applies film grain simulation using
     Blender modifiers (Gaussian blur + color adjustments).
-    
+
     Attributes:
         trigger: Event type (ignored for one-time effect)
         intensity: Grain intensity (0.0 to 1.0)
     """
 
-    def __init__(self,
-                 trigger: str = "one_time",
-                 intensity: float = 0.1,
-                 target_strips: Optional[List[str]] = None):
+    def __init__(
+        self,
+        trigger: str = "one_time",
+        intensity: float = 0.1,
+        target_strips: Optional[List[str]] = None,
+    ):
         """
         Initialize FilmGrainAnimation.
-        
+
         Args:
             trigger: Event type (ignored for one-time effect)
             intensity: Grain intensity (0.0 to 1.0)
@@ -41,13 +43,13 @@ class FilmGrainAnimation(BaseEffectAnimation):
     def apply_to_strip(self, strip, events: List[float], fps: int, **kwargs) -> bool:
         """
         Apply film grain noise effect to strip.
-        
+
         Args:
             strip: Blender video strip object
             events: List of event times (ignored for one-time effect)
             fps: Frames per second
             **kwargs: Additional parameters (unused)
-            
+
         Returns:
             True if animation was applied successfully
         """
@@ -87,8 +89,8 @@ class FilmGrainAnimation(BaseEffectAnimation):
     def get_required_properties(self) -> List[str]:
         """
         Get list of required strip properties.
-        
+
         Returns:
             List containing 'modifiers' property requirement
         """
-        return ['modifiers']
+        return ["modifiers"]

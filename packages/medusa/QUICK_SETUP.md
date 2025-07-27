@@ -249,4 +249,4 @@ python test_youtube_simple.py
 python -m pytest tests/integration/test_youtube_real_api.py -v
 ```
 
-**Gotowe do testowania YouTube API! 🚀** 
+**Gotowe do testowania YouTube API! 🚀**

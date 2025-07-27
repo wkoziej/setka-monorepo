@@ -35,9 +35,9 @@ def temp_video_file() -> Generator[str, None, None]:
         # Create minimal video file content (just empty for now)
         tmp.write(b"fake video content")
         temp_path = tmp.name
-    
+
     yield temp_path
-    
+
     # Cleanup
     if os.path.exists(temp_path):
         os.unlink(temp_path)
@@ -46,20 +46,20 @@ def temp_video_file() -> Generator[str, None, None]:
 @pytest.fixture
 def temp_config_file() -> Generator[str, None, None]:
     """Create temporary test config file."""
-    config_content = '''
+    config_content = """
 {
     "youtube": {
         "client_secrets_file": "path/to/client_secrets.json",
         "credentials_file": "path/to/credentials.json"
     }
 }
-'''
-    with tempfile.NamedTemporaryFile(mode='w', suffix=".json", delete=False) as tmp:
+"""
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as tmp:
         tmp.write(config_content)
         temp_path = tmp.name
-    
+
     yield temp_path
-    
+
     # Cleanup
     if os.path.exists(temp_path):
-        os.unlink(temp_path) 
+        os.unlink(temp_path)

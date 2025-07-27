@@ -3,7 +3,6 @@
 from unittest.mock import Mock, patch
 
 import pytest
-
 from vse.animation_compositor import AnimationCompositor
 from vse.animations import ScaleAnimation, ShakeAnimation
 from vse.layouts import LayoutPosition, RandomLayout
@@ -39,20 +38,22 @@ class TestAnimationCompositor:
                 "energy_peaks": [1.5, 2.5, 3.5],
                 "sections": [
                     {"start": 0.0, "end": 5.0, "label": "intro"},
-                    {"start": 5.0, "end": 10.0, "label": "main"}
-                ]
-            }
+                    {"start": 5.0, "end": 10.0, "label": "main"},
+                ],
+            },
         }
 
     @pytest.fixture
     def simple_layout(self):
         """Create a simple test layout."""
         layout = Mock()
-        layout.calculate_positions = Mock(return_value=[
-            LayoutPosition(x=100, y=50, scale=0.5),
-            LayoutPosition(x=-100, y=-50, scale=0.6),
-            LayoutPosition(x=0, y=0, scale=0.7)
-        ])
+        layout.calculate_positions = Mock(
+            return_value=[
+                LayoutPosition(x=100, y=50, scale=0.5),
+                LayoutPosition(x=-100, y=-50, scale=0.6),
+                LayoutPosition(x=0, y=0, scale=0.7),
+            ]
+        )
         return layout
 
     @pytest.fixture
@@ -68,8 +69,10 @@ class TestAnimationCompositor:
 
         return [scale_anim, shake_anim]
 
-    @patch('vse.animation_compositor.bpy')
-    def test_compositor_full_pipeline(self, mock_bpy, mock_video_strips, mock_audio_analysis):
+    @patch("vse.animation_compositor.bpy")
+    def test_compositor_full_pipeline(
+        self, mock_bpy, mock_video_strips, mock_audio_analysis
+    ):
         """Test pełnego pipeline: layout + animacje."""
         # Setup scene resolution
         mock_bpy.context.scene.render.resolution_x = 1920
@@ -78,7 +81,7 @@ class TestAnimationCompositor:
         layout = RandomLayout(seed=42)
         animations = [
             ScaleAnimation(trigger="bass", intensity=0.2),
-            ShakeAnimation(trigger="beat", intensity=5.0)
+            ShakeAnimation(trigger="beat", intensity=5.0),
         ]
 
         # Mock keyframe helpers to avoid actual Blender calls
@@ -94,7 +97,9 @@ class TestAnimationCompositor:
             assert strip.transform.offset_x != 0 or strip.transform.offset_y != 0
             assert 0.3 <= strip.transform.scale_x <= 0.8
 
-    def test_compositor_apply_layout(self, simple_layout, mock_video_strips, mock_audio_analysis):
+    def test_compositor_apply_layout(
+        self, simple_layout, mock_video_strips, mock_audio_analysis
+    ):
         """Test że compositor aplikuje layout."""
         compositor = AnimationCompositor(simple_layout, [])
         compositor._get_scene_resolution = Mock(return_value=(1920, 1080))
@@ -109,8 +114,9 @@ class TestAnimationCompositor:
         assert mock_video_strips[0].transform.offset_y == 50
         assert mock_video_strips[0].transform.scale_x == 0.5
 
-    def test_compositor_apply_animations(self, simple_layout, simple_animations,
-                                       mock_video_strips, mock_audio_analysis):
+    def test_compositor_apply_animations(
+        self, simple_layout, simple_animations, mock_video_strips, mock_audio_analysis
+    ):
         """Test że compositor aplikuje animacje."""
         compositor = AnimationCompositor(simple_layout, simple_animations)
         compositor._get_scene_resolution = Mock(return_value=(1920, 1080))
@@ -130,7 +136,7 @@ class TestAnimationCompositor:
             "animation_events": {
                 "beats": [1.0, 2.0],
                 "energy_peaks": [1.5, 2.5],
-                "sections": [{"start": 0, "end": 5}]
+                "sections": [{"start": 0, "end": 5}],
             }
         }
 
@@ -138,10 +144,14 @@ class TestAnimationCompositor:
         assert compositor._extract_events(audio_analysis, "beat") == [1.0, 2.0]
         assert compositor._extract_events(audio_analysis, "bass") == [1.5, 2.5]
         assert compositor._extract_events(audio_analysis, "energy_peaks") == [1.5, 2.5]
-        assert compositor._extract_events(audio_analysis, "sections") == [{"start": 0, "end": 5}]
+        assert compositor._extract_events(audio_analysis, "sections") == [
+            {"start": 0, "end": 5}
+        ]
         assert compositor._extract_events(audio_analysis, "unknown") == []
 
-    def test_compositor_empty_animations(self, simple_layout, mock_video_strips, mock_audio_analysis):
+    def test_compositor_empty_animations(
+        self, simple_layout, mock_video_strips, mock_audio_analysis
+    ):
         """Test compositor z pustą listą animacji."""
         compositor = AnimationCompositor(simple_layout, [])
         compositor._get_scene_resolution = Mock(return_value=(1920, 1080))
@@ -168,8 +178,10 @@ class TestAnimationCompositor:
         # Animation should not be called since no events
         animation.apply_to_strip.assert_not_called()
 
-    @patch('vse.animation_compositor.bpy')
-    def test_compositor_error_handling(self, mock_bpy, simple_layout, mock_video_strips):
+    @patch("vse.animation_compositor.bpy")
+    def test_compositor_error_handling(
+        self, mock_bpy, simple_layout, mock_video_strips
+    ):
         """Test obsługi błędów."""
         # Simulate error getting resolution
         mock_bpy.context.scene.render.resolution_x = None
@@ -181,7 +193,9 @@ class TestAnimationCompositor:
 
         assert not success
 
-    def test_compositor_with_real_components(self, mock_video_strips, mock_audio_analysis):
+    def test_compositor_with_real_components(
+        self, mock_video_strips, mock_audio_analysis
+    ):
         """Test z rzeczywistymi komponentami (integration test)."""
         layout = RandomLayout(seed=42, overlap_allowed=False)
         animations = [
@@ -201,5 +215,7 @@ class TestAnimationCompositor:
         assert success
         # Verify animations were called
         for anim in animations:
-            assert anim.keyframe_helper.insert_transform_scale_keyframes.called or \
-                   anim.keyframe_helper.insert_transform_position_keyframes.called
+            assert (
+                anim.keyframe_helper.insert_transform_scale_keyframes.called
+                or anim.keyframe_helper.insert_transform_position_keyframes.called
+            )

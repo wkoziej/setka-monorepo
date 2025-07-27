@@ -93,4 +93,3 @@ medusa.publish(
 
 - Implementacja obsługi kolejek zadań (Celery, RabbitMQ).
 - Integracja z narzędziami monitorującymi status przesyłania i publikacji (logging, monitoring).
-

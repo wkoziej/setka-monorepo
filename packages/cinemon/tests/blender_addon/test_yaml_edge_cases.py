@@ -90,7 +90,9 @@ layout:
 strip_animations: {}
 """
         loader = YAMLConfigLoader()
-        with pytest.raises(ValidationError, match="Resolution must have width and height"):
+        with pytest.raises(
+            ValidationError, match="Resolution must have width and height"
+        ):
             loader.load_from_string(config)
 
     def test_invalid_strip_animations_format(self):
@@ -108,7 +110,9 @@ strip_animations:
   Camera1: "invalid"
 """
         loader = YAMLConfigLoader()
-        with pytest.raises(ValidationError, match="Animations for strip 'Camera1' must be a list"):
+        with pytest.raises(
+            ValidationError, match="Animations for strip 'Camera1' must be a list"
+        ):
             loader.load_from_string(config)
 
     def test_animation_missing_required_fields(self):
@@ -128,7 +132,10 @@ strip_animations:
       intensity: 0.3
 """
         loader = YAMLConfigLoader()
-        with pytest.raises(ValidationError, match="Animation for strip 'Camera1' missing required field: type"):
+        with pytest.raises(
+            ValidationError,
+            match="Animation for strip 'Camera1' missing required field: type",
+        ):
             loader.load_from_string(config_no_type)
 
         # Missing trigger
@@ -143,7 +150,10 @@ strip_animations:
     - type: "scale"
       intensity: 0.3
 """
-        with pytest.raises(ValidationError, match="Animation for strip 'Camera1' missing required field: trigger"):
+        with pytest.raises(
+            ValidationError,
+            match="Animation for strip 'Camera1' missing required field: trigger",
+        ):
             loader.load_from_string(config_no_trigger)
 
     def test_nonexistent_file_loading(self):

@@ -13,8 +13,8 @@ function App() {
   if (selectedRecording) {
     return (
       <div style={{ height: '100vh', overflow: 'auto' }}>
-        <RecordingDetails 
-          recordingName={selectedRecording} 
+        <RecordingDetails
+          recordingName={selectedRecording}
           onBack={() => setSelectedRecording(null)}
           onRecordingRenamed={handleRecordingRenamed}
         />
@@ -29,4 +29,4 @@ function App() {
   );
 }
 
-export default App 
+export default App

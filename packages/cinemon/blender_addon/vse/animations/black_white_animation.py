@@ -11,24 +11,26 @@ from .base_effect_animation import BaseEffectAnimation
 class BlackWhiteAnimation(BaseEffectAnimation):
     """
     Animation that applies black and white desaturation effect to strips.
-    
+
     Refactored from VintageFilmEffects.apply_black_white_effect.
-    
+
     This is a one-time effect that doesn't depend on events but applies
     a consistent desaturation to the entire strip.
-    
+
     Attributes:
         trigger: Event type (ignored for one-time effect)
         intensity: Desaturation intensity (0.0 = color, 1.0 = full B&W)
     """
 
-    def __init__(self,
-                 trigger: str = "one_time",
-                 intensity: float = 0.8,
-                 target_strips: Optional[List[str]] = None):
+    def __init__(
+        self,
+        trigger: str = "one_time",
+        intensity: float = 0.8,
+        target_strips: Optional[List[str]] = None,
+    ):
         """
         Initialize BlackWhiteAnimation.
-        
+
         Args:
             trigger: Event type (ignored for one-time effect)
             intensity: Desaturation intensity (0.0 = color, 1.0 = full B&W)
@@ -41,13 +43,13 @@ class BlackWhiteAnimation(BaseEffectAnimation):
     def apply_to_strip(self, strip, events: List[float], fps: int, **kwargs) -> bool:
         """
         Apply black and white desaturation to strip.
-        
+
         Args:
             strip: Blender video strip object
             events: List of event times (ignored for one-time effect)
             fps: Frames per second
             **kwargs: Additional parameters (unused)
-            
+
         Returns:
             True if animation was applied successfully
         """
@@ -66,8 +68,8 @@ class BlackWhiteAnimation(BaseEffectAnimation):
     def get_required_properties(self) -> List[str]:
         """
         Get list of required strip properties.
-        
+
         Returns:
             List containing 'color_saturation' property requirement
         """
-        return ['color_saturation']
+        return ["color_saturation"]

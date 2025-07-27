@@ -194,8 +194,12 @@ class TestMultiPipLayoutCalculation:
             assert -half_height < y < half_height
 
             # Should have some margin from edges
-            assert abs(abs(x) - half_width) >= margin_x * 0.5  # At least half the margin
-            assert abs(abs(y) - half_height) >= margin_y * 0.5  # At least half the margin
+            assert (
+                abs(abs(x) - half_width) >= margin_x * 0.5
+            )  # At least half the margin
+            assert (
+                abs(abs(y) - half_height) >= margin_y * 0.5
+            )  # At least half the margin
 
     def test_calculate_multi_pip_layout_variable_strip_count(self):
         """Should handle different numbers of strips correctly."""
@@ -251,13 +255,13 @@ class TestCornerPositionsUtility:
 
         # All positions should be reasonable (within bounds and symmetric)
         assert top_right[0] > 0 and top_right[1] > 0  # Positive quadrant
-        assert top_left[0] < 0 and top_left[1] > 0    # Top-left quadrant
+        assert top_left[0] < 0 and top_left[1] > 0  # Top-left quadrant
         assert bottom_left[0] < 0 and bottom_left[1] < 0  # Bottom-left quadrant
         assert bottom_right[0] > 0 and bottom_right[1] < 0  # Bottom-right quadrant
 
         # Should be symmetric
         assert top_right[0] == -top_left[0]  # X symmetric
-        assert top_right[1] == top_left[1]   # Y same
+        assert top_right[1] == top_left[1]  # Y same
         assert top_right[0] == bottom_right[0]  # X same
         assert top_right[1] == -bottom_right[1]  # Y symmetric
 

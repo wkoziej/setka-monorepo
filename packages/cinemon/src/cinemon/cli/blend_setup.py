@@ -21,16 +21,13 @@ from ..project_manager import BlenderProjectManager
 def open_blender_with_video_editing(blend_file_path: Path) -> None:
     """
     Open Blender GUI with the blend file (should already be in Video Editing workspace).
-    
+
     Args:
         blend_file_path: Path to .blend file to open
     """
     try:
         # Simple Blender open - project was created with Video Editing template
-        cmd = [
-            "snap", "run", "blender",
-            str(blend_file_path)
-        ]
+        cmd = ["snap", "run", "blender", str(blend_file_path)]
 
         print("🎬 Otwieranie Blender (projekt utworzony z Video Editing template)...")
         print(f"📁 Plik: {blend_file_path}")
@@ -137,9 +134,11 @@ def validate_recording_directory(recording_dir: Path) -> None:
     # Check for metadata.json
     metadata_path = recording_dir / "metadata.json"
     if not metadata_path.exists():
-        raise ValueError(f"❌ Stare nagranie bez metadata.json: {recording_dir}\n"
-                        f"💡 To nagranie pochodzi sprzed aktualizacji OBS script.\n"
-                        f"🔧 Przenieś je do osobnego katalogu lub wygeneruj metadata.json ręcznie.")
+        raise ValueError(
+            f"❌ Stare nagranie bez metadata.json: {recording_dir}\n"
+            f"💡 To nagranie pochodzi sprzed aktualizacji OBS script.\n"
+            f"🔧 Przenieś je do osobnego katalogu lub wygeneruj metadata.json ręcznie."
+        )
 
     # Check for extracted directory
     extracted_dir = recording_dir / "extracted"
@@ -152,10 +151,6 @@ def validate_recording_directory(recording_dir: Path) -> None:
     # Check if extracted directory has any files
     if not any(extracted_dir.iterdir()):
         raise ValueError(f"Katalog extracted/ jest pusty w: {recording_dir}")
-
-
-
-
 
 
 def load_yaml_config(config_path: Path) -> BlenderYAMLConfig:
@@ -183,8 +178,6 @@ def load_yaml_config(config_path: Path) -> BlenderYAMLConfig:
         raise ValueError(f"Failed to load YAML configuration: {e}")
 
 
-
-
 def main() -> int:
     """
     Main CLI entry point.
@@ -210,9 +203,7 @@ def main() -> int:
             # Generate configuration from preset
             generator = CinemonConfigGenerator()
             config_path = generator.generate_preset(
-                args.recording_dir,
-                args.preset,
-                **preset_overrides
+                args.recording_dir, args.preset, **preset_overrides
             )
 
             logger.info(f"Generated configuration: {config_path}")
@@ -226,11 +217,12 @@ def main() -> int:
             # Create VSE project with generated config
             logger.info("Creating Blender VSE project with preset configuration...")
             project_path = manager.create_vse_project_with_config(
-                args.recording_dir,
-                yaml_config
+                args.recording_dir, yaml_config
             )
 
-            print(f"✅ Projekt Blender VSE utworzony z presetu {args.preset}: {project_path}")
+            print(
+                f"✅ Projekt Blender VSE utworzony z presetu {args.preset}: {project_path}"
+            )
 
             # Auto-open Blender if requested
             if args.open_blender:
@@ -250,8 +242,7 @@ def main() -> int:
             # Create VSE project with YAML config
             logger.info("Creating Blender VSE project with YAML configuration...")
             project_path = manager.create_vse_project_with_config(
-                args.recording_dir,
-                yaml_config
+                args.recording_dir, yaml_config
             )
 
             print(f"✅ Projekt Blender VSE utworzony z YAML config: {project_path}")

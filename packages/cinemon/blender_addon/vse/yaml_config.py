@@ -15,7 +15,7 @@ try:
     )
 except ImportError:
     # Fallback when running in Blender environment
-    sys.path.append('/home/wojtas/dev/setka-monorepo/packages/common/src')
+    sys.path.append("/home/wojtas/dev/setka-monorepo/packages/common/src")
     from setka_common.config.yaml_config import (
         BlenderYAMLConfig,
         YAMLConfigLoader,
@@ -28,7 +28,7 @@ class BlenderYAMLConfigReader:
     def __init__(self, config_path: Optional[str] = None):
         """
         Initialize YAML config reader.
-        
+
         Args:
             config_path: Optional path to YAML config file
         """
@@ -41,13 +41,13 @@ class BlenderYAMLConfigReader:
     def load_config(self, config_path: str) -> BlenderYAMLConfig:
         """
         Load YAML configuration from file.
-        
+
         Args:
             config_path: Path to YAML configuration file
-            
+
         Returns:
             BlenderYAMLConfig: Loaded configuration object
-            
+
         Raises:
             FileNotFoundError: If config file doesn't exist
             ValueError: If config is invalid
@@ -102,7 +102,7 @@ class BlenderYAMLConfigReader:
         """Get resolution width."""
         if not self.config or not self.config.project.resolution:
             return 1920
-        if hasattr(self.config.project.resolution, 'width'):
+        if hasattr(self.config.project.resolution, "width"):
             return self.config.project.resolution.width
         return self.config.project.resolution.get("width", 1920)
 
@@ -111,7 +111,7 @@ class BlenderYAMLConfigReader:
         """Get resolution height."""
         if not self.config or not self.config.project.resolution:
             return 1080
-        if hasattr(self.config.project.resolution, 'height'):
+        if hasattr(self.config.project.resolution, "height"):
             return self.config.project.resolution.height
         return self.config.project.resolution.get("height", 1080)
 
@@ -141,7 +141,7 @@ class BlenderYAMLConfigReader:
         """Get list of animations (converted from strip_animations to flat format)."""
         if not self.config:
             return []
-        
+
         # Convert strip_animations to flat animations list
         flat_animations = []
         for strip_name, animations in self.config.strip_animations.items():
@@ -150,7 +150,7 @@ class BlenderYAMLConfigReader:
                     flat_animation = animation.copy()
                     flat_animation["target_strips"] = [strip_name]
                     flat_animations.append(flat_animation)
-        
+
         return flat_animations
 
     @property
@@ -170,7 +170,7 @@ class BlenderYAMLConfigReader:
     def validate(self) -> Tuple[bool, List[str]]:
         """
         Validate configuration.
-        
+
         Returns:
             Tuple[bool, List[str]]: (is_valid, list_of_errors)
         """
@@ -189,20 +189,24 @@ class BlenderYAMLConfigReader:
         if self.config.project.main_audio:
             audio_path = Path(self.config.project.main_audio)
             if not audio_path.exists():
-                errors.append(f"Main audio file not found: {self.config.project.main_audio}")
+                errors.append(
+                    f"Main audio file not found: {self.config.project.main_audio}"
+                )
 
         # Validate audio analysis file exists if specified
         if self.config.audio_analysis.file:
             analysis_path = Path(self.config.audio_analysis.file)
             if not analysis_path.exists():
-                errors.append(f"Audio analysis file not found: {self.config.audio_analysis.file}")
+                errors.append(
+                    f"Audio analysis file not found: {self.config.audio_analysis.file}"
+                )
 
         return len(errors) == 0, errors
 
     def load_audio_analysis_data(self) -> Optional[Dict[str, Any]]:
         """
         Load audio analysis data from file or embedded data.
-        
+
         Returns:
             Optional[Dict]: Animation data with events or None if not available
         """
@@ -214,8 +218,9 @@ class BlenderYAMLConfigReader:
             analysis_path = Path(self.config.audio_analysis.file)
             if analysis_path.exists():
                 try:
-                    with open(analysis_path, 'r', encoding='utf-8') as f:
+                    with open(analysis_path, "r", encoding="utf-8") as f:
                         import json
+
                         return json.load(f)
                 except Exception as e:
                     print(f"Error loading analysis file {analysis_path}: {e}")

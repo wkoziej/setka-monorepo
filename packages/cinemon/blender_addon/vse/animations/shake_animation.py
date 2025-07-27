@@ -12,9 +12,9 @@ from .base_effect_animation import BaseEffectAnimation
 class ShakeAnimation(BaseEffectAnimation):
     """
     Animation that creates shaking/vibration effect on strips.
-    
+
     Refactored from VintageFilmEffects.apply_camera_shake with enhanced options.
-    
+
     Attributes:
         trigger: Event type to react to ("beat", "bass", "energy_peaks")
         intensity: Shake intensity in pixels
@@ -22,15 +22,17 @@ class ShakeAnimation(BaseEffectAnimation):
         random_direction: Whether shake direction is random or deterministic
     """
 
-    def __init__(self,
-                 trigger: str = "beat",
-                 intensity: float = 10.0,
-                 return_frames: int = 2,
-                 random_direction: bool = True,
-                 target_strips: Optional[List[str]] = None):
+    def __init__(
+        self,
+        trigger: str = "beat",
+        intensity: float = 10.0,
+        return_frames: int = 2,
+        random_direction: bool = True,
+        target_strips: Optional[List[str]] = None,
+    ):
         """
         Initialize ShakeAnimation.
-        
+
         Args:
             trigger: Event type to trigger animation
             intensity: Maximum shake offset in pixels
@@ -47,17 +49,17 @@ class ShakeAnimation(BaseEffectAnimation):
     def apply_to_strip(self, strip, events: List[float], fps: int, **kwargs) -> bool:
         """
         Apply shake animation to strip based on events.
-        
+
         Args:
             strip: Blender video strip object
             events: List of event times in seconds
             fps: Frames per second
             **kwargs: Additional parameters (unused)
-            
+
         Returns:
             True if animation was applied successfully
         """
-        if not hasattr(strip, 'transform'):
+        if not hasattr(strip, "transform"):
             return False
 
         # Get base position
@@ -98,8 +100,8 @@ class ShakeAnimation(BaseEffectAnimation):
     def get_required_properties(self) -> List[str]:
         """
         Get list of required strip properties.
-        
+
         Returns:
             List containing 'transform' property requirement
         """
-        return ['transform']
+        return ["transform"]

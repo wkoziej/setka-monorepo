@@ -3,14 +3,11 @@ ABOUTME: Tests for Blender VSE keyframe helper module - validates keyframe inser
 ABOUTME: TDD approach - tests written first to define expected keyframe helper behavior.
 """
 
-import sys
-from pathlib import Path
 from unittest.mock import Mock, patch
 
 import pytest
 
 # Path already added in conftest.py
-
 from vse.keyframe_helper import KeyframeHelper
 
 

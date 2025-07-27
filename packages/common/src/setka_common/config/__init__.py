@@ -4,23 +4,23 @@ ABOUTME: Exports configuration classes for use by other packages in the monorepo
 """
 
 from .yaml_config import (
-    BlenderYAMLConfig, 
-    ProjectConfig, 
-    AudioAnalysisConfig, 
-    LayoutConfig, 
+    BlenderYAMLConfig,
+    ProjectConfig,
+    AudioAnalysisConfig,
+    LayoutConfig,
     YAMLConfigLoader,
     AnimationSpec,
-    StripAnimations
+    StripAnimations,
 )
 from .validation import ConfigValidator
 
 __all__ = [
     "BlenderYAMLConfig",
-    "ProjectConfig", 
+    "ProjectConfig",
     "AudioAnalysisConfig",
     "LayoutConfig",
     "YAMLConfigLoader",
     "ConfigValidator",
     "AnimationSpec",
-    "StripAnimations"
+    "StripAnimations",
 ]

@@ -5,14 +5,14 @@
 
 import copy
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, Union
 
 import yaml
-
 from setka_common.config.yaml_config import (
-    BlenderYAMLConfig, ProjectConfig, AudioAnalysisConfig, 
-    LayoutConfig, Resolution, YAMLConfigLoader
+    BlenderYAMLConfig,
+    Resolution,
 )
+
 from .media_discovery import MediaDiscovery
 from .preset_manager import PresetManager
 
@@ -20,19 +20,19 @@ from .preset_manager import PresetManager
 class CinemonConfigGenerator:
     """
     Main generator class for cinemon YAML configurations.
-    
+
     Provides high-level APIs for generating configurations from presets,
     custom parameters, and auto-discovery mechanisms.
-    
+
     Example:
         generator = CinemonConfigGenerator()
-        
+
         # Generate preset configuration
         config_path = generator.generate_preset("./recording", "vintage")
-        
+
         # Generate preset with overrides
         config_path = generator.generate_preset(
-            "./recording", 
+            "./recording",
             "vintage",
             seed=42,
             main_audio="main_audio.m4a"
@@ -43,21 +43,20 @@ class CinemonConfigGenerator:
         """Initialize CinemonConfigGenerator."""
         self.preset_manager = PresetManager()
 
-    def generate_preset(self,
-                       recording_dir: Union[str, Path],
-                       preset_name: str,
-                       **overrides) -> Path:
+    def generate_preset(
+        self, recording_dir: Union[str, Path], preset_name: str, **overrides
+    ) -> Path:
         """
         Generate configuration from preset template.
-        
+
         Args:
             recording_dir: Path to recording directory
             preset_name: Name of preset to use
             **overrides: Parameter overrides (seed, main_audio, etc.)
-            
+
         Returns:
             Path to generated configuration file
-            
+
         Raises:
             FileNotFoundError: If recording directory invalid
             ValueError: If preset not found or validation fails
@@ -89,7 +88,9 @@ class CinemonConfigGenerator:
                     )
 
         # Build configuration from preset
-        config = self._build_config_from_preset(preset_config, main_audio, overrides, discovery)
+        config = self._build_config_from_preset(
+            preset_config, main_audio, overrides, discovery
+        )
 
         # Generate output file path
         output_file = recording_dir / f"animation_config_{preset_name}.yaml"
@@ -99,15 +100,13 @@ class CinemonConfigGenerator:
 
         return output_file
 
-
-
     def discover_media_files(self, recording_dir: Union[str, Path]) -> MediaDiscovery:
         """
         Discover media files in recording directory.
-        
+
         Args:
             recording_dir: Path to recording directory
-            
+
         Returns:
             MediaDiscovery instance with discovered files
         """
@@ -116,30 +115,32 @@ class CinemonConfigGenerator:
     def validate_recording_structure(self, recording_dir: Union[str, Path]):
         """
         Validate recording directory structure.
-        
+
         Args:
             recording_dir: Path to recording directory
-            
+
         Returns:
             ValidationResult with validation status
         """
         discovery = MediaDiscovery(Path(recording_dir))
         return discovery.validate_structure()
 
-    def _build_config_from_preset(self,
-                                 preset_config,
-                                 main_audio: str,
-                                 overrides: Dict[str, Any],
-                                 discovery: 'MediaDiscovery') -> Dict[str, Any]:
+    def _build_config_from_preset(
+        self,
+        preset_config,
+        main_audio: str,
+        overrides: Dict[str, Any],
+        discovery: "MediaDiscovery",
+    ) -> Dict[str, Any]:
         """
         Build configuration from preset template.
-        
+
         Args:
             preset_config: PresetConfig object
             main_audio: Main audio filename
             overrides: Parameter overrides
             discovery: MediaDiscovery instance to use
-            
+
         Returns:
             Complete configuration dictionary
         """
@@ -172,10 +173,10 @@ class CinemonConfigGenerator:
         # Update project settings
         config.project.video_files = video_files
         config.project.main_audio = main_audio
-        
+
         if "fps" in overrides:
             config.project.fps = overrides["fps"]
-        
+
         # Update resolution if provided
         if "width" in overrides or "height" in overrides:
             if not config.project.resolution:
@@ -184,7 +185,7 @@ class CinemonConfigGenerator:
                 config.project.resolution.width = overrides["width"]
             if "height" in overrides:
                 config.project.resolution.height = overrides["height"]
-        
+
         # Update audio analysis settings
         if "beat_division" in overrides:
             config.audio_analysis.beat_division = overrides["beat_division"]
@@ -195,11 +196,10 @@ class CinemonConfigGenerator:
 
         return config
 
-
     def _write_yaml_config(self, config: BlenderYAMLConfig, output_file: Path) -> None:
         """
         Write configuration to YAML file.
-        
+
         Args:
             config: BlenderYAMLConfig object
             output_file: Output file path
@@ -211,23 +211,27 @@ class CinemonConfigGenerator:
                 "main_audio": config.project.main_audio,
                 "fps": config.project.fps,
                 "resolution": {
-                    "width": config.project.resolution.width if config.project.resolution else 1920,
-                    "height": config.project.resolution.height if config.project.resolution else 1080
+                    "width": config.project.resolution.width
+                    if config.project.resolution
+                    else 1920,
+                    "height": config.project.resolution.height
+                    if config.project.resolution
+                    else 1080,
                 },
-                "beat_division": config.project.beat_division
+                "beat_division": config.project.beat_division,
             },
             "audio_analysis": {
                 "file": config.audio_analysis.file,
                 "beat_division": config.audio_analysis.beat_division,
-                "min_onset_interval": config.audio_analysis.min_onset_interval
+                "min_onset_interval": config.audio_analysis.min_onset_interval,
             },
             "layout": {
                 "type": config.layout.type,
-                "config": config.layout.config or {}
+                "config": config.layout.config or {},
             },
-            "strip_animations": config.strip_animations
+            "strip_animations": config.strip_animations,
         }
-        
+
         # Remove None values for cleaner YAML
         if not config.project.main_audio:
             del config_dict["project"]["main_audio"]
@@ -237,17 +241,17 @@ class CinemonConfigGenerator:
             del config_dict["audio_analysis"]["beat_division"]
         if config.audio_analysis.min_onset_interval is None:
             del config_dict["audio_analysis"]["min_onset_interval"]
-        
+
         # Remove empty audio_analysis if all fields are None
         if not any(config_dict["audio_analysis"].values()):
             del config_dict["audio_analysis"]
-            
-        with output_file.open('w', encoding='utf-8') as f:
+
+        with output_file.open("w", encoding="utf-8") as f:
             yaml.dump(
                 config_dict,
                 f,
                 default_flow_style=False,
                 allow_unicode=True,
                 indent=2,
-                sort_keys=False
+                sort_keys=False,
             )

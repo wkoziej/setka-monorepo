@@ -18,7 +18,7 @@ from medusa.exceptions import (
     AuthenticationError,
     ValidationError,
     NetworkError,
-    TemplateError
+    TemplateError,
 )
 
 
@@ -33,7 +33,7 @@ class TestFacebookPublisher:
             "access_token": "valid_access_token",
             "app_id": "app_123456",
             "app_secret": "app_secret_123",
-            "api_version": "v19.0"
+            "api_version": "v19.0",
         }
 
     @pytest.fixture
@@ -49,7 +49,7 @@ class TestFacebookPublisher:
     @pytest.fixture
     def mock_auth(self):
         """Mock FacebookAuth for testing."""
-        with patch('medusa.publishers.facebook.FacebookAuth') as mock_auth:
+        with patch("medusa.publishers.facebook.FacebookAuth") as mock_auth:
             mock_instance = Mock()
             mock_instance.test_connection.return_value = True
             mock_instance.check_permissions.return_value = True
@@ -91,7 +91,9 @@ class TestFacebookPublisher:
         mock_auth.verify_page_access.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_authenticate_connection_failure(self, publisher: FacebookPublisher, mock_auth):
+    async def test_authenticate_connection_failure(
+        self, publisher: FacebookPublisher, mock_auth
+    ):
         """Test authentication failure due to connection issues."""
         mock_auth.test_connection.return_value = False
 
@@ -101,7 +103,9 @@ class TestFacebookPublisher:
         assert "Failed to connect to Facebook API" in str(exc_info.value)
 
     @pytest.mark.asyncio
-    async def test_authenticate_permission_failure(self, publisher: FacebookPublisher, mock_auth):
+    async def test_authenticate_permission_failure(
+        self, publisher: FacebookPublisher, mock_auth
+    ):
         """Test authentication failure due to insufficient permissions."""
         mock_auth.check_permissions.return_value = False
 
@@ -111,7 +115,9 @@ class TestFacebookPublisher:
         assert "Insufficient Facebook permissions" in str(exc_info.value)
 
     @pytest.mark.asyncio
-    async def test_authenticate_page_access_failure(self, publisher: FacebookPublisher, mock_auth):
+    async def test_authenticate_page_access_failure(
+        self, publisher: FacebookPublisher, mock_auth
+    ):
         """Test authentication failure due to page access issues."""
         mock_auth.verify_page_access.return_value = False
 
@@ -156,91 +162,92 @@ class TestFacebookPublisher:
     def test_validate_content_invalid_link(self, publisher: FacebookPublisher):
         """Test content validation with invalid link."""
         content = "Check out this link"
-        metadata = {
-            "type": "link",
-            "link": "not-a-valid-url"
-        }
+        metadata = {"type": "link", "link": "not-a-valid-url"}
 
         with pytest.raises(ValidationError) as exc_info:
             publisher._validate_content(content, metadata)
 
         assert "Invalid URL format" in str(exc_info.value)
 
-    def test_validate_content_scheduled_post_invalid_timestamp_type(self, publisher: FacebookPublisher):
+    def test_validate_content_scheduled_post_invalid_timestamp_type(
+        self, publisher: FacebookPublisher
+    ):
         """Test validation of scheduled post with invalid timestamp type."""
         content = "Scheduled post"
-        metadata = {
-            "scheduled_publish_time": "not-a-number"
-        }
+        metadata = {"scheduled_publish_time": "not-a-number"}
 
         with pytest.raises(ValidationError) as exc_info:
             publisher._validate_content(content, metadata)
 
         assert "must be a positive integer timestamp" in str(exc_info.value)
 
-    def test_validate_content_scheduled_post_negative_timestamp(self, publisher: FacebookPublisher):
+    def test_validate_content_scheduled_post_negative_timestamp(
+        self, publisher: FacebookPublisher
+    ):
         """Test validation of scheduled post with negative timestamp."""
         content = "Scheduled post"
-        metadata = {
-            "scheduled_publish_time": -1
-        }
+        metadata = {"scheduled_publish_time": -1}
 
         with pytest.raises(ValidationError) as exc_info:
             publisher._validate_content(content, metadata)
 
         assert "must be a positive integer timestamp" in str(exc_info.value)
 
-    def test_validate_content_scheduled_post_zero_timestamp(self, publisher: FacebookPublisher):
+    def test_validate_content_scheduled_post_zero_timestamp(
+        self, publisher: FacebookPublisher
+    ):
         """Test validation of scheduled post with zero timestamp."""
         content = "Scheduled post"
-        metadata = {
-            "scheduled_publish_time": 0
-        }
+        metadata = {"scheduled_publish_time": 0}
 
         with pytest.raises(ValidationError) as exc_info:
             publisher._validate_content(content, metadata)
 
         assert "must be a positive integer timestamp" in str(exc_info.value)
 
-    def test_validate_content_scheduled_post_past_timestamp(self, publisher: FacebookPublisher):
+    def test_validate_content_scheduled_post_past_timestamp(
+        self, publisher: FacebookPublisher
+    ):
         """Test validation of scheduled post with past timestamp."""
         content = "Scheduled post"
         past_time = int(datetime.now(timezone.utc).timestamp()) - 3600  # 1 hour ago
-        metadata = {
-            "scheduled_publish_time": past_time
-        }
+        metadata = {"scheduled_publish_time": past_time}
 
         with pytest.raises(ValidationError) as exc_info:
             publisher._validate_content(content, metadata)
 
         assert "must be in the future" in str(exc_info.value)
 
-    def test_validate_content_scheduled_post_current_timestamp(self, publisher: FacebookPublisher):
+    def test_validate_content_scheduled_post_current_timestamp(
+        self, publisher: FacebookPublisher
+    ):
         """Test validation of scheduled post with current timestamp."""
         content = "Scheduled post"
         current_time = int(datetime.now(timezone.utc).timestamp())
-        metadata = {
-            "scheduled_publish_time": current_time
-        }
+        metadata = {"scheduled_publish_time": current_time}
 
         with pytest.raises(ValidationError) as exc_info:
             publisher._validate_content(content, metadata)
 
         assert "must be in the future" in str(exc_info.value)
 
-    def test_validate_content_scheduled_post_valid_future_timestamp(self, publisher: FacebookPublisher):
+    def test_validate_content_scheduled_post_valid_future_timestamp(
+        self, publisher: FacebookPublisher
+    ):
         """Test validation of scheduled post with valid future timestamp."""
         content = "Scheduled post"
-        future_time = int(datetime.now(timezone.utc).timestamp()) + 3600  # 1 hour from now
-        metadata = {
-            "scheduled_publish_time": future_time
-        }
+        future_time = (
+            int(datetime.now(timezone.utc).timestamp()) + 3600
+        )  # 1 hour from now
+        metadata = {"scheduled_publish_time": future_time}
 
         # Should not raise any exception
         publisher._validate_content(content, metadata)
 
     @pytest.mark.asyncio
-    async def test_publish_post_text_success(self, publisher: FacebookPublisher, mock_auth):
+    async def test_publish_post_text_success(
+        self, publisher: FacebookPublisher, mock_auth
+    ):
         """Test successful text post publishing."""
         # Setup
         await publisher.authenticate()
@@ -249,12 +256,11 @@ class TestFacebookPublisher:
         metadata = {"type": "text"}
 
         # Mock API response
-        mock_response = {
-            "id": "123456789_987654321",
-            "post_id": "987654321"
-        }
+        mock_response = {"id": "123456789_987654321", "post_id": "987654321"}
 
-        with patch.object(publisher._auth, '_make_api_request', return_value=mock_response):
+        with patch.object(
+            publisher._auth, "_make_api_request", return_value=mock_response
+        ):
             result = await publisher._publish_post(content, metadata)
 
         # Verify result
@@ -266,7 +272,9 @@ class TestFacebookPublisher:
         assert result.error is None
 
     @pytest.mark.asyncio
-    async def test_publish_post_link_success(self, publisher: FacebookPublisher, mock_auth):
+    async def test_publish_post_link_success(
+        self, publisher: FacebookPublisher, mock_auth
+    ):
         """Test successful link post publishing."""
         # Setup
         await publisher.authenticate()
@@ -276,16 +284,15 @@ class TestFacebookPublisher:
             "type": "link",
             "link": "https://youtube.com/watch?v=abc123",
             "name": "My Video Title",
-            "description": "Video description"
+            "description": "Video description",
         }
 
         # Mock API response
-        mock_response = {
-            "id": "123456789_987654321",
-            "post_id": "987654321"
-        }
+        mock_response = {"id": "123456789_987654321", "post_id": "987654321"}
 
-        with patch.object(publisher._auth, '_make_api_request', return_value=mock_response):
+        with patch.object(
+            publisher._auth, "_make_api_request", return_value=mock_response
+        ):
             result = await publisher._publish_post(content, metadata)
 
         # Verify result
@@ -296,25 +303,25 @@ class TestFacebookPublisher:
         assert result.metadata["link"] == "https://youtube.com/watch?v=abc123"
 
     @pytest.mark.asyncio
-    async def test_publish_post_scheduled_success(self, publisher: FacebookPublisher, mock_auth):
+    async def test_publish_post_scheduled_success(
+        self, publisher: FacebookPublisher, mock_auth
+    ):
         """Test successful scheduled post publishing."""
         # Setup
         await publisher.authenticate()
 
         content = "This is a scheduled post"
-        future_time = int((datetime.now(timezone.utc).timestamp()) + 3600)  # 1 hour from now
-        metadata = {
-            "type": "text",
-            "scheduled_publish_time": future_time
-        }
+        future_time = int(
+            (datetime.now(timezone.utc).timestamp()) + 3600
+        )  # 1 hour from now
+        metadata = {"type": "text", "scheduled_publish_time": future_time}
 
         # Mock API response
-        mock_response = {
-            "id": "123456789_987654321",
-            "post_id": "987654321"
-        }
+        mock_response = {"id": "123456789_987654321", "post_id": "987654321"}
 
-        with patch.object(publisher._auth, '_make_api_request', return_value=mock_response):
+        with patch.object(
+            publisher._auth, "_make_api_request", return_value=mock_response
+        ):
             result = await publisher._publish_post(content, metadata)
 
         # Verify result
@@ -322,7 +329,9 @@ class TestFacebookPublisher:
         assert result.metadata["scheduled_publish_time"] == future_time
 
     @pytest.mark.asyncio
-    async def test_publish_post_progress_callback(self, publisher: FacebookPublisher, mock_auth):
+    async def test_publish_post_progress_callback(
+        self, publisher: FacebookPublisher, mock_auth
+    ):
         """Test progress callback during post publishing."""
         # Setup
         await publisher.authenticate()
@@ -335,12 +344,11 @@ class TestFacebookPublisher:
             progress_calls.append(progress)
 
         # Mock API response
-        mock_response = {
-            "id": "123456789_987654321",
-            "post_id": "987654321"
-        }
+        mock_response = {"id": "123456789_987654321", "post_id": "987654321"}
 
-        with patch.object(publisher._auth, '_make_api_request', return_value=mock_response):
+        with patch.object(
+            publisher._auth, "_make_api_request", return_value=mock_response
+        ):
             await publisher._publish_post(content, metadata, progress_callback)
 
         # Verify progress callbacks
@@ -350,7 +358,9 @@ class TestFacebookPublisher:
         assert progress_calls[-1].status == "completed"
 
     @pytest.mark.asyncio
-    async def test_publish_post_api_error(self, publisher: FacebookPublisher, mock_auth):
+    async def test_publish_post_api_error(
+        self, publisher: FacebookPublisher, mock_auth
+    ):
         """Test post publishing with API error."""
         # Setup
         await publisher.authenticate()
@@ -361,7 +371,7 @@ class TestFacebookPublisher:
         # Mock API error
         api_error = NetworkError("API rate limit exceeded", platform="facebook")
 
-        with patch.object(publisher._auth, '_make_api_request', side_effect=api_error):
+        with patch.object(publisher._auth, "_make_api_request", side_effect=api_error):
             with pytest.raises(PublishError) as exc_info:
                 await publisher._publish_post(content, metadata)
 
@@ -380,32 +390,34 @@ class TestFacebookPublisher:
         assert "Not authenticated" in str(exc_info.value)
 
     @pytest.mark.asyncio
-    async def test_publish_post_template_substitution(self, publisher: FacebookPublisher, mock_auth):
+    async def test_publish_post_template_substitution(
+        self, publisher: FacebookPublisher, mock_auth
+    ):
         """Test post publishing with template variable substitution."""
         # Setup
         await publisher.authenticate()
 
         content = "Check out my video: {youtube_url}"
-        metadata = {
-            "type": "link",
-            "youtube_url": "https://youtube.com/watch?v=abc123"
-        }
+        metadata = {"type": "link", "youtube_url": "https://youtube.com/watch?v=abc123"}
 
         # Mock API response
-        mock_response = {
-            "id": "123456789_987654321",
-            "post_id": "987654321"
-        }
+        mock_response = {"id": "123456789_987654321", "post_id": "987654321"}
 
-        with patch.object(publisher._auth, '_make_api_request', return_value=mock_response) as mock_api:
+        with patch.object(
+            publisher._auth, "_make_api_request", return_value=mock_response
+        ) as mock_api:
             await publisher._publish_post(content, metadata)
 
         # Verify that the API was called with substituted content
         call_args = mock_api.call_args
-        assert "Check out my video: https://youtube.com/watch?v=abc123" in str(call_args)
+        assert "Check out my video: https://youtube.com/watch?v=abc123" in str(
+            call_args
+        )
 
     @pytest.mark.asyncio
-    async def test_publish_post_template_error(self, publisher: FacebookPublisher, mock_auth):
+    async def test_publish_post_template_error(
+        self, publisher: FacebookPublisher, mock_auth
+    ):
         """Test post publishing with template substitution error."""
         # Setup
         await publisher.authenticate()
@@ -436,7 +448,7 @@ class TestFacebookPublisher:
             "type": "link",
             "link": "https://example.com",
             "name": "Example Title",
-            "description": "Example description"
+            "description": "Example description",
         }
 
         post_data = publisher._format_post_data(content, metadata)
@@ -450,10 +462,7 @@ class TestFacebookPublisher:
         """Test formatting post data for scheduled post."""
         content = "Scheduled post"
         future_time = int(datetime.now(timezone.utc).timestamp()) + 3600
-        metadata = {
-            "type": "text",
-            "scheduled_publish_time": future_time
-        }
+        metadata = {"type": "text", "scheduled_publish_time": future_time}
 
         post_data = publisher._format_post_data(content, metadata)
 
@@ -463,10 +472,7 @@ class TestFacebookPublisher:
 
     def test_extract_post_id_from_response(self, publisher: FacebookPublisher):
         """Test extracting post ID from Facebook API response."""
-        response = {
-            "id": "123456789_987654321",
-            "post_id": "987654321"
-        }
+        response = {"id": "123456789_987654321", "post_id": "987654321"}
 
         post_id = publisher._extract_post_id(response)
         assert post_id == "987654321"
@@ -517,7 +523,9 @@ class TestFacebookPublisher:
         result = publisher.health_check()
         assert result is True
 
-    def test_health_check_connection_failure(self, publisher: FacebookPublisher, mock_auth):
+    def test_health_check_connection_failure(
+        self, publisher: FacebookPublisher, mock_auth
+    ):
         """Test health check with connection failure."""
         publisher._auth = mock_auth
         mock_auth.test_connection.return_value = False
@@ -533,7 +541,9 @@ class TestFacebookPublisher:
             assert pub._auth is not None  # Should be authenticated
 
     @pytest.mark.asyncio
-    async def test_context_manager_cleanup_on_exception(self, publisher: FacebookPublisher, mock_auth):
+    async def test_context_manager_cleanup_on_exception(
+        self, publisher: FacebookPublisher, mock_auth
+    ):
         """Test context manager cleanup when exception occurs."""
         cleanup_called = False
 
@@ -569,76 +579,10 @@ class TestFacebookPublisherIntegration:
             "access_token": "EAABwzLixnjYBO1234567890abcdef",
             "app_id": "1234567890123456",
             "app_secret": "abcdef1234567890abcdef1234567890",
-            "api_version": "v19.0"
+            "api_version": "v19.0",
         }
 
     @pytest.fixture
     def platform_config(self, publisher_config: Dict[str, Any]) -> PlatformConfig:
         """Provide PlatformConfig for integration tests."""
         return PlatformConfig(platform_name="facebook", credentials=publisher_config)
-
-    @pytest.mark.asyncio
-    # async def test_complete_workflow_text_post(self, platform_config: PlatformConfig):
-    #     """Test complete workflow for text post publishing."""
-    #     publisher = FacebookPublisher(config=platform_config)
-
-    #     with patch('medusa.publishers.facebook.FacebookAuth') as mock_auth_class:
-    #         # Setup mock auth
-    #         mock_auth = Mock()
-    #         mock_auth.test_connection.return_value = True
-    #         mock_auth.check_permissions.return_value = True
-    #         mock_auth.verify_page_access.return_value = True
-    #         mock_auth._make_api_request.return_value = {
-    #             "id": "123456789_987654321",
-    #             "post_id": "987654321"
-    #         }
-    #         mock_auth_class.return_value = mock_auth
-
-    #         # Test complete workflow
-    #         content = "This is a complete workflow test post!"
-    #         metadata = {"type": "text"}
-
-    #         result = await publisher.publish_post(content, metadata)
-
-    #         assert result.success is True
-    #         assert result.platform == "facebook"
-    #         assert result.post_id == "987654321"
-    #         assert "facebook.com" in result.post_url
-
-    # @pytest.mark.asyncio
-    # async def test_complete_workflow_link_post_with_template(self, platform_config: PlatformConfig):
-    #     """Test complete workflow for link post with template substitution."""
-    #     publisher = FacebookPublisher(config=platform_config)
-
-    #     with patch('medusa.publishers.facebook.FacebookAuth') as mock_auth_class:
-    #         # Setup mock auth
-    #         mock_auth = Mock()
-    #         mock_auth.test_connection.return_value = True
-    #         mock_auth.check_permissions.return_value = True
-    #         mock_auth.verify_page_access.return_value = True
-    #         mock_auth._make_api_request.return_value = {
-    #             "id": "123456789_987654321",
-    #             "post_id": "987654321"
-    #         }
-    #         mock_auth_class.return_value = mock_auth
-
-    #         # Test with template variables
-    #         content = "Check out my new video: {youtube_url} #video #content"
-    #         metadata = {
-    #             "type": "link",
-    #             "youtube_url": "https://youtube.com/watch?v=dQw4w9WgXcQ",
-    #             "link": "https://youtube.com/watch?v=dQw4w9WgXcQ",
-    #             "name": "Amazing Video Title",
-    #             "description": "This is an amazing video you should watch"
-    #         }
-
-    #         result = await publisher.publish_post(content, metadata)
-
-    #         assert result.success is True
-    #         assert result.metadata["link"] == "https://youtube.com/watch?v=dQw4w9WgXcQ"
-
-    #         # Verify API was called with substituted content
-    #         api_calls = mock_auth._make_api_request.call_args_list
-    #         assert len(api_calls) == 1
-    #         call_data = api_calls[0][1]["data"]  # Get the data parameter
-    #         assert "https://youtube.com/watch?v=dQw4w9WgXcQ" in call_data["message"]

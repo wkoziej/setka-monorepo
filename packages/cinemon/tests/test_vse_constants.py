@@ -143,6 +143,8 @@ class TestConstantsIntegration:
         assert scaled_energy == 120.0
 
         # Test margin calculation (percentage-based)
-        margin_pixels = BlenderConstants.DEFAULT_RESOLUTION_X * AnimationConstants.PIP_MARGIN
+        margin_pixels = (
+            BlenderConstants.DEFAULT_RESOLUTION_X * AnimationConstants.PIP_MARGIN
+        )
         corner_x = BlenderConstants.DEFAULT_RESOLUTION_X // 2 - margin_pixels
         assert corner_x == 576.0  # 640 - (1280 * 0.05) = 640 - 64 = 576

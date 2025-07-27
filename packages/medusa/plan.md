@@ -7,7 +7,7 @@ This document provides a step-by-step TDD implementation plan for the Medusa lib
 
 ### Architecture Layers
 1. **Configuration Layer**: JSON config loading and validation
-2. **Task Management Layer**: In-memory task tracking with states  
+2. **Task Management Layer**: In-memory task tracking with states
 3. **Platform Abstraction Layer**: Base classes for uploaders/publishers
 4. **Platform Implementation Layer**: YouTube and Facebook integrations
 5. **Core Orchestration Layer**: MedusaCore coordinating everything

@@ -11,26 +11,28 @@ from .base_effect_animation import BaseEffectAnimation
 class VintageColorGradeAnimation(BaseEffectAnimation):
     """
     Animation that applies vintage color grading to strips.
-    
+
     Refactored from VintageFilmEffects.apply_vintage_color_grade.
-    
+
     This is a one-time effect that applies vintage sepia tint and contrast
     adjustments to the entire strip.
-    
+
     Attributes:
         trigger: Event type (ignored for one-time effect)
         sepia_amount: Sepia tint intensity (0.0 to 1.0)
         contrast_boost: Contrast boost amount (0.0 to 1.0)
     """
 
-    def __init__(self,
-                 trigger: str = "one_time",
-                 sepia_amount: float = 0.3,
-                 contrast_boost: float = 0.2,
-                 target_strips: Optional[List[str]] = None):
+    def __init__(
+        self,
+        trigger: str = "one_time",
+        sepia_amount: float = 0.3,
+        contrast_boost: float = 0.2,
+        target_strips: Optional[List[str]] = None,
+    ):
         """
         Initialize VintageColorGradeAnimation.
-        
+
         Args:
             trigger: Event type (ignored for one-time effect)
             sepia_amount: Sepia tint intensity (0.0 to 1.0)
@@ -45,13 +47,13 @@ class VintageColorGradeAnimation(BaseEffectAnimation):
     def apply_to_strip(self, strip, events: List[float], fps: int, **kwargs) -> bool:
         """
         Apply vintage color grading to strip.
-        
+
         Args:
             strip: Blender video strip object
             events: List of event times (ignored for one-time effect)
             fps: Frames per second
             **kwargs: Additional parameters (unused)
-            
+
         Returns:
             True if animation was applied successfully
         """
@@ -95,8 +97,8 @@ class VintageColorGradeAnimation(BaseEffectAnimation):
     def get_required_properties(self) -> List[str]:
         """
         Get list of required strip properties.
-        
+
         Returns:
             List containing 'modifiers' property requirement
         """
-        return ['modifiers']
+        return ["modifiers"]

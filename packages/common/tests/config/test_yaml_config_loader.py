@@ -50,14 +50,14 @@ strip_animations:
       intensity: 5.0
       return_frames: 2
 """
-        
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False) as f:
+
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
             f.write(yaml_content)
             f.flush()
-            
+
             loader = YAMLConfigLoader()
             config = loader.load_config(Path(f.name))
-            
+
             assert isinstance(config, BlenderYAMLConfig)
             assert config.project.video_files == ["camera1.mp4", "camera2.mp4"]
             assert config.project.main_audio == "main_audio.m4a"
@@ -65,26 +65,26 @@ strip_animations:
             assert config.project.resolution.width == 1920
             assert config.project.resolution.height == 1080
             assert config.project.beat_division == 8
-            
+
             assert config.audio_analysis.file == "analysis/audio_analysis.json"
             assert config.audio_analysis.data is None
-            
+
             assert config.layout.type == "random"
             assert config.layout.config["overlap_allowed"] is False
             assert config.layout.config["seed"] == 42
             assert config.layout.config["margin"] == 0.05
-            
+
             assert len(config.strip_animations) == 2
             assert config.strip_animations["camera1"][0]["type"] == "scale"
             assert config.strip_animations["camera1"][0]["trigger"] == "bass"
             assert config.strip_animations["camera1"][0]["intensity"] == 0.3
             assert config.strip_animations["camera1"][0]["duration_frames"] == 2
-            
+
             assert config.strip_animations["camera2"][0]["type"] == "shake"
             assert config.strip_animations["camera2"][0]["trigger"] == "beat"
             assert config.strip_animations["camera2"][0]["intensity"] == 5.0
             assert config.strip_animations["camera2"][0]["return_frames"] == 2
-            
+
             # Cleanup
             Path(f.name).unlink()
 
@@ -101,35 +101,35 @@ layout:
 
 strip_animations: {}
 """
-        
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False) as f:
+
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
             f.write(yaml_content)
             f.flush()
-            
+
             loader = YAMLConfigLoader()
             config = loader.load_config(Path(f.name))
-            
+
             assert isinstance(config, BlenderYAMLConfig)
             assert config.project.video_files == ["test.mp4"]
             assert config.project.main_audio is None
             assert config.project.fps == 30  # default
             assert config.project.beat_division == 8  # default
-            
+
             assert config.audio_analysis.file is None
             assert config.audio_analysis.data is None
-            
+
             assert config.layout.type == "random"
             assert config.layout.config is None
-            
+
             assert len(config.strip_animations) == 0
-            
+
             # Cleanup
             Path(f.name).unlink()
 
     def test_load_config_file_not_found(self):
         """Test loading config from non-existent file."""
         loader = YAMLConfigLoader()
-        
+
         with pytest.raises(FileNotFoundError):
             loader.load_config(Path("nonexistent.yaml"))
 
@@ -140,16 +140,16 @@ project:
   video_files: [test.mp4
   # Invalid YAML - missing closing bracket
 """
-        
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False) as f:
+
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
             f.write(yaml_content)
             f.flush()
-            
+
             loader = YAMLConfigLoader()
-            
+
             with pytest.raises(Exception):  # Should raise YAML parsing error
                 loader.load_config(Path(f.name))
-            
+
             # Cleanup
             Path(f.name).unlink()
 
@@ -161,16 +161,16 @@ audio_analysis: {}
 layout: {}
 strip_animations: {}
 """
-        
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False) as f:
+
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
             f.write(yaml_content)
             f.flush()
-            
+
             loader = YAMLConfigLoader()
-            
+
             with pytest.raises(Exception):  # Should raise validation error
                 loader.load_config(Path(f.name))
-            
+
             # Cleanup
             Path(f.name).unlink()
 
@@ -179,22 +179,18 @@ strip_animations: {}
         project = ProjectConfig(video_files=["test.mp4"])
         audio_analysis = AudioAnalysisConfig(file="analysis.json")
         layout = LayoutConfig(type="random")
-        strip_animations = {
-            "test": [
-                {"type": "scale", "trigger": "bass"}
-            ]
-        }
-        
+        strip_animations = {"test": [{"type": "scale", "trigger": "bass"}]}
+
         config = BlenderYAMLConfig(
             project=project,
             audio_analysis=audio_analysis,
             layout=layout,
-            strip_animations=strip_animations
+            strip_animations=strip_animations,
         )
-        
+
         loader = YAMLConfigLoader()
         is_valid, errors = loader.validate_config(config)
-        
+
         assert is_valid is True
         assert len(errors) == 0
 
@@ -204,17 +200,17 @@ strip_animations: {}
         audio_analysis = AudioAnalysisConfig()
         layout = LayoutConfig()
         strip_animations = {}
-        
+
         config = BlenderYAMLConfig(
             project=project,
             audio_analysis=audio_analysis,
             layout=layout,
-            strip_animations=strip_animations
+            strip_animations=strip_animations,
         )
-        
+
         loader = YAMLConfigLoader()
         is_valid, errors = loader.validate_config(config)
-        
+
         assert is_valid is False
         assert len(errors) > 0
         assert any("video file" in error.lower() for error in errors)
@@ -225,17 +221,17 @@ strip_animations: {}
         audio_analysis = AudioAnalysisConfig()
         layout = LayoutConfig()
         strip_animations = {}
-        
+
         config = BlenderYAMLConfig(
             project=project,
             audio_analysis=audio_analysis,
             layout=layout,
-            strip_animations=strip_animations
+            strip_animations=strip_animations,
         )
-        
+
         loader = YAMLConfigLoader()
         is_valid, errors = loader.validate_config(config)
-        
+
         assert is_valid is False
         assert len(errors) > 0
         assert any("fps" in error.lower() for error in errors)
@@ -243,23 +239,22 @@ strip_animations: {}
     def test_validate_config_invalid_resolution(self):
         """Test validating config with invalid resolution."""
         project = ProjectConfig(
-            video_files=["test.mp4"],
-            resolution={"width": 0, "height": 1080}
+            video_files=["test.mp4"], resolution={"width": 0, "height": 1080}
         )
         audio_analysis = AudioAnalysisConfig()
         layout = LayoutConfig()
         strip_animations = {}
-        
+
         config = BlenderYAMLConfig(
             project=project,
             audio_analysis=audio_analysis,
             layout=layout,
-            strip_animations=strip_animations
+            strip_animations=strip_animations,
         )
-        
+
         loader = YAMLConfigLoader()
         is_valid, errors = loader.validate_config(config)
-        
+
         assert is_valid is False
         assert len(errors) > 0
         assert any("resolution" in error.lower() for error in errors)
@@ -269,23 +264,18 @@ strip_animations: {}
         project = ProjectConfig(video_files=["test.mp4"])
         audio_analysis = AudioAnalysisConfig()
         layout = LayoutConfig()
-        strip_animations = {
-            "test": [
-                {"type": "invalid_type", "trigger": "bass"}
-            ]
-        }
-        
+        strip_animations = {"test": [{"type": "invalid_type", "trigger": "bass"}]}
+
         config = BlenderYAMLConfig(
             project=project,
             audio_analysis=audio_analysis,
             layout=layout,
-            strip_animations=strip_animations
+            strip_animations=strip_animations,
         )
-        
+
         loader = YAMLConfigLoader()
         is_valid, errors = loader.validate_config(config)
-        
+
         assert is_valid is False
         assert len(errors) > 0
         assert any("animation" in error.lower() for error in errors)
-

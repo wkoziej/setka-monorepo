@@ -12,12 +12,12 @@ from .base_effect_animation import BaseEffectAnimation
 class JitterAnimation(BaseEffectAnimation):
     """
     Animation that creates continuous film jitter effect on strips.
-    
+
     Refactored from VintageFilmEffects.apply_film_jitter with enhanced options.
-    
+
     This animation doesn't use events but applies continuous jitter throughout
     the strip duration, simulating old film projection irregularities.
-    
+
     Attributes:
         trigger: Event type (ignored for continuous effect)
         intensity: Jitter intensity in pixels
@@ -25,15 +25,17 @@ class JitterAnimation(BaseEffectAnimation):
         max_interval: Maximum frames between jitter changes
     """
 
-    def __init__(self,
-                 trigger: str = "continuous",
-                 intensity: float = 2.0,
-                 min_interval: int = 3,
-                 max_interval: int = 8,
-                 target_strips: Optional[List[str]] = None):
+    def __init__(
+        self,
+        trigger: str = "continuous",
+        intensity: float = 2.0,
+        min_interval: int = 3,
+        max_interval: int = 8,
+        target_strips: Optional[List[str]] = None,
+    ):
         """
         Initialize JitterAnimation.
-        
+
         Args:
             trigger: Event type (ignored for continuous effect)
             intensity: Maximum jitter offset in pixels
@@ -50,21 +52,21 @@ class JitterAnimation(BaseEffectAnimation):
     def apply_to_strip(self, strip, events: List[float], fps: int, **kwargs) -> bool:
         """
         Apply continuous jitter animation to strip.
-        
+
         Args:
             strip: Blender video strip object
             events: List of event times (ignored for continuous effect)
             fps: Frames per second
             **kwargs: Additional parameters, expects 'duration_frames'
-            
+
         Returns:
             True if animation was applied successfully
         """
-        if not hasattr(strip, 'transform'):
+        if not hasattr(strip, "transform"):
             return False
 
         # Get duration from kwargs or calculate from strip
-        duration_frames = kwargs.get('duration_frames')
+        duration_frames = kwargs.get("duration_frames")
         if duration_frames is None:
             # Calculate duration from strip length
             duration_frames = int(strip.frame_final_duration)
@@ -95,8 +97,8 @@ class JitterAnimation(BaseEffectAnimation):
     def get_required_properties(self) -> List[str]:
         """
         Get list of required strip properties.
-        
+
         Returns:
             List containing 'transform' property requirement
         """
-        return ['transform']
+        return ["transform"]

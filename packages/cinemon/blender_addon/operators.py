@@ -25,8 +25,9 @@ except ImportError:
     def StringProperty(**kwargs):
         """Mock StringProperty for testing."""
         # Return actual value for testing
-        default = kwargs.get('default', '')
+        default = kwargs.get("default", "")
         return default
+
 
 # Import setka-common configuration system
 try:
@@ -44,9 +45,11 @@ try:
 
     class ValidationError(Exception):
         """Validation error for compatibility."""
+
         pass
 except ImportError as e:
     print(f"Warning: setka-common not available in operators.py: {e}")
+
     # Fallback for testing
     class YAMLConfigLoader:
         def load_config(self, path):
@@ -54,6 +57,7 @@ except ImportError as e:
 
     class ValidationError(Exception):
         pass
+
 
 # Import vse_script for applying configurations
 blender_path = Path(__file__).parent.parent / "src" / "blender"
@@ -67,6 +71,7 @@ except ImportError:
     class BlenderVSEConfigurator:
         def __init__(self, config_data=None):
             self.config_data = config_data
+
         def setup_vse_project(self):
             return True
 
@@ -77,7 +82,7 @@ class LoadConfigOperator(Operator, ImportHelper):
     bl_idname = "cinemon.load_config"
     bl_label = "Load Cinemon Config"
     bl_description = "Load YAML configuration for VSE animation setup"
-    bl_options = {'REGISTER', 'UNDO'}
+    bl_options = {"REGISTER", "UNDO"}
 
     # File browser properties
     filename_ext = ".yaml"
@@ -86,7 +91,7 @@ class LoadConfigOperator(Operator, ImportHelper):
     try:
         filter_glob: StringProperty(
             default="*.yaml;*.yml",
-            options={'HIDDEN'},
+            options={"HIDDEN"},
             maxlen=255,
         )
 
@@ -94,7 +99,7 @@ class LoadConfigOperator(Operator, ImportHelper):
             name="File Path",
             description="Path to YAML configuration file",
             maxlen=1024,
-            subtype='FILE_PATH'
+            subtype="FILE_PATH",
         )
     except NameError:
         # For testing without bpy
@@ -114,21 +119,23 @@ class LoadConfigOperator(Operator, ImportHelper):
             # Store filepath for reference
             context.scene.cinemon_config_path = self.filepath
 
-            self.report({'INFO'}, f"Loaded configuration from {Path(self.filepath).name}")
-            return {'FINISHED'}
+            self.report(
+                {"INFO"}, f"Loaded configuration from {Path(self.filepath).name}"
+            )
+            return {"FINISHED"}
 
         except ValidationError as e:
-            self.report({'ERROR'}, f"Configuration validation error: {e}")
-            return {'CANCELLED'}
+            self.report({"ERROR"}, f"Configuration validation error: {e}")
+            return {"CANCELLED"}
 
         except Exception as e:
-            self.report({'ERROR'}, f"Failed to load configuration: {e}")
-            return {'CANCELLED'}
+            self.report({"ERROR"}, f"Failed to load configuration: {e}")
+            return {"CANCELLED"}
 
     def invoke(self, context, event):
         """Open file browser for config selection."""
         context.window_manager.fileselect_add(self)
-        return {'RUNNING_MODAL'}
+        return {"RUNNING_MODAL"}
 
 
 class ApplyConfigOperator(Operator):
@@ -137,14 +144,14 @@ class ApplyConfigOperator(Operator):
     bl_idname = "cinemon.apply_config"
     bl_label = "Apply Cinemon Config"
     bl_description = "Apply loaded configuration to create animated VSE project"
-    bl_options = {'REGISTER', 'UNDO'}
+    bl_options = {"REGISTER", "UNDO"}
 
     def execute(self, context):
         """Apply loaded configuration to VSE."""
         # Check if configuration is loaded
-        if not hasattr(context.scene, 'cinemon_config'):
-            self.report({'ERROR'}, "No config loaded. Use 'Load Cinemon Config' first.")
-            return {'CANCELLED'}
+        if not hasattr(context.scene, "cinemon_config"):
+            self.report({"ERROR"}, "No config loaded. Use 'Load Cinemon Config' first.")
+            return {"CANCELLED"}
 
         try:
             config = context.scene.cinemon_config
@@ -155,7 +162,6 @@ class ApplyConfigOperator(Operator):
 
             # Create temporary file path for vse_script compatibility
             # In real usage, this would be handled differently
-            temp_config_path = "/tmp/cinemon_temp_config.yaml"
 
             # Create configurator with direct config data
             configurator = BlenderVSEConfiguratorDirect(internal_config)
@@ -164,16 +170,21 @@ class ApplyConfigOperator(Operator):
             success = configurator.setup_vse_project()
 
             if success:
-                config_name = getattr(context.scene, 'cinemon_config_path', 'loaded config')
-                self.report({'INFO'}, f"VSE project created successfully from {Path(config_name).name}")
-                return {'FINISHED'}
+                config_name = getattr(
+                    context.scene, "cinemon_config_path", "loaded config"
+                )
+                self.report(
+                    {"INFO"},
+                    f"VSE project created successfully from {Path(config_name).name}",
+                )
+                return {"FINISHED"}
             else:
-                self.report({'ERROR'}, "Failed to setup VSE project")
-                return {'CANCELLED'}
+                self.report({"ERROR"}, "Failed to setup VSE project")
+                return {"CANCELLED"}
 
         except Exception as e:
-            self.report({'ERROR'}, f"Error applying configuration: {e}")
-            return {'CANCELLED'}
+            self.report({"ERROR"}, f"Error applying configuration: {e}")
+            return {"CANCELLED"}
 
 
 class BlenderVSEConfiguratorDirect(BlenderVSEConfigurator):
@@ -185,16 +196,22 @@ class BlenderVSEConfiguratorDirect(BlenderVSEConfigurator):
         self.config_data = config_data
 
         # Set attributes from config (maintaining compatibility)
-        project = self.config_data['project']
-        self.video_files = [Path(f) for f in project['video_files']]
-        self.main_audio = Path(project['main_audio']) if project.get('main_audio') else None
-        self.output_blend = Path(project['output_blend']) if project.get('output_blend') else None
-        self.render_output = Path(project['render_output']) if project.get('render_output') else None
-        self.fps = project.get('fps', 30)
-        resolution = project.get('resolution', {})
-        self.resolution_x = resolution.get('width', 1920)
-        self.resolution_y = resolution.get('height', 1080)
-        self.beat_division = project.get('beat_division', 8)
+        project = self.config_data["project"]
+        self.video_files = [Path(f) for f in project["video_files"]]
+        self.main_audio = (
+            Path(project["main_audio"]) if project.get("main_audio") else None
+        )
+        self.output_blend = (
+            Path(project["output_blend"]) if project.get("output_blend") else None
+        )
+        self.render_output = (
+            Path(project["render_output"]) if project.get("render_output") else None
+        )
+        self.fps = project.get("fps", 30)
+        resolution = project.get("resolution", {})
+        self.resolution_x = resolution.get("width", 1920)
+        self.resolution_y = resolution.get("height", 1080)
+        self.beat_division = project.get("beat_division", 8)
 
         # Animation mode is always compositional
         self.animation_mode = "compositional"
@@ -202,15 +219,18 @@ class BlenderVSEConfiguratorDirect(BlenderVSEConfigurator):
         # Initialize project setup with config (if we have BlenderProjectSetup available)
         try:
             from vse.project_setup import BlenderProjectSetup
-            self.project_setup = BlenderProjectSetup({
-                "fps": self.fps,
-                "resolution_x": self.resolution_x,
-                "resolution_y": self.resolution_y,
-                "video_files": self.video_files,
-                "main_audio": self.main_audio,
-                "output_blend": self.output_blend,
-                "render_output": self.render_output,
-            })
+
+            self.project_setup = BlenderProjectSetup(
+                {
+                    "fps": self.fps,
+                    "resolution_x": self.resolution_x,
+                    "resolution_y": self.resolution_y,
+                    "video_files": self.video_files,
+                    "main_audio": self.main_audio,
+                    "output_blend": self.output_blend,
+                    "render_output": self.render_output,
+                }
+            )
         except ImportError:
             # For testing
             self.project_setup = None
