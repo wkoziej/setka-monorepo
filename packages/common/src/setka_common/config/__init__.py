@@ -3,7 +3,15 @@ ABOUTME: Configuration module for setka-common - provides YAML configuration cla
 ABOUTME: Exports configuration classes for use by other packages in the monorepo.
 """
 
-from .yaml_config import BlenderYAMLConfig, ProjectConfig, AudioAnalysisConfig, LayoutConfig, AnimationSpec, YAMLConfigLoader
+from .yaml_config import (
+    BlenderYAMLConfig, 
+    ProjectConfig, 
+    AudioAnalysisConfig, 
+    LayoutConfig, 
+    YAMLConfigLoader,
+    AnimationSpec,
+    StripAnimations
+)
 from .validation import ConfigValidator
 
 __all__ = [
@@ -11,7 +19,8 @@ __all__ = [
     "ProjectConfig", 
     "AudioAnalysisConfig",
     "LayoutConfig",
-    "AnimationSpec",
     "YAMLConfigLoader",
-    "ConfigValidator"
+    "ConfigValidator",
+    "AnimationSpec",
+    "StripAnimations"
 ]

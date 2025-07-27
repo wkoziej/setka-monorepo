@@ -122,10 +122,8 @@ def list_presets_command() -> int:
         print()
 
         for preset_name in presets:
-            preset_config = preset_manager.get_preset(preset_name)
-            print(f"  {preset_name}")
-            print(f"    {preset_config.description}")
-            print()
+            # Just print the preset name - BlenderYAMLConfig doesn't have description
+            print(f"  - {preset_name}")
 
         return 0
 

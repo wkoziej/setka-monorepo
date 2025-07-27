@@ -6,7 +6,7 @@
 
 import pytest
 
-from blender.config.media_discovery import MediaDiscovery
+from cinemon.config.media_discovery import MediaDiscovery
 
 
 class TestMediaDiscovery:

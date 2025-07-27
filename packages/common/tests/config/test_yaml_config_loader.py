@@ -10,7 +10,6 @@ from setka_common.config.yaml_config import (
     ProjectConfig,
     AudioAnalysisConfig,
     LayoutConfig,
-    AnimationSpec,
 )
 
 
@@ -39,17 +38,17 @@ layout:
     seed: 42
     margin: 0.05
 
-animations:
-  - type: scale
-    trigger: bass
-    target_strips: [camera1]
-    intensity: 0.3
-    duration_frames: 2
-  - type: shake
-    trigger: beat
-    target_strips: [camera2]
-    intensity: 5.0
-    return_frames: 2
+strip_animations:
+  camera1:
+    - type: scale
+      trigger: bass
+      intensity: 0.3
+      duration_frames: 2
+  camera2:
+    - type: shake
+      trigger: beat
+      intensity: 5.0
+      return_frames: 2
 """
         
         with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False) as f:
@@ -75,18 +74,16 @@ animations:
             assert config.layout.config["seed"] == 42
             assert config.layout.config["margin"] == 0.05
             
-            assert len(config.animations) == 2
-            assert config.animations[0].type == "scale"
-            assert config.animations[0].trigger == "bass"
-            assert config.animations[0].target_strips == ["camera1"]
-            assert config.animations[0].intensity == 0.3
-            assert config.animations[0].duration_frames == 2
+            assert len(config.strip_animations) == 2
+            assert config.strip_animations["camera1"][0]["type"] == "scale"
+            assert config.strip_animations["camera1"][0]["trigger"] == "bass"
+            assert config.strip_animations["camera1"][0]["intensity"] == 0.3
+            assert config.strip_animations["camera1"][0]["duration_frames"] == 2
             
-            assert config.animations[1].type == "shake"
-            assert config.animations[1].trigger == "beat"
-            assert config.animations[1].target_strips == ["camera2"]
-            assert config.animations[1].intensity == 5.0
-            assert config.animations[1].return_frames == 2
+            assert config.strip_animations["camera2"][0]["type"] == "shake"
+            assert config.strip_animations["camera2"][0]["trigger"] == "beat"
+            assert config.strip_animations["camera2"][0]["intensity"] == 5.0
+            assert config.strip_animations["camera2"][0]["return_frames"] == 2
             
             # Cleanup
             Path(f.name).unlink()
@@ -102,7 +99,7 @@ audio_analysis: {}
 layout:
   type: random
 
-animations: []
+strip_animations: {}
 """
         
         with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False) as f:
@@ -124,7 +121,7 @@ animations: []
             assert config.layout.type == "random"
             assert config.layout.config is None
             
-            assert len(config.animations) == 0
+            assert len(config.strip_animations) == 0
             
             # Cleanup
             Path(f.name).unlink()
@@ -162,7 +159,7 @@ project:
 project: {}
 audio_analysis: {}
 layout: {}
-animations: []
+strip_animations: {}
 """
         
         with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False) as f:
@@ -182,15 +179,17 @@ animations: []
         project = ProjectConfig(video_files=["test.mp4"])
         audio_analysis = AudioAnalysisConfig(file="analysis.json")
         layout = LayoutConfig(type="random")
-        animations = [
-            AnimationSpec(type="scale", trigger="bass", target_strips=["test"])
-        ]
+        strip_animations = {
+            "test": [
+                {"type": "scale", "trigger": "bass"}
+            ]
+        }
         
         config = BlenderYAMLConfig(
             project=project,
             audio_analysis=audio_analysis,
             layout=layout,
-            animations=animations
+            strip_animations=strip_animations
         )
         
         loader = YAMLConfigLoader()
@@ -204,13 +203,13 @@ animations: []
         project = ProjectConfig(video_files=[])
         audio_analysis = AudioAnalysisConfig()
         layout = LayoutConfig()
-        animations = []
+        strip_animations = {}
         
         config = BlenderYAMLConfig(
             project=project,
             audio_analysis=audio_analysis,
             layout=layout,
-            animations=animations
+            strip_animations=strip_animations
         )
         
         loader = YAMLConfigLoader()
@@ -225,13 +224,13 @@ animations: []
         project = ProjectConfig(video_files=["test.mp4"], fps=0)
         audio_analysis = AudioAnalysisConfig()
         layout = LayoutConfig()
-        animations = []
+        strip_animations = {}
         
         config = BlenderYAMLConfig(
             project=project,
             audio_analysis=audio_analysis,
             layout=layout,
-            animations=animations
+            strip_animations=strip_animations
         )
         
         loader = YAMLConfigLoader()
@@ -249,13 +248,13 @@ animations: []
         )
         audio_analysis = AudioAnalysisConfig()
         layout = LayoutConfig()
-        animations = []
+        strip_animations = {}
         
         config = BlenderYAMLConfig(
             project=project,
             audio_analysis=audio_analysis,
             layout=layout,
-            animations=animations
+            strip_animations=strip_animations
         )
         
         loader = YAMLConfigLoader()
@@ -270,15 +269,17 @@ animations: []
         project = ProjectConfig(video_files=["test.mp4"])
         audio_analysis = AudioAnalysisConfig()
         layout = LayoutConfig()
-        animations = [
-            AnimationSpec(type="invalid_type", trigger="bass", target_strips=["test"])
-        ]
+        strip_animations = {
+            "test": [
+                {"type": "invalid_type", "trigger": "bass"}
+            ]
+        }
         
         config = BlenderYAMLConfig(
             project=project,
             audio_analysis=audio_analysis,
             layout=layout,
-            animations=animations
+            strip_animations=strip_animations
         )
         
         loader = YAMLConfigLoader()

@@ -61,6 +61,11 @@ vendor_path = Path(__file__).parent / "vendor"
 if str(vendor_path) not in sys.path:
     sys.path.insert(0, str(vendor_path))
 
+# Add vse path for vse modules
+vse_path = Path(__file__).parent / "vse"
+if str(vse_path) not in sys.path:
+    sys.path.insert(0, str(vse_path))
+
 
 class CINEMON_PT_main_panel(Panel):
     """Main panel for Cinemon addon in VSE."""
@@ -166,7 +171,8 @@ class CINEMON_OT_load_preset(bpy.types.Operator):
                 return {'CANCELLED'}
 
             # Load preset without validation (presets have empty video_files)
-            import yaml
+            # Use vendored yaml from addon
+            import vendor.yaml as yaml
             with open(preset_path, 'r', encoding='utf-8') as f:
                 config_data = yaml.safe_load(f)
 
@@ -226,7 +232,7 @@ def register():
     operators.register()
 
     # Register main UI classes first
-    try:
+    if 'bpy' in globals() and hasattr(bpy, 'utils'):
         for cls in classes:
             bpy.utils.register_class(cls)
 
@@ -243,22 +249,18 @@ def register():
             default=""
         )
 
-    except (NameError, AttributeError):
-        # bpy not available in test environment
-        pass
+        print("Cinemon VSE Animator addon registered successfully")
 
     # Register layout UI after main panels
     layout_ui.register()
 
-    try:
-        print("Cinemon VSE Animator addon registered successfully")
-    except (NameError, AttributeError):
-        pass
-
 
 def unregister():
     """Unregister addon classes and operators."""
-    try:
+    # Unregister layout UI
+    layout_ui.unregister()
+
+    if 'bpy' in globals() and hasattr(bpy, 'utils'):
         # Unregister UI classes
         for cls in reversed(classes):
             bpy.utils.unregister_class(cls)
@@ -270,12 +272,6 @@ def unregister():
             delattr(bpy.types.Scene, 'cinemon_config_path')
 
         print("Cinemon VSE Animator addon unregistered")
-    except (NameError, AttributeError):
-        # bpy not available in test environment
-        pass
-
-    # Unregister layout UI
-    layout_ui.unregister()
 
     # Unregister operators
     operators.unregister()

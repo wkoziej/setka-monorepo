@@ -34,7 +34,7 @@ class BlenderProjectManager:
             blender_executable: Path or command to Blender executable
         """
         self.blender_executable = blender_executable
-        self.script_path = Path(__file__).parent / "vse_script.py"
+        self.script_path = Path(__file__).parent.parent.parent / "blender_addon" / "vse_script.py"
 
 
     def create_vse_project_with_config(
@@ -80,22 +80,27 @@ class BlenderProjectManager:
             import yaml
             temp_config_file = tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False, encoding='utf-8')
 
-            # Convert to internal format for vse_script.py compatibility
-            loader = YAMLConfigLoader()
-            internal_config = loader.convert_to_internal(resolved_config)
+            # Convert config to dict for YAML serialization
+            config_dict = {
+                'project': resolved_config.project.__dict__,
+                'audio_analysis': resolved_config.audio_analysis.__dict__,
+                'layout': resolved_config.layout.__dict__,
+                'strip_animations': resolved_config.strip_animations
+            }
 
-            yaml.dump(internal_config, temp_config_file, indent=2, allow_unicode=True, default_flow_style=False)
+            yaml.dump(config_dict, temp_config_file, indent=2, allow_unicode=True, default_flow_style=False)
             temp_config_file.close()
 
             logger.info(f"Created temporary config file: {temp_config_file.name}")
             logger.info(f"Video files: {resolved_config.project.video_files}")
             if resolved_config.project.main_audio:
                 logger.info(f"Main audio: {resolved_config.project.main_audio}")
-            logger.info(f"Animation mode: compositional with {len(resolved_config.animations)} animations")
+            animation_count = sum(len(anims) for anims in resolved_config.strip_animations.values())
+            logger.info(f"Animation mode: compositional with {animation_count} animations")
 
-            # 5. Execute Blender with JSON config path
+            # 5. Execute Blender with config path
             output_blend = resolved_config.project.output_blend
-            self._execute_blender_with_json_config(temp_config_file.name)
+            self._execute_blender_with_config(temp_config_file.name)
 
             logger.info(f"Blender project created successfully with YAML config: {output_blend}")
             return Path(output_blend)
@@ -115,12 +120,12 @@ class BlenderProjectManager:
 
 
 
-    def _execute_blender_with_json_config(self, config_path: str) -> None:
+    def _execute_blender_with_config(self, config_path: str) -> None:
         """
-        Execute Blender with the parametric script and JSON config file path.
+        Execute Blender with the parametric script and configuration file path.
 
         Args:
-            config_path: Path to the JSON configuration file
+            config_path: Path to the configuration file (YAML or JSON)
 
         Raises:
             RuntimeError: If Blender execution fails
@@ -339,6 +344,6 @@ class BlenderProjectManager:
             project=resolved_project,
             audio_analysis=resolved_audio_analysis,
             layout=resolved_layout,
-            animations=yaml_config.animations
+            strip_animations=yaml_config.strip_animations
         )
 

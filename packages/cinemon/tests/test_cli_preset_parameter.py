@@ -9,7 +9,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from blender.cli.blend_setup import main, parse_args
+from cinemon.cli.blend_setup import main, parse_args
 
 
 class TestCLIPresetParameter:
@@ -73,9 +73,9 @@ class TestCLIPresetParameter:
         assert args.force is True
         assert args.main_audio == "custom_audio.m4a"
 
-    @patch("blender.cli.blend_setup.BlenderProjectManager")
-    @patch("blender.cli.blend_setup.CinemonConfigGenerator")
-    @patch("blender.cli.blend_setup.load_yaml_config")
+    @patch("cinemon.cli.blend_setup.BlenderProjectManager")
+    @patch("cinemon.cli.blend_setup.CinemonConfigGenerator")
+    @patch("cinemon.cli.blend_setup.load_yaml_config")
     def test_main_with_preset_generates_config(self, mock_load_yaml, mock_generator_class, mock_manager_class):
         """Test that main() with --preset generates config via CinemonConfigGenerator."""
         test_args = ["recording_dir", "--preset", "vintage"]
@@ -109,9 +109,9 @@ class TestCLIPresetParameter:
             mock_yaml_config
         )
 
-    @patch("blender.cli.blend_setup.BlenderProjectManager")
-    @patch("blender.cli.blend_setup.CinemonConfigGenerator")
-    @patch("blender.cli.blend_setup.load_yaml_config")
+    @patch("cinemon.cli.blend_setup.BlenderProjectManager")
+    @patch("cinemon.cli.blend_setup.CinemonConfigGenerator")
+    @patch("cinemon.cli.blend_setup.load_yaml_config")
     def test_main_with_preset_and_overrides(self, mock_load_yaml, mock_generator_class, mock_manager_class):
         """Test that main() with --preset passes override parameters."""
         test_args = [
@@ -145,8 +145,8 @@ class TestCLIPresetParameter:
             main_audio="custom_main.m4a"
         )
 
-    @patch("blender.cli.blend_setup.BlenderProjectManager")
-    @patch("blender.cli.blend_setup.load_yaml_config")
+    @patch("cinemon.cli.blend_setup.BlenderProjectManager")
+    @patch("cinemon.cli.blend_setup.load_yaml_config")
     def test_main_with_config_file_skips_preset_generation(self, mock_load_yaml, mock_manager_class):
         """Test that main() with --config skips preset generation."""
         test_args = ["recording_dir", "--config", "custom_config.yaml"]
@@ -162,7 +162,7 @@ class TestCLIPresetParameter:
 
         with patch.object(sys, 'argv', ["blend_setup.py"] + test_args):
             # Should not import or use CinemonConfigGenerator
-            with patch("blender.cli.blend_setup.CinemonConfigGenerator") as mock_generator_class:
+            with patch("cinemon.cli.blend_setup.CinemonConfigGenerator") as mock_generator_class:
                 result = main()
 
                 # Verify no config generation
@@ -174,9 +174,9 @@ class TestCLIPresetParameter:
                     mock_yaml_config
                 )
 
-    @patch("blender.cli.blend_setup.BlenderProjectManager")
-    @patch("blender.cli.blend_setup.CinemonConfigGenerator")
-    @patch("blender.cli.blend_setup.load_yaml_config")
+    @patch("cinemon.cli.blend_setup.BlenderProjectManager")
+    @patch("cinemon.cli.blend_setup.CinemonConfigGenerator")
+    @patch("cinemon.cli.blend_setup.load_yaml_config")
     @patch("builtins.print")
     def test_main_preset_with_force_flag(self, mock_print, mock_load_yaml, mock_generator_class, mock_manager_class):
         """Test that main() processes --force flag with presets."""
@@ -204,9 +204,9 @@ class TestCLIPresetParameter:
         success_calls = [call for call in mock_print.call_args_list if "beat-switch" in str(call)]
         assert len(success_calls) > 0
 
-    @patch("blender.cli.blend_setup.BlenderProjectManager")
-    @patch("blender.cli.blend_setup.CinemonConfigGenerator")
-    @patch("blender.cli.blend_setup.load_yaml_config")
+    @patch("cinemon.cli.blend_setup.BlenderProjectManager")
+    @patch("cinemon.cli.blend_setup.CinemonConfigGenerator")
+    @patch("cinemon.cli.blend_setup.load_yaml_config")
     @patch("logging.getLogger")
     def test_main_preset_mode_logging(self, mock_get_logger, mock_load_yaml, mock_generator_class, mock_manager_class):
         """Test that main() logs preset generation steps."""

@@ -1,12 +1,77 @@
 """
 ABOUTME: YAML configuration classes for Blender VSE project configuration.
 ABOUTME: Provides dataclasses for project, audio analysis, layout, and animation specifications.
+
+Example YAML configuration structure:
+
+```yaml
+project:
+  video_files: [Camera1.mp4, Camera2.mp4]
+  main_audio: main_audio.m4a
+  fps: 30
+  resolution:
+    width: 1920
+    height: 1080
+
+audio_analysis:
+  file: analysis/audio_analysis.json
+
+layout:
+  type: random
+  config:
+    seed: 42
+    margin: 0.1
+
+strip_animations:
+  Camera1:
+    - type: scale
+      trigger: bass
+      intensity: 0.3
+    - type: vintage_color
+      trigger: one_time
+      sepia_amount: 0.4
+  Camera2:
+    - type: shake
+      trigger: beat
+      intensity: 2.0
+  all:  # Special key for applying to all strips
+    - type: film_grain
+      trigger: one_time
+      intensity: 0.15
+```
+
+The `strip_animations` format groups animations by strip name, providing precise control
+over which video strips receive which effects. Each strip can have multiple animations.
 """
 
 from dataclasses import dataclass, field
-from typing import List, Optional, Dict, Any, Tuple
+from typing import List, Optional, Dict, Any, Tuple, Union, TypedDict, Literal, NotRequired
 from pathlib import Path
 import yaml
+
+
+class AnimationSpec(TypedDict):
+    """Type specification for individual animation configuration."""
+    type: Literal[
+        "scale", "shake", "rotation", "jitter", "brightness_flicker",
+        "black_white", "film_grain", "vintage_color", "visibility", "pip_switch"
+    ]
+    trigger: Literal[
+        "bass", "beat", "energy_peaks", "one_time", "continuous", "sections", "treble"
+    ]
+    # Optional parameters (use NotRequired for backward compatibility)
+    intensity: NotRequired[float]
+    duration_frames: NotRequired[int]
+    return_frames: NotRequired[int]
+    degrees: NotRequired[float]
+    sepia_amount: NotRequired[float]
+    contrast_boost: NotRequired[float]
+    grain_intensity: NotRequired[float]
+    easing: NotRequired[str]
+
+
+# Type alias for strip animations
+StripAnimations = Dict[str, List[AnimationSpec]]
 
 
 @dataclass
@@ -48,64 +113,14 @@ class LayoutConfig:
 
 
 @dataclass
-class AnimationSpec:
-    """Specification for individual animation with dynamic parameters."""
-    
-    type: str
-    trigger: str
-    target_strips: List[str]
-    
-    def __init__(self, type: str, trigger: str, target_strips: List[str], **kwargs):
-        self.type = type
-        self.trigger = trigger
-        self.target_strips = target_strips
-        
-        # Store additional parameters as attributes
-        for key, value in kwargs.items():
-            setattr(self, key, value)
-
-
-@dataclass
 class BlenderYAMLConfig:
     """Complete YAML configuration for Blender VSE project."""
     
     project: ProjectConfig
     audio_analysis: AudioAnalysisConfig
     layout: LayoutConfig
-    strip_animations: Dict[str, List[Dict[str, Any]]] = field(default_factory=dict)
-    animations: List[AnimationSpec] = field(default_factory=list)  # Deprecated - use strip_animations
+    strip_animations: StripAnimations = field(default_factory=dict)
     
-    def to_dict(self) -> Dict[str, Any]:
-        """Convert config to dictionary for JSON serialization."""
-        return {
-            'project': {
-                'video_files': self.project.video_files,
-                'main_audio': self.project.main_audio,
-                'output_blend': self.project.output_blend,
-                'render_output': self.project.render_output,
-                'fps': self.project.fps,
-                'resolution': self.project.resolution,
-                'beat_division': self.project.beat_division
-            },
-            'audio_analysis': {
-                'file': self.audio_analysis.file,
-                'data': self.audio_analysis.data
-            },
-            'layout': {
-                'type': self.layout.type,
-                'config': self.layout.config
-            },
-            'animations': [
-                {
-                    'type': anim.type,
-                    'trigger': anim.trigger,
-                    'target_strips': anim.target_strips,
-                    **{k: v for k, v in anim.__dict__.items() 
-                       if k not in ('type', 'trigger', 'target_strips')}
-                }
-                for anim in self.animations
-            ]
-        }
 
 
 class YAMLConfigLoader:
@@ -113,46 +128,96 @@ class YAMLConfigLoader:
     
     VALID_ANIMATION_TYPES = {
         "scale", "shake", "rotation", "jitter", "brightness_flicker",
-        "black_white", "film_grain", "vintage_color", "visibility"
+        "black_white", "film_grain", "vintage_color", "visibility", "pip_switch"
     }
     
     VALID_TRIGGERS = {
-        "bass", "beat", "energy_peaks", "one_time", "continuous", "sections"
+        "bass", "beat", "energy_peaks", "one_time", "continuous", "sections", "treble"
     }
     
     VALID_LAYOUT_TYPES = {
-        "random", "grid", "center", "fill", "main-pip"
+        "random", "grid", "center", "fill", "main-pip", "cascade", "manual"
     }
     
-    def load_config(self, config_path: Path) -> BlenderYAMLConfig:
-        """Load and validate YAML configuration."""
-        if not config_path.exists():
-            raise FileNotFoundError(f"Configuration file not found: {config_path}")
+    def load_from_file(self, file_path: Union[str, Path]) -> BlenderYAMLConfig:
+        """Load configuration from YAML file.
+        
+        Args:
+            file_path: Path to YAML configuration file
+            
+        Returns:
+            Parsed and validated configuration
+            
+        Raises:
+            FileNotFoundError: If file doesn't exist
+            ValueError: If YAML is invalid or validation fails
+        """
+        path = Path(file_path)
+        if not path.exists():
+            raise FileNotFoundError(f"Configuration file not found: {file_path}")
         
         try:
-            with open(config_path, 'r', encoding='utf-8') as f:
-                data = yaml.safe_load(f)
+            with open(path, 'r', encoding='utf-8') as f:
+                content = f.read()
+            return self.load_from_string(content)
+        except Exception as e:
+            raise ValueError(f"Error reading file {file_path}: {e}")
+    
+    def load_from_string(self, yaml_content: str) -> BlenderYAMLConfig:
+        """Load configuration from YAML string.
+        
+        Args:
+            yaml_content: YAML configuration as string
+            
+        Returns:
+            Parsed and validated configuration
+            
+        Raises:
+            ValueError: If YAML is invalid or validation fails
+        """
+        try:
+            data = yaml.safe_load(yaml_content)
         except yaml.YAMLError as e:
-            raise ValueError(f"Invalid YAML syntax: {e}")
+            raise ValueError(f"Invalid YAML format: {e}")
+        
+        if data is None:
+            raise ValueError("Empty YAML configuration")
+        
+        return self._parse_and_validate(data)
+    
+    def _parse_and_validate(self, data: Dict[str, Any]) -> BlenderYAMLConfig:
+        """Parse YAML data and validate configuration.
+        
+        Args:
+            data: Parsed YAML data
+            
+        Returns:
+            Validated configuration object
+            
+        Raises:
+            ValueError: If validation fails
+        """
+        # Check required top-level sections
+        required_sections = ["project", "layout", "strip_animations"]
+        for section in required_sections:
+            if section not in data:
+                raise ValueError(f"Missing required section: {section}")
         
         # Parse sections
         project_data = data.get("project", {})
         audio_analysis_data = data.get("audio_analysis", {})
         layout_data = data.get("layout", {})
-        animations_data = data.get("animations", [])
         strip_animations_data = data.get("strip_animations", {})
         
         # Create configuration objects
         project = self._parse_project_config(project_data)
         audio_analysis = self._parse_audio_analysis_config(audio_analysis_data)
         layout = self._parse_layout_config(layout_data)
-        animations = self._parse_animations_config(animations_data)
         
         config = BlenderYAMLConfig(
             project=project,
             audio_analysis=audio_analysis,
             layout=layout,
-            animations=animations,
             strip_animations=strip_animations_data
         )
         
@@ -162,6 +227,14 @@ class YAMLConfigLoader:
             raise ValueError(f"Configuration validation failed: {'; '.join(errors)}")
         
         return config
+    
+    def load_config(self, config_path: Path) -> BlenderYAMLConfig:
+        """Load and validate YAML configuration.
+        
+        This method is kept for backward compatibility.
+        It delegates to load_from_file for consistency.
+        """
+        return self.load_from_file(config_path)
     
     def _parse_project_config(self, data: Dict[str, Any]) -> ProjectConfig:
         """Parse project configuration section."""
@@ -207,30 +280,6 @@ class YAMLConfigLoader:
             config=data.get("config")
         )
     
-    def _parse_animations_config(self, data: List[Dict[str, Any]]) -> List[AnimationSpec]:
-        """Parse animations configuration section."""
-        animations = []
-        for anim_data in data:
-            anim_type = anim_data.get("type")
-            trigger = anim_data.get("trigger")
-            target_strips = anim_data.get("target_strips", [])
-            
-            if not anim_type or not trigger:
-                raise ValueError("Animation must have 'type' and 'trigger' fields")
-            
-            # Extract additional parameters
-            kwargs = {k: v for k, v in anim_data.items() 
-                     if k not in ["type", "trigger", "target_strips"]}
-            
-            animation = AnimationSpec(
-                type=anim_type,
-                trigger=trigger,
-                target_strips=target_strips,
-                **kwargs
-            )
-            animations.append(animation)
-        
-        return animations
     
     def validate_config(self, config: BlenderYAMLConfig) -> Tuple[bool, List[str]]:
         """Validate configuration with fail-fast approach."""
@@ -259,88 +308,27 @@ class YAMLConfigLoader:
         if config.layout.type not in self.VALID_LAYOUT_TYPES:
             errors.append(f"Invalid layout type: {config.layout.type}. Must be one of {self.VALID_LAYOUT_TYPES}")
         
-        # Validate animations
-        for i, animation in enumerate(config.animations):
-            if animation.type not in self.VALID_ANIMATION_TYPES:
-                errors.append(f"Animation {i}: Invalid type '{animation.type}'. Must be one of {self.VALID_ANIMATION_TYPES}")
-            
-            if animation.trigger not in self.VALID_TRIGGERS:
-                errors.append(f"Animation {i}: Invalid trigger '{animation.trigger}'. Must be one of {self.VALID_TRIGGERS}")
+        # Validate strip_animations
+        for strip_name, animations in config.strip_animations.items():
+            if not isinstance(animations, list):
+                errors.append(f"Animations for strip '{strip_name}' must be a list")
+                continue
+                
+            for j, animation in enumerate(animations):
+                if not isinstance(animation, dict):
+                    errors.append(f"Strip '{strip_name}' animation {j}: Must be a dictionary")
+                    continue
+                    
+                if "type" not in animation:
+                    errors.append(f"Strip '{strip_name}' animation {j}: Missing required field 'type'")
+                elif animation["type"] not in self.VALID_ANIMATION_TYPES:
+                    errors.append(f"Strip '{strip_name}' animation {j}: Invalid type '{animation['type']}'. Must be one of {self.VALID_ANIMATION_TYPES}")
+                
+                if "trigger" not in animation:
+                    errors.append(f"Strip '{strip_name}' animation {j}: Missing required field 'trigger'")
+                elif animation["trigger"] not in self.VALID_TRIGGERS:
+                    errors.append(f"Strip '{strip_name}' animation {j}: Invalid trigger '{animation['trigger']}'. Must be one of {self.VALID_TRIGGERS}")
         
         return len(errors) == 0, errors
     
-    def convert_to_internal(self, config: BlenderYAMLConfig) -> Dict[str, Any]:
-        """Convert BlenderYAMLConfig to internal format used by vse_script.py.
-        
-        Converts strip_animations (grouped format) to animations (flat format with target_strips).
-        This is needed for backwards compatibility with vse_script.py.
-        
-        Args:
-            config: BlenderYAMLConfig object to convert
-            
-        Returns:
-            Dictionary in internal format expected by vse_script.py
-        """
-        # Start with project configuration
-        internal_format = {
-            "project": {
-                "video_files": config.project.video_files,
-                "main_audio": config.project.main_audio,
-                "output_blend": config.project.output_blend,
-                "render_output": config.project.render_output,
-                "fps": config.project.fps,
-                "beat_division": config.project.beat_division,
-            },
-            "layout": {
-                "type": config.layout.type,
-                "config": config.layout.config or {}
-            },
-            "audio_analysis": {
-                "file": config.audio_analysis.file,
-                "data": config.audio_analysis.data,
-                "beat_division": config.audio_analysis.beat_division,
-                "min_onset_interval": config.audio_analysis.min_onset_interval,
-            }
-        }
-        
-        # Add resolution if present
-        if config.project.resolution:
-            if isinstance(config.project.resolution, Resolution):
-                internal_format["project"]["resolution"] = {
-                    "width": config.project.resolution.width,
-                    "height": config.project.resolution.height
-                }
-            else:
-                # Handle dict format for backwards compatibility
-                internal_format["project"]["resolution"] = config.project.resolution
-        
-        # Convert strip_animations to flat animations list
-        flat_animations = []
-        
-        # First, convert strip_animations (new format)
-        for strip_name, animations in config.strip_animations.items():
-            if animations:  # Only include strips that have animations
-                for animation in animations:
-                    # Create copy and add target_strips
-                    flat_animation = animation.copy()
-                    flat_animation["target_strips"] = [strip_name]
-                    flat_animations.append(flat_animation)
-        
-        # Then, add any legacy flat animations (for backwards compatibility)
-        for animation in config.animations:
-            flat_animation = {
-                "type": animation.type,
-                "trigger": animation.trigger,
-                "target_strips": animation.target_strips or []
-            }
-            # Add any additional properties from the animation spec
-            for key, value in animation.__dict__.items():
-                if key not in ["type", "trigger", "target_strips"] and value is not None:
-                    flat_animation[key] = value
-            
-            flat_animations.append(flat_animation)
-        
-        internal_format["animations"] = flat_animations
-        
-        return internal_format
     

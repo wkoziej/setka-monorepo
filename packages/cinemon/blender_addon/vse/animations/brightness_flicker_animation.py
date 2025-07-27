@@ -4,7 +4,7 @@
 """Brightness flicker animation for VSE strips."""
 
 import random
-from typing import List
+from typing import List, Optional
 
 from .base_effect_animation import BaseEffectAnimation
 
@@ -24,7 +24,8 @@ class BrightnessFlickerAnimation(BaseEffectAnimation):
     def __init__(self,
                  trigger: str = "beat",
                  intensity: float = 0.15,
-                 return_frames: int = 1):
+                 return_frames: int = 1,
+                 target_strips: Optional[List[str]] = None):
         """
         Initialize BrightnessFlickerAnimation.
         
@@ -32,8 +33,9 @@ class BrightnessFlickerAnimation(BaseEffectAnimation):
             trigger: Event type to trigger animation
             intensity: Maximum brightness reduction (0.0 to 1.0)
             return_frames: Frames until brightness returns to normal
+            target_strips: List of strip names to target (None = all strips)
         """
-        super().__init__()
+        super().__init__(target_strips=target_strips)
         self.trigger = trigger
         self.intensity = intensity
         self.return_frames = return_frames

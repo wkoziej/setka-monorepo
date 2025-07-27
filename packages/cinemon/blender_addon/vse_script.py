@@ -21,24 +21,12 @@ from typing import Dict, List, Optional, Tuple
 
 import bpy
 
-# Import YAML configuration loader
-addon_path = Path(__file__).parent.parent.parent / "blender_addon"
-if str(addon_path) not in sys.path:
-    sys.path.insert(0, str(addon_path))
-
-# NOTE: This import is kept for fallback compatibility but not used
-# The actual config loading is done through setka-common later in the file
-
-# Import refactored modules
-try:
-    from .vse.constants import AnimationConstants
-    from .vse.keyframe_helper import KeyframeHelper
-    from .vse.layout_manager import BlenderLayoutManager
-    from .vse.project_setup import BlenderProjectSetup
-except ImportError:
-    # Fallback for when script is run standalone in Blender
-    sys.path.append(str(Path(__file__).parent))
-    from vse.project_setup import BlenderProjectSetup
+# Import refactored modules - absolute imports after sys.path setup
+from vse.constants import AnimationConstants
+from vse.keyframe_helper import KeyframeHelper
+from vse.layout_manager import BlenderLayoutManager
+from vse.project_setup import BlenderProjectSetup
+from vse.yaml_config import BlenderYAMLConfigReader
 
 
 class BlenderVSEConfigurator:
@@ -54,56 +42,23 @@ class BlenderVSEConfigurator:
         if config_path is None:
             config_path = self._parse_command_line_args()
 
-        # Load YAML configuration
+        # Load YAML configuration using BlenderYAMLConfigReader
         self.config_path = Path(config_path)
+        self.reader = BlenderYAMLConfigReader(config_path)
+        self.config = self.reader.config
+        
+        # Add config_data property for test compatibility
+        self.config_data = self.config
 
-        # Add vendor path for PyYAML (Blender doesn't have it)
-        addon_vendor_path = Path(__file__).parent.parent.parent / "blender_addon" / "vendor"
-        if str(addon_vendor_path) not in sys.path:
-            sys.path.insert(0, str(addon_vendor_path))
-
-        import yaml
-        with open(config_path, 'r', encoding='utf-8') as f:
-            raw_config = yaml.safe_load(f)
-
-        # Detect format and convert if needed
-        if "strip_animations" in raw_config:
-            # This is grouped format (preset file) - need to convert to internal
-            common_path = Path(__file__).parent.parent.parent.parent.parent / "common" / "src"
-            if str(common_path) not in sys.path:
-                sys.path.insert(0, str(common_path))
-
-            from setka_common.config.yaml_config import YAMLConfigLoader
-
-            loader = YAMLConfigLoader()
-            # Write temp file and load through standard pipeline
-            import tempfile
-            with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False) as temp_file:
-                yaml.dump(raw_config, temp_file, default_flow_style=False, allow_unicode=True)
-                temp_path = temp_file.name
-
-            try:
-                config_obj = loader.load_config(Path(temp_path))
-                # Convert to internal format
-                self.config_data = loader.convert_to_internal(config_obj)
-            finally:
-                import os
-                os.unlink(temp_path)
-        else:
-            # This is already internal format (from project_manager.py)
-            self.config_data = raw_config
-
-        # Set attributes from config (maintaining compatibility)
-        project = self.config_data['project']
-        self.video_files = [Path(f) for f in project['video_files']]
-        self.main_audio = Path(project['main_audio']) if project.get('main_audio') else None
-        self.output_blend = Path(project['output_blend']) if project.get('output_blend') else None
-        self.render_output = Path(project['render_output']) if project.get('render_output') else None
-        self.fps = project.get('fps', 30)
-        resolution = project.get('resolution', {})
-        self.resolution_x = resolution.get('width', 1920)
-        self.resolution_y = resolution.get('height', 1080)
-        self.beat_division = project.get('beat_division', 8)
+        # Use reader properties for all attributes
+        self.video_files = [Path(f) for f in self.reader.video_files]
+        self.main_audio = Path(self.reader.main_audio) if self.reader.main_audio else None
+        self.output_blend = Path(self.reader.output_blend) if self.reader.output_blend else None
+        self.render_output = Path(self.reader.render_output) if self.reader.render_output else None
+        self.fps = self.reader.fps
+        self.resolution_x = self.reader.resolution_x
+        self.resolution_y = self.reader.resolution_y
+        self.beat_division = self.reader.beat_division
 
         # Animation mode is always compositional with JSON config
         self.animation_mode = "compositional"
@@ -145,21 +100,8 @@ class BlenderVSEConfigurator:
         Returns:
             Tuple[bool, List[str]]: (czy_valid, lista_błędów)
         """
-        # Validation for internal format (converted from YAML)
-        errors = []
-        required_keys = ['project', 'audio_analysis', 'layout', 'animations']
-        for key in required_keys:
-            if key not in self.config_data:
-                errors.append(f"Missing required key: {key}")
-
-        # Additional validation
-        project = self.config_data.get('project', {})
-        # Empty video_files is allowed for auto-discovery in presets
-
-        if not project.get('fps'):
-            errors.append("FPS not specified in project")
-
-        return len(errors) == 0, errors
+        # Use BlenderYAMLConfigReader's validation method
+        return self.reader.validate()
 
     def setup_vse_project(self) -> bool:
         """
@@ -185,8 +127,10 @@ class BlenderVSEConfigurator:
             return False
 
         # Apply compositional animations if configured
-        print(f"🎭 Checking animations: config has {len(self.config_data.get('animations', []))} animations")
-        if self.config_data['animations']:
+        strip_animations = self.config.strip_animations
+        total_animations = sum(len(anims) for anims in strip_animations.values())
+        print(f"🎭 Checking animations: config has {total_animations} animations across {len(strip_animations)} strips")
+        if strip_animations:
             print("🎭 Applying compositional animations...")
             sequencer = bpy.context.scene.sequence_editor
             animation_success = self._apply_compositional_animations(sequencer)
@@ -242,10 +186,11 @@ class BlenderVSEConfigurator:
             return False
 
         print(f"✓ Found {len(video_strips)} video strips for animation")
-        layout = self.config_data.get('layout', {})
-        animations = self.config_data.get('animations', [])
-        print(f"✓ Layout type: {layout.get('type', 'unknown')}")
-        print(f"✓ Animations configured: {len(animations)}")
+        layout = self.config.layout
+        strip_animations = self.config.strip_animations
+        total_animations = sum(len(anims) for anims in strip_animations.values())
+        print(f"✓ Layout type: {layout.type}")
+        print(f"✓ Animations configured: {total_animations} animations across {len(strip_animations)} strips")
 
         # Apply layout using YAML config
         success = self._apply_yaml_layout_and_animations(video_strips, animation_data)
@@ -265,10 +210,10 @@ class BlenderVSEConfigurator:
             Optional[Dict]: Animation data with events or None if not available
         """
         # Load audio analysis data from file specified in YAML config
-        audio_analysis = self.config_data.get('audio_analysis', {})
-        print(f"🎵 Audio analysis section: {audio_analysis.keys() if audio_analysis else 'None'}")
+        audio_analysis = self.config.audio_analysis
+        print(f"🎵 Audio analysis file: {audio_analysis.file if audio_analysis.file else 'None'}")
 
-        analysis_file = audio_analysis.get('file')
+        analysis_file = audio_analysis.file
         print(f"🎵 Loading from file: {analysis_file}")
 
         if not analysis_file:
@@ -339,23 +284,7 @@ class BlenderVSEConfigurator:
         Returns:
             bool: True if layout and animations were applied successfully
         """
-        try:
-            from .vse.animation_compositor import AnimationCompositor
-            from .vse.animations import (
-                BlackWhiteAnimation,
-                BrightnessFlickerAnimation,
-                FilmGrainAnimation,
-                JitterAnimation,
-                RotationWobbleAnimation,
-                ScaleAnimation,
-                ShakeAnimation,
-                VintageColorGradeAnimation,
-            )
-            from .vse.layouts import RandomLayout
-        except ImportError:
-            # Fallback for when script is run standalone in Blender
-            sys.path.append(str(Path(__file__).parent))
-            from vse.animation_compositor import AnimationCompositor
+        from .vse.animation_compositor import AnimationCompositor
 
         print("=== Applying YAML layout and animations ===")
 
@@ -381,16 +310,11 @@ class BlenderVSEConfigurator:
 
     def _create_layout_from_yaml(self):
         """Create layout instance from YAML configuration."""
-        try:
-            from .vse.layouts import MainPipLayout, RandomLayout
-        except ImportError:
-            # Fallback for when script is run standalone in Blender
-            sys.path.append(str(Path(__file__).parent))
-            from vse.layouts import MainPipLayout, RandomLayout
+        from .vse.layouts import MainPipLayout, RandomLayout
 
-        layout = self.config_data.get('layout', {})
-        layout_type = layout.get('type', 'random')
-        layout_config = layout.get('config', {})
+        layout = self.config.layout
+        layout_type = layout.type
+        layout_config = layout.config if layout.config else {}
 
         if layout_type == "random":
             return RandomLayout(
@@ -411,134 +335,15 @@ class BlenderVSEConfigurator:
 
     def _create_animations_from_yaml(self) -> List:
         """Create animation instances from YAML configuration."""
-        try:
-            from .vse.animations import (
-                BlackWhiteAnimation,
-                BrightnessFlickerAnimation,
-                FilmGrainAnimation,
-                JitterAnimation,
-                RotationWobbleAnimation,
-                ScaleAnimation,
-                ShakeAnimation,
-                VintageColorGradeAnimation,
-            )
-        except ImportError:
-            # Fallback for when script is run standalone in Blender
-            sys.path.append(str(Path(__file__).parent))
-            from vse.animations import (
-                BlackWhiteAnimation,
-                BrightnessFlickerAnimation,
-                FilmGrainAnimation,
-                JitterAnimation,
-                RotationWobbleAnimation,
-                ScaleAnimation,
-                ShakeAnimation,
-                VintageColorGradeAnimation,
-                VisibilityAnimation,
-            )
+        from .vse.animations import AnimationFactory
 
-        animations = []
-
-        print(f"🎨 _create_animations_from_yaml: Found {len(self.config_data.get('animations', []))} animation specs")
-        for anim_spec in self.config_data.get('animations', []):
-            anim_type = anim_spec.get('type')
-            trigger = anim_spec.get('trigger')
-
-            # Create animation based on type
-            if anim_type == "scale":
-                intensity = anim_spec.get('intensity', 0.3)
-                duration_frames = anim_spec.get('duration_frames', 2)
-                target_strips = anim_spec.get('target_strips', [])
-                animation = ScaleAnimation(
-                    trigger=trigger,
-                    intensity=intensity,
-                    duration_frames=duration_frames,
-                    target_strips=target_strips
-                )
-                print(f"🎨 Created ScaleAnimation: trigger={trigger}, intensity={intensity}, target_strips={target_strips}")
-                animations.append(animation)
-
-            elif anim_type == "shake":
-                intensity = anim_spec.get('intensity', 10.0)
-                return_frames = anim_spec.get('return_frames', 2)
-                animation = ShakeAnimation(
-                    trigger=trigger,
-                    intensity=intensity,
-                    return_frames=return_frames
-                )
-                animations.append(animation)
-
-            elif anim_type == "rotation":
-                wobble_degrees = anim_spec.get('wobble_degrees', 1.0)
-                return_frames = anim_spec.get('return_frames', 3)
-                animation = RotationWobbleAnimation(
-                    trigger=trigger,
-                    wobble_degrees=wobble_degrees,
-                    return_frames=return_frames
-                )
-                animations.append(animation)
-
-            elif anim_type == "jitter":
-                intensity = anim_spec.get('intensity', 2.0)
-                min_interval = anim_spec.get('min_interval', 3)
-                max_interval = anim_spec.get('max_interval', 8)
-                animation = JitterAnimation(
-                    trigger=trigger,
-                    intensity=intensity,
-                    min_interval=min_interval,
-                    max_interval=max_interval
-                )
-                animations.append(animation)
-
-            elif anim_type == "brightness_flicker":
-                intensity = anim_spec.get('intensity', 0.15)
-                return_frames = anim_spec.get('return_frames', 1)
-                animation = BrightnessFlickerAnimation(
-                    trigger=trigger,
-                    intensity=intensity,
-                    return_frames=return_frames
-                )
-                animations.append(animation)
-
-            elif anim_type == "black_white":
-                intensity = anim_spec.get('intensity', 0.8)
-                animation = BlackWhiteAnimation(
-                    trigger=trigger,
-                    intensity=intensity
-                )
-                animations.append(animation)
-
-            elif anim_type == "film_grain":
-                intensity = anim_spec.get('intensity', 0.1)
-                animation = FilmGrainAnimation(
-                    trigger=trigger,
-                    intensity=intensity
-                )
-                animations.append(animation)
-
-            elif anim_type == "vintage_color":
-                sepia_amount = anim_spec.get('sepia_amount', 0.3)
-                contrast_boost = anim_spec.get('contrast_boost', 0.2)
-                animation = VintageColorGradeAnimation(
-                    trigger=trigger,
-                    sepia_amount=sepia_amount,
-                    contrast_boost=contrast_boost
-                )
-                animations.append(animation)
-
-            elif anim_type == "visibility":
-                pattern = anim_spec.get('pattern', 'alternate')
-                duration_frames = anim_spec.get('duration_frames', 10)
-                target_strips = anim_spec.get('target_strips', [])
-                animation = VisibilityAnimation(
-                    trigger=trigger,
-                    pattern=pattern,
-                    duration_frames=duration_frames,
-                    target_strips=target_strips
-                )
-                print(f"🎨 Created VisibilityAnimation: trigger={trigger}, pattern={pattern}, target_strips={target_strips}")
-                animations.append(animation)
-
+        # Use reader.animations which automatically converts strip_animations to flat format
+        animation_specs = self.reader.animations
+        print(f"🎨 _create_animations_from_yaml: Found {len(animation_specs)} animation specs")
+        
+        # Use factory to create all animations
+        animations = AnimationFactory.create_multiple(animation_specs)
+        
         return animations
 
 
@@ -559,8 +364,8 @@ def main() -> int:
         print(f"Renderowanie: {configurator.render_output}")
         print(f"Rozdzielczość: {configurator.resolution_x}x{configurator.resolution_y}")
         print(f"FPS: {configurator.fps}")
-        print(f"Layout: {configurator.config_data.get('layout', {}).get('type', 'unknown')}")
-        print(f"Animations: {len(configurator.config_data.get('animations', []))}")
+        print(f"Layout: {configurator.config.layout.type}")
+        print(f"Animations: {len(configurator.reader.animations)}")
         print()
 
         success = configurator.setup_vse_project()

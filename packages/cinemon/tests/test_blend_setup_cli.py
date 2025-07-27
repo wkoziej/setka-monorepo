@@ -11,7 +11,7 @@ from unittest.mock import Mock, patch
 import pytest
 from beatrix import AudioValidationError
 
-from blender.cli.blend_setup import (
+from cinemon.cli.blend_setup import (
     load_yaml_config,
     main,
     parse_args,
@@ -103,7 +103,7 @@ class TestValidateRecordingDirectory:
 
     def test_validate_missing_metadata(self, tmp_path):
         """Test validation when metadata.json is missing."""
-        with pytest.raises(ValueError, match="Brak pliku metadata.json"):
+        with pytest.raises(ValueError, match="Stare nagranie bez metadata.json"):
             validate_recording_directory(tmp_path)
 
     def test_validate_missing_extracted_directory(self, tmp_path):
@@ -162,7 +162,7 @@ animations: []
 """
         config_file.write_text(config_content)
 
-        with patch("blender.cli.blend_setup.YAMLConfigLoader") as mock_loader_class:
+        with patch("cinemon.cli.blend_setup.YAMLConfigLoader") as mock_loader_class:
             mock_loader = Mock()
             mock_config = Mock()
             mock_loader.load_config.return_value = mock_config
@@ -185,7 +185,7 @@ animations: []
         config_file = tmp_path / "invalid.yaml"
         config_file.write_text("invalid: yaml: content:")
 
-        with patch("blender.cli.blend_setup.YAMLConfigLoader") as mock_loader_class:
+        with patch("cinemon.cli.blend_setup.YAMLConfigLoader") as mock_loader_class:
             mock_loader = Mock()
             mock_loader.load_config.side_effect = Exception("Invalid YAML")
             mock_loader_class.return_value = mock_loader
@@ -217,10 +217,10 @@ class TestSetupLogging:
 class TestMain:
     """Test cases for main function with YAML configuration."""
 
-    @patch("blender.cli.blend_setup.BlenderProjectManager")
-    @patch("blender.cli.blend_setup.CinemonConfigGenerator")
-    @patch("blender.cli.blend_setup.load_yaml_config")
-    @patch("blender.cli.blend_setup.parse_args")
+    @patch("cinemon.cli.blend_setup.BlenderProjectManager")
+    @patch("cinemon.cli.blend_setup.CinemonConfigGenerator")
+    @patch("cinemon.cli.blend_setup.load_yaml_config")
+    @patch("cinemon.cli.blend_setup.parse_args")
     def test_main_with_preset_success(self, mock_parse_args, mock_load_yaml, mock_generator_class, mock_manager_class):
         """Test successful main execution with preset."""
         # Setup mocks
@@ -260,9 +260,9 @@ class TestMain:
             mock_yaml_config
         )
 
-    @patch("blender.cli.blend_setup.BlenderProjectManager")
-    @patch("blender.cli.blend_setup.load_yaml_config")
-    @patch("blender.cli.blend_setup.parse_args")
+    @patch("cinemon.cli.blend_setup.BlenderProjectManager")
+    @patch("cinemon.cli.blend_setup.load_yaml_config")
+    @patch("cinemon.cli.blend_setup.parse_args")
     def test_main_with_config_success(self, mock_parse_args, mock_load_yaml, mock_manager_class):
         """Test successful main execution with config file."""
         # Setup mocks
@@ -292,7 +292,7 @@ class TestMain:
             mock_yaml_config
         )
 
-    @patch("blender.cli.blend_setup.parse_args")
+    @patch("cinemon.cli.blend_setup.parse_args")
     def test_main_audio_validation_error(self, mock_parse_args):
         """Test main with audio validation error."""
         mock_args = Mock()
@@ -301,7 +301,7 @@ class TestMain:
         mock_args.verbose = False
         mock_parse_args.return_value = mock_args
 
-        with patch("blender.cli.blend_setup.CinemonConfigGenerator") as mock_generator_class:
+        with patch("cinemon.cli.blend_setup.CinemonConfigGenerator") as mock_generator_class:
             mock_generator = Mock()
             mock_generator.generate_preset.side_effect = AudioValidationError("Audio error")
             mock_generator_class.return_value = mock_generator
@@ -310,7 +310,7 @@ class TestMain:
 
             assert result == 1
 
-    @patch("blender.cli.blend_setup.parse_args")
+    @patch("cinemon.cli.blend_setup.parse_args")
     def test_main_validation_error(self, mock_parse_args):
         """Test main with validation error."""
         mock_args = Mock()
@@ -319,7 +319,7 @@ class TestMain:
         mock_args.verbose = False
         mock_parse_args.return_value = mock_args
 
-        with patch("blender.cli.blend_setup.CinemonConfigGenerator") as mock_generator_class:
+        with patch("cinemon.cli.blend_setup.CinemonConfigGenerator") as mock_generator_class:
             mock_generator = Mock()
             mock_generator.generate_preset.side_effect = ValueError("Validation error")
             mock_generator_class.return_value = mock_generator
@@ -328,7 +328,7 @@ class TestMain:
 
             assert result == 1
 
-    @patch("blender.cli.blend_setup.parse_args")
+    @patch("cinemon.cli.blend_setup.parse_args")
     def test_main_unexpected_error(self, mock_parse_args):
         """Test main with unexpected error."""
         mock_args = Mock()
@@ -337,7 +337,7 @@ class TestMain:
         mock_args.verbose = False
         mock_parse_args.return_value = mock_args
 
-        with patch("blender.cli.blend_setup.CinemonConfigGenerator") as mock_generator_class:
+        with patch("cinemon.cli.blend_setup.CinemonConfigGenerator") as mock_generator_class:
             mock_generator = Mock()
             mock_generator.generate_preset.side_effect = Exception("Unexpected error")
             mock_generator_class.return_value = mock_generator
@@ -350,10 +350,10 @@ class TestMain:
 class TestMainWithPresetOverrides:
     """Test main function with preset overrides."""
 
-    @patch("blender.cli.blend_setup.BlenderProjectManager")
-    @patch("blender.cli.blend_setup.CinemonConfigGenerator")
-    @patch("blender.cli.blend_setup.load_yaml_config")
-    @patch("blender.cli.blend_setup.parse_args")
+    @patch("cinemon.cli.blend_setup.BlenderProjectManager")
+    @patch("cinemon.cli.blend_setup.CinemonConfigGenerator")
+    @patch("cinemon.cli.blend_setup.load_yaml_config")
+    @patch("cinemon.cli.blend_setup.parse_args")
     def test_main_with_preset_and_main_audio_override(self, mock_parse_args, mock_load_yaml, mock_generator_class, mock_manager_class):
         """Test main with preset and main audio override."""
         # Setup mocks

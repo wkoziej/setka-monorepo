@@ -4,7 +4,7 @@
 """Jitter animation for VSE strips."""
 
 import random
-from typing import List
+from typing import List, Optional
 
 from .base_effect_animation import BaseEffectAnimation
 
@@ -29,7 +29,8 @@ class JitterAnimation(BaseEffectAnimation):
                  trigger: str = "continuous",
                  intensity: float = 2.0,
                  min_interval: int = 3,
-                 max_interval: int = 8):
+                 max_interval: int = 8,
+                 target_strips: Optional[List[str]] = None):
         """
         Initialize JitterAnimation.
         
@@ -38,8 +39,9 @@ class JitterAnimation(BaseEffectAnimation):
             intensity: Maximum jitter offset in pixels
             min_interval: Minimum frames between jitter changes
             max_interval: Maximum frames between jitter changes
+            target_strips: List of strip names to target (None = all strips)
         """
-        super().__init__()
+        super().__init__(target_strips=target_strips)
         self.trigger = trigger
         self.intensity = intensity
         self.min_interval = min_interval

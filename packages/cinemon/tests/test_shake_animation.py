@@ -4,7 +4,7 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from blender.vse.animations.shake_animation import ShakeAnimation
+from vse.animations.shake_animation import ShakeAnimation
 
 
 class TestShakeAnimation:

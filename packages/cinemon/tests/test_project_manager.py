@@ -10,14 +10,13 @@ from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 from setka_common.config.yaml_config import (
-    AnimationSpec,
     AudioAnalysisConfig,
     BlenderYAMLConfig,
     LayoutConfig,
     ProjectConfig,
 )
 
-from blender.project_manager import BlenderProjectManager
+from cinemon.project_manager import BlenderProjectManager
 
 
 class TestBlenderProjectManager:
@@ -164,7 +163,7 @@ class TestBlenderProjectManager:
             project=ProjectConfig(video_files=["test.mp4"]),
             audio_analysis=AudioAnalysisConfig(),
             layout=LayoutConfig(),
-            animations=[]
+            strip_animations={}
         )
 
         with pytest.raises(ValueError, match="Invalid recording structure"):
@@ -185,7 +184,7 @@ class TestBlenderProjectManager:
         config_path.write_text("project:\n  video_files: []\n")
 
         # Should not raise exception
-        manager._execute_blender_with_yaml_config(str(config_path))
+        manager._execute_blender_with_config(str(config_path))
 
         # Check subprocess.run was called with correct arguments
         mock_run.assert_called_once()
@@ -219,7 +218,7 @@ class TestBlenderProjectManager:
         config_path.write_text("project:\n  video_files: []\n")
 
         # Should not raise exception
-        manager._execute_blender_with_yaml_config(str(config_path))
+        manager._execute_blender_with_config(str(config_path))
 
         # Check subprocess.run was called with custom executable
         mock_run.assert_called_once()
@@ -243,7 +242,7 @@ class TestBlenderProjectManager:
         config_path.write_text("project:\n  video_files: []\n")
 
         with pytest.raises(RuntimeError, match="Blender VSE script not found"):
-            manager._execute_blender_with_yaml_config(str(config_path))
+            manager._execute_blender_with_config(str(config_path))
 
     @patch("subprocess.run")
     def test_execute_blender_with_yaml_config_failure(self, mock_run, tmp_path):
@@ -261,7 +260,7 @@ class TestBlenderProjectManager:
         config_path.write_text("project:\n  video_files: []\n")
 
         with pytest.raises(RuntimeError, match="Blender execution failed"):
-            manager._execute_blender_with_yaml_config(str(config_path))
+            manager._execute_blender_with_config(str(config_path))
 
     @patch("subprocess.run")
     @patch("tempfile.NamedTemporaryFile")
@@ -297,15 +296,16 @@ class TestBlenderProjectManager:
                 type="random",
                 config={"seed": 42, "margin": 0.1}
             ),
-            animations=[
-                AnimationSpec(
-                    type="scale",
-                    trigger="beat",
-                    target_strips=[],
-                    intensity=0.3,
-                    duration_frames=2
-                )
-            ]
+            strip_animations={
+                "all": [
+                    {
+                        "type": "scale",
+                        "trigger": "beat",
+                        "intensity": 0.3,
+                        "duration_frames": 2
+                    }
+                ]
+            }
         )
 
         # Should not raise exception and return blend path
@@ -348,7 +348,7 @@ class TestBlenderProjectManager:
                 file="analysis/main_audio_analysis.json"
             ),
             layout=LayoutConfig(),
-            animations=[]
+            strip_animations={}
         )
 
         resolved_config = manager._create_resolved_config(
@@ -361,54 +361,6 @@ class TestBlenderProjectManager:
         assert Path(resolved_config.project.output_blend).is_absolute()
         assert Path(resolved_config.project.render_output).is_absolute()
 
-    def test_convert_config_to_dict(self):
-        """Test _convert_config_to_dict method."""
-        manager = BlenderProjectManager()
-
-        # Create YAML config
-        yaml_config = BlenderYAMLConfig(
-            project=ProjectConfig(
-                video_files=["video1.mp4", "video2.mp4"],
-                main_audio="audio.m4a",
-                fps=25,
-                resolution={"width": 1920, "height": 1080}
-            ),
-            audio_analysis=AudioAnalysisConfig(
-                file="analysis.json"
-            ),
-            layout=LayoutConfig(
-                type="random",
-                config={"seed": 123}
-            ),
-            animations=[
-                AnimationSpec(
-                    type="shake",
-                    trigger="beat",
-                    target_strips=["strip_0"],
-                    intensity=5.0,
-                    return_frames=2
-                )
-            ]
-        )
-
-        config_dict = manager._convert_config_to_dict(yaml_config)
-
-        # Check structure
-        assert "project" in config_dict
-        assert "audio_analysis" in config_dict
-        assert "layout" in config_dict
-        assert "animations" in config_dict
-
-        # Check project data
-        assert config_dict["project"]["video_files"] == ["video1.mp4", "video2.mp4"]
-        assert config_dict["project"]["main_audio"] == "audio.m4a"
-        assert config_dict["project"]["fps"] == 25
-        assert config_dict["project"]["resolution"]["width"] == 1920
-
-        # Check animation data
-        assert len(config_dict["animations"]) == 1
-        assert config_dict["animations"][0]["type"] == "shake"
-        assert config_dict["animations"][0]["intensity"] == 5.0
 
     def test_validate_animation_mode(self):
         """Test _validate_animation_mode method."""

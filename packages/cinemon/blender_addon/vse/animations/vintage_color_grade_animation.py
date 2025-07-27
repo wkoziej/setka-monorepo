@@ -3,7 +3,7 @@
 
 """Vintage color grading animation for VSE strips."""
 
-from typing import List
+from typing import List, Optional
 
 from .base_effect_animation import BaseEffectAnimation
 
@@ -26,7 +26,8 @@ class VintageColorGradeAnimation(BaseEffectAnimation):
     def __init__(self,
                  trigger: str = "one_time",
                  sepia_amount: float = 0.3,
-                 contrast_boost: float = 0.2):
+                 contrast_boost: float = 0.2,
+                 target_strips: Optional[List[str]] = None):
         """
         Initialize VintageColorGradeAnimation.
         
@@ -34,8 +35,9 @@ class VintageColorGradeAnimation(BaseEffectAnimation):
             trigger: Event type (ignored for one-time effect)
             sepia_amount: Sepia tint intensity (0.0 to 1.0)
             contrast_boost: Contrast boost amount (0.0 to 1.0)
+            target_strips: List of strip names to target (None = all strips)
         """
-        super().__init__()
+        super().__init__(target_strips=target_strips)
         self.trigger = trigger
         self.sepia_amount = sepia_amount
         self.contrast_boost = contrast_boost

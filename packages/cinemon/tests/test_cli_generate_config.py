@@ -8,7 +8,7 @@ from unittest.mock import MagicMock, patch
 
 import yaml
 
-from blender.cli.generate_config import (
+from cinemon.cli.generate_config import (
     generate_config_command,
     list_presets_command,
     main,
@@ -46,7 +46,7 @@ class TestCinemonGenerateConfigCLI:
 
         assert "project" in config_data
         assert "layout" in config_data
-        assert "animations" in config_data
+        assert "strip_animations" in config_data
         assert config_data["project"]["main_audio"] == "main_audio.m4a"
 
     def test_main_with_preset_and_seed_override(self, tmp_path):
@@ -279,17 +279,18 @@ class TestListPresetsCommand:
         assert "minimal" in captured.out
         assert "beat-switch" in captured.out
 
-    def test_list_presets_command_shows_descriptions(self, capsys):
-        """Test that preset listing shows descriptions."""
+    def test_list_presets_command_shows_preset_names(self, capsys):
+        """Test that preset listing shows preset names."""
         result = list_presets_command()
 
         assert result == 0
 
         captured = capsys.readouterr()
-        assert "Classic film effects" in captured.out
-        assert "High-energy effects" in captured.out
-        assert "Clean, simple animation" in captured.out
-        assert "Legacy compatibility" in captured.out
+        assert "Available presets:" in captured.out
+        assert "vintage" in captured.out
+        assert "music-video" in captured.out
+        assert "minimal" in captured.out
+        assert "beat-switch" in captured.out
 
 
 class TestCLIIntegration:

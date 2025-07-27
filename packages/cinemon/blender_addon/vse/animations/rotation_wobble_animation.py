@@ -5,7 +5,7 @@
 
 import math
 import random
-from typing import List
+from typing import List, Optional
 
 from .base_effect_animation import BaseEffectAnimation
 
@@ -27,7 +27,8 @@ class RotationWobbleAnimation(BaseEffectAnimation):
                  trigger: str = "beat",
                  wobble_degrees: float = 1.0,
                  return_frames: int = 3,
-                 oscillate: bool = True):
+                 oscillate: bool = True,
+                 target_strips: Optional[List[str]] = None):
         """
         Initialize RotationWobbleAnimation.
         
@@ -36,8 +37,9 @@ class RotationWobbleAnimation(BaseEffectAnimation):
             wobble_degrees: Maximum rotation in degrees
             return_frames: Frames until rotation returns to normal
             oscillate: If True, alternate wobble direction between events
+            target_strips: List of strip names to target (None = all strips)
         """
-        super().__init__()
+        super().__init__(target_strips=target_strips)
         self.trigger = trigger
         self.wobble_degrees = wobble_degrees
         self.return_frames = return_frames

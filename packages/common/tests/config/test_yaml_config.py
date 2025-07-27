@@ -6,7 +6,6 @@ from setka_common.config.yaml_config import (
     ProjectConfig,
     AudioAnalysisConfig,
     LayoutConfig,
-    AnimationSpec,
     BlenderYAMLConfig,
 )
 
@@ -153,79 +152,6 @@ class TestLayoutConfig:
         assert config.config["spacing"] == 0.1
 
 
-class TestAnimationSpec:
-    """Test cases for AnimationSpec dataclass."""
-
-    def test_animation_spec_creation_basic(self):
-        """Test creating AnimationSpec with basic parameters."""
-        spec = AnimationSpec(
-            type="scale",
-            trigger="bass",
-            target_strips=["Camera1", "Camera2"]
-        )
-        
-        assert spec.type == "scale"
-        assert spec.trigger == "bass"
-        assert spec.target_strips == ["Camera1", "Camera2"]
-
-    def test_animation_spec_creation_with_kwargs(self):
-        """Test creating AnimationSpec with additional parameters."""
-        spec = AnimationSpec(
-            type="scale",
-            trigger="bass",
-            target_strips=["Camera1"],
-            intensity=0.3,
-            duration_frames=2
-        )
-        
-        assert spec.type == "scale"
-        assert spec.trigger == "bass"
-        assert spec.target_strips == ["Camera1"]
-        assert spec.intensity == 0.3
-        assert spec.duration_frames == 2
-
-    def test_animation_spec_shake_animation(self):
-        """Test creating AnimationSpec for shake animation."""
-        spec = AnimationSpec(
-            type="shake",
-            trigger="beat",
-            target_strips=["Camera2", "Camera3"],
-            intensity=5.0,
-            return_frames=2
-        )
-        
-        assert spec.type == "shake"
-        assert spec.trigger == "beat"
-        assert spec.target_strips == ["Camera2", "Camera3"]
-        assert spec.intensity == 5.0
-        assert spec.return_frames == 2
-
-    def test_animation_spec_vintage_animation(self):
-        """Test creating AnimationSpec for vintage effects."""
-        spec = AnimationSpec(
-            type="vintage_color",
-            trigger="one_time",
-            target_strips=["Camera1"],
-            sepia_amount=0.4,
-            contrast_boost=0.3
-        )
-        
-        assert spec.type == "vintage_color"
-        assert spec.trigger == "one_time"
-        assert spec.target_strips == ["Camera1"]
-        assert spec.sepia_amount == 0.4
-        assert spec.contrast_boost == 0.3
-
-    def test_animation_spec_empty_target_strips(self):
-        """Test creating AnimationSpec with empty target strips."""
-        spec = AnimationSpec(
-            type="scale",
-            trigger="bass",
-            target_strips=[]
-        )
-        
-        assert spec.target_strips == []
-
 
 class TestBlenderYAMLConfig:
     """Test cases for BlenderYAMLConfig dataclass."""
@@ -235,19 +161,19 @@ class TestBlenderYAMLConfig:
         project = ProjectConfig(video_files=["test.mp4"])
         audio_analysis = AudioAnalysisConfig()
         layout = LayoutConfig()
-        animations = []
+        strip_animations = {}
         
         config = BlenderYAMLConfig(
             project=project,
             audio_analysis=audio_analysis,
             layout=layout,
-            animations=animations
+            strip_animations=strip_animations
         )
         
         assert config.project == project
         assert config.audio_analysis == audio_analysis
         assert config.layout == layout
-        assert config.animations == animations
+        assert config.strip_animations == strip_animations
 
     def test_blender_yaml_config_creation_complete(self):
         """Test creating BlenderYAMLConfig with complete configuration."""
@@ -274,28 +200,30 @@ class TestBlenderYAMLConfig:
             }
         )
         
-        animations = [
-            AnimationSpec(
-                type="scale",
-                trigger="bass",
-                target_strips=["camera1"],
-                intensity=0.3,
-                duration_frames=2
-            ),
-            AnimationSpec(
-                type="shake",
-                trigger="beat",
-                target_strips=["camera2"],
-                intensity=5.0,
-                return_frames=2
-            )
-        ]
+        strip_animations = {
+            "camera1": [
+                {
+                    "type": "scale",
+                    "trigger": "bass",
+                    "intensity": 0.3,
+                    "duration_frames": 2
+                }
+            ],
+            "camera2": [
+                {
+                    "type": "shake",
+                    "trigger": "beat",
+                    "intensity": 5.0,
+                    "return_frames": 2
+                }
+            ]
+        }
         
         config = BlenderYAMLConfig(
             project=project,
             audio_analysis=audio_analysis,
             layout=layout,
-            animations=animations
+            strip_animations=strip_animations
         )
         
         assert config.project.video_files == ["camera1.mp4", "camera2.mp4"]
@@ -303,22 +231,22 @@ class TestBlenderYAMLConfig:
         assert config.audio_analysis.file == "analysis/audio_analysis.json"
         assert config.layout.type == "random"
         assert config.layout.config["overlap_allowed"] is False
-        assert len(config.animations) == 2
-        assert config.animations[0].type == "scale"
-        assert config.animations[1].type == "shake"
+        assert len(config.strip_animations) == 2
+        assert config.strip_animations["camera1"][0]["type"] == "scale"
+        assert config.strip_animations["camera2"][0]["type"] == "shake"
 
     def test_blender_yaml_config_dataclass_conversion(self):
         """Test that BlenderYAMLConfig can be converted to dict."""
         project = ProjectConfig(video_files=["test.mp4"])
         audio_analysis = AudioAnalysisConfig()
         layout = LayoutConfig()
-        animations = []
+        strip_animations = {}
         
         config = BlenderYAMLConfig(
             project=project,
             audio_analysis=audio_analysis,
             layout=layout,
-            animations=animations
+            strip_animations=strip_animations
         )
         
         result = asdict(config)
@@ -327,5 +255,5 @@ class TestBlenderYAMLConfig:
         assert "project" in result
         assert "audio_analysis" in result
         assert "layout" in result
-        assert "animations" in result
+        assert "strip_animations" in result
         assert result["project"]["video_files"] == ["test.mp4"]

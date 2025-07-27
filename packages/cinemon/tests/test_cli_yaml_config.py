@@ -6,7 +6,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from blender.cli.blend_setup import load_yaml_config, main, parse_args
+from cinemon.cli.blend_setup import load_yaml_config, main, parse_args
 
 
 class TestCLIYAMLConfig:
@@ -20,8 +20,8 @@ class TestCLIYAMLConfig:
             assert args.recording_dir == Path('test_dir')
             assert args.preset is None
 
-    @patch("blender.cli.blend_setup.BlenderProjectManager")
-    @patch("blender.cli.blend_setup.load_yaml_config")
+    @patch("cinemon.cli.blend_setup.BlenderProjectManager")
+    @patch("cinemon.cli.blend_setup.load_yaml_config")
     def test_main_with_yaml_config_file_success(self, mock_load_yaml, mock_manager_class):
         """Test successful main function with YAML config file."""
         # Setup mocks
@@ -62,7 +62,7 @@ audio_analysis:
 layout:
   type: random
   config: {}
-animations: []
+strip_animations: {}
 """
 
         with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False) as f:
@@ -77,8 +77,8 @@ animations: []
             finally:
                 Path(f.name).unlink()
 
-    @patch("blender.cli.blend_setup.BlenderProjectManager")
-    @patch("blender.cli.blend_setup.load_yaml_config")
+    @patch("cinemon.cli.blend_setup.BlenderProjectManager")
+    @patch("cinemon.cli.blend_setup.load_yaml_config")
     def test_main_with_yaml_config_integration(self, mock_load_yaml, mock_manager_class):
         """Test integration with valid YAML config file."""
         yaml_content = """
@@ -145,7 +145,7 @@ audio_analysis:
 layout:
   type: random
   config: {}
-animations: []
+strip_animations: {}
 """
             f.write(yaml_content)
             f.flush()
@@ -164,7 +164,7 @@ animations: []
 class TestCLIYAMLConfigErrorHandling:
     """Test error handling in CLI YAML configuration."""
 
-    @patch("blender.cli.blend_setup.BlenderProjectManager")
+    @patch("cinemon.cli.blend_setup.BlenderProjectManager")
     def test_yaml_config_file_permission_error(self, mock_manager_class):
         """Test handling of file permission errors."""
         with patch('sys.argv', ['cinemon-blend-setup', 'test_dir', '--config', '/root/no_permission.yaml']):
@@ -196,7 +196,7 @@ audio_analysis:
   file: null
 layout:
   type: random
-animations: []
+strip_animations: {}
 """
 
         with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False) as f:
@@ -229,7 +229,7 @@ audio_analysis:
 layout:
   type: random
   config: {}
-animations: []
+strip_animations: {}
 """
 
         with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False) as f:
@@ -242,7 +242,7 @@ animations: []
                 assert config is not None
                 assert hasattr(config, 'project')
                 assert hasattr(config, 'layout')
-                assert hasattr(config, 'animations')
+                assert hasattr(config, 'strip_animations')
             finally:
                 Path(f.name).unlink()
 

@@ -54,15 +54,14 @@ strip_animations:
       return_frames: 2
 
   Screen:
-    - type: "position"
+    - type: "shake"
       trigger: "beat"
       intensity: 1.0
-      drift_distance: 100
       return_frames: 4
-    - type: "opacity"
+    - type: "brightness_flicker"
       trigger: "energy_peaks"
-      intensity: 0.4
-      min_opacity: 0.6
+      intensity: 0.2
+      return_frames: 1
 
 audio_analysis:
   file: "./analysis/main_audio_analysis.json"

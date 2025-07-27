@@ -65,47 +65,87 @@ class TestAddonRegistration:
         assert hasattr(addon_module, 'classes')
         assert len(addon_module.classes) == 2
 
-    @patch('bpy.utils.register_class')
-    @patch('operators.register')
-    def test_register_function(self, mock_operators_register, mock_register_class):
+    def test_register_function(self):
         """Test addon registration function."""
         addon_module = load_addon_module()
+        
+        # Add utils to MockBpy and mock register_class
+        from unittest.mock import Mock
+        
+        class MockUtils:
+            register_class = Mock()
+            unregister_class = Mock()
+        
+        # Enhance MockProps with needed properties
+        addon_module.bpy.props.PointerProperty = Mock()
+        addon_module.bpy.props.StringProperty = Mock()
+        
+        # Add missing PropertyGroup and Scene to MockTypes
+        addon_module.bpy.types.PropertyGroup = Mock()
+        addon_module.bpy.types.Scene = Mock()
+        
+        addon_module.bpy.utils = MockUtils()
+        mock_register_class = addon_module.bpy.utils.register_class
+        
+        # Mock operators module and layout_ui
+        with patch.object(addon_module, 'operators') as mock_operators:
+            mock_operators.register = Mock()
+            with patch.object(addon_module, 'layout_ui') as mock_layout_ui:
+                mock_layout_ui.register = Mock()
+                
+                # Mock print to avoid output during test
+                with patch('builtins.print'):
+                    addon_module.register()
 
-        # Mock print to avoid output during test
-        with patch('builtins.print'):
-            addon_module.register()
+                # Should register operators first
+                mock_operators.register.assert_called_once()
 
-        # Should register operators first
-        mock_operators_register.assert_called_once()
+                # Should register all UI classes
+                assert mock_register_class.call_count == len(addon_module.classes)
 
-        # Should register all UI classes
-        assert mock_register_class.call_count == len(addon_module.classes)
+                # Check that each class was registered
+                registered_classes = [call[0][0] for call in mock_register_class.call_args_list]
+                for cls in addon_module.classes:
+                    assert cls in registered_classes
 
-        # Check that each class was registered
-        registered_classes = [call[0][0] for call in mock_register_class.call_args_list]
-        for cls in addon_module.classes:
-            assert cls in registered_classes
-
-    @patch('bpy.utils.unregister_class')
-    @patch('operators.unregister')
-    @patch('bpy.types.Scene')
-    def test_unregister_function(self, mock_scene, mock_operators_unregister, mock_unregister_class):
+    def test_unregister_function(self):
         """Test addon unregistration function."""
         addon_module = load_addon_module()
 
+        # Setup MockBpy with utils (same as test_register_function)
+        from unittest.mock import Mock
+        
+        class MockUtils:
+            register_class = Mock()
+            unregister_class = Mock()
+        
+        addon_module.bpy.props.PointerProperty = Mock()
+        addon_module.bpy.props.StringProperty = Mock()
+        addon_module.bpy.types.PropertyGroup = Mock()
+        addon_module.bpy.types.Scene = Mock()
+        addon_module.bpy.utils = MockUtils()
+        
+        mock_unregister_class = addon_module.bpy.utils.unregister_class
+
         # Mock scene properties for cleanup
-        mock_scene.cinemon_config = Mock()
-        mock_scene.cinemon_config_path = Mock()
+        addon_module.bpy.types.Scene.cinemon_config = Mock()
+        addon_module.bpy.types.Scene.cinemon_config_path = Mock()
 
-        # Mock print to avoid output during test
-        with patch('builtins.print'):
-            addon_module.unregister()
+        # Mock operators and layout_ui modules
+        with patch.object(addon_module, 'operators') as mock_operators:
+            mock_operators.unregister = Mock()
+            with patch.object(addon_module, 'layout_ui') as mock_layout_ui:
+                mock_layout_ui.unregister = Mock()
+                
+                # Mock print to avoid output during test
+                with patch('builtins.print'):
+                    addon_module.unregister()
 
-        # Should unregister all UI classes (in reverse order)
-        assert mock_unregister_class.call_count == len(addon_module.classes)
+                # Should unregister all UI classes (in reverse order)
+                assert mock_unregister_class.call_count == len(addon_module.classes)
 
-        # Should unregister operators
-        mock_operators_unregister.assert_called_once()
+                # Should unregister operators
+                mock_operators.unregister.assert_called_once()
 
     def test_panel_properties(self):
         """Test main panel has correct properties."""
@@ -179,7 +219,13 @@ class TestAddonRegistration:
         operator.preset_name = "vintage.yaml"
 
         mock_context = Mock()
-        mock_context.scene = Mock()
+        # Create dict-like scene that supports both dict access and attributes
+        class DictLikeScene(dict):
+            def __init__(self):
+                super().__init__()
+                self.cinemon_config_path = ""
+        
+        mock_context.scene = DictLikeScene()
 
         # Mock preset file exists
         preset_path = addon_path / "example_presets" / "vintage.yaml"
@@ -199,8 +245,12 @@ class TestAddonRegistration:
                     assert result == {'FINISHED'}
                     mock_report.assert_called_once()
 
-                    # Should store config in scene
-                    assert mock_context.scene.cinemon_config == mock_config
+                    # Should store config path in scene
+                    assert mock_context.scene.cinemon_config_path == str(preset_path)
+                    
+                    # Should store layout info in scene dict
+                    assert 'cinemon_layout_type' in mock_context.scene
+                    assert 'cinemon_animations_count' in mock_context.scene
         else:
             # Test error case when preset doesn't exist
             with patch.object(operator, 'report') as mock_report:
@@ -230,20 +280,36 @@ class TestOperatorsImport:
         assert callable(operators.register)
         assert callable(operators.unregister)
 
-    @patch('bpy.utils.register_class')
-    def test_operators_register_calls(self, mock_register):
+    def test_operators_register_calls(self):
         """Test operators.register() calls bpy.utils.register_class."""
         import operators
+        
+        # Setup mock bpy.utils in operators module directly
+        from unittest.mock import Mock
+        
+        class MockUtils:
+            register_class = Mock()
+        
+        operators.bpy.utils = MockUtils()
+        mock_register = operators.bpy.utils.register_class
 
         operators.register()
 
         # Should register classes from operators.classes
         assert mock_register.call_count == len(operators.classes)
 
-    @patch('bpy.utils.unregister_class')
-    def test_operators_unregister_calls(self, mock_unregister):
+    def test_operators_unregister_calls(self):
         """Test operators.unregister() calls bpy.utils.unregister_class."""
         import operators
+        
+        # Setup mock bpy.utils in operators module directly
+        from unittest.mock import Mock
+        
+        class MockUtils:
+            unregister_class = Mock()
+        
+        operators.bpy.utils = MockUtils()
+        mock_unregister = operators.bpy.utils.unregister_class
 
         operators.unregister()
 

@@ -10,7 +10,6 @@ from typing import Any, Dict, List, Optional, Tuple
 # Import shared config classes
 try:
     from setka_common.config.yaml_config import (
-        AnimationSpec,
         BlenderYAMLConfig,
         YAMLConfigLoader,
     )
@@ -18,7 +17,6 @@ except ImportError:
     # Fallback when running in Blender environment
     sys.path.append('/home/wojtas/dev/setka-monorepo/packages/common/src')
     from setka_common.config.yaml_config import (
-        AnimationSpec,
         BlenderYAMLConfig,
         YAMLConfigLoader,
     )
@@ -104,6 +102,8 @@ class BlenderYAMLConfigReader:
         """Get resolution width."""
         if not self.config or not self.config.project.resolution:
             return 1920
+        if hasattr(self.config.project.resolution, 'width'):
+            return self.config.project.resolution.width
         return self.config.project.resolution.get("width", 1920)
 
     @property
@@ -111,6 +111,8 @@ class BlenderYAMLConfigReader:
         """Get resolution height."""
         if not self.config or not self.config.project.resolution:
             return 1080
+        if hasattr(self.config.project.resolution, 'height'):
+            return self.config.project.resolution.height
         return self.config.project.resolution.get("height", 1080)
 
     @property
@@ -135,11 +137,21 @@ class BlenderYAMLConfigReader:
         return self.config.layout.config
 
     @property
-    def animations(self) -> List[AnimationSpec]:
-        """Get list of animations."""
+    def animations(self) -> List[Dict[str, Any]]:
+        """Get list of animations (converted from strip_animations to flat format)."""
         if not self.config:
             return []
-        return self.config.animations
+        
+        # Convert strip_animations to flat animations list
+        flat_animations = []
+        for strip_name, animations in self.config.strip_animations.items():
+            if animations:
+                for animation in animations:
+                    flat_animation = animation.copy()
+                    flat_animation["target_strips"] = [strip_name]
+                    flat_animations.append(flat_animation)
+        
+        return flat_animations
 
     @property
     def audio_analysis_file(self) -> Optional[str]:

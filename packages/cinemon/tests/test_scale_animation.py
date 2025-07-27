@@ -4,7 +4,7 @@ from unittest.mock import Mock
 
 import pytest
 
-from blender.vse.animations import ScaleAnimation
+from vse.animations import ScaleAnimation
 
 
 class TestScaleAnimation:

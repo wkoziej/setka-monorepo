@@ -11,10 +11,10 @@ class TestPackageStructure:
 
     def test_package_imports(self):
         """Test that main package can be imported."""
-        import blender
+        import cinemon
 
-        assert hasattr(blender, "__version__")
-        assert hasattr(blender, "BlenderProjectManager")
+        assert hasattr(cinemon, "ProjectManager")
+        assert hasattr(cinemon, "CinemonConfigGenerator")
 
     def test_vse_module_imports(self):
         """Test VSE submodule imports."""
@@ -27,7 +27,7 @@ class TestPackageStructure:
 
     def test_cli_module_imports(self):
         """Test CLI module imports."""
-        from blender.cli import blend_setup
+        from cinemon.cli import blend_setup
 
         assert hasattr(blend_setup, "main")
 
@@ -39,19 +39,19 @@ class TestPackageStructure:
         package_root = Path(__file__).parent.parent
 
         # Check main modules
-        assert (package_root / "src/blender/project_manager.py").exists()
-        assert (package_root / "src/blender/vse_script.py").exists()
+        assert (package_root / "src/cinemon/project_manager.py").exists()
+        assert (package_root / "blender_addon/vse_script.py").exists()
 
-        # Check VSE modules
-        assert (package_root / "src/blender/vse/__init__.py").exists()
-        assert (package_root / "src/blender/vse/yaml_config.py").exists()
-        assert (package_root / "src/blender/vse/animation_compositor.py").exists()
+        # Check VSE modules (in blender_addon)
+        assert (package_root / "blender_addon/vse/__init__.py").exists()
+        assert (package_root / "blender_addon/vse/yaml_config.py").exists()
+        assert (package_root / "blender_addon/vse/animation_compositor.py").exists()
 
         # Check config modules
-        assert (package_root / "src/blender/config/__init__.py").exists()
+        assert (package_root / "src/cinemon/config/__init__.py").exists()
 
         # Check CLI modules
-        assert (package_root / "src/blender/cli/blend_setup.py").exists()
+        assert (package_root / "src/cinemon/cli/blend_setup.py").exists()
 
         # Check test files
         assert (package_root / "tests/test_project_manager.py").exists()

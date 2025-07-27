@@ -13,6 +13,7 @@ from .scale_animation import ScaleAnimation
 from .shake_animation import ShakeAnimation
 from .vintage_color_grade_animation import VintageColorGradeAnimation
 from .visibility_animation import VisibilityAnimation
+from .animation_factory import AnimationFactory
 
 __all__ = [
     "BaseEffectAnimation",
@@ -24,5 +25,6 @@ __all__ = [
     "BlackWhiteAnimation",
     "FilmGrainAnimation",
     "VintageColorGradeAnimation",
-    "VisibilityAnimation"
+    "VisibilityAnimation",
+    "AnimationFactory"
 ]

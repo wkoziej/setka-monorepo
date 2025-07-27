@@ -61,10 +61,10 @@ class CinemonConfig:
 class YAMLConfigLoader:
     """Loads and validates YAML configuration files in new format."""
 
-    # Valid animation types
+    # Valid animation types (synchronized with setka-common AnimationSpec)
     VALID_ANIMATION_TYPES = {
-        "scale", "shake", "vintage_color", "pip_switch",
-        "rotation", "opacity", "position"
+        "scale", "shake", "rotation", "jitter", "brightness_flicker",
+        "black_white", "film_grain", "vintage_color", "visibility", "pip_switch"
     }
 
     # Valid trigger types

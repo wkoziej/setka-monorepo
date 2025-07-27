@@ -3,7 +3,7 @@
 
 """Black and white desaturation animation for VSE strips."""
 
-from typing import List
+from typing import List, Optional
 
 from .base_effect_animation import BaseEffectAnimation
 
@@ -24,15 +24,17 @@ class BlackWhiteAnimation(BaseEffectAnimation):
 
     def __init__(self,
                  trigger: str = "one_time",
-                 intensity: float = 0.8):
+                 intensity: float = 0.8,
+                 target_strips: Optional[List[str]] = None):
         """
         Initialize BlackWhiteAnimation.
         
         Args:
             trigger: Event type (ignored for one-time effect)
             intensity: Desaturation intensity (0.0 = color, 1.0 = full B&W)
+            target_strips: List of strip names to target (None = all strips)
         """
-        super().__init__()
+        super().__init__(target_strips=target_strips)
         self.trigger = trigger
         self.intensity = intensity
 

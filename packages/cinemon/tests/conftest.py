@@ -4,9 +4,15 @@
 """Pytest configuration for cinemon tests."""
 
 import sys
+from pathlib import Path
 from unittest.mock import Mock
 
 import pytest
+
+# Add blender_addon to Python path so tests can import it
+blender_addon_path = Path(__file__).parent.parent / "blender_addon"
+if str(blender_addon_path) not in sys.path:
+    sys.path.insert(0, str(blender_addon_path))
 
 
 @pytest.fixture(autouse=True)

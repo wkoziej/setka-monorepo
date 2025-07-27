@@ -5,7 +5,7 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from blender.vse.animations.rotation_wobble_animation import RotationWobbleAnimation
+from vse.animations.rotation_wobble_animation import RotationWobbleAnimation
 
 
 class TestRotationWobbleAnimation:

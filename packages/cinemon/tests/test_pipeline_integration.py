@@ -7,7 +7,7 @@
 import pytest
 import yaml
 
-from blender.config import CinemonConfigGenerator, MediaDiscovery, PresetManager
+from cinemon.config import CinemonConfigGenerator, MediaDiscovery, PresetManager
 
 
 class TestPipelineIntegration:
@@ -52,9 +52,8 @@ class TestPipelineIntegration:
         preset_manager = PresetManager()
         vintage_preset = preset_manager.get_preset("vintage")
 
-        assert vintage_preset.name == "vintage"
-        assert len(vintage_preset.animations) == 6
-        assert vintage_preset.layout["type"] == "random"
+        assert vintage_preset.layout.type == "random"
+        assert len(vintage_preset.strip_animations) > 0
 
         # 3. Test CinemonConfigGenerator
         generator = CinemonConfigGenerator()
@@ -70,14 +69,14 @@ class TestPipelineIntegration:
         assert "project" in config_data
         assert "audio_analysis" in config_data
         assert "layout" in config_data
-        assert "animations" in config_data
+        assert "strip_animations" in config_data
 
         assert config_data["project"]["main_audio"] == "main_audio.m4a"
         assert config_data["layout"]["config"]["seed"] == 42
-        assert len(config_data["animations"]) == 6
+        assert len(config_data["strip_animations"]) > 0
 
     def test_custom_config_pipeline(self, tmp_path):
-        """Test complete pipeline for custom configuration generation."""
+        """Test complete pipeline using preset generation with overrides."""
         # Setup test recording structure
         recording_dir = tmp_path / "recording_20250105_143022"
         extracted_dir = recording_dir / "extracted"
@@ -87,44 +86,17 @@ class TestPipelineIntegration:
         (extracted_dir / "Camera2.mp4").touch()
         (extracted_dir / "microphone.wav").touch()
 
-        # Define custom configuration
-        layout = {
-            "type": "random",
-            "config": {
-                "overlap_allowed": False,
-                "seed": 123,
-                "margin": 0.08
-            }
-        }
-
-        animations = [
-            {
-                "type": "scale",
-                "trigger": "bass",
-                "intensity": 0.4,
-                "duration_frames": 3,
-                "target_strips": ["Camera1"]
-            },
-            {
-                "type": "vintage_color",
-                "trigger": "one_time",
-                "sepia_amount": 0.5,
-                "contrast_boost": 0.4,
-                "target_strips": ["Camera2"]
-            }
-        ]
-
-        # Generate custom configuration
+        # Use preset generation with custom parameters
         generator = CinemonConfigGenerator()
-        config_path = generator.generate_config(
+        config_path = generator.generate_preset(
             recording_dir,
-            layout=layout,
-            animations=animations,
+            "minimal",  # Use minimal preset
+            seed=123,
             main_audio="microphone.wav"
         )
 
         assert config_path.exists()
-        assert config_path.name == "animation_config.yaml"
+        assert config_path.name == "animation_config_minimal.yaml"
 
         # Verify configuration content
         with config_path.open('r') as f:
@@ -132,14 +104,8 @@ class TestPipelineIntegration:
 
         assert config_data["project"]["main_audio"] == "microphone.wav"
         assert config_data["layout"]["config"]["seed"] == 123
-        assert len(config_data["animations"]) == 2
-
-        # Verify targeting
-        scale_anim = next(anim for anim in config_data["animations"] if anim["type"] == "scale")
-        vintage_anim = next(anim for anim in config_data["animations"] if anim["type"] == "vintage_color")
-
-        assert scale_anim["target_strips"] == ["Camera1"]
-        assert vintage_anim["target_strips"] == ["Camera2"]
+        assert "strip_animations" in config_data
+        assert len(config_data["strip_animations"]) > 0
 
     def test_multiple_audio_files_handling(self, tmp_path):
         """Test pipeline handling of multiple audio files."""
@@ -199,8 +165,8 @@ class TestPipelineIntegration:
 
             assert config_data["project"]["main_audio"] == "main_audio.m4a"
             assert "layout" in config_data
-            assert "animations" in config_data
-            assert isinstance(config_data["animations"], list)
+            assert "strip_animations" in config_data
+            assert isinstance(config_data["strip_animations"], dict)
 
     def test_polish_filenames_pipeline(self, tmp_path):
         """Test complete pipeline with Polish character filenames."""

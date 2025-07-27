@@ -1,6 +1,6 @@
 """Tests for RandomLayout implementation."""
 
-from blender.vse.layouts import LayoutPosition, RandomLayout
+from vse.layouts import LayoutPosition, RandomLayout
 
 
 class TestRandomLayout:

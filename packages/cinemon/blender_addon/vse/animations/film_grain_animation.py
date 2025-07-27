@@ -3,7 +3,7 @@
 
 """Film grain animation for VSE strips."""
 
-from typing import List
+from typing import List, Optional
 
 from .base_effect_animation import BaseEffectAnimation
 
@@ -24,15 +24,17 @@ class FilmGrainAnimation(BaseEffectAnimation):
 
     def __init__(self,
                  trigger: str = "one_time",
-                 intensity: float = 0.1):
+                 intensity: float = 0.1,
+                 target_strips: Optional[List[str]] = None):
         """
         Initialize FilmGrainAnimation.
         
         Args:
             trigger: Event type (ignored for one-time effect)
             intensity: Grain intensity (0.0 to 1.0)
+            target_strips: List of strip names to target (None = all strips)
         """
-        super().__init__()
+        super().__init__(target_strips=target_strips)
         self.trigger = trigger
         self.intensity = intensity
 

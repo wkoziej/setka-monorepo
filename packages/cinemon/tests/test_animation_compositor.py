@@ -4,9 +4,9 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from blender.vse.animation_compositor import AnimationCompositor
-from blender.vse.animations import ScaleAnimation, ShakeAnimation
-from blender.vse.layouts import LayoutPosition, RandomLayout
+from vse.animation_compositor import AnimationCompositor
+from vse.animations import ScaleAnimation, ShakeAnimation
+from vse.layouts import LayoutPosition, RandomLayout
 
 
 class TestAnimationCompositor:
@@ -68,7 +68,7 @@ class TestAnimationCompositor:
 
         return [scale_anim, shake_anim]
 
-    @patch('blender.vse.animation_compositor.bpy')
+    @patch('vse.animation_compositor.bpy')
     def test_compositor_full_pipeline(self, mock_bpy, mock_video_strips, mock_audio_analysis):
         """Test pełnego pipeline: layout + animacje."""
         # Setup scene resolution
@@ -168,7 +168,7 @@ class TestAnimationCompositor:
         # Animation should not be called since no events
         animation.apply_to_strip.assert_not_called()
 
-    @patch('blender.vse.animation_compositor.bpy')
+    @patch('vse.animation_compositor.bpy')
     def test_compositor_error_handling(self, mock_bpy, simple_layout, mock_video_strips):
         """Test obsługi błędów."""
         # Simulate error getting resolution
