@@ -37,9 +37,9 @@ for package_dir in $packages; do
         continue
     fi
 
-    # Run unit tests only (exclude integration, manual, and audio tests)
-    echo "  uv run --package $package_name pytest packages/$package_dir/tests/ -m 'not integration and not manual and not audio' --tb=short -q"
-    if ! (cd "packages/$package_dir" && uv run --package "$package_name" pytest tests/ -m "not integration and not manual and not audio" --tb=short -q); then
+    # Run unit tests only (exclude integration, manual, audio, and slow tests)
+    echo "  uv run --package $package_name pytest packages/$package_dir/tests/ -m 'not integration and not manual and not audio and not slow' --tb=short -q"
+    if ! (cd "packages/$package_dir" && uv run --package "$package_name" pytest tests/ -m "not integration and not manual and not audio and not slow" --tb=short -q); then
         echo "Unit tests failed for package: $package_dir"
         exit 1
     fi

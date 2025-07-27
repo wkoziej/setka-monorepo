@@ -44,7 +44,7 @@ cp /path/to/your/small_video.mp4 ./test_video.mp4
 
 ```bash
 # Uruchom prosty test script
-python youtube_manual_test.py
+python youtube_manual_example.py
 ```
 
 **Co testuje:**
@@ -180,7 +180,7 @@ python -c "import json; print(json.load(open('client_secrets.json')))"
 ### Problem: "Upload fails"
 ```bash
 # Sprawdź logi
-python youtube_manual_test.py 2>&1 | tee debug.log
+python youtube_manual_example.py 2>&1 | tee debug.log
 
 # Sprawdź network connectivity
 ping youtube.googleapis.com
@@ -199,7 +199,7 @@ medusa/
 ├── client_secrets.json          # OAuth credentials (nie commituj!)
 ├── credentials.json             # Wygenerowane po auth (nie commituj!)
 ├── test_video.mp4              # Test file (opcjonalny)
-├── youtube_manual_test.py      # Prosty test script
+├── youtube_manual_example.py      # Prosty test script
 ├── upload_result.txt           # Wynik ostatniego upload'u
 ├── last_upload_result.json     # Szczegóły ostatniego upload'u
 └── debug.log                   # Logi debug (jeśli potrzebne)

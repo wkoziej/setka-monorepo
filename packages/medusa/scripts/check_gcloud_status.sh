@@ -78,8 +78,8 @@ if ! command -v gcloud &> /dev/null; then
 elif [[ ! -f "client_secrets.json" ]]; then
     echo "1. ./setup_youtube_api.sh (dokończ setup)"
 elif [[ ! -f "credentials.json" ]]; then
-    echo "1. python youtube_manual_test.py (test authentication)"
+    echo "1. python youtube_manual_example.py (test authentication)"
 else
-    echo "1. python youtube_manual_test.py (test upload)"
+    echo "1. python youtube_manual_example.py (test upload)"
     echo "2. python -m pytest tests/integration/test_youtube_real_api.py -v"
 fi

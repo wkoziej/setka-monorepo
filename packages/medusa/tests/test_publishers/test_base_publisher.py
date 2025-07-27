@@ -446,6 +446,7 @@ class TestBasePublisher:
         assert all(isinstance(p, PublishProgress) for p in progress_updates)
 
     @pytest.mark.asyncio
+    @pytest.mark.slow
     async def test_publish_post_retry_logic(self, mock_publisher):
         """Test retry logic on transient failures."""
         mock_publisher.is_authenticated = True
@@ -473,6 +474,7 @@ class TestBasePublisher:
         assert call_count == 2  # Failed once, succeeded on retry
 
     @pytest.mark.asyncio
+    @pytest.mark.slow
     async def test_publish_post_timeout(self, mock_publisher):
         """Test publish timeout handling."""
         mock_publisher.is_authenticated = True
@@ -498,6 +500,7 @@ class TestBasePublisher:
         assert result.success is True
 
     @pytest.mark.asyncio
+    @pytest.mark.slow
     async def test_publish_post_max_retries_exceeded(self, mock_publisher):
         """Test behavior when max retries are exceeded."""
         mock_publisher.is_authenticated = True
@@ -623,6 +626,7 @@ class TestIntegrationScenarios:
         assert publisher.cleanup_called is True
 
     @pytest.mark.asyncio
+    @pytest.mark.slow
     async def test_error_recovery_workflow(self):
         """Test error recovery in publishing workflow."""
         publisher = MockPublisher("error_test")

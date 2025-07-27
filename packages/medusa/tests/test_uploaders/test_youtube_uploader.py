@@ -783,6 +783,7 @@ class TestYouTubeUploaderResumableUpload:
         assert len(progress_updates) >= 1
 
     @pytest.mark.asyncio
+    @pytest.mark.slow
     async def test_resumable_upload_with_retry(self):
         """Test resumable upload with retry on failure."""
         uploader = YouTubeUploader()

@@ -298,6 +298,7 @@ class TestBaseUploader:
             await uploader.upload_media("test_video.mp4", metadata)
 
     @pytest.mark.asyncio
+    @pytest.mark.slow
     async def test_upload_with_retry_logic(self):
         """Test upload retry logic on transient failures."""
         uploader = ConcreteUploader()
@@ -321,6 +322,7 @@ class TestBaseUploader:
             assert mock_upload.call_count == 2
 
     @pytest.mark.asyncio
+    @pytest.mark.slow
     async def test_upload_retry_exhausted(self):
         """Test upload when all retries are exhausted."""
         uploader = ConcreteUploader()
@@ -423,6 +425,7 @@ class TestBaseUploader:
         assert not uploader._is_retryable_error(ValueError("Generic error"))
 
     @pytest.mark.asyncio
+    @pytest.mark.slow
     async def test_upload_with_timeout(self):
         """Test upload with timeout."""
         uploader = ConcreteUploader()

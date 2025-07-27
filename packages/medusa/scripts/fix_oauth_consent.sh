@@ -38,7 +38,7 @@ if [[ -n "$PROJECT_ID" ]]; then
 
     # Test authorization
     source venv/bin/activate
-    python youtube_manual_test.py
+    python youtube_manual_example.py
 
 else
     echo "❌ Nie można znaleźć aktywnego projektu"
