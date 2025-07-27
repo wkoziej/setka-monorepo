@@ -64,7 +64,7 @@ def mock_obspython():
         sys.modules["obspython"] = mock_obs
 
         # Also ensure the import in the actual modules works
-        import src.obs_integration.obs_script as obs_script_module
+        import obsession.obs_integration.obs_script as obs_script_module
 
         obs_script_module.obs = mock_obs
 
@@ -140,6 +140,11 @@ def mock_obs_functions(mock_obspython):
     obs.obs_sceneitem_get_scale = Mock()
     obs.obs_sceneitem_get_bounds = Mock()
     obs.obs_sceneitem_get_info = Mock(return_value=MockTransformInfo())
+
+    # Source capabilities - return flags for audio+video by default
+    obs.obs_source_get_output_flags = Mock(
+        return_value=0x003
+    )  # Audio (0x002) + Video (0x001)
 
     return obs
 

@@ -11,7 +11,7 @@ from unittest.mock import Mock, patch
 
 
 # Import functions to test - will be implemented
-from src.obs_integration.obs_script import (
+from obsession.obs_integration.obs_script import (
     get_recording_output_path,
     reorganize_files_after_recording,
     save_metadata_to_file,
@@ -39,7 +39,7 @@ class TestFileReorganization:
     def test_get_recording_output_path_no_obs(self):
         """Test getting recording output path when OBS is not available."""
         # Mock obs as None
-        import src.obs_integration.obs_script as script_module
+        import obsession.obs_integration.obs_script as script_module
 
         original_obs = script_module.obs
         script_module.obs = None
@@ -196,7 +196,7 @@ class TestFileReorganization:
         """Test saving metadata fallback behavior (always uses timestamp after refactoring)."""
         with tempfile.TemporaryDirectory() as temp_dir:
             # Set the recording output path to the temp directory
-            import src.obs_integration.obs_script as script_module
+            import obsession.obs_integration.obs_script as script_module
 
             original_path = script_module.recording_output_path
             script_module.recording_output_path = temp_dir
@@ -286,7 +286,7 @@ class TestFileReorganization:
         """Test collect_and_save_metadata with file reorganization."""
         with tempfile.TemporaryDirectory() as temp_dir:
             # Setup scene data
-            import src.obs_integration.obs_script as script_module
+            import obsession.obs_integration.obs_script as script_module
 
             script_module.current_scene_data = {
                 "canvas_size": [1920, 1080],
@@ -339,7 +339,9 @@ class TestFileReorganization:
 
             try:
                 # Call collect_and_save_metadata
-                from src.obs_integration.obs_script import collect_and_save_metadata
+                from obsession.obs_integration.obs_script import (
+                    collect_and_save_metadata,
+                )
 
                 collect_and_save_metadata()
 
@@ -368,7 +370,7 @@ class TestFileReorganization:
     ):
         """Test collect_and_save_metadata when recording path cannot be obtained."""
         # Setup scene data
-        import src.obs_integration.obs_script as script_module
+        import obsession.obs_integration.obs_script as script_module
 
         script_module.current_scene_data = {
             "canvas_size": [1920, 1080],
@@ -411,7 +413,7 @@ class TestFileReorganization:
 
         try:
             # Call collect_and_save_metadata
-            from src.obs_integration.obs_script import collect_and_save_metadata
+            from obsession.obs_integration.obs_script import collect_and_save_metadata
 
             collect_and_save_metadata()
 

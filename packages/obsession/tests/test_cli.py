@@ -7,8 +7,8 @@ import tempfile
 from pathlib import Path
 from unittest.mock import patch
 
-from cli.extract import main, parse_args
-from core.extractor import ExtractionResult
+from obsession.cli.extract import main, parse_args
+from obsession.core.extractor import ExtractionResult
 
 
 class TestCLIExtract:
@@ -76,7 +76,9 @@ class TestCLIExtract:
                 success=True, extracted_files=[str(Path(temp_dir) / "Camera1.mp4")]
             )
 
-            with patch("cli.extract.extract_sources", return_value=mock_result):
+            with patch(
+                "obsession.cli.extract.extract_sources", return_value=mock_result
+            ):
                 with patch(
                     "sys.argv", ["extract.py", str(video_file), str(metadata_file)]
                 ):
@@ -109,7 +111,9 @@ class TestCLIExtract:
             # Mock failed extraction
             mock_result = ExtractionResult(success=False, error_message="FFmpeg failed")
 
-            with patch("cli.extract.extract_sources", return_value=mock_result):
+            with patch(
+                "obsession.cli.extract.extract_sources", return_value=mock_result
+            ):
                 with patch(
                     "sys.argv", ["extract.py", str(video_file), str(metadata_file)]
                 ):

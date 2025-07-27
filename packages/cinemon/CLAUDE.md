@@ -51,8 +51,10 @@ uv run pytest --cov=src/blender
 # Run specific test file
 uv run pytest tests/test_animation_engine.py -v
 
-# Run linting
+# Run linting and formatting
 uv run ruff check src/
+uv run ruff check --fix src/
+uv run ruff format src/
 
 # Create VSE project from CLI with preset
 cinemon-blend-setup ./recording_dir --preset vintage
@@ -95,9 +97,9 @@ packages/cinemon/
 ├── src/cinemon/           # Python API (outside Blender)
 │   ├── __init__.py
 │   ├── project_manager.py # Calls Blender subprocess
-│   ├── animation_engine.py # Animation delegation (legacy)
 │   ├── cli/
-│   │   └── blend_setup.py # CLI interface
+│   │   ├── blend_setup.py # Main CLI interface
+│   │   └── generate_config.py # Config generation CLI
 │   └── config/           # YAML configuration generation
 │       ├── __init__.py
 │       ├── cinemon_config_generator.py
@@ -349,6 +351,21 @@ def test_something(mock_bpy):
     mock_bpy.context.scene.render.fps = 60
     # test code here
 ```
+
+### Test Markers
+
+Available pytest markers defined in `pyproject.toml`:
+- `unit`: Unit tests (default)
+- `integration`: Integration tests requiring external services
+- `slow`: Slow tests
+
+### Coverage Configuration
+
+Test coverage is configured with:
+- Minimum 80% coverage required (`--cov-fail-under=80`)
+- HTML coverage reports generated in `htmlcov/`
+- Source coverage from `src/` directory only
+- Excludes test files and `__init__.py` from coverage calculation
 
 ## CLI Usage Patterns
 

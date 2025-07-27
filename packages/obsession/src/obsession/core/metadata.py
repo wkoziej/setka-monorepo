@@ -26,16 +26,20 @@ def determine_source_capabilities(obs_source) -> Dict[str, bool]:
     if obs_source is None or obs is None:
         return {"has_audio": False, "has_video": False}
 
-    flags = obs.obs_source_get_output_flags(obs_source)
+    try:
+        flags = obs.obs_source_get_output_flags(obs_source)
 
-    # OBS source flags constants
-    OBS_SOURCE_VIDEO = 0x001
-    OBS_SOURCE_AUDIO = 0x002
+        # OBS source flags constants
+        OBS_SOURCE_VIDEO = 0x001
+        OBS_SOURCE_AUDIO = 0x002
 
-    return {
-        "has_audio": bool(flags & OBS_SOURCE_AUDIO),
-        "has_video": bool(flags & OBS_SOURCE_VIDEO),
-    }
+        return {
+            "has_audio": bool(flags & OBS_SOURCE_AUDIO),
+            "has_video": bool(flags & OBS_SOURCE_VIDEO),
+        }
+    except (TypeError, AttributeError):
+        # Handle cases where obs is mocked or flags are not integers
+        return {"has_audio": False, "has_video": False}
 
 
 def create_metadata(

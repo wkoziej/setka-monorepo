@@ -1,11 +1,11 @@
-# ABOUTME: Tests for MediaDiscovery auto-discovery functionality
+# ABOUTME: Tests for MediaDiscovery auto-discovery functionality in setka-common
 # ABOUTME: Tests file discovery, validation, and main audio detection in recording directories
 
 """Tests for MediaDiscovery class."""
 
 import pytest
 
-from cinemon.config.media_discovery import MediaDiscovery
+from setka_common.utils import MediaDiscovery
 
 
 class TestMediaDiscovery:

@@ -12,7 +12,7 @@ from unittest.mock import patch, Mock
 
 
 # Import functions to test
-from src.obs_integration.advanced_scene_switcher_extractor import (
+from obsession.obs_integration.advanced_scene_switcher_extractor import (
     find_latest_recording,
     run_extraction,
 )
@@ -43,7 +43,7 @@ class TestAdvancedSceneSwitcherExtractor:
 
                 # Mock the common directories to point to our temp structure
                 with patch(
-                    "src.obs_integration.advanced_scene_switcher_extractor.Path"
+                    "obsession.obs_integration.advanced_scene_switcher_extractor.Path"
                 ) as mock_path:
                     mock_path.home.return_value = Path(temp_dir)
 

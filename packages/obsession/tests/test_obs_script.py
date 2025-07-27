@@ -6,11 +6,10 @@ Using shared OBS fixtures from conftest.py to avoid duplication.
 import json
 import os
 import tempfile
-import importlib
 from unittest.mock import Mock, patch
 
 # Import our module - obspython mock is handled by conftest.py
-from src.obs_integration.obs_script import (
+from obsession.obs_integration.obs_script import (
     script_description,
     script_load,
     script_unload,
@@ -25,16 +24,8 @@ class TestOBSScript:
     """Test cases for OBS script functionality."""
 
     def setup_method(self):
-        """Reset module state before each test."""
-        import sys
-        import src.obs_integration.obs_script
-        import metadata
-
-        # Only reload if modules are already in sys.modules
-        if "src.obs_integration.obs_script" in sys.modules:
-            importlib.reload(src.obs_integration.obs_script)
-        if "metadata" in sys.modules:
-            importlib.reload(metadata)
+        """Setup method for each test."""
+        pass
 
     def test_script_description(self):
         """Test script description returns proper HTML."""
@@ -64,12 +55,15 @@ class TestOBSScript:
     def test_on_event_recording_started(self, mock_obspython):
         """Test event handler for recording started."""
         with patch(
-            "src.obs_integration.obs_script.prepare_metadata_collection"
+            "obsession.obs_integration.obs_script.prepare_metadata_collection"
         ) as mock_prepare:
             # Set script as enabled
-            import src.obs_integration.obs_script as script_module
+            import obsession.obs_integration.obs_script as script_module
 
             script_module.script_enabled = True
+
+            # Mock obs reference
+            script_module.obs = mock_obspython
 
             # Call event handler
             on_event(mock_obspython.OBS_FRONTEND_EVENT_RECORDING_STARTED)
@@ -80,12 +74,15 @@ class TestOBSScript:
     def test_on_event_recording_stopped(self, mock_obspython):
         """Test event handler for recording stopped."""
         with patch(
-            "src.obs_integration.obs_script.collect_and_save_metadata"
+            "obsession.obs_integration.obs_script.collect_and_save_metadata"
         ) as mock_collect:
             # Set script as enabled
-            import src.obs_integration.obs_script as script_module
+            import obsession.obs_integration.obs_script as script_module
 
             script_module.script_enabled = True
+
+            # Mock obs reference
+            script_module.obs = mock_obspython
 
             # Call event handler
             on_event(mock_obspython.OBS_FRONTEND_EVENT_RECORDING_STOPPED)
@@ -96,12 +93,15 @@ class TestOBSScript:
     def test_on_event_script_disabled(self, mock_obspython):
         """Test event handler when script is disabled."""
         with patch(
-            "src.obs_integration.obs_script.prepare_metadata_collection"
+            "obsession.obs_integration.obs_script.prepare_metadata_collection"
         ) as mock_prepare:
             # Set script as disabled
-            import src.obs_integration.obs_script as script_module
+            import obsession.obs_integration.obs_script as script_module
 
             script_module.script_enabled = False
+
+            # Mock obs reference
+            script_module.obs = mock_obspython
 
             # Call event handler
             on_event(mock_obspython.OBS_FRONTEND_EVENT_RECORDING_STARTED)
@@ -129,7 +129,7 @@ class TestOBSScript:
         # Create temporary directory
         with tempfile.TemporaryDirectory() as temp_dir:
             # Set recording output path
-            import src.obs_integration.obs_script as script_module
+            import obsession.obs_integration.obs_script as script_module
 
             # Save original path
             original_path = script_module.recording_output_path
@@ -168,7 +168,7 @@ class TestOBSScript:
     def test_collect_and_save_metadata_no_scene_data(self):
         """Test collect metadata when no scene data is prepared."""
         # Clear scene data
-        import src.obs_integration.obs_script as script_module
+        import obsession.obs_integration.obs_script as script_module
 
         script_module.current_scene_data = {}
 
@@ -184,13 +184,19 @@ class TestOBSScript:
     ):
         """Test collect metadata with scene sources."""
         # Setup scene data
-        import src.obs_integration.obs_script as script_module
+        import obsession.obs_integration.obs_script as script_module
 
         script_module.current_scene_data = {
             "canvas_size": [1920, 1080],
             "fps": 30.0,
             "scene_name": "Test Scene",
         }
+
+        # Ensure recording_output_path is set
+        script_module.recording_output_path = "/tmp/test_output"
+
+        # Mock obs reference
+        script_module.obs = mock_obs_functions
 
         # Setup mock returns
         mock_obs_functions.obs_frontend_get_current_scene.return_value = mock_obs_scene
@@ -220,10 +226,12 @@ class TestOBSScript:
         mock_obs_functions.sceneitem_list_release = Mock()
 
         # Mock save function
-        with patch("src.obs_integration.obs_script.save_metadata_to_file") as mock_save:
+        with patch(
+            "obsession.obs_integration.obs_script.save_metadata_to_file"
+        ) as mock_save:
             # Mock determine_source_capabilities to return specific capabilities
             with patch(
-                "src.obs_integration.obs_script.determine_source_capabilities"
+                "obsession.obs_integration.obs_script.determine_source_capabilities"
             ) as mock_caps:
                 mock_caps.return_value = {"has_audio": True, "has_video": True}
 

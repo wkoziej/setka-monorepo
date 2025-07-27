@@ -9,7 +9,7 @@ import time
 from pathlib import Path
 from typing import List, Optional
 
-from core.extractor import extract_sources
+from obsession.core.extractor import extract_sources
 from setka_common.file_structure.specialized import RecordingStructureManager
 
 

@@ -4,13 +4,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Setka is a monorepo containing five interconnected media processing and automation packages:
+Setka is a monorepo containing six interconnected media processing and automation packages:
 
 - **setka-common**: Shared utilities for file structure management
 - **obsession**: OBS Canvas Recorder with FFmpeg extraction and metadata collection
 - **beatrix**: Dedicated audio analysis for animation timing and beat detection
 - **cinemon**: Blender VSE project creation with audio-driven animations
 - **medusa**: Media upload automation to YouTube/Vimeo and social media publishing
+- **fermata**: Tauri-based desktop GUI for managing recordings and batch operations
 
 ## Monorepo Structure and Workflow
 
@@ -34,6 +35,11 @@ uv add --package cinemon librosa
 
 # Add workspace-wide dev dependencies
 uv add --dev pytest-xdist
+
+# Linting and formatting
+uv run ruff check .
+uv run ruff check --fix .
+uv run ruff format .
 ```
 
 ### Testing Commands
@@ -56,6 +62,13 @@ uv run pytest packages/obsession/tests/test_extractor.py -v
 
 # Run specific test
 uv run pytest -k "test_audio_analysis" -v
+
+# Run tests by marker
+uv run pytest -m unit -v           # Unit tests only
+uv run pytest -m integration -v    # Integration tests only
+uv run pytest -m "not slow" -v     # Exclude slow tests
+uv run pytest -m audio -v          # Audio processing tests
+uv run pytest -m manual -v         # Manual intervention tests
 ```
 
 ## Architecture Overview
@@ -71,14 +84,16 @@ uv run pytest -k "test_audio_analysis" -v
 ### Package Dependencies
 
 ```
-medusa ←─┐
-         │
-cinemon ←─┼─── setka-common (file_structure, utils)
-         │       ↘ beatrix (audio analysis)
-         │
-obsession ←┘
-         │
-beatrix ←┘
+fermata ←─┐ (Tauri GUI)
+          │
+medusa ←──┼─┐
+          │ │
+cinemon ←─┼─┼─── setka-common (file_structure, utils)
+          │ │       ↘ beatrix (audio analysis)
+          │ │
+obsession ←┘ │
+          │
+beatrix ←─┘
 ```
 
 ### Key Integration Points
@@ -90,6 +105,8 @@ beatrix ←┘
   - `beatrix` → analyze audio for animation timing
   - `cinemon-blend-setup` → create Blender projects with animations
   - `medusa` → upload and publish media
+- **GUI Integration**:
+  - `fermata` → Tauri desktop app for batch operations and recording management
 
 ## Critical Architecture Patterns
 
@@ -165,6 +182,16 @@ Managed by `setka-common.file_structure.specialized.RecordingStructureManager`
 - **medusa**: Separates unit tests from integration tests with YouTube/Facebook APIs
 - **beatrix**: Uses mock AudioAnalyzer for testing audio processing components
 - **setka-common**: Provides file structure utilities and validates directory organization
+- **fermata**: Tauri frontend testing with Vitest, backend Rust testing with cargo test
+
+### Test Markers
+
+Available pytest markers defined in workspace `pyproject.toml`:
+- `unit`: Unit tests (default)
+- `integration`: Integration tests requiring external services
+- `audio`: Tests requiring audio processing capabilities
+- `manual`: Tests requiring manual intervention
+- `asyncio`: Tests using asyncio functionality
 
 ### Test Isolation Issues
 
@@ -216,6 +243,7 @@ Each package provides specific commands:
 - `obs-extract` - Extract sources from OBS recordings (obsession)
 - `beatrix` - Analyze audio for animation timing (beatrix)
 - `cinemon-blend-setup` - Create animated Blender VSE projects (cinemon)
+- `cinemon-generate-config` - Generate YAML configuration files (cinemon)
 - Direct module execution for medusa: `python -m medusa.cli`
 
 ## Practical Usage Examples

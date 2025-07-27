@@ -4,7 +4,7 @@ Tests for source extraction functionality.
 
 import tempfile
 from unittest.mock import patch
-from core.extractor import (
+from obsession.core.extractor import (
     ExtractionResult,
     calculate_crop_params,
     sanitize_filename,

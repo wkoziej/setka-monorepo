@@ -15,7 +15,7 @@ class TestImportVerification:
 
     def test_metadata_module_uses_correct_obs_import(self):
         """Verify that metadata.py uses 'import obspython as obs' not 'import obs'."""
-        metadata_file = Path("src/core/metadata.py")
+        metadata_file = Path("src/obsession/core/metadata.py")
         source_code = metadata_file.read_text()
 
         # Parse the AST to find import statements
@@ -43,7 +43,7 @@ class TestImportVerification:
 
     def test_obs_script_uses_correct_obs_import(self):
         """Verify that obs_script.py uses 'import obspython as obs' not 'import obs'."""
-        obs_script_file = Path("src/obs_integration/obs_script.py")
+        obs_script_file = Path("src/obsession/obs_integration/obs_script.py")
         source_code = obs_script_file.read_text()
 
         # Check for correct import in source
@@ -59,7 +59,7 @@ class TestImportVerification:
             del sys.modules[module_name]
 
         # Import should work (obspython will be None due to ImportError, which is expected)
-        from core.metadata import determine_source_capabilities
+        from obsession.core.metadata import determine_source_capabilities
 
         # Function should exist and be callable
         assert callable(determine_source_capabilities)
@@ -72,7 +72,7 @@ class TestImportVerification:
             if "metadata" in sys.modules:
                 del sys.modules["metadata"]
 
-            from core.metadata import determine_source_capabilities
+            from obsession.core.metadata import determine_source_capabilities
 
             # Should return False for both when obs is None
             result = determine_source_capabilities(Mock())
@@ -81,7 +81,7 @@ class TestImportVerification:
     def test_obs_module_availability_in_metadata(self):
         """Test that the obs module is properly available in metadata module."""
         # Import the module
-        from src.core import metadata
+        from obsession.core import metadata
 
         # The obs variable should be either None or a proper mock/module
         assert hasattr(metadata, "obs"), "metadata module should have 'obs' attribute"
@@ -98,7 +98,7 @@ class TestOBSIntegrationImports:
 
     def test_obs_script_fallback_implementation(self):
         """Test that OBS script has fallback implementation for determine_source_capabilities."""
-        obs_script_file = Path("src/obs_integration/obs_script.py")
+        obs_script_file = Path("src/obsession/obs_integration/obs_script.py")
         source_code = obs_script_file.read_text()
 
         # Should have fallback implementation
@@ -124,7 +124,7 @@ class TestOBSIntegrationImports:
             del sys.modules[module_name]
 
         # Should be able to import the module
-        from src.obs_integration import obs_script
+        from obsession.obs_integration import obs_script
 
         # Should have the required functions
         assert hasattr(obs_script, "determine_source_capabilities")
@@ -191,7 +191,7 @@ class TestRealImportBehavior:
                 del sys.modules[module_name]
 
         # Import fresh
-        from core.metadata import determine_source_capabilities
+        from obsession.core.metadata import determine_source_capabilities
 
         # Test with None source (should always work)
         result = determine_source_capabilities(None)
@@ -203,12 +203,8 @@ class TestRealImportBehavior:
         mock_obs = Mock()
         mock_obs.obs_source_get_output_flags.return_value = 0x003  # Audio + Video flags
 
-        with patch.dict("sys.modules", {"obspython": mock_obs}):
-            # Force reload
-            if "metadata" in sys.modules:
-                del sys.modules["metadata"]
-
-            from core.metadata import determine_source_capabilities
+        with patch("obsession.core.metadata.obs", mock_obs):
+            from obsession.core.metadata import determine_source_capabilities
 
             # Test with mock source
             mock_source = Mock()
@@ -238,11 +234,8 @@ class TestRealImportBehavior:
             0x003  # Audio + Video
         )
 
-        with patch.dict("sys.modules", {"obspython": mock_obs_proper}):
-            if "metadata" in sys.modules:
-                del sys.modules["metadata"]
-
-            from core.metadata import determine_source_capabilities
+        with patch("obsession.core.metadata.obs", mock_obs_proper):
+            from obsession.core.metadata import determine_source_capabilities
 
             result_proper = determine_source_capabilities(mock_source)
             assert result_proper["has_audio"] is True
@@ -250,11 +243,8 @@ class TestRealImportBehavior:
 
         # Now simulate the bug scenario where obs is None (wrong import)
         # In the original bug, 'import obs' would fail or return None
-        with patch.dict("sys.modules", {"obspython": None}):
-            if "metadata" in sys.modules:
-                del sys.modules["metadata"]
-
-            from core.metadata import determine_source_capabilities
+        with patch("obsession.core.metadata.obs", None):
+            from obsession.core.metadata import determine_source_capabilities
 
             # In the bug scenario, this would always return False
             result_bug = determine_source_capabilities(mock_source)

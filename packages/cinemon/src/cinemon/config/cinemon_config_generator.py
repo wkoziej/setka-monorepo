@@ -13,7 +13,7 @@ from setka_common.config.yaml_config import (
     Resolution,
 )
 
-from .media_discovery import MediaDiscovery
+from setka_common.utils import MediaDiscovery
 from .preset_manager import PresetManager
 
 

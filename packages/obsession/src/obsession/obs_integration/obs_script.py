@@ -19,34 +19,48 @@ except ImportError:
 
 # Import capabilities detection from metadata module
 try:
-    from src.core.metadata import determine_source_capabilities
+    from obsession.core.metadata import determine_source_capabilities
 except ImportError:
-    # Fallback for when running in OBS without proper Python path
-    def determine_source_capabilities(obs_source) -> Dict[str, bool]:
-        """Fallback implementation for OBS environment."""
-        if obs_source is None or obs is None:
-            return {"has_audio": False, "has_video": False}
+    try:
+        # Try relative import for OBS environment
+        from ..core.metadata import determine_source_capabilities
+    except ImportError:
+        # Fallback for when running in OBS without proper Python path
+        def determine_source_capabilities(obs_source) -> Dict[str, bool]:
+            """Fallback implementation for OBS environment."""
+            if obs_source is None or obs is None:
+                return {"has_audio": False, "has_video": False}
 
-        flags = obs.obs_source_get_output_flags(obs_source)
+            flags = obs.obs_source_get_output_flags(obs_source)
 
-        # OBS source flags constants
-        OBS_SOURCE_VIDEO = 0x001
-        OBS_SOURCE_AUDIO = 0x002
+            # OBS source flags constants
+            OBS_SOURCE_VIDEO = 0x001
+            OBS_SOURCE_AUDIO = 0x002
 
-        return {
-            "has_audio": bool(flags & OBS_SOURCE_AUDIO),
-            "has_video": bool(flags & OBS_SOURCE_VIDEO),
-        }
+            return {
+                "has_audio": bool(flags & OBS_SOURCE_AUDIO),
+                "has_video": bool(flags & OBS_SOURCE_VIDEO),
+            }
 
 
 # Import file structure manager
 # Direct import for OBS environment
 import sys
 
-# Add the core directory to sys.path
+# Add the necessary directories to sys.path for monorepo access
 core_dir = Path(__file__).parent.parent / "core"
 if str(core_dir) not in sys.path:
     sys.path.insert(0, str(core_dir))
+
+# Add the setka-common src directory to access setka_common
+setka_common_src = (
+    Path(__file__).parent.parent.parent.parent.parent.parent
+    / "packages"
+    / "common"
+    / "src"
+)
+if str(setka_common_src) not in sys.path:
+    sys.path.insert(0, str(setka_common_src))
 
 from setka_common.file_structure.specialized import RecordingStructureManager
 

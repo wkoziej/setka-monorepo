@@ -4,9 +4,8 @@ Tests for metadata management functionality.
 
 import json
 import time
-import importlib
 from unittest.mock import Mock, patch
-from core.metadata import (
+from obsession.core.metadata import (
     create_metadata,
     validate_metadata,
     determine_source_capabilities,
@@ -17,13 +16,8 @@ class TestSourceCapabilitiesDetection:
     """Test source capabilities detection using OBS API."""
 
     def setup_method(self):
-        """Reset module state before each test."""
-        import sys
-        import metadata
-
-        # Only reload if module is already in sys.modules
-        if "metadata" in sys.modules:
-            importlib.reload(metadata)
+        """Setup method for each test."""
+        pass
 
     def test_determine_source_capabilities_audio_only(self):
         """Test detection of audio-only source."""
@@ -32,7 +26,7 @@ class TestSourceCapabilitiesDetection:
         mock_obs = Mock()
         mock_obs.obs_source_get_output_flags.return_value = 0x002  # OBS_SOURCE_AUDIO
 
-        with patch("metadata.obs", mock_obs):
+        with patch("obsession.core.metadata.obs", mock_obs):
             result = determine_source_capabilities(mock_source)
 
             assert result == {"has_audio": True, "has_video": False}
@@ -44,7 +38,7 @@ class TestSourceCapabilitiesDetection:
         mock_obs = Mock()
         mock_obs.obs_source_get_output_flags.return_value = 0x001  # OBS_SOURCE_VIDEO
 
-        with patch("metadata.obs", mock_obs):
+        with patch("obsession.core.metadata.obs", mock_obs):
             result = determine_source_capabilities(mock_source)
 
             assert result == {"has_audio": False, "has_video": True}
@@ -57,12 +51,12 @@ class TestSourceCapabilitiesDetection:
             0x003  # OBS_SOURCE_VIDEO | OBS_SOURCE_AUDIO
         )
 
-        with patch("metadata.obs", mock_obs):
+        with patch("obsession.core.metadata.obs", mock_obs):
             result = determine_source_capabilities(mock_source)
 
             assert result == {"has_audio": True, "has_video": True}
 
-    @patch("metadata.obs")
+    @patch("obsession.core.metadata.obs")
     def test_determine_source_capabilities_none(self, mock_obs):
         """Test detection of source with no audio/video."""
         mock_source = Mock()
@@ -83,7 +77,7 @@ class TestSourceCapabilitiesDetection:
         # It directly tests the fallback behavior that should occur
 
         # Mock the obs module to be None at the module level
-        with patch("metadata.obs", None):
+        with patch("obsession.core.metadata.obs", None):
             mock_source = Mock()
             result = determine_source_capabilities(mock_source)
 
@@ -97,13 +91,8 @@ class TestMetadataWithCapabilities:
     """Test metadata creation with new has_audio/has_video fields."""
 
     def setup_method(self):
-        """Reset module state before each test."""
-        import sys
-        import metadata
-
-        # Only reload if module is already in sys.modules
-        if "metadata" in sys.modules:
-            importlib.reload(metadata)
+        """Setup method for each test."""
+        pass
 
     def test_metadata_has_audio_video_flags(self):
         """Test that metadata contains has_audio and has_video fields."""
@@ -112,7 +101,9 @@ class TestMetadataWithCapabilities:
             {"name": "Microphone", "x": 100, "y": 100, "obs_source": Mock()},
         ]
 
-        with patch("metadata.determine_source_capabilities") as mock_caps:
+        with patch(
+            "obsession.core.metadata.determine_source_capabilities"
+        ) as mock_caps:
             mock_caps.side_effect = [
                 {"has_audio": True, "has_video": True},  # Camera
                 {"has_audio": True, "has_video": False},  # Microphone
@@ -302,13 +293,8 @@ class TestMetadataIntegration:
     """Integration tests for metadata functionality."""
 
     def setup_method(self):
-        """Reset module state before each test."""
-        import sys
-        import metadata
-
-        # Only reload if module is already in sys.modules
-        if "metadata" in sys.modules:
-            importlib.reload(metadata)
+        """Setup method for each test."""
+        pass
 
     def test_metadata_json_serialization(self):
         """Test that metadata can be serialized to JSON."""
@@ -331,7 +317,9 @@ class TestMetadataIntegration:
         """Test that JSON roundtrip preserves source capabilities."""
         sources = [{"name": "Camera", "x": 0, "y": 0, "obs_source": Mock()}]
 
-        with patch("metadata.determine_source_capabilities") as mock_caps:
+        with patch(
+            "obsession.core.metadata.determine_source_capabilities"
+        ) as mock_caps:
             mock_caps.return_value = {"has_audio": True, "has_video": True}
 
             metadata = create_metadata(sources)
