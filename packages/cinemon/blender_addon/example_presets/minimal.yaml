@@ -12,7 +12,7 @@ project:
     height: 1080
 
 layout:
-  type: "center"
+  type: "cascade"
   config:
     margin: 0.15
     overlap_allowed: false
@@ -34,10 +34,10 @@ strip_animations:
 
   # Screen recording stays mostly static
   Screen:
-    - type: "opacity"
+    - type: "brightness_flicker"
       trigger: "energy_peaks"
-      intensity: 0.2  # Very subtle opacity change
-      min_opacity: 0.9
+      intensity: 0.1  # Very subtle brightness change
+      return_frames: 1
 
   # Additional cameras get no animations (professional look)
   # Camera3: []  # Commented out - no animations

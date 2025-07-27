@@ -156,7 +156,7 @@ print('✅ Validation działa')
 
 ### **Test 3: Authentication (wymaga credentials)**
 ```bash
-python test_youtube_simple.py
+python youtube_manual_example.py
 ```
 
 ### **Test 4: Pełne testy**
@@ -243,10 +243,10 @@ gcloud logging read "resource.type=api" --limit=10 --format="table(timestamp,res
 ./check_gcloud_status.sh
 
 # Pierwszy test
-python test_youtube_simple.py
+python youtube_manual_example.py
 
 # Pełne testy
 python -m pytest tests/integration/test_youtube_real_api.py -v
 ```
 
-**Gotowe do testowania YouTube API! 🚀** 
+**Gotowe do testowania YouTube API! 🚀**

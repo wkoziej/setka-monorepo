@@ -21,8 +21,9 @@ if str(addon_path) not in sys.path:
 # Test import
 try:
     from vendor import yaml
+
     print("✓ Successfully imported vendored YAML")
-    
+
     # Test basic functionality
     test_data = """
     preset:
@@ -31,17 +32,18 @@ try:
       type: random
       seed: 42
     """
-    
+
     parsed = yaml.safe_load(test_data)
     print(f"✓ Parsed YAML: {parsed}")
-    
+
     # Test dump
     output = yaml.dump(parsed, default_flow_style=False)
     print(f"✓ Dumped YAML:\n{output}")
-    
+
     print("\n✅ All tests passed! YAML is working in Blender.")
-    
+
 except Exception as e:
     print(f"❌ Error: {e}")
     import traceback
+
     traceback.print_exc()

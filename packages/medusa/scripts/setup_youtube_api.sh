@@ -65,7 +65,7 @@ check_gcloud() {
 # Authenticate with Google Cloud
 authenticate_gcloud() {
     print_info "Sprawdzam authentication..."
-    
+
     if ! gcloud auth list --filter=status:ACTIVE --format="value(account)" | head -n1 > /dev/null 2>&1; then
         print_warning "Nie jesteś zalogowany do Google Cloud"
         echo "Uruchamiam proces logowania..."
@@ -79,19 +79,19 @@ authenticate_gcloud() {
 # List and select/create project
 setup_project() {
     print_info "Konfiguracja projektu..."
-    
+
     echo ""
     echo "Dostępne projekty:"
     gcloud projects list --format="table(projectId,name,projectNumber)" || {
         print_warning "Brak dostępu do projektów lub brak projektów"
     }
-    
+
     echo ""
     echo "Opcje:"
     echo "1. Użyj istniejący projekt"
     echo "2. Utwórz nowy projekt"
     read -p "Wybierz opcję (1/2): " project_option
-    
+
     case $project_option in
         1)
             read -p "Podaj Project ID: " PROJECT_ID
@@ -105,7 +105,7 @@ setup_project() {
         2)
             read -p "Podaj nowy Project ID (np. medusa-youtube-test): " PROJECT_ID
             read -p "Podaj nazwę projektu (np. 'Medusa YouTube Test'): " PROJECT_NAME
-            
+
             print_info "Tworzę projekt $PROJECT_ID..."
             gcloud projects create "$PROJECT_ID" --name="$PROJECT_NAME"
             print_status "Projekt utworzony!"
@@ -115,7 +115,7 @@ setup_project() {
             exit 1
             ;;
     esac
-    
+
     # Set as default project
     gcloud config set project "$PROJECT_ID"
     print_status "Aktywny projekt: $PROJECT_ID"
@@ -124,10 +124,10 @@ setup_project() {
 # Enable YouTube Data API
 enable_youtube_api() {
     print_info "Włączam YouTube Data API v3..."
-    
+
     gcloud services enable youtube.googleapis.com
     print_status "YouTube Data API v3 włączone!"
-    
+
     # Wait a moment for API to be fully enabled
     sleep 2
 }
@@ -135,10 +135,10 @@ enable_youtube_api() {
 # Create OAuth 2.0 credentials
 create_oauth_credentials() {
     print_info "Tworzę OAuth 2.0 credentials..."
-    
+
     # Check if OAuth consent screen is configured
     print_info "Sprawdzam OAuth consent screen..."
-    
+
     # Try to get consent screen info
     if ! gcloud alpha iap oauth-brands list > /dev/null 2>&1; then
         print_warning "OAuth consent screen może nie być skonfigurowany"
@@ -155,19 +155,19 @@ create_oauth_credentials() {
         echo ""
         read -p "Naciśnij Enter gdy skonfigurujesz OAuth consent screen..."
     fi
-    
+
     # Create OAuth 2.0 client
     CLIENT_NAME="medusa-youtube-client"
-    
+
     print_info "Tworzę OAuth 2.0 client..."
-    
+
     # Create the OAuth client
     gcloud alpha iap oauth-clients create \
         --display_name="$CLIENT_NAME" \
         --brand="projects/$PROJECT_ID/brands/$(gcloud alpha iap oauth-brands list --format='value(name)' | head -n1 | cut -d'/' -f4)" 2>/dev/null || {
-        
+
         print_warning "Nie udało się utworzyć przez gcloud, używam alternatywnej metody..."
-        
+
         # Alternative: create through API
         echo "Tworzę credentials przez Google Cloud Console..."
         echo ""
@@ -181,13 +181,13 @@ create_oauth_credentials() {
         echo "5. Pobierz plik JSON"
         echo ""
         read -p "Naciśnij Enter gdy pobierzesz plik JSON..."
-        
+
         # Ask for the downloaded file
         echo "Opcje dla pliku credentials:"
         echo "1. Plik jest w ~/Downloads/"
         echo "2. Podaj ścieżkę do pliku"
         read -p "Wybierz opcję (1/2): " file_option
-        
+
         case $file_option in
             1)
                 CRED_FILE=$(ls ~/Downloads/client_secret_*.json 2>/dev/null | head -n1)
@@ -216,10 +216,10 @@ create_oauth_credentials() {
 # Verify setup
 verify_setup() {
     print_info "Weryfikuję setup..."
-    
+
     if [[ -f "client_secrets.json" ]]; then
         print_status "Plik client_secrets.json istnieje"
-        
+
         # Validate JSON format
         if python3 -c "import json; json.load(open('client_secrets.json'))" 2>/dev/null; then
             print_status "Plik JSON jest prawidłowy"
@@ -227,16 +227,16 @@ verify_setup() {
             print_error "Plik JSON jest nieprawidłowy!"
             exit 1
         fi
-        
+
         # Show client info
         CLIENT_ID=$(python3 -c "import json; data=json.load(open('client_secrets.json')); print(data.get('installed', data.get('web', {})).get('client_id', 'N/A'))")
         print_status "Client ID: ${CLIENT_ID:0:20}..."
-        
+
     else
         print_error "Brak pliku client_secrets.json!"
         exit 1
     fi
-    
+
     # Test our implementation
     print_info "Testuję implementację Medusa..."
     python3 -c "
@@ -247,7 +247,7 @@ from medusa.models import MediaMetadata, PlatformConfig
 
 metadata = MediaMetadata(
     title='Test Video',
-    description='Test description', 
+    description='Test description',
     tags=['test'],
     privacy='private'
 )
@@ -270,20 +270,20 @@ print('✅ Medusa implementation works!')
 main() {
     echo "Ten skrypt pomoże skonfigurować YouTube API dla projektu Medusa"
     echo ""
-    
+
     check_gcloud
     authenticate_gcloud
     setup_project
     enable_youtube_api
     create_oauth_credentials
     verify_setup
-    
+
     echo ""
     echo "🎉 Setup zakończony pomyślnie!"
     echo ""
     echo "Następne kroki:"
     echo "1. Przetestuj authentication:"
-    echo "   python test_youtube_simple.py"
+    echo "   python youtube_manual_example.py"
     echo ""
     echo "2. Uruchom pełne testy:"
     echo "   python -m pytest tests/integration/test_youtube_real_api.py -v"
@@ -295,4 +295,4 @@ main() {
 }
 
 # Run main function
-main "$@" 
+main "$@"

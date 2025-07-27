@@ -44,6 +44,7 @@ where = ["src"]
 "" = "src"
 
 [tool.pytest.ini_options]
+pythonpath = ["src"]
 testpaths = ["tests"]
 python_files = ["test_*.py"]
 python_classes = ["Test*"]
@@ -75,6 +76,6 @@ disallow_untyped_defs = true
 [dependency-groups]
 dev = [
     "pytest>=8.4.1",
-    "pytest-cov>=6.2.1", 
+    "pytest-cov>=6.2.1",
     "pytest-xdist>=3.8.0",
 ]

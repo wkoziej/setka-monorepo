@@ -7,9 +7,9 @@ from .base import BasePublisher, PublishProgress, PublishResult, TemplateSubstit
 from .facebook import FacebookPublisher
 
 __all__ = [
-    'BasePublisher',
-    'PublishProgress', 
-    'PublishResult',
-    'TemplateSubstitution',
-    'FacebookPublisher'
-] 
+    "BasePublisher",
+    "PublishProgress",
+    "PublishResult",
+    "TemplateSubstitution",
+    "FacebookPublisher",
+]

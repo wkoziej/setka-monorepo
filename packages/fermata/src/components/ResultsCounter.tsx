@@ -10,4 +10,4 @@ export function ResultsCounter({ filteredCount, totalCount, hasActiveFilters }: 
       Showing {filteredCount} of {totalCount} recordings
     </div>
   );
-} 
+}

@@ -6,4 +6,4 @@
 # Make yaml available from vendor
 from . import yaml
 
-__all__ = ['yaml']
+__all__ = ["yaml"]

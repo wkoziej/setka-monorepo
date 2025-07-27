@@ -14,4 +14,4 @@ echo "🔧 EGL Fix: WEBKIT_DISABLE_DMABUF_RENDERER=1"
 echo "🎤 Main Audio: $FERMATA_MAIN_AUDIO"
 echo ""
 
-npm run tauri dev 
+npm run tauri dev

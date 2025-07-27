@@ -23,3 +23,34 @@ obsession = { workspace = true }
 cinemon = { workspace = true }
 medusa = { workspace = true }
 beatrix = { workspace = true }
+
+[tool.pytest.ini_options]
+testpaths = [
+    "packages/common/tests",
+    "packages/obsession/tests",
+    "packages/cinemon/tests",
+    "packages/medusa/tests",
+    "packages/beatrix/tests",
+]
+pythonpath = [
+    "packages/obsession/src",
+    "packages/common/src",
+    "packages/cinemon/src",
+    "packages/medusa/src",
+    "packages/beatrix/src",
+]
+addopts = [
+    "--strict-markers",
+    "--strict-config",
+    "-v"
+]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+markers = [
+    "unit: marks tests as unit tests (default)",
+    "integration: marks tests as integration tests",
+    "audio: marks tests that require audio processing",
+    "manual: marks tests that require manual intervention",
+    "asyncio: marks tests that use asyncio",
+]

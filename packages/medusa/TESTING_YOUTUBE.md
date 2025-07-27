@@ -44,7 +44,7 @@ cp /path/to/your/small_video.mp4 ./test_video.mp4
 
 ```bash
 # Uruchom prosty test script
-python test_youtube_simple.py
+python youtube_manual_example.py
 ```
 
 **Co testuje:**
@@ -121,10 +121,10 @@ async def quick_test():
         credentials={"client_secrets_file": "client_secrets.json"}
     )
     uploader = YouTubeUploader(config=config)
-    
+
     # Authentication
     await uploader.authenticate()
-    
+
     # Test metadata
     metadata = MediaMetadata(
         title="Test Video",
@@ -132,7 +132,7 @@ async def quick_test():
         privacy="private",
         tags=["test"]
     )
-    
+
     # Upload (jeśli masz plik)
     if os.path.exists("test_video.mp4"):
         result = await uploader.upload_media("test_video.mp4", metadata)
@@ -180,7 +180,7 @@ python -c "import json; print(json.load(open('client_secrets.json')))"
 ### Problem: "Upload fails"
 ```bash
 # Sprawdź logi
-python test_youtube_simple.py 2>&1 | tee debug.log
+python youtube_manual_example.py 2>&1 | tee debug.log
 
 # Sprawdź network connectivity
 ping youtube.googleapis.com
@@ -199,7 +199,7 @@ medusa/
 ├── client_secrets.json          # OAuth credentials (nie commituj!)
 ├── credentials.json             # Wygenerowane po auth (nie commituj!)
 ├── test_video.mp4              # Test file (opcjonalny)
-├── test_youtube_simple.py      # Prosty test script
+├── youtube_manual_example.py      # Prosty test script
 ├── upload_result.txt           # Wynik ostatniego upload'u
 ├── last_upload_result.json     # Szczegóły ostatniego upload'u
 └── debug.log                   # Logi debug (jeśli potrzebne)
@@ -225,4 +225,4 @@ Po pomyślnym teście powinieneś zobaczyć:
 
 ---
 
-**Potrzebujesz pomocy?** Sprawdź logi lub uruchom testy z debug mode! 
+**Potrzebujesz pomocy?** Sprawdź logi lub uruchom testy z debug mode!

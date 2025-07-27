@@ -5,4 +5,8 @@
 from .exceptions import MedusaError, UploadError, PublishError
 
 __version__ = "0.1.0"
-__all__ = ["MedusaError", "UploadError", "PublishError"]  # "MedusaCore" will be added later
+__all__ = [
+    "MedusaError",
+    "UploadError",
+    "PublishError",
+]  # "MedusaCore" will be added later

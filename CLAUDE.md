@@ -85,7 +85,7 @@ beatrix ←┘
 
 - **File Structure**: All packages use `setka-common.file_structure.specialized.RecordingStructureManager`
 - **Audio Processing**: Dedicated audio analysis via `beatrix.core.AudioAnalyzer`
-- **CLI Integration**: 
+- **CLI Integration**:
   - `obs-extract` → extract sources from OBS recordings
   - `beatrix` → analyze audio for animation timing
   - `cinemon-blend-setup` → create Blender projects with animations
@@ -215,7 +215,7 @@ Each package provides specific commands:
 
 - `obs-extract` - Extract sources from OBS recordings (obsession)
 - `beatrix` - Analyze audio for animation timing (beatrix)
-- `cinemon-blend-setup` - Create animated Blender VSE projects (cinemon)  
+- `cinemon-blend-setup` - Create animated Blender VSE projects (cinemon)
 - Direct module execution for medusa: `python -m medusa.cli`
 
 ## Practical Usage Examples

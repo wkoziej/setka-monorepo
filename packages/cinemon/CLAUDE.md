@@ -10,14 +10,18 @@ Cinemon is a **Blender VSE (Video Sequence Editor) automation package** within t
 
 ### Core Components
 
-- **project_manager.py**: Python API for creating VSE projects via subprocess calls to Blender
-- **vse_script.py**: Parametric Blender script executed inside Blender (Polish comments)
-- **animation_engine.py**: Delegation pattern routing to specialized animator classes
-- **CLI (blend_setup.py)**: Command-line interface with auto-detection of audio analysis needs
-- **config/**: YAML configuration system with preset management and auto-discovery
+- **src/cinemon/project_manager.py**: Python API for creating VSE projects via subprocess calls to Blender
+- **blender_addon/vse_script.py**: Parametric Blender script executed inside Blender (Polish comments)
+- **src/cinemon/animation_engine.py**: Delegation pattern routing to specialized animator classes (being migrated)
+- **src/cinemon/cli/blend_setup.py**: Command-line interface with auto-detection of audio analysis needs
+- **src/cinemon/config/**: YAML configuration system with preset management and auto-discovery
   - **CinemonConfigGenerator**: High-level API for generating YAML configurations
   - **MediaDiscovery**: Auto-discovery of video/audio files in recording directories
   - **PresetManager**: Built-in and custom preset management
+- **blender_addon/**: Complete Blender addon with VSE automation modules
+  - **vse/**: Core VSE modules (constants, layout_manager, keyframe_helper, etc.)
+  - **operators.py**: Blender UI operators
+  - **layout_ui.py**: Blender UI panels
 
 ### Animation System
 
@@ -62,6 +66,47 @@ print(f'Generated: {config_path}')
 "
 ```
 
+## File Structure
+
+```
+packages/cinemon/
+├── blender_addon/          # Blender addon (executed in Blender)
+│   ├── __init__.py        # bl_info and addon registration
+│   ├── vse_script.py      # Main VSE configuration script
+│   ├── operators.py       # Blender operators
+│   ├── layout_ui.py       # UI panels
+│   ├── vse/               # VSE modules
+│   │   ├── __init__.py    # Module exports
+│   │   ├── constants.py
+│   │   ├── layout_manager.py
+│   │   ├── keyframe_helper.py
+│   │   ├── yaml_config.py
+│   │   ├── animation_compositor.py
+│   │   ├── project_setup.py
+│   │   ├── animations/    # Animation implementations
+│   │   ├── animators/     # Legacy animators
+│   │   ├── effects/       # Visual effects
+│   │   └── layouts/       # Layout strategies
+│   ├── example_presets/   # YAML preset files
+│   └── vendor/            # Dependencies (PyYAML)
+├── src/cinemon/           # Python API (outside Blender)
+│   ├── __init__.py
+│   ├── project_manager.py # Calls Blender subprocess
+│   ├── animation_engine.py # Animation delegation (legacy)
+│   ├── cli/
+│   │   └── blend_setup.py # CLI interface
+│   └── config/           # YAML configuration generation
+│       ├── __init__.py
+│       ├── cinemon_config_generator.py
+│       ├── media_discovery.py
+│       └── preset_manager.py
+└── tests/
+    ├── test_project_manager.py
+    ├── test_animation_engine.py
+    ├── test_config/
+    └── blender_addon/     # Tests for addon components
+```
+
 ## Key Technical Patterns
 
 ### YAML Configuration System
@@ -82,16 +127,18 @@ layout:
     seed: 42
     margin: 0.1
 
-animations:
-  - type: scale
-    trigger: bass
-    intensity: 0.3
-    target_strips: [Camera1, Camera2]
-  - type: vintage_color
-    trigger: one_time
-    sepia_amount: 0.4
-    target_strips: []
+strip_animations:
+  Camera1:
+    - type: scale
+      trigger: bass
+      intensity: 0.3
+  Camera2:
+    - type: vintage_color
+      trigger: one_time
+      sepia_amount: 0.4
 ```
+
+The `strip_animations` format groups animations by strip name, allowing precise control over which video strips receive which effects. Each strip can have multiple animations applied.
 
 ### Configuration Generation
 
@@ -110,6 +157,27 @@ config_path = generator.generate_config(
     animations=[{"type": "scale", "trigger": "bass", "intensity": 0.5}]
 )
 ```
+
+### Import Strategy
+
+Due to the separation between Blender addon and Python API:
+
+1. **In blender_addon/** - Use relative imports:
+   ```python
+   from .vse import AnimationConstants, BlenderLayoutManager
+   from .vse.yaml_config import BlenderYAMLConfigReader
+   ```
+
+2. **In src/cinemon/** - Use absolute imports:
+   ```python
+   from cinemon.config import CinemonConfigGenerator
+   from cinemon.cli import blend_setup
+   ```
+
+3. **project_manager.py** calls Blender with addon script:
+   ```python
+   self.script_path = Path(__file__).parent.parent.parent / "blender_addon" / "vse_script.py"
+   ```
 
 ### Blender Mock System
 
@@ -141,9 +209,9 @@ Expected recording structure (managed by setka-common):
 recording_name/
 ├── metadata.json                    # OBS metadata
 ├── extracted/                       # Video/audio files
-│   ├── Camera1.mp4        
+│   ├── Camera1.mp4
 │   ├── Camera2.mp4
-│   └── main_audio.m4a     
+│   └── main_audio.m4a
 ├── analysis/                        # Audio analysis JSON
 │   └── audio_analysis.json
 ├── animation_config_vintage.yaml    # Generated YAML config (preset-based)
@@ -182,13 +250,14 @@ recording_name/
 layout:
   type: random
   config: {margin: 0.1, seed: 1950}
-animations:
-  - {type: shake, trigger: beat, intensity: 2.0}
-  - {type: jitter, trigger: continuous, intensity: 1.0}
-  - {type: brightness_flicker, trigger: beat, intensity: 0.1}
-  - {type: black_white, trigger: one_time, intensity: 0.6}
-  - {type: film_grain, trigger: one_time, intensity: 0.15}
-  - {type: vintage_color, trigger: one_time, sepia_amount: 0.4}
+strip_animations:
+  all:  # Apply to all strips
+    - {type: shake, trigger: beat, intensity: 2.0}
+    - {type: jitter, trigger: continuous, intensity: 1.0}
+    - {type: brightness_flicker, trigger: beat, intensity: 0.1}
+    - {type: black_white, trigger: one_time, intensity: 0.6}
+    - {type: film_grain, trigger: one_time, intensity: 0.15}
+    - {type: vintage_color, trigger: one_time, sepia_amount: 0.4}
 ```
 
 **music-video** - High-energy effects:
@@ -196,46 +265,57 @@ animations:
 layout:
   type: random
   config: {margin: 0.05, seed: 100, min_scale: 0.4, max_scale: 0.9}
-animations:
-  - {type: scale, trigger: bass, intensity: 0.5, duration_frames: 3}
-  - {type: shake, trigger: beat, intensity: 12.0}
-  - {type: rotation, trigger: energy_peaks, degrees: 2.0}
+strip_animations:
+  all:
+    - {type: scale, trigger: bass, intensity: 0.5, duration_frames: 3}
+    - {type: shake, trigger: beat, intensity: 12.0}
+    - {type: rotation, trigger: energy_peaks, degrees: 2.0}
 ```
 
 **minimal** - Basic effects:
 ```yaml
-animations:
-  - {type: scale, trigger: bass, intensity: 0.2, duration_frames: 3}
+strip_animations:
+  all:
+    - {type: scale, trigger: bass, intensity: 0.2, duration_frames: 3}
 ```
 
 **beat-switch** - Legacy compatibility:
 ```yaml
-animations:
-  - {type: scale, trigger: beat, intensity: 0.2}
+strip_animations:
+  all:
+    - {type: scale, trigger: beat, intensity: 0.2}
 ```
 
 #### Selective Strip Targeting
 
-All animations support `target_strips` for selective application:
+With the `strip_animations` format, you can precisely control which strips receive which effects:
 
 ```yaml
-animations:
-  - type: scale
-    trigger: bass
-    intensity: 0.5
-    target_strips: [Camera1, Camera2]  # Only these strips
-    
-  - type: vintage_color
-    trigger: one_time
-    sepia_amount: 0.4
-    target_strips: []  # All strips (default)
+strip_animations:
+  Camera1:
+    - type: scale
+      trigger: bass
+      intensity: 0.5
+    - type: vintage_color
+      trigger: one_time
+      sepia_amount: 0.4
+
+  Camera2:
+    - type: shake
+      trigger: beat
+      intensity: 2.0
+
+  all:  # Special key for applying to all strips
+    - type: film_grain
+      trigger: one_time
+      intensity: 0.15
 ```
 
 #### Supported Animation Types
 
 **Transform Animations:**
 - `scale` - Scale changes on audio events
-- `shake` - Position shake effects  
+- `shake` - Position shake effects
 - `rotation` - Rotation wobble effects
 - `jitter` - Continuous random position changes
 
@@ -311,11 +391,11 @@ generator = CinemonConfigGenerator()
 
 # Generate from preset with overrides
 config_path = generator.generate_preset(
-    './recording', 'vintage', 
+    './recording', 'vintage',
     seed=42, fps=60, main_audio='audio.m4a'
 )
 
-# Generate completely custom configuration  
+# Generate completely custom configuration
 layout = {'type': 'random', 'config': {'seed': 123}}
 animations = [
     {'type': 'scale', 'trigger': 'bass', 'intensity': 0.8, 'target_strips': ['Camera1']},

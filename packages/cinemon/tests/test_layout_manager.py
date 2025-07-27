@@ -3,14 +3,14 @@ ABOUTME: Tests for Blender VSE layout manager module - validates PiP positioning
 ABOUTME: TDD approach - tests written first to define expected layout manager behavior.
 """
 
-from pathlib import Path
 import sys
+from pathlib import Path
 
 # Add src to path for testing
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-from blender.vse.layout_manager import BlenderLayoutManager
-from blender.vse.constants import AnimationConstants
+from vse.constants import AnimationConstants
+from vse.layout_manager import BlenderLayoutManager
 
 
 class TestBlenderLayoutManagerBasic:
@@ -180,7 +180,7 @@ class TestMultiPipLayoutCalculation:
         margin_percent = AnimationConstants.PIP_MARGIN
         half_width = 1280 // 2  # 640
         half_height = 720 // 2  # 360
-        
+
         # Calculate actual margin in pixels (5% of half dimensions)
         margin_x = half_width * margin_percent  # 640 * 0.05 = 32
         margin_y = half_height * margin_percent  # 360 * 0.05 = 18
@@ -192,10 +192,14 @@ class TestMultiPipLayoutCalculation:
             # Should be within canvas bounds
             assert -half_width < x < half_width
             assert -half_height < y < half_height
-            
+
             # Should have some margin from edges
-            assert abs(abs(x) - half_width) >= margin_x * 0.5  # At least half the margin
-            assert abs(abs(y) - half_height) >= margin_y * 0.5  # At least half the margin
+            assert (
+                abs(abs(x) - half_width) >= margin_x * 0.5
+            )  # At least half the margin
+            assert (
+                abs(abs(y) - half_height) >= margin_y * 0.5
+            )  # At least half the margin
 
     def test_calculate_multi_pip_layout_variable_strip_count(self):
         """Should handle different numbers of strips correctly."""
@@ -245,19 +249,19 @@ class TestCornerPositionsUtility:
         # From actual calculation: (424, 239) for top-right
         # Verify that we get 4 symmetric corner positions
         assert len(corners) == 4
-        
+
         # Extract positions
         top_right, top_left, bottom_left, bottom_right = corners
-        
+
         # All positions should be reasonable (within bounds and symmetric)
         assert top_right[0] > 0 and top_right[1] > 0  # Positive quadrant
-        assert top_left[0] < 0 and top_left[1] > 0    # Top-left quadrant
+        assert top_left[0] < 0 and top_left[1] > 0  # Top-left quadrant
         assert bottom_left[0] < 0 and bottom_left[1] < 0  # Bottom-left quadrant
         assert bottom_right[0] > 0 and bottom_right[1] < 0  # Bottom-right quadrant
-        
+
         # Should be symmetric
         assert top_right[0] == -top_left[0]  # X symmetric
-        assert top_right[1] == top_left[1]   # Y same
+        assert top_right[1] == top_left[1]  # Y same
         assert top_right[0] == bottom_right[0]  # X same
         assert top_right[1] == -bottom_right[1]  # Y symmetric
 
@@ -268,19 +272,19 @@ class TestCornerPositionsUtility:
         # Test with different margin percentages
         default_corners = manager.get_corner_positions()
         custom_corners = manager.get_corner_positions(margin_percent=0.1)  # 10%
-        
+
         # Custom margin should result in different positions
         assert default_corners != custom_corners
-        
+
         # Both should return 4 corners
         assert len(default_corners) == 4
         assert len(custom_corners) == 4
-        
+
         # With larger margin (10% vs 5%), positions should be closer to center
         # (since we subtract more margin from half_width/height)
         default_top_right = default_corners[0]
         custom_top_right = custom_corners[0]
-        
+
         # Custom (larger margin) should have smaller absolute coordinates
         assert abs(custom_top_right[0]) < abs(default_top_right[0])
         assert abs(custom_top_right[1]) < abs(default_top_right[1])

@@ -34,7 +34,7 @@ function getStatusDisplay(status: RecordingStatus): { text: string; emoji: strin
   if (typeof status === 'object' && 'Failed' in status) {
     return { text: 'Failed', emoji: '❌', className: 'failed' };
   }
-  
+
   switch (status) {
     case 'Recorded':
       return { text: 'Recorded', emoji: '📹', className: 'recorded' };
@@ -57,7 +57,7 @@ function getNextAction(status: RecordingStatus): string | null {
   if (typeof status === 'object' && 'Failed' in status) {
     return 'Retry';
   }
-  
+
   switch (status) {
     case 'Recorded':
       return 'Extract';
@@ -76,8 +76,8 @@ function getNextAction(status: RecordingStatus): string | null {
   }
 }
 
-function RecordingCard({ recording, onAction, isOperationRunning }: { 
-  recording: Recording; 
+function RecordingCard({ recording, onAction, isOperationRunning }: {
+  recording: Recording;
   onAction: (name: string, action: string) => void;
   isOperationRunning: boolean;
 }) {
@@ -102,10 +102,10 @@ function RecordingCard({ recording, onAction, isOperationRunning }: {
       </div>
 
       {typeof recording.status === 'object' && 'Failed' in recording.status && (
-        <div style={{ 
-          background: '#fee2e2', 
-          color: '#dc2626', 
-          padding: '8px 12px', 
+        <div style={{
+          background: '#fee2e2',
+          color: '#dc2626',
+          padding: '8px 12px',
           borderRadius: '6px',
           fontSize: '0.875rem',
           marginBottom: '16px'
@@ -121,7 +121,7 @@ function RecordingCard({ recording, onAction, isOperationRunning }: {
         >
           👁️ View
         </button>
-        
+
         <button
           className="btn btn-primary"
           onClick={() => onAction(recording.name, 'Play Video')}
@@ -129,7 +129,7 @@ function RecordingCard({ recording, onAction, isOperationRunning }: {
         >
           🎬 Play Video
         </button>
-        
+
         <button
           className="btn btn-danger"
           onClick={() => onAction(recording.name, 'Delete')}
@@ -137,7 +137,7 @@ function RecordingCard({ recording, onAction, isOperationRunning }: {
         >
           🗑️ Delete
         </button>
-        
+
         {nextAction && (
           <button
             className="btn btn-primary"
@@ -159,14 +159,14 @@ interface RecordingListProps {
 export function RecordingList({ onSelectRecording }: RecordingListProps) {
   const { recordings, loading, error, refreshRecordings, showDeletionDialog, deletionState, deleteRecording, hideDeletionDialog } = useRecordings();
   const { runNextStep, runSpecificStep, running, output } = useRecordingOperations();
-  const { 
-    processedRecordings, 
-    filterConfig, 
-    hasActiveFilters, 
-    updateFilter, 
-    clearFilters 
+  const {
+    processedRecordings,
+    filterConfig,
+    hasActiveFilters,
+    updateFilter,
+    clearFilters
   } = useSortingAndFiltering(recordings);
-  
+
   const [showVideoPlayer, setShowVideoPlayer] = useState(false);
   const [videoPath, setVideoPath] = useState<string | null>(null);
   const [currentRecordingName, setCurrentRecordingName] = useState<string | null>(null);
@@ -207,16 +207,16 @@ export function RecordingList({ onSelectRecording }: RecordingListProps) {
       // Map frontend action names to backend step names
       const stepMap: Record<string, string> = {
         'Extract': 'extract',
-        'Analyze': 'analyze', 
+        'Analyze': 'analyze',
         'Setup': 'setup_render',
         'Render': 'render',
         'Upload': 'upload'
       };
-      
+
       const step = stepMap[action] || action.toLowerCase();
       await runSpecificStep(recordingName, step);
     }
-    
+
     // Refresh recordings after operation
     setTimeout(() => {
       refreshRecordings();
@@ -238,13 +238,13 @@ export function RecordingList({ onSelectRecording }: RecordingListProps) {
           <span className="fermata-after">𝄑</span>
         </h1>
         <div className="header-actions">
-          <button 
+          <button
             className="btn btn-secondary"
             onClick={refreshRecordings}
           >
             🔄 Refresh
           </button>
-          <button 
+          <button
             className="btn btn-secondary"
           >
             ⚙️ Settings
@@ -284,7 +284,7 @@ export function RecordingList({ onSelectRecording }: RecordingListProps) {
         {error && (
           <div className="error-state">
             <div><strong>Error:</strong> {error}</div>
-            <button 
+            <button
               className="btn btn-primary"
               onClick={refreshRecordings}
               style={{ marginTop: '10px' }}
@@ -298,7 +298,7 @@ export function RecordingList({ onSelectRecording }: RecordingListProps) {
           <>
             {processedRecordings.length === 0 ? (
               <div className="empty-state">
-                {hasActiveFilters ? 
+                {hasActiveFilters ?
                   'No recordings match your filters. Try adjusting your search or filters.' :
                   'No recordings found. Check your recordings directory configuration.'
                 }
@@ -341,4 +341,4 @@ export function RecordingList({ onSelectRecording }: RecordingListProps) {
       )}
     </div>
   );
-} 
+}

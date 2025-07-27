@@ -3,15 +3,12 @@ ABOUTME: Tests for Blender VSE keyframe helper module - validates keyframe inser
 ABOUTME: TDD approach - tests written first to define expected keyframe helper behavior.
 """
 
-import pytest
-from pathlib import Path
-import sys
 from unittest.mock import Mock, patch
 
-# Add src to path for testing
-sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
+import pytest
 
-from blender.vse.keyframe_helper import KeyframeHelper
+# Path already added in conftest.py
+from vse.keyframe_helper import KeyframeHelper
 
 
 class MockBPYContext:
@@ -50,7 +47,7 @@ class TestKeyframeHelperBasic:
 class TestBlendAlphaKeyframes:
     """Test blend_alpha keyframe insertion."""
 
-    @patch("blender.vse.keyframe_helper.bpy")
+    @patch("vse.keyframe_helper.bpy")
     def test_insert_blend_alpha_keyframe_basic(self, mock_bpy):
         """Should insert blend_alpha keyframe correctly."""
         mock_bpy.context = MockBPYContext()
@@ -71,7 +68,7 @@ class TestBlendAlphaKeyframes:
         assert "blend_alpha" in call_args[1]["data_path"]
         assert strip_name in call_args[1]["data_path"]
 
-    @patch("blender.vse.keyframe_helper.bpy")
+    @patch("vse.keyframe_helper.bpy")
     def test_insert_blend_alpha_keyframe_with_strip_object(self, mock_bpy):
         """Should accept strip object and extract name."""
         mock_bpy.context = MockBPYContext()
@@ -88,7 +85,7 @@ class TestBlendAlphaKeyframes:
         # Should extract alpha value from strip if not provided
         mock_bpy.context.scene.keyframe_insert.assert_called_once()
 
-    @patch("blender.vse.keyframe_helper.bpy")
+    @patch("vse.keyframe_helper.bpy")
     def test_insert_blend_alpha_keyframe_error_handling(self, mock_bpy):
         """Should handle keyframe insertion errors gracefully."""
         mock_bpy.context = MockBPYContext()
@@ -103,7 +100,7 @@ class TestBlendAlphaKeyframes:
 class TestTransformScaleKeyframes:
     """Test transform scale keyframe insertion."""
 
-    @patch("blender.vse.keyframe_helper.bpy")
+    @patch("vse.keyframe_helper.bpy")
     def test_insert_transform_scale_keyframes_basic(self, mock_bpy):
         """Should insert scale_x and scale_y keyframes correctly."""
         mock_bpy.context = MockBPYContext()
@@ -122,7 +119,7 @@ class TestTransformScaleKeyframes:
         # Should be called twice (scale_x and scale_y)
         assert mock_bpy.context.scene.keyframe_insert.call_count == 2
 
-    @patch("blender.vse.keyframe_helper.bpy")
+    @patch("vse.keyframe_helper.bpy")
     def test_insert_transform_scale_keyframes_uniform_scale(self, mock_bpy):
         """Should accept single scale value for uniform scaling."""
         mock_bpy.context = MockBPYContext()
@@ -133,7 +130,7 @@ class TestTransformScaleKeyframes:
         assert result is True
         assert mock_bpy.context.scene.keyframe_insert.call_count == 2
 
-    @patch("blender.vse.keyframe_helper.bpy")
+    @patch("vse.keyframe_helper.bpy")
     def test_insert_transform_scale_keyframes_with_strip_object(self, mock_bpy):
         """Should accept strip object and extract current scale values."""
         mock_bpy.context = MockBPYContext()
@@ -153,7 +150,7 @@ class TestTransformScaleKeyframes:
 class TestTransformOffsetKeyframes:
     """Test transform offset keyframe insertion."""
 
-    @patch("blender.vse.keyframe_helper.bpy")
+    @patch("vse.keyframe_helper.bpy")
     def test_insert_transform_offset_keyframes_basic(self, mock_bpy):
         """Should insert offset_x and offset_y keyframes correctly."""
         mock_bpy.context = MockBPYContext()
@@ -172,7 +169,7 @@ class TestTransformOffsetKeyframes:
         # Should be called twice (offset_x and offset_y)
         assert mock_bpy.context.scene.keyframe_insert.call_count == 2
 
-    @patch("blender.vse.keyframe_helper.bpy")
+    @patch("vse.keyframe_helper.bpy")
     def test_insert_transform_offset_keyframes_with_strip_object(self, mock_bpy):
         """Should accept strip object and extract current offset values."""
         mock_bpy.context = MockBPYContext()
@@ -232,7 +229,7 @@ class TestDataPathBuilder:
 class TestKeyframeHelperIntegration:
     """Test integration patterns and edge cases."""
 
-    @patch("blender.vse.keyframe_helper.bpy")
+    @patch("vse.keyframe_helper.bpy")
     def test_multiple_keyframes_batch_insertion(self, mock_bpy):
         """Should handle multiple keyframe insertions efficiently."""
         mock_bpy.context = MockBPYContext()
@@ -275,7 +272,7 @@ class TestKeyframeHelperIntegration:
         with pytest.raises((ValueError, TypeError)):
             helper.build_data_path(None, "blend_alpha")
 
-    @patch("blender.vse.keyframe_helper.bpy")
+    @patch("vse.keyframe_helper.bpy")
     def test_keyframe_helper_backwards_compatibility(self, mock_bpy):
         """Should work with existing code patterns from blender_vse_script.py."""
         mock_bpy.context = MockBPYContext()

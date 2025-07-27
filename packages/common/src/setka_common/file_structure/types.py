@@ -9,6 +9,7 @@ from typing import List
 
 class MediaType(Enum):
     """Types of media files."""
+
     AUDIO = "audio"
     VIDEO = "video"
     IMAGE = "image"
@@ -17,11 +18,12 @@ class MediaType(Enum):
 
 class FileExtensions:
     """Common file extensions by type."""
+
     AUDIO = [".mp3", ".wav", ".flac", ".aac", ".m4a", ".ogg", ".wma"]
     VIDEO = [".mp4", ".mkv", ".avi", ".mov", ".flv", ".wmv", ".webm"]
     IMAGE = [".jpg", ".jpeg", ".png", ".gif", ".bmp", ".svg", ".webp"]
     DOCUMENT = [".pdf", ".doc", ".docx", ".txt", ".md", ".odt"]
-    
+
     @classmethod
     def get_for_type(cls, media_type: MediaType) -> List[str]:
         """Get extensions for media type."""

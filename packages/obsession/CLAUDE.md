@@ -90,7 +90,7 @@ uv run python -m cli.blend_setup ./recording_20250105_143022 --main-audio "main_
 
 # Create animated VSE project (automatic audio analysis)
 uv run python -m cli.blend_setup ./recording_20250105_143022 --animation-mode beat-switch
-uv run python -m cli.blend_setup ./recording_20250105_143022 --animation-mode energy-pulse 
+uv run python -m cli.blend_setup ./recording_20250105_143022 --animation-mode energy-pulse
 uv run python -m cli.blend_setup ./recording_20250105_143022 --animation-mode multi-pip
 
 # Standalone audio analysis (optional - done automatically when needed)
@@ -169,7 +169,7 @@ The system includes sophisticated audio analysis and animation capabilities:
 
 - **Runtime**: `ffmpeg-python`, `pathlib-extensions`, `librosa`, `numpy`, `scipy`
 - **Development**: `pytest`, `pytest-cov`, `black`, `mypy`, `flake8`, `pre-commit`
-- **External**: 
+- **External**:
   - FFmpeg 4.4+ must be available in PATH
   - Blender 3.0+ for VSE project generation (can be snap-installed)
   - OBS Studio with Python scripting support
@@ -235,7 +235,7 @@ uv run python -m src.cli.blend_setup ./recording_dir \
 
 **Animation behavior:**
 - **Strip 1 visible**: From start until first beat
-- **Strip 2 visible**: From first beat until second beat  
+- **Strip 2 visible**: From first beat until second beat
 - **Strip 3 visible**: From second beat until third beat
 - **Cycling**: After last strip, returns to Strip 1 (round-robin)
 
@@ -252,7 +252,7 @@ uv run python -m src.cli.blend_setup ./recording_dir \
 
 **Beat division options:**
 - `1`: Every beat (quarter notes)
-- `2`: Every half beat (eighth notes)  
+- `2`: Every half beat (eighth notes)
 - `4`: Every quarter beat (sixteenth notes)
 - `8`: Every eighth beat (thirty-second notes) - default
 - `16`: Every sixteenth beat (sixty-fourth notes)

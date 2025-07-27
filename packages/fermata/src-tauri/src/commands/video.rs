@@ -7,11 +7,11 @@ use std::path::Path;
 #[tauri::command]
 pub fn get_playable_video_path(recording_name: String, config: State<AppConfig>) -> Result<String, String> {
     let recording_path = config.recordings_path.join(&recording_name);
-    
+
     if !recording_path.exists() {
         return Err(format!("Recording '{}' not found", recording_name));
     }
-    
+
     // Priority 1: Check for rendered final.mp4 or *_final.mp4
     let render_dir = recording_path.join("blender").join("render");
     if render_dir.exists() {
@@ -28,12 +28,12 @@ pub fn get_playable_video_path(recording_name: String, config: State<AppConfig>)
             }
         }
     }
-    
+
     // Priority 2: Look for main OBS recording file (.mkv, .mp4, .avi)
     let video_extensions = ["mkv", "mp4", "avi", "mov"];
     if let Ok(entries) = std::fs::read_dir(&recording_path) {
         let mut video_files = Vec::new();
-        
+
         // Collect all video files
         for entry in entries.flatten() {
             let file_path = entry.path();
@@ -45,7 +45,7 @@ pub fn get_playable_video_path(recording_name: String, config: State<AppConfig>)
                 }
             }
         }
-        
+
         // First priority: files that match the recording name
         for file_path in &video_files {
             if let Some(file_stem) = file_path.file_stem() {
@@ -54,13 +54,13 @@ pub fn get_playable_video_path(recording_name: String, config: State<AppConfig>)
                 }
             }
         }
-        
+
         // Second priority: any video file found
         if let Some(first_video) = video_files.first() {
             return Ok(first_video.to_string_lossy().to_string());
         }
     }
-    
+
     Err(format!("No playable video file found for recording '{}'", recording_name))
 }
 
@@ -71,9 +71,9 @@ pub fn open_video_external(file_path: String) -> Result<(), String> {
     if !path.exists() {
         return Err(format!("Video file not found: {}", file_path));
     }
-    
+
     println!("🔗 [Rust] Opening video in external player: {}", file_path);
-    
+
     #[cfg(target_os = "linux")]
     {
         match Command::new("xdg-open").arg(&file_path).spawn() {
@@ -88,7 +88,7 @@ pub fn open_video_external(file_path: String) -> Result<(), String> {
             }
         }
     }
-    
+
     #[cfg(target_os = "windows")]
     {
         match Command::new("cmd").args(&["/C", "start", "", &file_path]).spawn() {
@@ -103,7 +103,7 @@ pub fn open_video_external(file_path: String) -> Result<(), String> {
             }
         }
     }
-    
+
     #[cfg(target_os = "macos")]
     {
         match Command::new("open").arg(&file_path).spawn() {
@@ -118,9 +118,9 @@ pub fn open_video_external(file_path: String) -> Result<(), String> {
             }
         }
     }
-    
+
     #[cfg(not(any(target_os = "linux", target_os = "windows", target_os = "macos")))]
     {
         Err("External player not supported on this platform".to_string())
     }
-} 
+}

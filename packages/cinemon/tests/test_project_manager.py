@@ -4,15 +4,19 @@ Tests for BlenderProjectManager with YAML API only.
 This module contains unit tests for the BlenderProjectManager class.
 """
 
-import pytest
-from pathlib import Path
-from unittest.mock import Mock, patch, MagicMock
 import subprocess
-import tempfile
-import yaml
+from pathlib import Path
+from unittest.mock import MagicMock, Mock, patch
 
-from blender.project_manager import BlenderProjectManager
-from setka_common.config.yaml_config import BlenderYAMLConfig, ProjectConfig, AudioAnalysisConfig, LayoutConfig, AnimationSpec
+import pytest
+from setka_common.config.yaml_config import (
+    AudioAnalysisConfig,
+    BlenderYAMLConfig,
+    LayoutConfig,
+    ProjectConfig,
+)
+
+from cinemon.project_manager import BlenderProjectManager
 
 
 class TestBlenderProjectManager:
@@ -153,13 +157,13 @@ class TestBlenderProjectManager:
         """Test that create_vse_project_with_config raises ValueError for invalid structure."""
         manager = BlenderProjectManager()
         recording_path = Path("/tmp/test_recording")
-        
+
         # Create minimal YAML config
         yaml_config = BlenderYAMLConfig(
             project=ProjectConfig(video_files=["test.mp4"]),
             audio_analysis=AudioAnalysisConfig(),
             layout=LayoutConfig(),
-            animations=[]
+            strip_animations={},
         )
 
         with pytest.raises(ValueError, match="Invalid recording structure"):
@@ -174,13 +178,13 @@ class TestBlenderProjectManager:
         # Create mock script file
         manager.script_path = tmp_path / "vse_script.py"
         manager.script_path.touch()
-        
+
         # Create a temporary YAML config file
         config_path = tmp_path / "test_config.yaml"
         config_path.write_text("project:\n  video_files: []\n")
 
         # Should not raise exception
-        manager._execute_blender_with_yaml_config(str(config_path))
+        manager._execute_blender_with_config(str(config_path))
 
         # Check subprocess.run was called with correct arguments
         mock_run.assert_called_once()
@@ -201,7 +205,9 @@ class TestBlenderProjectManager:
         assert kwargs["check"] is True
 
     @patch("subprocess.run")
-    def test_execute_blender_with_yaml_config_custom_executable(self, mock_run, tmp_path):
+    def test_execute_blender_with_yaml_config_custom_executable(
+        self, mock_run, tmp_path
+    ):
         """Test execution with custom Blender executable."""
         mock_run.return_value = Mock(stdout="Success", stderr="")
 
@@ -209,12 +215,12 @@ class TestBlenderProjectManager:
         # Create mock script file
         manager.script_path = tmp_path / "vse_script.py"
         manager.script_path.touch()
-        
+
         config_path = tmp_path / "test_config.yaml"
         config_path.write_text("project:\n  video_files: []\n")
 
         # Should not raise exception
-        manager._execute_blender_with_yaml_config(str(config_path))
+        manager._execute_blender_with_config(str(config_path))
 
         # Check subprocess.run was called with custom executable
         mock_run.assert_called_once()
@@ -238,7 +244,7 @@ class TestBlenderProjectManager:
         config_path.write_text("project:\n  video_files: []\n")
 
         with pytest.raises(RuntimeError, match="Blender VSE script not found"):
-            manager._execute_blender_with_yaml_config(str(config_path))
+            manager._execute_blender_with_config(str(config_path))
 
     @patch("subprocess.run")
     def test_execute_blender_with_yaml_config_failure(self, mock_run, tmp_path):
@@ -251,12 +257,12 @@ class TestBlenderProjectManager:
         # Create mock script file
         manager.script_path = tmp_path / "vse_script.py"
         manager.script_path.touch()
-        
+
         config_path = tmp_path / "test_config.yaml"
         config_path.write_text("project:\n  video_files: []\n")
 
         with pytest.raises(RuntimeError, match="Blender execution failed"):
-            manager._execute_blender_with_yaml_config(str(config_path))
+            manager._execute_blender_with_config(str(config_path))
 
     @patch("subprocess.run")
     @patch("tempfile.NamedTemporaryFile")
@@ -266,7 +272,7 @@ class TestBlenderProjectManager:
         """Test successful create_vse_project_with_config execution."""
         # Mock successful subprocess execution
         mock_run.return_value = Mock(stdout="Success", stderr="")
-        
+
         # Mock temporary file
         mock_temp = MagicMock()
         mock_temp.name = str(tmp_path / "temp_config.yaml")
@@ -276,31 +282,29 @@ class TestBlenderProjectManager:
         # Create mock script file
         manager.script_path = tmp_path / "vse_script.py"
         manager.script_path.touch()
-        
+
         # Create YAML config
         yaml_config = BlenderYAMLConfig(
             project=ProjectConfig(
                 video_files=["camera1.mp4", "screen.mkv"],
                 main_audio="main_audio.m4a",
                 fps=30,
-                resolution={"width": 1920, "height": 1080}
+                resolution={"width": 1920, "height": 1080},
             ),
             audio_analysis=AudioAnalysisConfig(
                 file="analysis/main_audio_analysis.json"
             ),
-            layout=LayoutConfig(
-                type="random",
-                config={"seed": 42, "margin": 0.1}
-            ),
-            animations=[
-                AnimationSpec(
-                    type="scale",
-                    trigger="beat",
-                    target_strips=[],
-                    intensity=0.3,
-                    duration_frames=2
-                )
-            ]
+            layout=LayoutConfig(type="random", config={"seed": 42, "margin": 0.1}),
+            strip_animations={
+                "all": [
+                    {
+                        "type": "scale",
+                        "trigger": "beat",
+                        "intensity": 0.3,
+                        "duration_frames": 2,
+                    }
+                ]
+            },
         )
 
         # Should not raise exception and return blend path
@@ -325,93 +329,45 @@ class TestBlenderProjectManager:
     def test_create_resolved_config(self, sample_recording_structure):
         """Test _create_resolved_config method."""
         manager = BlenderProjectManager()
-        
+
         # Create structure object
         from types import SimpleNamespace
+
         structure = SimpleNamespace()
         structure.extracted_dir = sample_recording_structure / "extracted"
         structure.blender_dir = sample_recording_structure / "blender"
-        
+
         # Create YAML config
         yaml_config = BlenderYAMLConfig(
             project=ProjectConfig(
                 video_files=["camera1.mp4", "screen.mkv"],
                 main_audio="main_audio.m4a",
-                fps=30
+                fps=30,
             ),
             audio_analysis=AudioAnalysisConfig(
                 file="analysis/main_audio_analysis.json"
             ),
             layout=LayoutConfig(),
-            animations=[]
+            strip_animations={},
         )
-        
+
         resolved_config = manager._create_resolved_config(
             yaml_config, sample_recording_structure, structure
         )
-        
+
         # Check that paths are resolved
         assert all(Path(vf).is_absolute() for vf in resolved_config.project.video_files)
         assert Path(resolved_config.project.main_audio).is_absolute()
         assert Path(resolved_config.project.output_blend).is_absolute()
         assert Path(resolved_config.project.render_output).is_absolute()
 
-    def test_convert_config_to_dict(self):
-        """Test _convert_config_to_dict method."""
-        manager = BlenderProjectManager()
-        
-        # Create YAML config
-        yaml_config = BlenderYAMLConfig(
-            project=ProjectConfig(
-                video_files=["video1.mp4", "video2.mp4"],
-                main_audio="audio.m4a",
-                fps=25,
-                resolution={"width": 1920, "height": 1080}
-            ),
-            audio_analysis=AudioAnalysisConfig(
-                file="analysis.json"
-            ),
-            layout=LayoutConfig(
-                type="random",
-                config={"seed": 123}
-            ),
-            animations=[
-                AnimationSpec(
-                    type="shake",
-                    trigger="beat",
-                    target_strips=["strip_0"],
-                    intensity=5.0,
-                    return_frames=2
-                )
-            ]
-        )
-        
-        config_dict = manager._convert_config_to_dict(yaml_config)
-        
-        # Check structure
-        assert "project" in config_dict
-        assert "audio_analysis" in config_dict
-        assert "layout" in config_dict
-        assert "animations" in config_dict
-        
-        # Check project data
-        assert config_dict["project"]["video_files"] == ["video1.mp4", "video2.mp4"]
-        assert config_dict["project"]["main_audio"] == "audio.m4a"
-        assert config_dict["project"]["fps"] == 25
-        assert config_dict["project"]["resolution"]["width"] == 1920
-        
-        # Check animation data
-        assert len(config_dict["animations"]) == 1
-        assert config_dict["animations"][0]["type"] == "shake"
-        assert config_dict["animations"][0]["intensity"] == 5.0
-
     def test_validate_animation_mode(self):
         """Test _validate_animation_mode method."""
         manager = BlenderProjectManager()
-        
+
         # Valid mode should not raise
         manager._validate_animation_mode("compositional")
-        
+
         # Invalid mode should raise
         with pytest.raises(ValueError, match="Invalid animation mode"):
             manager._validate_animation_mode("invalid-mode")
@@ -419,11 +375,11 @@ class TestBlenderProjectManager:
     def test_validate_beat_division(self):
         """Test _validate_beat_division method."""
         manager = BlenderProjectManager()
-        
+
         # Valid divisions should not raise
         for division in [1, 2, 4, 8, 16]:
             manager._validate_beat_division(division)
-        
+
         # Invalid divisions should raise
         with pytest.raises(ValueError, match="Invalid beat division"):
             manager._validate_beat_division(3)

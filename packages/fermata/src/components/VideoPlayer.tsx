@@ -29,7 +29,7 @@ export function VideoPlayer({ videoPath, recordingName, onClose }: VideoPlayerPr
 
   // Prosty modal z informacją o ładowaniu
   return (
-    <div 
+    <div
       style={{
         position: 'fixed',
         top: 0, left: 0, right: 0, bottom: 0,
@@ -50,7 +50,7 @@ export function VideoPlayer({ videoPath, recordingName, onClose }: VideoPlayerPr
         <div style={{ fontSize: '14px', marginTop: '10px', opacity: 0.7 }}>
           {recordingName}
         </div>
-        <button 
+        <button
           onClick={onClose}
           style={{
             marginTop: '30px',
@@ -67,4 +67,4 @@ export function VideoPlayer({ videoPath, recordingName, onClose }: VideoPlayerPr
       </div>
     </div>
   );
-} 
+}

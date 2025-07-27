@@ -42,16 +42,15 @@ strip_animations:
       intensity: 2.0
       return_frames: 3
 
-  # Screen with opacity flashing
+  # Screen with visibility switching
   Screen:
-    - type: "opacity"
+    - type: "visibility"
       trigger: "beat"
-      intensity: 0.6
-      min_opacity: 0.3
-    - type: "position"
+      pattern: "flash"
+    - type: "shake"
       trigger: "energy_peaks"
       intensity: 1.2
-      drift_distance: 50
+      return_frames: 2
 
   # Third camera with complex animations
   Camera3:

@@ -30,7 +30,7 @@ body {
   --red-danger-hover: #b91c1c;
   --orange-warning: #f59e0b;
   --purple-info: #7c3aed;
-  
+
   /* Grays */
   --gray-50: #fafafa;
   --gray-100: #f3f4f6;
@@ -42,12 +42,12 @@ body {
   --gray-700: #374151;
   --gray-800: #1f2937;
   --gray-900: #111827;
-  
+
   /* Surfaces & Borders */
   --surface-primary: #ffffff;
   --border-color: #e5e5e5;
   --border-color-light: #f5f5f5;
-  
+
   /* Spacing */
   --spacing-2: 8px;
   --spacing-3: 12px;
@@ -55,11 +55,11 @@ body {
   --spacing-5: 20px;
   --spacing-6: 24px;
   --spacing-8: 32px;
-  
+
   /* Border Radius */
   --border-radius: 8px;
   --border-radius-lg: 12px;
-  
+
   /* Shadows */
   --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
   --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
@@ -362,41 +362,41 @@ body {
   .content {
     padding: 0 var(--spacing-3) var(--spacing-3) var(--spacing-3);
   }
-  
+
   .app-header {
     padding: var(--spacing-4) var(--spacing-3);
   }
-  
+
   .app-title {
     font-size: 1.5rem;
   }
-  
+
   .recording-card-header {
     flex-direction: column;
     gap: var(--spacing-3);
     align-items: flex-start;
   }
-  
+
   .recording-actions {
     justify-content: stretch;
   }
-  
+
   .recording-actions .btn {
     flex: 1;
     justify-content: center;
   }
-  
+
   .controls-bar {
     flex-direction: column;
     align-items: stretch;
   }
-  
+
   .controls-group {
     flex-direction: column;
     align-items: stretch;
   }
-  
+
   .search-input {
     min-width: unset;
   }
-} 
+}

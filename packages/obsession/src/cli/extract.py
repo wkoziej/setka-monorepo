@@ -138,7 +138,9 @@ def find_metadata_file(video_path: Path) -> Optional[Path]:
     # First, try to find metadata file using FileStructureManager
     # This handles the new structure where metadata.json is in the same directory as video
     try:
-        structure = RecordingStructureManager.find_recording_structure(video_path.parent)
+        structure = RecordingStructureManager.find_recording_structure(
+            video_path.parent
+        )
         if structure and structure.metadata_file.exists():
             print(
                 f"Found metadata file using FileStructureManager: {structure.metadata_file}"
@@ -207,47 +209,49 @@ def find_metadata_file(video_path: Path) -> Optional[Path]:
 def apply_audio_pattern_filter(metadata: dict, pattern: str) -> dict:
     """
     Apply audio filtering based on source name pattern.
-    
+
     Args:
         metadata: The loaded metadata dictionary
         pattern: Regex pattern to match source names
-        
+
     Returns:
         Modified metadata dictionary with has_audio=False for matching sources
     """
     import re
-    
+
     if not pattern:
         return metadata
-        
+
     try:
         regex = re.compile(pattern, re.IGNORECASE)
     except re.error as e:
         print(f"Error: Invalid regex pattern '{pattern}': {e}", file=sys.stderr)
         return metadata
-    
+
     modified_count = 0
-    
+
     # Create a copy to avoid modifying original
     new_metadata = metadata.copy()
     new_sources = {}
-    
+
     for source_name, source_info in metadata.get("sources", {}).items():
         source_copy = source_info.copy()
-        
+
         if regex.match(source_name):
             if source_copy.get("has_audio", False):
-                print(f"Skipping audio extraction for source matching pattern: {source_name}")
+                print(
+                    f"Skipping audio extraction for source matching pattern: {source_name}"
+                )
                 source_copy["has_audio"] = False
                 modified_count += 1
-        
+
         new_sources[source_name] = source_copy
-    
+
     new_metadata["sources"] = new_sources
-    
+
     if modified_count > 0:
         print(f"Applied audio filtering to {modified_count} source(s)")
-    
+
     return new_metadata
 
 
