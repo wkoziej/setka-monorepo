@@ -3,6 +3,7 @@
 
 """Pytest configuration for cinemon tests."""
 
+import subprocess
 import sys
 from pathlib import Path
 from unittest.mock import Mock
@@ -40,6 +41,18 @@ def mock_bpy(monkeypatch):
 
     # If bpy already exists, return it
     return sys.modules["bpy"]
+
+
+@pytest.fixture(autouse=True)
+def mock_subprocess(monkeypatch):
+    """Mock subprocess.run to prevent actual Blender execution in tests."""
+    mock_result = Mock()
+    mock_result.stdout = "Blender execution mocked"
+    mock_result.stderr = ""
+    mock_result.returncode = 0
+
+    monkeypatch.setattr(subprocess, "run", Mock(return_value=mock_result))
+    monkeypatch.setattr(subprocess, "Popen", Mock())
 
 
 @pytest.fixture
