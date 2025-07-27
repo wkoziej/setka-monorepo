@@ -214,7 +214,6 @@ class TestApplyConfigOperator:
         with patch("operators.YAMLConfigLoader") as mock_loader_class:
             mock_loader = Mock()
             mock_loader_class.return_value = mock_loader
-            mock_loader.convert_to_internal.return_value = {"test": "config"}
 
             with patch(
                 "operators.BlenderVSEConfiguratorDirect"
@@ -269,7 +268,6 @@ class TestApplyConfigOperator:
         with patch("operators.YAMLConfigLoader") as mock_loader_class:
             mock_loader = Mock()
             mock_loader_class.return_value = mock_loader
-            mock_loader.convert_to_internal.return_value = {"test": "config"}
 
             with patch(
                 "operators.BlenderVSEConfiguratorDirect"

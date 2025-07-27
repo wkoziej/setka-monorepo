@@ -156,15 +156,9 @@ class ApplyConfigOperator(Operator):
         try:
             config = context.scene.cinemon_config
 
-            # Convert config to internal format and create configurator
-            loader = YAMLConfigLoader()
-            internal_config = loader.convert_to_internal(config)
-
-            # Create temporary file path for vse_script compatibility
-            # In real usage, this would be handled differently
-
-            # Create configurator with direct config data
-            configurator = BlenderVSEConfiguratorDirect(internal_config)
+            # Create configurator with config object directly
+            # BlenderVSEConfiguratorDirect expects CinemonConfig object
+            configurator = BlenderVSEConfiguratorDirect(config)
 
             # Apply configuration
             success = configurator.setup_vse_project()
@@ -190,28 +184,24 @@ class ApplyConfigOperator(Operator):
 class BlenderVSEConfiguratorDirect(BlenderVSEConfigurator):
     """VSE Configurator that accepts config data directly instead of file path."""
 
-    def __init__(self, config_data):
-        """Initialize with config data instead of file path."""
-        # Set config data directly
-        self.config_data = config_data
+    def __init__(self, config):
+        """Initialize with CinemonConfig object."""
+        # Set config object directly
+        self.config = config
+        self.config_data = config
 
-        # Set attributes from config (maintaining compatibility)
-        project = self.config_data["project"]
-        self.video_files = [Path(f) for f in project["video_files"]]
-        self.main_audio = (
-            Path(project["main_audio"]) if project.get("main_audio") else None
-        )
-        self.output_blend = (
-            Path(project["output_blend"]) if project.get("output_blend") else None
-        )
+        # Set attributes from config object
+        project = config.project
+        self.video_files = [Path(f) for f in project.video_files]
+        self.main_audio = Path(project.main_audio) if project.main_audio else None
+        self.output_blend = Path(project.output_blend) if project.output_blend else None
         self.render_output = (
-            Path(project["render_output"]) if project.get("render_output") else None
+            Path(project.render_output) if project.render_output else None
         )
-        self.fps = project.get("fps", 30)
-        resolution = project.get("resolution", {})
-        self.resolution_x = resolution.get("width", 1920)
-        self.resolution_y = resolution.get("height", 1080)
-        self.beat_division = project.get("beat_division", 8)
+        self.fps = project.fps
+        self.resolution_x = project.resolution.width
+        self.resolution_y = project.resolution.height
+        self.beat_division = project.beat_division
 
         # Animation mode is always compositional
         self.animation_mode = "compositional"

@@ -109,38 +109,6 @@ class TestExamplePresets:
         )
         assert has_pip_switch, "Beat switch preset should have pip_switch animation"
 
-    def test_all_presets_convert_to_internal(self):
-        """Test that all presets convert to internal format correctly."""
-        from config_loader import YAMLConfigLoader
-
-        preset_files = [
-            "vintage.yaml",
-            "music-video.yaml",
-            "minimal.yaml",
-            "beat-switch.yaml",
-        ]
-
-        loader = YAMLConfigLoader()
-
-        for preset_file in preset_files:
-            preset_path = addon_path / "example_presets" / preset_file
-            config = loader.load_from_file(preset_path)
-
-            # Convert to internal format
-            internal_format = loader.convert_to_internal(config)
-
-            # Verify internal format structure
-            assert "project" in internal_format
-            assert "layout" in internal_format
-            assert "animations" in internal_format
-            assert "audio_analysis" in internal_format
-
-            # Verify project section
-            assert "video_files" in internal_format["project"]
-            assert "fps" in internal_format["project"]
-
-            print(f"✓ {preset_file} converts to internal format correctly")
-
     def test_preset_files_exist(self):
         """Test that all expected preset files exist."""
         expected_presets = [
