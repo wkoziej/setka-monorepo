@@ -283,7 +283,7 @@ main() {
     echo ""
     echo "Następne kroki:"
     echo "1. Przetestuj authentication:"
-    echo "   python test_youtube_simple.py"
+    echo "   python youtube_manual_test.py"
     echo ""
     echo "2. Uruchom pełne testy:"
     echo "   python -m pytest tests/integration/test_youtube_real_api.py -v"
