@@ -33,6 +33,9 @@ Uses **delegation pattern** with three specialized animators:
 ### Integration Points
 
 - **setka-common**: Uses `RecordingStructureManager` for standardized file organization
+  - **NEW**: Also imports validation constants (`VALID_ANIMATION_TYPES`, `VALID_TRIGGERS`, `VALID_LAYOUT_TYPES`)
+  - **NEW**: Uses `ConfigValidationError` for consistent error handling
+  - **NEW**: Imports `AnimationSpec` TypedDict for type-safe animation configuration
 - **beatrix**: Consumes audio analysis JSON for animation timing data
 - **Blender 4.3+**: Executes via `snap run blender` with YAML configuration system
 

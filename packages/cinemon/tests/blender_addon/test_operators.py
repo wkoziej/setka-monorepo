@@ -66,13 +66,13 @@ class TestLoadConfigOperator:
 
     def test_load_config_execute_valid_file(self):
         """Test LoadConfigOperator.execute() with valid YAML file."""
-        from config_loader import (
+        from operators import LoadConfigOperator
+        from setka_common.config import (
             AudioAnalysisConfig,
-            CinemonConfig,
+            BlenderYAMLConfig,
             LayoutConfig,
             ProjectConfig,
         )
-        from operators import LoadConfigOperator
 
         operator = LoadConfigOperator()
         operator.filepath = str(addon_path / "example_presets" / "vintage.yaml")
@@ -85,7 +85,7 @@ class TestLoadConfigOperator:
             mock_loader_class.return_value = mock_loader
 
             # Mock successful loading
-            mock_config = CinemonConfig(
+            mock_config = BlenderYAMLConfig(
                 project=ProjectConfig(video_files=[], fps=30),
                 layout=LayoutConfig(type="random"),
                 strip_animations={},
@@ -107,8 +107,8 @@ class TestLoadConfigOperator:
 
     def test_load_config_execute_invalid_file(self):
         """Test LoadConfigOperator.execute() with invalid YAML file."""
-        from config_loader import ValidationError
         from operators import LoadConfigOperator
+        from setka_common.config import ConfigValidationError
 
         operator = LoadConfigOperator()
         operator.filepath = "/nonexistent/file.yaml"
@@ -121,7 +121,7 @@ class TestLoadConfigOperator:
             mock_loader_class.return_value = mock_loader
 
             # Mock validation error
-            mock_loader.load_from_file.side_effect = ValidationError("Test error")
+            mock_loader.load_from_file.side_effect = ConfigValidationError("Test error")
 
             with patch.object(operator, "report") as mock_report:
                 result = operator.execute(mock_context)
@@ -189,20 +189,20 @@ class TestApplyConfigOperator:
 
     def test_apply_config_execute_with_config(self):
         """Test ApplyConfigOperator.execute() with loaded config."""
-        from config_loader import (
+        from operators import ApplyConfigOperator
+        from setka_common.config import (
             AudioAnalysisConfig,
-            CinemonConfig,
+            BlenderYAMLConfig,
             LayoutConfig,
             ProjectConfig,
         )
-        from operators import ApplyConfigOperator
 
         operator = ApplyConfigOperator()
         mock_context = Mock()
         mock_context.scene = Mock()
 
         # Mock loaded config
-        mock_config = CinemonConfig(
+        mock_config = BlenderYAMLConfig(
             project=ProjectConfig(video_files=["Camera1.mp4"], fps=30),
             layout=LayoutConfig(type="random"),
             strip_animations={"Camera1": [{"type": "scale", "trigger": "beat"}]},
@@ -243,20 +243,20 @@ class TestApplyConfigOperator:
 
     def test_apply_config_execute_setup_fails(self):
         """Test ApplyConfigOperator.execute() when VSE setup fails."""
-        from config_loader import (
+        from operators import ApplyConfigOperator
+        from setka_common.config import (
             AudioAnalysisConfig,
-            CinemonConfig,
+            BlenderYAMLConfig,
             LayoutConfig,
             ProjectConfig,
         )
-        from operators import ApplyConfigOperator
 
         operator = ApplyConfigOperator()
         mock_context = Mock()
         mock_context.scene = Mock()
 
         # Mock loaded config
-        mock_config = CinemonConfig(
+        mock_config = BlenderYAMLConfig(
             project=ProjectConfig(video_files=["Camera1.mp4"], fps=30),
             layout=LayoutConfig(type="random"),
             strip_animations={},

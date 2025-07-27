@@ -11,8 +11,16 @@ from .yaml_config import (
     YAMLConfigLoader,
     AnimationSpec,
     StripAnimations,
+    ConfigValidationError,
+    Resolution,
 )
 from .validation import ConfigValidator
+
+# Expose validation constants from YAMLConfigLoader
+_loader = YAMLConfigLoader()
+VALID_ANIMATION_TYPES = _loader.VALID_ANIMATION_TYPES
+VALID_TRIGGERS = _loader.VALID_TRIGGERS
+VALID_LAYOUT_TYPES = _loader.VALID_LAYOUT_TYPES
 
 __all__ = [
     "BlenderYAMLConfig",
@@ -23,4 +31,9 @@ __all__ = [
     "ConfigValidator",
     "AnimationSpec",
     "StripAnimations",
+    "ConfigValidationError",
+    "Resolution",
+    "VALID_ANIMATION_TYPES",
+    "VALID_TRIGGERS",
+    "VALID_LAYOUT_TYPES",
 ]

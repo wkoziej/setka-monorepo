@@ -19,7 +19,7 @@ class TestExamplePresets:
 
     def test_vintage_preset_loads(self):
         """Test that vintage preset loads correctly."""
-        from config_loader import YAMLConfigLoader
+        from setka_common.config import YAMLConfigLoader
 
         preset_path = addon_path / "example_presets" / "vintage.yaml"
         assert preset_path.exists(), f"Vintage preset not found at {preset_path}"
@@ -42,7 +42,7 @@ class TestExamplePresets:
 
     def test_music_video_preset_loads(self):
         """Test that music-video preset loads correctly."""
-        from config_loader import YAMLConfigLoader
+        from setka_common.config import YAMLConfigLoader
 
         preset_path = addon_path / "example_presets" / "music-video.yaml"
         assert preset_path.exists(), f"Music video preset not found at {preset_path}"
@@ -64,7 +64,7 @@ class TestExamplePresets:
 
     def test_minimal_preset_loads(self):
         """Test that minimal preset loads correctly."""
-        from config_loader import YAMLConfigLoader
+        from setka_common.config import YAMLConfigLoader
 
         preset_path = addon_path / "example_presets" / "minimal.yaml"
         assert preset_path.exists(), f"Minimal preset not found at {preset_path}"
@@ -89,7 +89,7 @@ class TestExamplePresets:
 
     def test_beat_switch_preset_loads(self):
         """Test that beat-switch preset loads correctly."""
-        from config_loader import YAMLConfigLoader
+        from setka_common.config import YAMLConfigLoader
 
         preset_path = addon_path / "example_presets" / "beat-switch.yaml"
         assert preset_path.exists(), f"Beat switch preset not found at {preset_path}"
@@ -131,7 +131,7 @@ class TestExamplePresets:
 
     def test_presets_have_different_characteristics(self):
         """Test that presets have different characteristics as expected."""
-        from config_loader import YAMLConfigLoader
+        from setka_common.config import YAMLConfigLoader
 
         loader = YAMLConfigLoader()
 

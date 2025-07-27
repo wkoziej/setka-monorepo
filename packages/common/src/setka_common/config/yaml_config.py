@@ -60,6 +60,12 @@ from pathlib import Path
 import yaml
 
 
+class ConfigValidationError(Exception):
+    """Raised when YAML configuration validation fails."""
+
+    pass
+
+
 class AnimationSpec(TypedDict):
     """Type specification for individual animation configuration."""
 
@@ -143,7 +149,36 @@ class BlenderYAMLConfig:
 
 
 class YAMLConfigLoader:
-    """Loader and validator for YAML configuration files."""
+    """Loader and validator for YAML configuration files.
+
+    This class provides a centralized way to load and validate YAML configuration
+    files for Blender VSE projects. It ensures all configurations conform to the
+    expected structure and valid types.
+
+    Example usage:
+        loader = YAMLConfigLoader()
+
+        # Load from file
+        config = loader.load_from_file("animation_config.yaml")
+
+        # Load from string
+        yaml_str = '''
+        project:
+          video_files: [cam1.mp4, cam2.mp4]
+          fps: 30
+        layout:
+          type: random
+        strip_animations:
+          cam1:
+            - type: scale
+              trigger: bass
+              intensity: 0.5
+        '''
+        config = loader.load_from_string(yaml_str)
+
+        # Validate existing config
+        is_valid, errors = loader.validate_config(config)
+    """
 
     VALID_ANIMATION_TYPES = {
         "scale",
@@ -200,7 +235,7 @@ class YAMLConfigLoader:
                 content = f.read()
             return self.load_from_string(content)
         except Exception as e:
-            raise ValueError(f"Error reading file {file_path}: {e}")
+            raise ConfigValidationError(f"Error reading file {file_path}: {e}")
 
     def load_from_string(self, yaml_content: str) -> BlenderYAMLConfig:
         """Load configuration from YAML string.
@@ -217,10 +252,10 @@ class YAMLConfigLoader:
         try:
             data = yaml.safe_load(yaml_content)
         except yaml.YAMLError as e:
-            raise ValueError(f"Invalid YAML format: {e}")
+            raise ConfigValidationError(f"Invalid YAML format: {e}")
 
         if data is None:
-            raise ValueError("Empty YAML configuration")
+            raise ConfigValidationError("Empty YAML configuration")
 
         return self._parse_and_validate(data)
 
@@ -240,7 +275,7 @@ class YAMLConfigLoader:
         required_sections = ["project", "layout", "strip_animations"]
         for section in required_sections:
             if section not in data:
-                raise ValueError(f"Missing required section: {section}")
+                raise ConfigValidationError(f"Missing required section: {section}")
 
         # Parse sections
         project_data = data.get("project", {})
@@ -263,7 +298,9 @@ class YAMLConfigLoader:
         # Validate configuration
         is_valid, errors = self.validate_config(config)
         if not is_valid:
-            raise ValueError(f"Configuration validation failed: {'; '.join(errors)}")
+            raise ConfigValidationError(
+                f"Configuration validation failed: {'; '.join(errors)}"
+            )
 
         return config
 
@@ -279,7 +316,7 @@ class YAMLConfigLoader:
         """Parse project configuration section."""
         video_files = data.get("video_files", [])
         if not isinstance(video_files, list):
-            raise ValueError("video_files must be a list")
+            raise ConfigValidationError("video_files must be a list")
 
         # Parse resolution
         resolution_data = data.get("resolution")
@@ -320,9 +357,9 @@ class YAMLConfigLoader:
         """Validate configuration with fail-fast approach."""
         errors = []
 
-        # Validate project
-        if not config.project.video_files:
-            errors.append("Project must have at least one video file")
+        # Validate project - empty video_files allowed for auto-discovery
+        # if not config.project.video_files:
+        #     errors.append("Project must have at least one video file")
 
         if config.project.fps <= 0:
             errors.append("FPS must be greater than 0")

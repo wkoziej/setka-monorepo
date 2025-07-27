@@ -153,10 +153,9 @@ project:
             # Cleanup
             Path(f.name).unlink()
 
-    def test_load_config_missing_required_fields(self):
-        """Test loading YAML with missing required fields."""
+    def test_load_config_missing_required_section(self):
+        """Test loading YAML with missing required section."""
         yaml_content = """
-project: {}
 audio_analysis: {}
 layout: {}
 strip_animations: {}
@@ -168,7 +167,9 @@ strip_animations: {}
 
             loader = YAMLConfigLoader()
 
-            with pytest.raises(Exception):  # Should raise validation error
+            with pytest.raises(
+                Exception
+            ):  # Should raise validation error for missing project
                 loader.load_config(Path(f.name))
 
             # Cleanup
@@ -195,7 +196,7 @@ strip_animations: {}
         assert len(errors) == 0
 
     def test_validate_config_empty_video_files(self):
-        """Test validating config with empty video files."""
+        """Test validating config with empty video files (now allowed for auto-discovery)."""
         project = ProjectConfig(video_files=[])
         audio_analysis = AudioAnalysisConfig()
         layout = LayoutConfig()
@@ -211,9 +212,9 @@ strip_animations: {}
         loader = YAMLConfigLoader()
         is_valid, errors = loader.validate_config(config)
 
-        assert is_valid is False
-        assert len(errors) > 0
-        assert any("video file" in error.lower() for error in errors)
+        # Empty video_files are now allowed for auto-discovery
+        assert is_valid is True
+        assert len(errors) == 0
 
     def test_validate_config_invalid_fps(self):
         """Test validating config with invalid FPS."""

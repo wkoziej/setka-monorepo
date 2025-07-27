@@ -10,6 +10,14 @@ from .config import (
     ConfigValidator,
     AnimationSpec,
     StripAnimations,
+    ConfigValidationError,
+    ProjectConfig,
+    AudioAnalysisConfig,
+    LayoutConfig,
+    Resolution,
+    VALID_ANIMATION_TYPES,
+    VALID_TRIGGERS,
+    VALID_LAYOUT_TYPES,
 )
 
 __all__ = [
@@ -19,4 +27,12 @@ __all__ = [
     "ConfigValidator",
     "AnimationSpec",
     "StripAnimations",
+    "ConfigValidationError",
+    "ProjectConfig",
+    "AudioAnalysisConfig",
+    "LayoutConfig",
+    "Resolution",
+    "VALID_ANIMATION_TYPES",
+    "VALID_TRIGGERS",
+    "VALID_LAYOUT_TYPES",
 ]
