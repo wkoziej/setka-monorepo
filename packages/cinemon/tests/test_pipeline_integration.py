@@ -5,9 +5,9 @@
 
 import pytest
 import yaml
+from setka_common.utils import MediaDiscovery
 
 from cinemon.config import CinemonConfigGenerator, PresetManager
-from setka_common.utils import MediaDiscovery
 
 
 class TestPipelineIntegration:

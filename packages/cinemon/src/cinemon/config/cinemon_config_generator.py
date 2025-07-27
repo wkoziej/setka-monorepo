@@ -12,8 +12,8 @@ from setka_common.config.yaml_config import (
     BlenderYAMLConfig,
     Resolution,
 )
-
 from setka_common.utils import MediaDiscovery
+
 from .preset_manager import PresetManager
 
 
