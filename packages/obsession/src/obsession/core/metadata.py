@@ -37,9 +37,13 @@ def determine_source_capabilities(obs_source) -> Dict[str, bool]:
             "has_audio": bool(flags & OBS_SOURCE_AUDIO),
             "has_video": bool(flags & OBS_SOURCE_VIDEO),
         }
-    except (TypeError, AttributeError):
-        # Handle cases where obs is mocked or flags are not integers
-        return {"has_audio": False, "has_video": False}
+    except (TypeError, AttributeError) as e:
+        # Only return False/False if obs is actually None (import failure)
+        # For real errors (like Mock configuration issues), re-raise
+        if obs is None:
+            return {"has_audio": False, "has_video": False}
+        # If we get here, it's likely a real error - re-raise it
+        raise
 
 
 def create_metadata(
