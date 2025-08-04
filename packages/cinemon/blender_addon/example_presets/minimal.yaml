@@ -18,29 +18,37 @@ layout:
     overlap_allowed: false
 
 strip_animations:
-  # Main camera with very subtle scale
-  Camera1:
+  # RPI cameras with subtle animations
+  "RPI_FRONT.mp4":
     - type: "scale"
       trigger: "beat"
-      intensity: 0.1  # Very subtle
+      intensity: 2.0  # VERY VISIBLE for testing
       easing: "EASE_IN_OUT"
 
-  # Secondary camera with minimal shake
-  Camera2:
+  "RPI_RIGHT.mp4":
     - type: "shake"
       trigger: "energy_peaks"
-      intensity: 0.5  # Gentle shake
-      return_frames: 1
+      intensity: 5.0  # VERY VISIBLE shake
+      return_frames: 3
 
-  # Screen recording stays mostly static
-  Screen:
+  # V4L2 devices with minimal effects
+  "Urządzenie przechwytujące obraz (V4L2).mp4":
     - type: "brightness_flicker"
       trigger: "energy_peaks"
       intensity: 0.1  # Very subtle brightness change
       return_frames: 1
 
-  # Additional cameras get no animations (professional look)
-  # Camera3: []  # Commented out - no animations
+  "Urządzenie przechwytujące obraz (V4L2) 2.mp4":
+    - type: "scale"
+      trigger: "beat"
+      intensity: 0.05  # Even more subtle
+      easing: "EASE_IN_OUT"
+
+  "Urządzenie przechwytujące obraz (V4L2) 3.mp4":
+    - type: "shake"
+      trigger: "energy_peaks"
+      intensity: 0.3  # Very gentle shake
+      return_frames: 2
 
 audio_analysis:
   file: "./analysis/main_audio_analysis.json"

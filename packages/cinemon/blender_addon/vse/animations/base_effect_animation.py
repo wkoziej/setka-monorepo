@@ -77,11 +77,11 @@ class BaseEffectAnimation(ABC):
             strip: Blender video strip object
 
         Returns:
-            Strip name (filename without extension)
+            Strip name (filename with extension)
         """
         if hasattr(strip, "filepath") and strip.filepath:
-            # Extract filename without extension from filepath
-            return Path(strip.filepath).stem
+            # Extract filename with extension from filepath to match YAML config
+            return Path(strip.filepath).name
         elif hasattr(strip, "name") and strip.name:
             # Fallback to strip name
             return strip.name

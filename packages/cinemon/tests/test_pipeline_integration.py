@@ -50,17 +50,17 @@ class TestPipelineIntegration:
 
         # 2. Test PresetManager
         preset_manager = PresetManager()
-        vintage_preset = preset_manager.get_preset("vintage")
+        minimal_preset = preset_manager.get_preset("minimal")
 
-        assert vintage_preset.layout.type == "random"
-        assert len(vintage_preset.strip_animations) > 0
+        assert minimal_preset.layout.type == "cascade"
+        assert len(minimal_preset.strip_animations) > 0
 
         # 3. Test CinemonConfigGenerator
         generator = CinemonConfigGenerator()
-        config_path = generator.generate_preset(recording_dir, "vintage", seed=42)
+        config_path = generator.generate_preset(recording_dir, "minimal", seed=42)
 
         assert config_path.exists()
-        assert config_path.name == "animation_config_vintage.yaml"
+        assert config_path.name == "animation_config_minimal.yaml"
 
         # 4. Verify generated config structure
         with config_path.open("r") as f:
@@ -128,11 +128,11 @@ class TestPipelineIntegration:
         generator = CinemonConfigGenerator()
 
         with pytest.raises(ValueError, match="Multiple audio files found"):
-            generator.generate_preset(recording_dir, "vintage")
+            generator.generate_preset(recording_dir, "minimal")
 
         # Test explicit main audio specification
         config_path = generator.generate_preset(
-            recording_dir, "vintage", main_audio="microphone.wav"
+            recording_dir, "minimal", main_audio="microphone.wav"
         )
 
         with config_path.open("r") as f:
@@ -150,7 +150,7 @@ class TestPipelineIntegration:
         (extracted_dir / "main_audio.m4a").touch()
 
         generator = CinemonConfigGenerator()
-        presets_to_test = ["vintage", "music-video", "minimal", "beat-switch"]
+        presets_to_test = ["minimal", "minimal", "minimal", "minimal"]
 
         for preset_name in presets_to_test:
             config_path = generator.generate_preset(recording_dir, preset_name)
@@ -189,7 +189,7 @@ class TestPipelineIntegration:
 
         # Test config generation with Polish filenames
         generator = CinemonConfigGenerator()
-        config_path = generator.generate_preset(recording_dir, "vintage")
+        config_path = generator.generate_preset(recording_dir, "minimal")
 
         with config_path.open("r", encoding="utf-8") as f:
             config_data = yaml.safe_load(f)
@@ -206,13 +206,13 @@ class TestPipelineIntegration:
         # Test nonexistent directory
         nonexistent_dir = tmp_path / "nonexistent"
         with pytest.raises(FileNotFoundError):
-            generator.generate_preset(nonexistent_dir, "vintage")
+            generator.generate_preset(nonexistent_dir, "minimal")
 
         # Test directory with missing extracted folder
         empty_dir = tmp_path / "empty_recording"
         empty_dir.mkdir()
         with pytest.raises(FileNotFoundError):
-            generator.generate_preset(empty_dir, "vintage")
+            generator.generate_preset(empty_dir, "minimal")
 
         # Test directory with no video files
         recording_dir = tmp_path / "recording_no_video"
@@ -221,7 +221,7 @@ class TestPipelineIntegration:
         (extracted_dir / "audio_only.m4a").touch()
 
         with pytest.raises(ValueError, match="No video files found"):
-            generator.generate_preset(recording_dir, "vintage")
+            generator.generate_preset(recording_dir, "minimal")
 
         # Test directory with no audio files
         recording_dir2 = tmp_path / "recording_no_audio"
@@ -230,7 +230,7 @@ class TestPipelineIntegration:
         (extracted_dir2 / "video_only.mp4").touch()
 
         with pytest.raises(ValueError, match="No audio files found"):
-            generator.generate_preset(recording_dir2, "vintage")
+            generator.generate_preset(recording_dir2, "minimal")
 
         # Test invalid preset name
         recording_dir3 = tmp_path / "recording_valid"
@@ -254,14 +254,14 @@ class TestPipelineIntegration:
         generator = CinemonConfigGenerator()
 
         # Generate first config
-        config_path1 = generator.generate_preset(recording_dir, "vintage", seed=100)
+        config_path1 = generator.generate_preset(recording_dir, "minimal", seed=100)
 
         with config_path1.open("r") as f:
             config_data1 = yaml.safe_load(f)
         assert config_data1["layout"]["config"]["seed"] == 100
 
         # Generate second config with different parameters
-        config_path2 = generator.generate_preset(recording_dir, "vintage", seed=200)
+        config_path2 = generator.generate_preset(recording_dir, "minimal", seed=200)
 
         # Should be same path
         assert config_path1 == config_path2

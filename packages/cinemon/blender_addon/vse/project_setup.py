@@ -156,8 +156,11 @@ class BlenderProjectSetup:
 
             for i, video_file in enumerate(video_files):
                 channel = i + 2  # Start from channel 2 (audio is channel 1)
+                # Use actual filename as strip name
+                import os
+                strip_name = os.path.basename(str(video_file))
                 sequencer.sequences.new_movie(
-                    name=f"Video_{i + 1}",
+                    name=strip_name,
                     filepath=str(video_file),
                     channel=channel,
                     frame_start=1,

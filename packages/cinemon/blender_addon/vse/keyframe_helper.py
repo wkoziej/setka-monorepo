@@ -49,7 +49,10 @@ class KeyframeHelper:
             bpy.context.scene.keyframe_insert(data_path=data_path, frame=frame)
             return True
 
-        except Exception:
+        except Exception as e:
+            print(f"ERROR inserting keyframe: {e}")
+            import traceback
+            traceback.print_exc()
             return False
 
     def insert_transform_scale_keyframes(
@@ -96,7 +99,10 @@ class KeyframeHelper:
             bpy.context.scene.keyframe_insert(data_path=data_path_y, frame=frame)
             return True
 
-        except Exception:
+        except Exception as e:
+            print(f"ERROR inserting keyframe: {e}")
+            import traceback
+            traceback.print_exc()
             return False
 
     def insert_transform_offset_keyframes(
@@ -141,7 +147,10 @@ class KeyframeHelper:
             bpy.context.scene.keyframe_insert(data_path=data_path_y, frame=frame)
             return True
 
-        except Exception:
+        except Exception as e:
+            print(f"ERROR inserting keyframe: {e}")
+            import traceback
+            traceback.print_exc()
             return False
 
     def build_data_path(self, strip_name: str, property_path: str) -> str:
@@ -214,5 +223,8 @@ class KeyframeHelper:
             bpy.context.scene.keyframe_insert(data_path=data_path, frame=frame)
             return True
 
-        except Exception:
+        except Exception as e:
+            print(f"ERROR inserting keyframe: {e}")
+            import traceback
+            traceback.print_exc()
             return False

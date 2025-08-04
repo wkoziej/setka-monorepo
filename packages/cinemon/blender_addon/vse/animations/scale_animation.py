@@ -56,7 +56,10 @@ class ScaleAnimation(BaseEffectAnimation):
         Returns:
             True if animation was applied successfully
         """
+        print(f"🎵 ScaleAnimation.apply_to_strip: strip={strip.name}, events={len(events)}, fps={fps}")
+        
         if not hasattr(strip, "transform"):
+            print(f"🎵 Strip {strip.name} has no transform property")
             return False
 
         # Get base scale

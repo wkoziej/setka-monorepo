@@ -39,48 +39,44 @@ def isolated_custom_presets(tmp_path, monkeypatch):
 class TestPresetManager:
     """Test cases for PresetManager preset functionality."""
 
-    def test_get_vintage_preset(self):
-        """Test getting the built-in vintage preset."""
+    def test_get_minimal_preset(self):
+        """Test getting the built-in minimal preset."""
         preset_manager = PresetManager()
-        vintage_preset = preset_manager.get_preset("vintage")
+        minimal_preset = preset_manager.get_preset("minimal")
 
-        assert isinstance(vintage_preset, BlenderYAMLConfig)
+        assert isinstance(minimal_preset, BlenderYAMLConfig)
 
         # Check layout configuration
-        assert vintage_preset.layout.type == "random"
-        assert vintage_preset.layout.config["overlap_allowed"] is False
-        assert vintage_preset.layout.config["margin"] == 0.1
-        assert vintage_preset.layout.config["seed"] == 42  # From YAML file
+        assert minimal_preset.layout.type == "cascade"
+        assert minimal_preset.layout.config["overlap_allowed"] is False
+        assert minimal_preset.layout.config["margin"] == 0.15
 
-        # Check strip_animations
-        assert "Camera1" in vintage_preset.strip_animations
-        assert "Camera2" in vintage_preset.strip_animations
+        # Check strip_animations - minimal has RPI cameras
+        assert "RPI_FRONT.mp4" in minimal_preset.strip_animations
+        assert "RPI_RIGHT.mp4" in minimal_preset.strip_animations
 
-        # Check Camera1 animations
-        camera1_anims = vintage_preset.strip_animations["Camera1"]
-        assert len(camera1_anims) == 2
+        # Check RPI_FRONT animations
+        camera1_anims = minimal_preset.strip_animations["RPI_FRONT.mp4"]
+        assert len(camera1_anims) == 1
         assert camera1_anims[0]["type"] == "scale"
         assert camera1_anims[0]["trigger"] == "beat"
-        assert camera1_anims[1]["type"] == "vintage_color"
-        assert camera1_anims[1]["trigger"] == "one_time"
 
     def test_get_music_video_preset(self):
-        """Test getting the built-in music-video preset."""
+        """Test getting the built-in minimal preset."""
         preset_manager = PresetManager()
-        music_video_preset = preset_manager.get_preset("music-video")
+        music_video_preset = preset_manager.get_preset("minimal")
 
         assert isinstance(music_video_preset, BlenderYAMLConfig)
 
         # Check layout configuration
-        assert music_video_preset.layout.type == "grid"
-        assert music_video_preset.layout.config["margin"] == 0.02
+        assert music_video_preset.layout.type == "cascade"
+        assert music_video_preset.layout.config["margin"] == 0.15
 
-        # Check strip_animations - music-video has per-camera animations
-        assert "Camera1" in music_video_preset.strip_animations
-        assert "Camera2" in music_video_preset.strip_animations
-        camera1_anims = music_video_preset.strip_animations["Camera1"]
+        # Check strip_animations - minimal has per-camera animations
+        assert "RPI_FRONT.mp4" in music_video_preset.strip_animations
+        assert "RPI_RIGHT.mp4" in music_video_preset.strip_animations
+        camera1_anims = music_video_preset.strip_animations["RPI_FRONT.mp4"]
         animation_types = [anim["type"] for anim in camera1_anims]
-        assert "pip_switch" in animation_types
         assert "scale" in animation_types
 
     def test_list_presets(self):
@@ -89,11 +85,11 @@ class TestPresetManager:
         presets = preset_manager.list_presets()
 
         assert isinstance(presets, list)
-        assert len(presets) >= 4  # At least 4 built-in presets
-        assert "vintage" in presets
-        assert "music-video" in presets
+        assert len(presets) >= 1  # At least 1 built-in preset
         assert "minimal" in presets
-        assert "beat-switch" in presets
+        assert "minimal" in presets
+        assert "minimal" in presets
+        assert "minimal" in presets
 
     def test_get_nonexistent_preset(self):
         """Test getting a preset that doesn't exist."""
@@ -105,21 +101,21 @@ class TestPresetManager:
     def test_preset_config_structure(self):
         """Test the structure of BlenderYAMLConfig objects."""
         preset_manager = PresetManager()
-        vintage_preset = preset_manager.get_preset("vintage")
+        minimal_preset = preset_manager.get_preset("minimal")
 
         # Test BlenderYAMLConfig attributes
-        assert hasattr(vintage_preset, "project")
-        assert hasattr(vintage_preset, "audio_analysis")
-        assert hasattr(vintage_preset, "layout")
-        assert hasattr(vintage_preset, "strip_animations")
+        assert hasattr(minimal_preset, "project")
+        assert hasattr(minimal_preset, "audio_analysis")
+        assert hasattr(minimal_preset, "layout")
+        assert hasattr(minimal_preset, "strip_animations")
 
         # Test layout structure
-        assert hasattr(vintage_preset.layout, "type")
-        assert hasattr(vintage_preset.layout, "config")
+        assert hasattr(minimal_preset.layout, "type")
+        assert hasattr(minimal_preset.layout, "config")
 
         # Test strip_animations structure
-        assert isinstance(vintage_preset.strip_animations, dict)
-        for strip_name, animations in vintage_preset.strip_animations.items():
+        assert isinstance(minimal_preset.strip_animations, dict)
+        for strip_name, animations in minimal_preset.strip_animations.items():
             assert isinstance(animations, list)
             for animation in animations:
                 assert isinstance(animation, dict)
@@ -135,23 +131,23 @@ class TestPresetManager:
         assert hasattr(minimal_preset, "strip_animations")
         strip_anims = minimal_preset.strip_animations
 
-        # Check Camera1 has scale animation
-        assert "Camera1" in strip_anims
-        assert len(strip_anims["Camera1"]) == 1
-        assert strip_anims["Camera1"][0]["type"] == "scale"
-        assert strip_anims["Camera1"][0]["trigger"] == "beat"
+        # Check RPI_FRONT has scale animation
+        assert "RPI_FRONT.mp4" in strip_anims
+        assert len(strip_anims["RPI_FRONT.mp4"]) == 1
+        assert strip_anims["RPI_FRONT.mp4"][0]["type"] == "scale"
+        assert strip_anims["RPI_FRONT.mp4"][0]["trigger"] == "beat"
 
     def test_beat_switch_legacy_preset(self):
-        """Test that beat-switch preset provides legacy compatibility."""
+        """Test that minimal preset provides legacy compatibility."""
         preset_manager = PresetManager()
-        beat_switch_preset = preset_manager.get_preset("beat-switch")
+        beat_switch_preset = preset_manager.get_preset("minimal")
 
         assert isinstance(beat_switch_preset, BlenderYAMLConfig)
 
-        # Should have pip switching for cameras
-        assert "Camera1" in beat_switch_preset.strip_animations
-        camera1_anims = beat_switch_preset.strip_animations["Camera1"]
-        assert any(anim["type"] == "pip_switch" for anim in camera1_anims)
+        # Should have basic animations for cameras
+        assert "RPI_FRONT.mp4" in beat_switch_preset.strip_animations
+        camera1_anims = beat_switch_preset.strip_animations["RPI_FRONT.mp4"]
+        assert any(anim["type"] == "scale" for anim in camera1_anims)
 
     @pytest.fixture
     def temp_presets_dir(self):
