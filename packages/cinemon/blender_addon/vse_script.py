@@ -19,6 +19,14 @@ import sys
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
+# Add the blender_addon directory to Python path for vse module imports
+script_dir = Path(__file__).parent
+sys.path.insert(0, str(script_dir))
+
+# Add vendor directory for PyYAML
+vendor_dir = script_dir / "vendor"
+sys.path.insert(0, str(vendor_dir))
+
 import bpy
 
 # Import refactored modules - absolute imports after sys.path setup
@@ -297,7 +305,7 @@ class BlenderVSEConfigurator:
         Returns:
             bool: True if layout and animations were applied successfully
         """
-        from .vse.animation_compositor import AnimationCompositor
+        from vse.animation_compositor import AnimationCompositor
 
         print("=== Applying YAML layout and animations ===")
 
@@ -325,7 +333,7 @@ class BlenderVSEConfigurator:
 
     def _create_layout_from_yaml(self):
         """Create layout instance from YAML configuration."""
-        from .vse.layouts import MainPipLayout, RandomLayout
+        from vse.layouts import MainPipLayout, RandomLayout
 
         layout = self.config.layout
         layout_type = layout.type
@@ -350,7 +358,7 @@ class BlenderVSEConfigurator:
 
     def _create_animations_from_yaml(self) -> List:
         """Create animation instances from YAML configuration."""
-        from .vse.animations import AnimationFactory
+        from vse.animations import AnimationFactory
 
         # Use reader.animations which automatically converts strip_animations to flat format
         animation_specs = self.reader.animations

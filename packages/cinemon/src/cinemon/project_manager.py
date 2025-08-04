@@ -38,17 +38,17 @@ class BlenderProjectManager:
             Path(__file__).parent.parent.parent / "blender_addon" / "vse_script.py"
         )
 
-    def create_vse_project_with_config(
+    def create_vse_project_with_yaml_file(
         self,
         recording_path: Path,
-        yaml_config: BlenderYAMLConfig,
+        yaml_config_path: Path,
     ) -> Path:
         """
-        Create a Blender VSE project using YAML configuration.
+        Create a Blender VSE project using existing YAML configuration file.
 
         Args:
             recording_path: Path to the recording directory
-            yaml_config: YAML configuration object
+            yaml_config_path: Path to existing YAML configuration file
 
         Returns:
             Path: Path to the created .blend file
@@ -57,12 +57,10 @@ class BlenderProjectManager:
             ValueError: If configuration is invalid
             RuntimeError: If Blender execution fails
         """
-        import tempfile
-
         from setka_common.file_structure.specialized import RecordingStructureManager
 
         logger.info(
-            f"Creating Blender VSE project with YAML config for: {recording_path}"
+            f"Creating Blender VSE project with YAML file for: {recording_path}"
         )
 
         # 1. Validate recording structure
@@ -73,73 +71,45 @@ class BlenderProjectManager:
         # 2. Ensure blender directory exists
         RecordingStructureManager.ensure_blender_dir(recording_path)
 
-        # 3. Resolve paths relative to recording directory and create resolved config
-        resolved_config = self._create_resolved_config(
-            yaml_config, recording_path, structure
+        # 3. Validate YAML config file exists
+        if not yaml_config_path.exists():
+            raise ValueError(f"YAML config file not found: {yaml_config_path}")
+        
+        # 3a. Load config with path resolution enabled and validate base_directory
+        from setka_common.config import YAMLConfigLoader
+        loader = YAMLConfigLoader(resolve_paths=True)
+        config = loader.load_config(yaml_config_path)
+        
+        # Validate base_directory exists (fail fast)
+        if not config.project.base_directory:
+            raise ValueError("base_directory required for Blender execution")
+        
+        # Validate base_directory matches recording_path
+        config_base = Path(config.project.base_directory)
+        if config_base.resolve() != recording_path.resolve():
+            raise ValueError(f"Config base_directory {config_base} doesn't match recording_path {recording_path}")
+
+        # 4. Determine output blend file path
+        project_name = recording_path.name
+        blender_dir = (
+            structure.blender_dir
+            if hasattr(structure, "blender_dir")
+            else recording_path / "blender"
         )
+        output_blend = blender_dir / f"{project_name}.blend"
 
-        # 4. Create temporary YAML file with resolved paths
-        temp_config_file = None
         try:
-            # Write resolved config to temporary YAML file
-            import yaml
-
-            temp_config_file = tempfile.NamedTemporaryFile(
-                mode="w", suffix=".yaml", delete=False, encoding="utf-8"
-            )
-
-            # Convert config to dict for YAML serialization
-            config_dict = {
-                "project": resolved_config.project.__dict__,
-                "audio_analysis": resolved_config.audio_analysis.__dict__,
-                "layout": resolved_config.layout.__dict__,
-                "strip_animations": resolved_config.strip_animations,
-            }
-
-            yaml.dump(
-                config_dict,
-                temp_config_file,
-                indent=2,
-                allow_unicode=True,
-                default_flow_style=False,
-            )
-            temp_config_file.close()
-
-            logger.info(f"Created temporary config file: {temp_config_file.name}")
-            logger.info(f"Video files: {resolved_config.project.video_files}")
-            if resolved_config.project.main_audio:
-                logger.info(f"Main audio: {resolved_config.project.main_audio}")
-            animation_count = sum(
-                len(anims) for anims in resolved_config.strip_animations.values()
-            )
-            logger.info(
-                f"Animation mode: compositional with {animation_count} animations"
-            )
-
-            # 5. Execute Blender with config path
-            output_blend = resolved_config.project.output_blend
-            self._execute_blender_with_config(temp_config_file.name)
+            # 5. Execute Blender with existing YAML config file
+            self._execute_blender_with_config(str(yaml_config_path))
 
             logger.info(
-                f"Blender project created successfully with YAML config: {output_blend}"
+                f"Blender project created successfully with YAML file: {output_blend}"
             )
-            return Path(output_blend)
+            return output_blend
 
         except Exception as e:
-            logger.error(f"Failed to create Blender project with YAML config: {e}")
+            logger.error(f"Failed to create Blender project with YAML file: {e}")
             raise RuntimeError(f"Blender execution failed: {e}")
-        finally:
-            # Clean up temporary file
-            if temp_config_file:
-                try:
-                    import os
-
-                    os.unlink(temp_config_file.name)
-                    logger.debug(
-                        f"Cleaned up temporary config file: {temp_config_file.name}"
-                    )
-                except Exception as e:
-                    logger.warning(f"Failed to clean up temporary config file: {e}")
 
     def _execute_blender_with_config(self, config_path: str) -> None:
         """
@@ -279,92 +249,3 @@ class BlenderProjectManager:
                 f"Valid divisions: {', '.join(map(str, sorted(valid_divisions)))}"
             )
 
-    def _create_resolved_config(
-        self, yaml_config: BlenderYAMLConfig, recording_path: Path, structure
-    ) -> BlenderYAMLConfig:
-        """
-        Create a new config with all paths resolved to absolute paths.
-
-        Args:
-            yaml_config: Original YAML configuration
-            recording_path: Path to the recording directory
-            structure: Recording structure manager
-
-        Returns:
-            BlenderYAMLConfig: New config with resolved paths
-        """
-        from setka_common.config.yaml_config import (
-            AudioAnalysisConfig,
-            LayoutConfig,
-            ProjectConfig,
-        )
-
-        # Resolve video files
-        resolved_video_files = []
-        for video_file in yaml_config.project.video_files:
-            video_path = structure.extracted_dir / video_file
-            if not video_path.exists():
-                raise ValueError(f"Video file not found: {video_path}")
-            resolved_video_files.append(str(video_path.resolve()))
-
-        # Resolve main audio
-        resolved_main_audio = None
-        if yaml_config.project.main_audio:
-            main_audio_path = structure.extracted_dir / yaml_config.project.main_audio
-            if not main_audio_path.exists():
-                raise ValueError(f"Main audio file not found: {main_audio_path}")
-            resolved_main_audio = str(main_audio_path.resolve())
-
-        # Resolve output paths
-        project_name = recording_path.name
-        blender_dir = (
-            structure.blender_dir
-            if hasattr(structure, "blender_dir")
-            else recording_path / "blender"
-        )
-
-        if yaml_config.project.output_blend:
-            output_blend = recording_path / yaml_config.project.output_blend
-        else:
-            output_blend = blender_dir / f"{project_name}.blend"
-
-        if yaml_config.project.render_output:
-            render_output = recording_path / yaml_config.project.render_output
-        else:
-            render_output = blender_dir / "render" / f"{project_name}_final.mp4"
-
-        # Ensure render output directory exists
-        render_output.parent.mkdir(parents=True, exist_ok=True)
-
-        # Resolve audio analysis file
-        resolved_analysis_file = None
-        if yaml_config.audio_analysis.file:
-            analysis_file_path = recording_path / yaml_config.audio_analysis.file
-            if analysis_file_path.exists():
-                resolved_analysis_file = str(analysis_file_path.resolve())
-
-        # Create resolved config objects
-        resolved_project = ProjectConfig(
-            video_files=resolved_video_files,
-            main_audio=resolved_main_audio,
-            output_blend=str(output_blend.resolve()),
-            render_output=str(render_output.resolve()),
-            fps=yaml_config.project.fps,
-            resolution=yaml_config.project.resolution,
-            beat_division=yaml_config.project.beat_division,
-        )
-
-        resolved_audio_analysis = AudioAnalysisConfig(
-            file=resolved_analysis_file, data=yaml_config.audio_analysis.data
-        )
-
-        resolved_layout = LayoutConfig(
-            type=yaml_config.layout.type, config=yaml_config.layout.config
-        )
-
-        return BlenderYAMLConfig(
-            project=resolved_project,
-            audio_analysis=resolved_audio_analysis,
-            layout=resolved_layout,
-            strip_animations=yaml_config.strip_animations,
-        )

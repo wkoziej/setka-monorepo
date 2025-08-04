@@ -118,6 +118,8 @@ class ProjectConfig:
     fps: int = 30
     resolution: Optional[Resolution] = None
     beat_division: int = 8
+    # Path resolution (only in generated configs, not presets)
+    base_directory: Optional[str] = None  # Optional for presets compatibility
 
 
 @dataclass
@@ -180,6 +182,14 @@ class YAMLConfigLoader:
         is_valid, errors = loader.validate_config(config)
     """
 
+    def __init__(self, resolve_paths: bool = True):
+        """Initialize loader with optional path resolution.
+        
+        Args:
+            resolve_paths: If True, resolve relative paths using base_directory
+        """
+        self.resolve_paths = resolve_paths
+
     VALID_ANIMATION_TYPES = {
         "scale",
         "shake",
@@ -233,7 +243,13 @@ class YAMLConfigLoader:
         try:
             with open(path, "r", encoding="utf-8") as f:
                 content = f.read()
-            return self.load_from_string(content)
+            config = self.load_from_string(content)
+            
+            # Resolve relative paths using base_directory (only if enabled and base_directory exists)
+            if self.resolve_paths and config.project.base_directory:
+                config = self._resolve_relative_paths(config)
+            
+            return config
         except Exception as e:
             raise ConfigValidationError(f"Error reading file {file_path}: {e}")
 
@@ -310,7 +326,13 @@ class YAMLConfigLoader:
         This method is kept for backward compatibility.
         It delegates to load_from_file for consistency.
         """
-        return self.load_from_file(config_path)
+        config = self.load_from_file(config_path)
+        
+        # Resolve relative paths using base_directory (only if enabled and base_directory exists)
+        if self.resolve_paths and config.project.base_directory:
+            config = self._resolve_relative_paths(config)
+        
+        return config
 
     def _parse_project_config(self, data: Dict[str, Any]) -> ProjectConfig:
         """Parse project configuration section."""
@@ -338,6 +360,7 @@ class YAMLConfigLoader:
             fps=data.get("fps", 30),
             resolution=resolution,
             beat_division=data.get("beat_division", 8),
+            base_directory=data.get("base_directory"),
         )
 
     def _parse_audio_analysis_config(self, data: Dict[str, Any]) -> AudioAnalysisConfig:
@@ -414,3 +437,88 @@ class YAMLConfigLoader:
                     )
 
         return len(errors) == 0, errors
+    
+    def _resolve_relative_paths(self, config: BlenderYAMLConfig) -> BlenderYAMLConfig:
+        """Resolve relative paths using base_directory.
+        
+        Args:
+            config: Configuration with potential relative paths
+            
+        Returns:
+            Configuration with resolved absolute paths
+        """
+        base_path = Path(config.project.base_directory)
+        extracted_dir = base_path / "extracted"
+        
+        # Resolve video files to absolute paths
+        resolved_video_files = []
+        for video_file in config.project.video_files:
+            if Path(video_file).is_absolute():
+                resolved_video_files.append(video_file)
+            else:
+                resolved_video_files.append(str(extracted_dir / video_file))
+        
+        # Resolve main audio
+        resolved_main_audio = None
+        if config.project.main_audio:
+            if Path(config.project.main_audio).is_absolute():
+                resolved_main_audio = config.project.main_audio
+            else:
+                resolved_main_audio = str(extracted_dir / config.project.main_audio)
+        
+        # Resolve analysis file
+        resolved_analysis_file = None
+        if config.audio_analysis.file:
+            if Path(config.audio_analysis.file).is_absolute():
+                resolved_analysis_file = config.audio_analysis.file
+            else:
+                resolved_analysis_file = str(base_path / config.audio_analysis.file)
+        
+        # Resolve output_blend
+        resolved_output_blend = None
+        if config.project.output_blend:
+            if Path(config.project.output_blend).is_absolute():
+                resolved_output_blend = config.project.output_blend
+            else:
+                resolved_output_blend = str(base_path / config.project.output_blend)
+        
+        # Create new config with resolved paths
+        return BlenderYAMLConfig(
+            project=ProjectConfig(
+                base_directory=config.project.base_directory,
+                video_files=resolved_video_files,
+                main_audio=resolved_main_audio,
+                output_blend=resolved_output_blend,
+                render_output=config.project.render_output,
+                fps=config.project.fps,
+                resolution=config.project.resolution,
+                beat_division=config.project.beat_division,
+            ),
+            audio_analysis=AudioAnalysisConfig(
+                file=resolved_analysis_file,
+                data=config.audio_analysis.data,
+                beat_division=config.audio_analysis.beat_division,
+                min_onset_interval=config.audio_analysis.min_onset_interval,
+            ),
+            layout=config.layout,
+            strip_animations=config.strip_animations,
+        )
+    
+    def _validate_for_blender_execution(self, config: BlenderYAMLConfig):
+        """Validate config is ready for Blender execution.
+        
+        Args:
+            config: Configuration to validate
+            
+        Raises:
+            ConfigValidationError: If validation fails
+        """
+        if not config.project.base_directory:
+            raise ConfigValidationError("base_directory required for Blender execution")
+        
+        if not config.project.video_files:
+            raise ConfigValidationError("video_files required for Blender execution")
+        
+        base_dir = Path(config.project.base_directory)
+        if not base_dir.exists():
+            raise ConfigValidationError(f"Base directory does not exist: {base_dir}")

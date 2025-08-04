@@ -43,7 +43,7 @@ class CinemonConfigGenerator:
         """Initialize CinemonConfigGenerator."""
         self.preset_manager = PresetManager()
 
-    def generate_preset(
+    def generate_config_from_preset(
         self, recording_dir: Union[str, Path], preset_name: str, **overrides
     ) -> Path:
         """
@@ -89,7 +89,7 @@ class CinemonConfigGenerator:
 
         # Build configuration from preset
         config = self._build_config_from_preset(
-            preset_config, main_audio, overrides, discovery
+            preset_config, main_audio, overrides, discovery, recording_dir
         )
 
         # Generate output file path
@@ -99,6 +99,17 @@ class CinemonConfigGenerator:
         self._write_yaml_config(config, output_file)
 
         return output_file
+
+    def generate_preset(
+        self, recording_dir: Union[str, Path], preset_name: str, **overrides
+    ) -> Path:
+        """
+        Generate configuration from preset template.
+
+        Deprecated: Use generate_config_from_preset instead.
+        This method is kept for backward compatibility.
+        """
+        return self.generate_config_from_preset(recording_dir, preset_name, **overrides)
 
     def discover_media_files(self, recording_dir: Union[str, Path]) -> MediaDiscovery:
         """
@@ -131,6 +142,7 @@ class CinemonConfigGenerator:
         main_audio: str,
         overrides: Dict[str, Any],
         discovery: "MediaDiscovery",
+        recording_dir: Path,
     ) -> Dict[str, Any]:
         """
         Build configuration from preset template.
@@ -140,12 +152,16 @@ class CinemonConfigGenerator:
             main_audio: Main audio filename
             overrides: Parameter overrides
             discovery: MediaDiscovery instance to use
+            recording_dir: Recording directory path
 
         Returns:
             Complete configuration dictionary
         """
         # Deep copy the entire config to avoid modifying original
         config = copy.deepcopy(preset_config)
+
+        # Add base_directory to project config
+        config.project.base_directory = str(recording_dir.resolve())
 
         # Apply overrides to layout
         if "seed" in overrides:
@@ -173,6 +189,10 @@ class CinemonConfigGenerator:
         # Update project settings
         config.project.video_files = video_files
         config.project.main_audio = main_audio
+        
+        # Set output blend file path
+        project_name = recording_dir.name
+        config.project.output_blend = f"blender/{project_name}.blend"
 
         if "fps" in overrides:
             config.project.fps = overrides["fps"]
@@ -207,8 +227,10 @@ class CinemonConfigGenerator:
         # Convert BlenderYAMLConfig to dict for YAML serialization
         config_dict = {
             "project": {
+                "base_directory": config.project.base_directory,
                 "video_files": config.project.video_files,
                 "main_audio": config.project.main_audio,
+                "output_blend": config.project.output_blend,
                 "fps": config.project.fps,
                 "resolution": {
                     "width": config.project.resolution.width
@@ -232,9 +254,11 @@ class CinemonConfigGenerator:
             "strip_animations": config.strip_animations,
         }
 
-        # Remove None values for cleaner YAML
+        # Remove None values for cleaner YAML  
         if not config.project.main_audio:
             del config_dict["project"]["main_audio"]
+        if not config.project.output_blend:
+            del config_dict["project"]["output_blend"]
         if not config.audio_analysis.file:
             del config_dict["audio_analysis"]["file"]
         if config.audio_analysis.beat_division is None:

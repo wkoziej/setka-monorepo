@@ -12,7 +12,6 @@ import sys
 from pathlib import Path
 
 from beatrix import AudioValidationError
-from setka_common.config import BlenderYAMLConfig, YAMLConfigLoader
 
 from ..config import CinemonConfigGenerator
 from ..project_manager import BlenderProjectManager
@@ -153,30 +152,6 @@ def validate_recording_directory(recording_dir: Path) -> None:
         raise ValueError(f"Katalog extracted/ jest pusty w: {recording_dir}")
 
 
-def load_yaml_config(config_path: Path) -> BlenderYAMLConfig:
-    """
-    Load and validate YAML configuration.
-
-    Args:
-        config_path: Path to YAML configuration file
-
-    Returns:
-        BlenderYAMLConfig: Loaded configuration
-
-    Raises:
-        FileNotFoundError: If config file not found
-        ValueError: If config validation fails
-    """
-    if not config_path.exists():
-        raise FileNotFoundError(f"Configuration file not found: {config_path}")
-
-    try:
-        loader = YAMLConfigLoader()
-        config = loader.load_config(config_path)
-        return config
-    except Exception as e:
-        raise ValueError(f"Failed to load YAML configuration: {e}")
-
 
 def main() -> int:
     """
@@ -202,7 +177,7 @@ def main() -> int:
 
             # Generate configuration from preset
             generator = CinemonConfigGenerator()
-            config_path = generator.generate_preset(
+            config_path = generator.generate_config_from_preset(
                 args.recording_dir, args.preset, **preset_overrides
             )
 
@@ -211,13 +186,10 @@ def main() -> int:
             # Create Blender project manager
             manager = BlenderProjectManager()
 
-            # Load generated YAML config
-            yaml_config = load_yaml_config(config_path)
-
-            # Create VSE project with generated config
+            # Create VSE project with generated YAML file directly
             logger.info("Creating Blender VSE project with preset configuration...")
-            project_path = manager.create_vse_project_with_config(
-                args.recording_dir, yaml_config
+            project_path = manager.create_vse_project_with_yaml_file(
+                args.recording_dir, config_path
             )
 
             print(
@@ -233,16 +205,15 @@ def main() -> int:
 
         # Handle YAML configuration if provided
         elif args.config:
-            logger.info(f"Loading YAML configuration: {args.config}")
-            yaml_config = load_yaml_config(args.config)
+            logger.info(f"Using YAML configuration file: {args.config}")
 
             # Create Blender project manager
             manager = BlenderProjectManager()
 
-            # Create VSE project with YAML config
+            # Create VSE project with YAML config file directly
             logger.info("Creating Blender VSE project with YAML configuration...")
-            project_path = manager.create_vse_project_with_config(
-                args.recording_dir, yaml_config
+            project_path = manager.create_vse_project_with_yaml_file(
+                args.recording_dir, args.config
             )
 
             print(f"✅ Projekt Blender VSE utworzony z YAML config: {project_path}")

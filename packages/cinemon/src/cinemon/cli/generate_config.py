@@ -72,7 +72,7 @@ def generate_config_command(args) -> int:
 
         # Generate configuration
         generator = CinemonConfigGenerator()
-        config_path = generator.generate_preset(recording_dir, args.preset, **overrides)
+        config_path = generator.generate_config_from_preset(recording_dir, args.preset, **overrides)
 
         print(f"✅ Configuration generated: {config_path}")
         print(f"   Preset: {args.preset}")

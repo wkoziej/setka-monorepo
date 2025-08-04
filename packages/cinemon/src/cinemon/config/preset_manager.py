@@ -100,7 +100,7 @@ class PresetManager:
                 preset_name = preset_file.stem
 
                 # Convert dict to BlenderYAMLConfig
-                loader = YAMLConfigLoader()
+                loader = YAMLConfigLoader(resolve_paths=False)
                 config = loader._parse_and_validate(preset_data)
                 custom_presets[preset_name] = config
 
@@ -143,53 +143,6 @@ class PresetManager:
 
     def _load_preset_template(self, yaml_file: Path) -> BlenderYAMLConfig:
         """Load preset template without validation."""
-        from setka_common.config.yaml_config import (
-            AudioAnalysisConfig,
-            LayoutConfig,
-            ProjectConfig,
-            Resolution,
-        )
-
-        with yaml_file.open("r", encoding="utf-8") as f:
-            data = yaml.safe_load(f)
-
-        # Parse project section with defaults
-        project_data = data.get("project", {})
-        resolution_data = project_data.get("resolution", {})
-
-        project = ProjectConfig(
-            video_files=project_data.get("video_files", []),
-            main_audio=project_data.get("main_audio"),
-            fps=project_data.get("fps", 30),
-            resolution=Resolution(
-                width=resolution_data.get("width", 1920),
-                height=resolution_data.get("height", 1080),
-            )
-            if resolution_data
-            else None,
-            beat_division=project_data.get("beat_division", 8),
-        )
-
-        # Parse audio analysis section
-        audio_data = data.get("audio_analysis", {})
-        audio_analysis = AudioAnalysisConfig(
-            file=audio_data.get("file"),
-            beat_division=audio_data.get("beat_division"),
-            min_onset_interval=audio_data.get("min_onset_interval"),
-        )
-
-        # Parse layout section
-        layout_data = data.get("layout", {})
-        layout = LayoutConfig(
-            type=layout_data.get("type", "random"), config=layout_data.get("config")
-        )
-
-        # Get strip animations as-is
-        strip_animations = data.get("strip_animations", {})
-
-        return BlenderYAMLConfig(
-            project=project,
-            audio_analysis=audio_analysis,
-            layout=layout,
-            strip_animations=strip_animations,
-        )
+        # Use YAMLConfigLoader but without path resolution (presets don't have base_directory)
+        loader = YAMLConfigLoader(resolve_paths=False)
+        return loader.load_from_file(yaml_file)
