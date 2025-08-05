@@ -114,10 +114,7 @@ class CINEMON_PT_main_panel(Panel):
         layout.label(text="Quick Presets:", icon="PRESET")
 
         preset_buttons = [
-            ("vintage.yaml", "Vintage Film", "CAMERA_DATA"),
-            ("music-video.yaml", "Music Video", "SPEAKER"),
             ("minimal.yaml", "Minimal", "DOT"),
-            ("beat-switch.yaml", "Beat Switch", "ARROW_LEFTRIGHT"),
         ]
 
         for preset_file, label, icon in preset_buttons:
