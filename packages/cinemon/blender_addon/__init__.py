@@ -50,9 +50,10 @@ except ImportError:
 
 # Import addon modules
 try:
-    from . import layout_ui, operators
+    from . import animation_panel, layout_ui, operators
 except ImportError:
     # For testing - import operators directly
+    import animation_panel
     import layout_ui
     import operators
 
@@ -216,6 +217,10 @@ class CINEMON_OT_load_preset(bpy.types.Operator):
                 else 0
             )
             context.scene["cinemon_animations_count"] = total_animations
+            
+            # Store strip animations for the animation panel
+            if config.strip_animations:
+                context.scene["cinemon_strip_animations"] = config.strip_animations
 
             preset_display = (
                 self.preset_name.replace(".yaml", "").replace("-", " ").title()
@@ -266,10 +271,16 @@ def register():
 
     # Register layout UI after main panels
     layout_ui.register()
+    
+    # Register animation panel
+    animation_panel.register()
 
 
 def unregister():
     """Unregister addon classes and operators."""
+    # Unregister animation panel
+    animation_panel.unregister()
+    
     # Unregister layout UI
     layout_ui.unregister()
 

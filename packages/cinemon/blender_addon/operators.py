@@ -118,6 +118,18 @@ class LoadConfigOperator(Operator, ImportHelper):
 
             # Store filepath for reference
             context.scene.cinemon_config_path = self.filepath
+            
+            # Store strip animations for the animation panel
+            if hasattr(config, 'strip_animations') and config.strip_animations:
+                context.scene["cinemon_strip_animations"] = config.strip_animations
+                
+                # Count animations for display
+                total_animations = sum(len(anims) for anims in config.strip_animations.values())
+                context.scene["cinemon_animations_count"] = total_animations
+                
+            # Store layout type
+            if hasattr(config, 'layout') and hasattr(config.layout, 'type'):
+                context.scene["cinemon_layout_type"] = config.layout.type
 
             self.report(
                 {"INFO"}, f"Loaded configuration from {Path(self.filepath).name}"
