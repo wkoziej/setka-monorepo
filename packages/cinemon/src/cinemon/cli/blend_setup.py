@@ -12,9 +12,37 @@ import sys
 from pathlib import Path
 
 from beatrix import AudioValidationError
+from setka_common.config import BlenderYAMLConfig, YAMLConfigLoader
 
 from ..config import CinemonConfigGenerator
 from ..project_manager import BlenderProjectManager
+
+
+def load_yaml_config(config_path: Path) -> BlenderYAMLConfig:
+    """
+    Load and validate YAML configuration.
+
+    This function provides backward compatibility for tests.
+    It's a wrapper around YAMLConfigLoader.load_from_file().
+
+    Args:
+        config_path: Path to YAML configuration file
+
+    Returns:
+        Parsed and validated configuration
+
+    Raises:
+        FileNotFoundError: If file doesn't exist
+        ValueError: If YAML is invalid or validation fails
+    """
+    loader = YAMLConfigLoader()
+    try:
+        return loader.load_from_file(config_path)
+    except FileNotFoundError:
+        # Let FileNotFoundError pass through for test compatibility
+        raise
+    except Exception as e:
+        raise ValueError(f"Failed to load YAML configuration: {e}") from e
 
 
 def open_blender_with_video_editing(blend_file_path: Path) -> None:
@@ -150,7 +178,6 @@ def validate_recording_directory(recording_dir: Path) -> None:
     # Check if extracted directory has any files
     if not any(extracted_dir.iterdir()):
         raise ValueError(f"Katalog extracted/ jest pusty w: {recording_dir}")
-
 
 
 def main() -> int:

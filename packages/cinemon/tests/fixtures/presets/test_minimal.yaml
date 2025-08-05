@@ -1,0 +1,36 @@
+# ABOUTME: Test fixture for minimal preset - simplified version for testing
+# ABOUTME: Contains basic configuration without complex device-specific strip animations
+
+# Minimal Test Preset - Clean and simple for testing
+project:
+  video_files: []  # Will be auto-discovered
+  fps: 30
+  resolution:
+    width: 1920
+    height: 1080
+
+layout:
+  type: "random"
+  config:
+    margin: 0.15
+    seed: 42
+    overlap_allowed: false
+
+strip_animations:
+  # Generic Camera1/Camera2 for testing
+  "Camera1":
+    - type: "scale"
+      trigger: "beat"
+      intensity: 0.2
+      easing: "EASE_IN_OUT"
+
+  "Camera2":
+    - type: "shake"
+      trigger: "energy_peaks"
+      intensity: 1.0
+      return_frames: 2
+
+audio_analysis:
+  file: "./analysis/main_audio_analysis.json"
+  beat_division: 4
+  min_onset_interval: 2.0

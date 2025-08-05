@@ -30,33 +30,23 @@ except ImportError:
 
 
 # Import setka-common configuration system
-try:
-    # Add vendor path for PyYAML first (Blender doesn't have it)
-    vendor_path = Path(__file__).parent / "vendor"
-    if str(vendor_path) not in sys.path:
-        sys.path.insert(0, str(vendor_path))
+# Add vendor path for PyYAML first (Blender doesn't have it)
+vendor_path = Path(__file__).parent / "vendor"
+if str(vendor_path) not in sys.path:
+    sys.path.insert(0, str(vendor_path))
 
-    # Add addon directory to path for local setka_common symlink
-    addon_path = Path(__file__).parent
-    if str(addon_path) not in sys.path:
-        sys.path.insert(0, str(addon_path))
+# Add addon directory to path for local setka_common symlink
+addon_path = Path(__file__).parent
+if str(addon_path) not in sys.path:
+    sys.path.insert(0, str(addon_path))
 
-    from setka_common.config.yaml_config import YAMLConfigLoader
+from setka_common.config.yaml_config import YAMLConfigLoader
 
-    class ValidationError(Exception):
-        """Validation error for compatibility."""
 
-        pass
-except ImportError as e:
-    print(f"Warning: setka-common not available in operators.py: {e}")
+class ValidationError(Exception):
+    """Validation error for compatibility."""
 
-    # Fallback for testing
-    class YAMLConfigLoader:
-        def load_config(self, path):
-            return {}
-
-    class ValidationError(Exception):
-        pass
+    pass
 
 
 # Import vse_script for applying configurations
@@ -116,20 +106,23 @@ class LoadConfigOperator(Operator, ImportHelper):
             # Store configuration in scene for later use
             context.scene.cinemon_config = config
 
-            # Store filepath for reference
+            # Store filepath for reference - THIS IS THE KEY FOR PANEL
             context.scene.cinemon_config_path = self.filepath
-            
-            # Store strip animations for the animation panel
-            if hasattr(config, 'strip_animations') and config.strip_animations:
-                context.scene["cinemon_strip_animations"] = config.strip_animations
-                
-                # Count animations for display
-                total_animations = sum(len(anims) for anims in config.strip_animations.values())
-                context.scene["cinemon_animations_count"] = total_animations
-                
-            # Store layout type
-            if hasattr(config, 'layout') and hasattr(config.layout, 'type'):
+
+            # REMOVED: Don't store strip_animations in memory anymore
+            # OLD CODE REMOVED:
+            # context.scene["cinemon_strip_animations"] = config.strip_animations
+
+            # Store basic info for main panel display
+            if hasattr(config, "layout") and hasattr(config.layout, "type"):
                 context.scene["cinemon_layout_type"] = config.layout.type
+
+            # Count animations by reading from config object (not storing)
+            if hasattr(config, "strip_animations") and config.strip_animations:
+                total_animations = sum(
+                    len(anims) for anims in config.strip_animations.values()
+                )
+                context.scene["cinemon_animations_count"] = total_animations
 
             self.report(
                 {"INFO"}, f"Loaded configuration from {Path(self.filepath).name}"

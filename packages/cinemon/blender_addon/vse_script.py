@@ -139,6 +139,11 @@ class BlenderVSEConfigurator:
             print("✗ Błąd konfiguracji podstawowego projektu")
             return False
 
+        # CRITICAL: Store config path in scene (required for YAML-as-single-source-of-truth)
+        # This must be done after project setup but before save
+        bpy.context.scene.cinemon_config_path = str(self.config_path)
+        print(f"✓ Stored config path in scene: {self.config_path}")
+
         # Apply compositional animations if configured
         strip_animations = self.config.strip_animations
         total_animations = sum(len(anims) for anims in strip_animations.values())

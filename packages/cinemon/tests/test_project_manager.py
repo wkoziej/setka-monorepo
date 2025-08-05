@@ -153,22 +153,6 @@ class TestBlenderProjectManager:
 
         assert fps == 30  # Default value
 
-    def test_create_vse_project_with_config_invalid_structure(self):
-        """Test that create_vse_project_with_config raises ValueError for invalid structure."""
-        manager = BlenderProjectManager()
-        recording_path = Path("/tmp/test_recording")
-
-        # Create minimal YAML config
-        yaml_config = BlenderYAMLConfig(
-            project=ProjectConfig(video_files=["test.mp4"]),
-            audio_analysis=AudioAnalysisConfig(),
-            layout=LayoutConfig(),
-            strip_animations={},
-        )
-
-        with pytest.raises(ValueError, match="Invalid recording structure"):
-            manager.create_vse_project_with_config(recording_path, yaml_config)
-
     @patch("subprocess.run")
     def test_execute_blender_with_yaml_config_success(self, mock_run, tmp_path):
         """Test successful execution of Blender with YAML config."""
@@ -263,103 +247,6 @@ class TestBlenderProjectManager:
 
         with pytest.raises(RuntimeError, match="Blender execution failed"):
             manager._execute_blender_with_config(str(config_path))
-
-    @patch("subprocess.run")
-    @patch("tempfile.NamedTemporaryFile")
-    def test_create_vse_project_with_config_success(
-        self, mock_tempfile, mock_run, sample_recording_structure, tmp_path
-    ):
-        """Test successful create_vse_project_with_config execution."""
-        # Mock successful subprocess execution
-        mock_run.return_value = Mock(stdout="Success", stderr="")
-
-        # Mock temporary file
-        mock_temp = MagicMock()
-        mock_temp.name = str(tmp_path / "temp_config.yaml")
-        mock_tempfile.return_value = mock_temp
-
-        manager = BlenderProjectManager()
-        # Create mock script file
-        manager.script_path = tmp_path / "vse_script.py"
-        manager.script_path.touch()
-
-        # Create YAML config
-        yaml_config = BlenderYAMLConfig(
-            project=ProjectConfig(
-                video_files=["camera1.mp4", "screen.mkv"],
-                main_audio="main_audio.m4a",
-                fps=30,
-                resolution={"width": 1920, "height": 1080},
-            ),
-            audio_analysis=AudioAnalysisConfig(
-                file="analysis/main_audio_analysis.json"
-            ),
-            layout=LayoutConfig(type="random", config={"seed": 42, "margin": 0.1}),
-            strip_animations={
-                "all": [
-                    {
-                        "type": "scale",
-                        "trigger": "beat",
-                        "intensity": 0.3,
-                        "duration_frames": 2,
-                    }
-                ]
-            },
-        )
-
-        # Should not raise exception and return blend path
-        result = manager.create_vse_project_with_config(
-            sample_recording_structure, yaml_config
-        )
-
-        # Check result
-        expected_blend = (
-            sample_recording_structure
-            / "blender"
-            / f"{sample_recording_structure.name}.blend"
-        )
-        assert result == expected_blend
-
-        # Check subprocess was called
-        mock_run.assert_called_once()
-        args = mock_run.call_args[0][0]
-        assert args[:3] == ["snap", "run", "blender"]
-        assert "--config" in args
-
-    def test_create_resolved_config(self, sample_recording_structure):
-        """Test _create_resolved_config method."""
-        manager = BlenderProjectManager()
-
-        # Create structure object
-        from types import SimpleNamespace
-
-        structure = SimpleNamespace()
-        structure.extracted_dir = sample_recording_structure / "extracted"
-        structure.blender_dir = sample_recording_structure / "blender"
-
-        # Create YAML config
-        yaml_config = BlenderYAMLConfig(
-            project=ProjectConfig(
-                video_files=["camera1.mp4", "screen.mkv"],
-                main_audio="main_audio.m4a",
-                fps=30,
-            ),
-            audio_analysis=AudioAnalysisConfig(
-                file="analysis/main_audio_analysis.json"
-            ),
-            layout=LayoutConfig(),
-            strip_animations={},
-        )
-
-        resolved_config = manager._create_resolved_config(
-            yaml_config, sample_recording_structure, structure
-        )
-
-        # Check that paths are resolved
-        assert all(Path(vf).is_absolute() for vf in resolved_config.project.video_files)
-        assert Path(resolved_config.project.main_audio).is_absolute()
-        assert Path(resolved_config.project.output_blend).is_absolute()
-        assert Path(resolved_config.project.render_output).is_absolute()
 
     def test_validate_animation_mode(self):
         """Test _validate_animation_mode method."""

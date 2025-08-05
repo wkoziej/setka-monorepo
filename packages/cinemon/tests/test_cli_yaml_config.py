@@ -23,18 +23,12 @@ class TestCLIYAMLConfig:
             assert args.preset is None
 
     @patch("cinemon.cli.blend_setup.BlenderProjectManager")
-    @patch("cinemon.cli.blend_setup.load_yaml_config")
-    def test_main_with_yaml_config_file_success(
-        self, mock_load_yaml, mock_manager_class
-    ):
+    def test_main_with_yaml_config_file_success(self, mock_manager_class):
         """Test successful main function with YAML config file."""
         # Setup mocks
-        mock_yaml_config = MagicMock()
-        mock_load_yaml.return_value = mock_yaml_config
-
         mock_manager = MagicMock()
         mock_project_path = Path("/test/recording/blender/project.blend")
-        mock_manager.create_vse_project_with_config.return_value = mock_project_path
+        mock_manager.create_vse_project_with_yaml_file.return_value = mock_project_path
         mock_manager_class.return_value = mock_manager
 
         with patch(
@@ -43,9 +37,8 @@ class TestCLIYAMLConfig:
             result = main()
 
         assert result == 0
-        mock_load_yaml.assert_called_once_with(Path("test.yaml"))
-        mock_manager.create_vse_project_with_config.assert_called_once_with(
-            Path("test_dir"), mock_yaml_config
+        mock_manager.create_vse_project_with_yaml_file.assert_called_once_with(
+            Path("test_dir"), Path("test.yaml")
         )
 
     def test_main_with_yaml_config_file_not_found(self):
@@ -88,10 +81,7 @@ strip_animations: {}
                 Path(f.name).unlink()
 
     @patch("cinemon.cli.blend_setup.BlenderProjectManager")
-    @patch("cinemon.cli.blend_setup.load_yaml_config")
-    def test_main_with_yaml_config_integration(
-        self, mock_load_yaml, mock_manager_class
-    ):
+    def test_main_with_yaml_config_integration(self, mock_manager_class):
         """Test integration with valid YAML config file."""
         yaml_content = """
 project:
@@ -122,12 +112,9 @@ animations:
 """
 
         # Setup mocks
-        mock_yaml_config = MagicMock()
-        mock_load_yaml.return_value = mock_yaml_config
-
         mock_manager = MagicMock()
         mock_project_path = Path("/test/recording/blender/project.blend")
-        mock_manager.create_vse_project_with_config.return_value = mock_project_path
+        mock_manager.create_vse_project_with_yaml_file.return_value = mock_project_path
         mock_manager_class.return_value = mock_manager
 
         with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
@@ -141,8 +128,9 @@ animations:
                     result = main()
 
                 assert result == 0
-                mock_load_yaml.assert_called_once_with(Path(f.name))
-                mock_manager.create_vse_project_with_config.assert_called_once()
+                mock_manager.create_vse_project_with_yaml_file.assert_called_once_with(
+                    Path("test_dir"), Path(f.name)
+                )
             finally:
                 Path(f.name).unlink()
 
@@ -181,6 +169,13 @@ class TestCLIYAMLConfigErrorHandling:
     @patch("cinemon.cli.blend_setup.BlenderProjectManager")
     def test_yaml_config_file_permission_error(self, mock_manager_class):
         """Test handling of file permission errors."""
+        # Mock BlenderProjectManager to raise FileNotFoundError
+        mock_manager = MagicMock()
+        mock_manager.create_vse_project_with_yaml_file.side_effect = FileNotFoundError(
+            "Config file not found"
+        )
+        mock_manager_class.return_value = mock_manager
+
         with patch(
             "sys.argv",
             ["cinemon-blend-setup", "test_dir", "--config", "/root/no_permission.yaml"],

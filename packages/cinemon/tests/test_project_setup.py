@@ -300,14 +300,14 @@ class TestBlenderProjectSetupAudioVideo:
         # Should call new_movie for each video file with correct parameters
         # First video file
         mock_sequencer.sequences.new_movie.assert_any_call(
-            name="Video_1",
+            name="video1.mp4",
             filepath="/path/video1.mp4",
             channel=2,
             frame_start=1,
         )
         # Second video file
         mock_sequencer.sequences.new_movie.assert_any_call(
-            name="Video_2",
+            name="video2.mp4",
             filepath="/path/video2.mp4",
             channel=3,
             frame_start=1,

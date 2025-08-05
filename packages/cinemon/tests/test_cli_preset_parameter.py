@@ -89,15 +89,12 @@ class TestCLIPresetParameter:
         # Setup mocks
         mock_generator = MagicMock()
         mock_config_path = Path("/tmp/generated_config.yaml")
-        mock_generator.generate_preset.return_value = mock_config_path
+        mock_generator.generate_config_from_preset.return_value = mock_config_path
         mock_generator_class.return_value = mock_generator
-
-        mock_yaml_config = MagicMock()
-        mock_load_yaml.return_value = mock_yaml_config
 
         mock_manager = MagicMock()
         mock_project_path = Path("/test/recording/blender/project.blend")
-        mock_manager.create_vse_project_with_config.return_value = mock_project_path
+        mock_manager.create_vse_project_with_yaml_file.return_value = mock_project_path
         mock_manager_class.return_value = mock_manager
 
         with patch.object(sys, "argv", ["blend_setup.py"] + test_args):
@@ -105,12 +102,11 @@ class TestCLIPresetParameter:
 
         # Verify config generation workflow
         assert result == 0
-        mock_generator.generate_preset.assert_called_once_with(
+        mock_generator.generate_config_from_preset.assert_called_once_with(
             Path("recording_dir"), "vintage"
         )
-        mock_load_yaml.assert_called_once_with(mock_config_path)
-        mock_manager.create_vse_project_with_config.assert_called_once_with(
-            Path("recording_dir"), mock_yaml_config
+        mock_manager.create_vse_project_with_yaml_file.assert_called_once_with(
+            Path("recording_dir"), mock_config_path
         )
 
     @patch("cinemon.cli.blend_setup.BlenderProjectManager")
@@ -131,15 +127,12 @@ class TestCLIPresetParameter:
         # Setup mocks
         mock_generator = MagicMock()
         mock_config_path = Path("/tmp/generated_config.yaml")
-        mock_generator.generate_preset.return_value = mock_config_path
+        mock_generator.generate_config_from_preset.return_value = mock_config_path
         mock_generator_class.return_value = mock_generator
-
-        mock_yaml_config = MagicMock()
-        mock_load_yaml.return_value = mock_yaml_config
 
         mock_manager = MagicMock()
         mock_project_path = Path("/test/recording/blender/project.blend")
-        mock_manager.create_vse_project_with_config.return_value = mock_project_path
+        mock_manager.create_vse_project_with_yaml_file.return_value = mock_project_path
         mock_manager_class.return_value = mock_manager
 
         with patch.object(sys, "argv", ["blend_setup.py"] + test_args):
@@ -147,25 +140,22 @@ class TestCLIPresetParameter:
 
         # Verify overrides are passed to preset generation
         assert result == 0
-        mock_generator.generate_preset.assert_called_once_with(
+        mock_generator.generate_config_from_preset.assert_called_once_with(
             Path("recording_dir"), "music-video", main_audio="custom_main.m4a"
+        )
+        mock_manager.create_vse_project_with_yaml_file.assert_called_once_with(
+            Path("recording_dir"), mock_config_path
         )
 
     @patch("cinemon.cli.blend_setup.BlenderProjectManager")
-    @patch("cinemon.cli.blend_setup.load_yaml_config")
-    def test_main_with_config_file_skips_preset_generation(
-        self, mock_load_yaml, mock_manager_class
-    ):
+    def test_main_with_config_file_skips_preset_generation(self, mock_manager_class):
         """Test that main() with --config skips preset generation."""
         test_args = ["recording_dir", "--config", "custom_config.yaml"]
 
         # Setup mocks
-        mock_yaml_config = MagicMock()
-        mock_load_yaml.return_value = mock_yaml_config
-
         mock_manager = MagicMock()
         mock_project_path = Path("/test/recording/blender/project.blend")
-        mock_manager.create_vse_project_with_config.return_value = mock_project_path
+        mock_manager.create_vse_project_with_yaml_file.return_value = mock_project_path
         mock_manager_class.return_value = mock_manager
 
         with patch.object(sys, "argv", ["blend_setup.py"] + test_args):
@@ -178,9 +168,8 @@ class TestCLIPresetParameter:
                 # Verify no config generation
                 assert result == 0
                 mock_generator_class.assert_not_called()
-                mock_load_yaml.assert_called_once_with(Path("custom_config.yaml"))
-                mock_manager.create_vse_project_with_config.assert_called_once_with(
-                    Path("recording_dir"), mock_yaml_config
+                mock_manager.create_vse_project_with_yaml_file.assert_called_once_with(
+                    Path("recording_dir"), Path("custom_config.yaml")
                 )
 
     @patch("cinemon.cli.blend_setup.BlenderProjectManager")

@@ -198,11 +198,14 @@ class CINEMON_OT_load_preset(bpy.types.Operator):
 
             config = SimpleConfig(config_data)
 
-            # Store configuration - for now just store as string representation
-            # TODO: Create proper PropertyGroup for complex config storage
+            # Store filepath for reference - ONLY THIS
             context.scene.cinemon_config_path = str(preset_path)
 
-            # Store basic config info as scene properties for UI display
+            # REMOVED: Don't parse and store in memory
+            # OLD CODE REMOVED:
+            # context.scene["cinemon_strip_animations"] = config.strip_animations
+
+            # Basic display info can be read on-demand or stored minimally
             layout_type = (
                 getattr(config.layout, "type", "unknown")
                 if hasattr(config, "layout")
@@ -217,10 +220,6 @@ class CINEMON_OT_load_preset(bpy.types.Operator):
                 else 0
             )
             context.scene["cinemon_animations_count"] = total_animations
-            
-            # Store strip animations for the animation panel
-            if config.strip_animations:
-                context.scene["cinemon_strip_animations"] = config.strip_animations
 
             preset_display = (
                 self.preset_name.replace(".yaml", "").replace("-", " ").title()
@@ -271,7 +270,7 @@ def register():
 
     # Register layout UI after main panels
     layout_ui.register()
-    
+
     # Register animation panel
     animation_panel.register()
 
@@ -280,7 +279,7 @@ def unregister():
     """Unregister addon classes and operators."""
     # Unregister animation panel
     animation_panel.unregister()
-    
+
     # Unregister layout UI
     layout_ui.unregister()
 

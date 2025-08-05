@@ -183,13 +183,13 @@ animations: []
         with patch("cinemon.cli.blend_setup.YAMLConfigLoader") as mock_loader_class:
             mock_loader = Mock()
             mock_config = Mock()
-            mock_loader.load_config.return_value = mock_config
+            mock_loader.load_from_file.return_value = mock_config
             mock_loader_class.return_value = mock_loader
 
             result = load_yaml_config(config_file)
 
             assert result == mock_config
-            mock_loader.load_config.assert_called_once_with(config_file)
+            mock_loader.load_from_file.assert_called_once_with(config_file)
 
     def test_load_yaml_config_file_not_found(self, tmp_path):
         """Test YAML config loading with missing file."""
@@ -205,7 +205,7 @@ animations: []
 
         with patch("cinemon.cli.blend_setup.YAMLConfigLoader") as mock_loader_class:
             mock_loader = Mock()
-            mock_loader.load_config.side_effect = Exception("Invalid YAML")
+            mock_loader.load_from_file.side_effect = Exception("Invalid YAML")
             mock_loader_class.return_value = mock_loader
 
             with pytest.raises(ValueError, match="Failed to load YAML configuration"):
@@ -237,10 +237,9 @@ class TestMain:
 
     @patch("cinemon.cli.blend_setup.BlenderProjectManager")
     @patch("cinemon.cli.blend_setup.CinemonConfigGenerator")
-    @patch("cinemon.cli.blend_setup.load_yaml_config")
     @patch("cinemon.cli.blend_setup.parse_args")
     def test_main_with_preset_success(
-        self, mock_parse_args, mock_load_yaml, mock_generator_class, mock_manager_class
+        self, mock_parse_args, mock_generator_class, mock_manager_class
     ):
         """Test successful main execution with preset."""
         # Setup mocks
@@ -250,19 +249,17 @@ class TestMain:
         mock_args.recording_dir = Path("/test/recording")
         mock_args.main_audio = None
         mock_args.verbose = False
+        mock_args.open_blender = False
         mock_parse_args.return_value = mock_args
 
         mock_generator = Mock()
         mock_config_path = Path("/tmp/config.yaml")
-        mock_generator.generate_preset.return_value = mock_config_path
+        mock_generator.generate_config_from_preset.return_value = mock_config_path
         mock_generator_class.return_value = mock_generator
-
-        mock_yaml_config = Mock()
-        mock_load_yaml.return_value = mock_yaml_config
 
         mock_manager = Mock()
         mock_blend_path = Path("/test/recording/blender/project.blend")
-        mock_manager.create_vse_project_with_config.return_value = mock_blend_path
+        mock_manager.create_vse_project_with_yaml_file.return_value = mock_blend_path
         mock_manager_class.return_value = mock_manager
 
         # Run main
@@ -270,20 +267,16 @@ class TestMain:
 
         # Verify calls
         assert result == 0
-        mock_generator.generate_preset.assert_called_once_with(
+        mock_generator.generate_config_from_preset.assert_called_once_with(
             mock_args.recording_dir, "vintage"
         )
-        mock_load_yaml.assert_called_once_with(mock_config_path)
-        mock_manager.create_vse_project_with_config.assert_called_once_with(
-            mock_args.recording_dir, mock_yaml_config
+        mock_manager.create_vse_project_with_yaml_file.assert_called_once_with(
+            mock_args.recording_dir, mock_config_path
         )
 
     @patch("cinemon.cli.blend_setup.BlenderProjectManager")
-    @patch("cinemon.cli.blend_setup.load_yaml_config")
     @patch("cinemon.cli.blend_setup.parse_args")
-    def test_main_with_config_success(
-        self, mock_parse_args, mock_load_yaml, mock_manager_class
-    ):
+    def test_main_with_config_success(self, mock_parse_args, mock_manager_class):
         """Test successful main execution with config file."""
         # Setup mocks
         mock_args = Mock()
@@ -291,14 +284,12 @@ class TestMain:
         mock_args.config = Path("/test/config.yaml")
         mock_args.recording_dir = Path("/test/recording")
         mock_args.verbose = False
+        mock_args.open_blender = False
         mock_parse_args.return_value = mock_args
-
-        mock_yaml_config = Mock()
-        mock_load_yaml.return_value = mock_yaml_config
 
         mock_manager = Mock()
         mock_blend_path = Path("/test/recording/blender/project.blend")
-        mock_manager.create_vse_project_with_config.return_value = mock_blend_path
+        mock_manager.create_vse_project_with_yaml_file.return_value = mock_blend_path
         mock_manager_class.return_value = mock_manager
 
         # Run main
@@ -306,9 +297,8 @@ class TestMain:
 
         # Verify calls
         assert result == 0
-        mock_load_yaml.assert_called_once_with(mock_args.config)
-        mock_manager.create_vse_project_with_config.assert_called_once_with(
-            mock_args.recording_dir, mock_yaml_config
+        mock_manager.create_vse_project_with_yaml_file.assert_called_once_with(
+            mock_args.recording_dir, mock_args.config
         )
 
     @patch("cinemon.cli.blend_setup.parse_args")
@@ -324,8 +314,8 @@ class TestMain:
             "cinemon.cli.blend_setup.CinemonConfigGenerator"
         ) as mock_generator_class:
             mock_generator = Mock()
-            mock_generator.generate_preset.side_effect = AudioValidationError(
-                "Audio error"
+            mock_generator.generate_config_from_preset.side_effect = (
+                AudioValidationError("Audio error")
             )
             mock_generator_class.return_value = mock_generator
 
@@ -346,7 +336,9 @@ class TestMain:
             "cinemon.cli.blend_setup.CinemonConfigGenerator"
         ) as mock_generator_class:
             mock_generator = Mock()
-            mock_generator.generate_preset.side_effect = ValueError("Validation error")
+            mock_generator.generate_config_from_preset.side_effect = ValueError(
+                "Validation error"
+            )
             mock_generator_class.return_value = mock_generator
 
             result = main()
@@ -366,7 +358,9 @@ class TestMain:
             "cinemon.cli.blend_setup.CinemonConfigGenerator"
         ) as mock_generator_class:
             mock_generator = Mock()
-            mock_generator.generate_preset.side_effect = Exception("Unexpected error")
+            mock_generator.generate_config_from_preset.side_effect = Exception(
+                "Unexpected error"
+            )
             mock_generator_class.return_value = mock_generator
 
             result = main()
@@ -379,10 +373,9 @@ class TestMainWithPresetOverrides:
 
     @patch("cinemon.cli.blend_setup.BlenderProjectManager")
     @patch("cinemon.cli.blend_setup.CinemonConfigGenerator")
-    @patch("cinemon.cli.blend_setup.load_yaml_config")
     @patch("cinemon.cli.blend_setup.parse_args")
     def test_main_with_preset_and_main_audio_override(
-        self, mock_parse_args, mock_load_yaml, mock_generator_class, mock_manager_class
+        self, mock_parse_args, mock_generator_class, mock_manager_class
     ):
         """Test main with preset and main audio override."""
         # Setup mocks
@@ -392,19 +385,17 @@ class TestMainWithPresetOverrides:
         mock_args.recording_dir = Path("/test/recording")
         mock_args.main_audio = "custom_audio.m4a"
         mock_args.verbose = False
+        mock_args.open_blender = False
         mock_parse_args.return_value = mock_args
 
         mock_generator = Mock()
         mock_config_path = Path("/tmp/config.yaml")
-        mock_generator.generate_preset.return_value = mock_config_path
+        mock_generator.generate_config_from_preset.return_value = mock_config_path
         mock_generator_class.return_value = mock_generator
-
-        mock_yaml_config = Mock()
-        mock_load_yaml.return_value = mock_yaml_config
 
         mock_manager = Mock()
         mock_blend_path = Path("/test/recording/blender/project.blend")
-        mock_manager.create_vse_project_with_config.return_value = mock_blend_path
+        mock_manager.create_vse_project_with_yaml_file.return_value = mock_blend_path
         mock_manager_class.return_value = mock_manager
 
         # Run main
@@ -412,6 +403,100 @@ class TestMainWithPresetOverrides:
 
         # Verify calls with overrides
         assert result == 0
-        mock_generator.generate_preset.assert_called_once_with(
+        mock_generator.generate_config_from_preset.assert_called_once_with(
             mock_args.recording_dir, "music-video", main_audio="custom_audio.m4a"
         )
+
+    @patch("cinemon.cli.blend_setup.open_blender_with_video_editing")
+    @patch("cinemon.cli.blend_setup.BlenderProjectManager")
+    @patch("cinemon.cli.blend_setup.CinemonConfigGenerator")
+    @patch("cinemon.cli.blend_setup.parse_args")
+    def test_main_with_open_blender_flag(
+        self,
+        mock_parse_args,
+        mock_generator_class,
+        mock_manager_class,
+        mock_open_blender,
+    ):
+        """Test main function with --open-blender flag."""
+        # Mock arguments with open_blender = True
+        mock_args = Mock()
+        mock_args.preset = "vintage"
+        mock_args.config = None
+        mock_args.recording_dir = Path("/test/recording")
+        mock_args.main_audio = None
+        mock_args.verbose = False
+        mock_args.open_blender = True  # This is the key difference
+        mock_parse_args.return_value = mock_args
+
+        # Mock generator and manager
+        mock_generator = Mock()
+        mock_config_path = Path("/tmp/config.yaml")
+        mock_generator.generate_config_from_preset.return_value = mock_config_path
+        mock_generator_class.return_value = mock_generator
+
+        mock_manager = Mock()
+        mock_blend_path = Path("/test/recording/blender/project.blend")
+        mock_manager.create_vse_project_with_yaml_file.return_value = mock_blend_path
+        mock_manager_class.return_value = mock_manager
+
+        # Run main
+        result = main()
+
+        # Verify Blender was opened
+        assert result == 0
+        mock_open_blender.assert_called_once_with(mock_blend_path)
+
+    @patch("cinemon.cli.blend_setup.open_blender_with_video_editing")
+    @patch("cinemon.cli.blend_setup.BlenderProjectManager")
+    @patch("cinemon.cli.blend_setup.parse_args")
+    def test_main_with_config_and_open_blender(
+        self, mock_parse_args, mock_manager_class, mock_open_blender
+    ):
+        """Test main function with --config and --open-blender flags."""
+        # Mock arguments with config path and open_blender = True
+        mock_args = Mock()
+        mock_args.preset = None
+        mock_args.config = Path("/test/config.yaml")
+        mock_args.recording_dir = Path("/test/recording")
+        mock_args.verbose = False
+        mock_args.open_blender = True
+        mock_parse_args.return_value = mock_args
+
+        mock_manager = Mock()
+        mock_blend_path = Path("/test/recording/blender/project.blend")
+        mock_manager.create_vse_project_with_yaml_file.return_value = mock_blend_path
+        mock_manager_class.return_value = mock_manager
+
+        # Run main
+        result = main()
+
+        # Verify Blender was opened
+        assert result == 0
+        mock_open_blender.assert_called_once_with(mock_blend_path)
+
+
+class TestOpenBlenderWithVideoEditing:
+    """Test cases for open_blender_with_video_editing function."""
+
+    def test_open_blender_with_video_editing_error_handling(self):
+        """Test error handling in open_blender_with_video_editing function."""
+        from cinemon.cli.blend_setup import open_blender_with_video_editing
+
+        blend_file_path = Path("/test/project.blend")
+
+        # Test subprocess error handling
+        with patch("cinemon.cli.blend_setup.subprocess.Popen") as mock_popen:
+            mock_popen.side_effect = FileNotFoundError("snap command not found")
+
+            # Should not raise exception, just print error
+            with patch("builtins.print") as mock_print:
+                open_blender_with_video_editing(blend_file_path)
+
+                # Verify error messages were printed
+                mock_print.assert_any_call(
+                    "⚠ Nie udało się otworzyć Blender: snap command not found"
+                )
+                mock_print.assert_any_call(
+                    "💡 Otwórz ręcznie: snap run blender '/test/project.blend'"
+                )
