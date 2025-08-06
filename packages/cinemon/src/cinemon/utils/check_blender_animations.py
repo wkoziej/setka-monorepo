@@ -20,8 +20,21 @@ def check_vse_animations():
         "total_keyframes": 0,
         "animated_strips": [],
         "strip_count": 0,
-        "layout_applied": False
+        "layout_applied": False,
+        "config_path": None,
+        "config_exists": False
     }
+
+    # Sprawdź cinemon_config_path w scenie
+    scene = bpy.context.scene
+    config_path = getattr(scene, "cinemon_config_path", "")
+    if config_path:
+        result["config_path"] = config_path
+        # Sprawdź czy plik istnieje
+        from pathlib import Path
+        result["config_exists"] = Path(config_path).exists()
+    else:
+        result["config_path"] = "NOT_SET"
 
     # Sprawdź czy są jakieś akcje
     if bpy.data.actions:
@@ -146,6 +159,16 @@ def print_animation_report(data: dict, blend_file: Path):
     print(f"🎨 Layout zastosowany: {'TAK' if data['layout_applied'] else 'NIE'}")
     print(f"🎬 Całkowita liczba klatek kluczowych: {data['total_keyframes']}")
     print(f"✅ Animacje obecne: {'TAK' if data['has_animations'] else 'NIE'}")
+
+    # Config path info
+    config_status = "NIE USTAWIONA"
+    if data.get("config_path") and data["config_path"] != "NOT_SET":
+        if data.get("config_exists"):
+            config_status = f"✅ {data['config_path']}"
+        else:
+            config_status = f"❌ {data['config_path']} (nie istnieje)"
+
+    print(f"⚙️  Ścieżka konfiguracji: {config_status}")
 
     if data["animated_strips"]:
         print(f"\n🎭 Animowane paski ({len(data['animated_strips'])}):")

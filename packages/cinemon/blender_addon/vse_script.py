@@ -139,16 +139,6 @@ class BlenderVSEConfigurator:
             print("✗ Błąd konfiguracji podstawowego projektu")
             return False
 
-        # Store config path in scene if addon is loaded (for UI access)
-        # This is optional - script works without it
-        if hasattr(bpy.types.Scene, "cinemon_config_path"):
-            bpy.context.scene.cinemon_config_path = str(self.config_path)
-            print(f"✓ Stored config path in scene: {self.config_path}")
-        else:
-            print(
-                f"ℹ Addon not loaded, config path not stored in scene (not required for script)"
-            )
-
         # Apply compositional animations if configured
         strip_animations = self.config.strip_animations
         total_animations = sum(len(anims) for anims in strip_animations.values())
@@ -172,6 +162,40 @@ class BlenderVSEConfigurator:
                     except Exception as e:
                         print(f"✗ Błąd zapisywania projektu z animacjami: {e}")
                         return False
+
+        # Store config path in scene if addon is loaded (for UI access)
+        # This MUST be after setup_project() because read_factory_settings() resets scene properties
+
+        # Try to enable addon if not already enabled
+        addon_enabled = False
+        try:
+            if "cinemon_addon" not in bpy.context.preferences.addons.keys():
+                print("🔌 Enabling cinemon addon...")
+                bpy.ops.preferences.addon_enable(module="cinemon_addon")
+                addon_enabled = True
+                print("✓ Cinemon addon enabled")
+            else:
+                addon_enabled = True
+                print("✓ Cinemon addon already enabled")
+        except Exception as e:
+            print(f"⚠ Could not enable addon: {e}")
+
+        # Now try to set config path
+        if addon_enabled and hasattr(bpy.types.Scene, "cinemon_config_path"):
+            bpy.context.scene.cinemon_config_path = str(self.config_path)
+            print(f"✓ Stored config path in scene: {self.config_path}")
+
+            # Save file again to persist config path in .blend
+            if self.output_blend:
+                try:
+                    bpy.ops.wm.save_as_mainfile(filepath=str(self.output_blend))
+                    print(f"✓ Final save with config path: {self.output_blend}")
+                except Exception as e:
+                    print(f"⚠ Warning: Could not save config path to blend file: {e}")
+        else:
+            print(
+                f"ℹ Addon not available, config path not stored in scene (not required for script)"
+            )
 
         print("=== Konfiguracja projektu VSE zakończona sukcesem ===")
         return True
