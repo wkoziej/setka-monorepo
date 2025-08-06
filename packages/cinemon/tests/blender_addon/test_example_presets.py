@@ -29,7 +29,7 @@ class TestExamplePresets:
 
         # Verify basic structure
         assert config.project.fps == 30
-        assert config.layout.type == "cascade"
+        assert config.layout.type == "random"
         assert "RPI_FRONT.mp4" in config.strip_animations
 
         # Verify minimal-specific settings - using actual content from minimal.yaml

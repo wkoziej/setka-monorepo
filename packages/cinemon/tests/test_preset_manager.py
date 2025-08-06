@@ -13,95 +13,86 @@ from setka_common.config.yaml_config import BlenderYAMLConfig
 from cinemon.config.preset_manager import PresetManager
 
 
-@pytest.fixture(autouse=True)
-def isolated_custom_presets(tmp_path, monkeypatch):
-    """Ensure each test uses isolated temporary directory for custom presets."""
-    temp_presets_dir = tmp_path / "custom_presets"
-    temp_presets_dir.mkdir()
+@pytest.fixture
+def test_preset_dir():
+    """Return path to test fixtures preset directory."""
+    return Path(__file__).parent / "fixtures" / "presets"
 
-    # Mock the custom presets directory method
+
+@pytest.fixture
+def preset_manager(test_preset_dir, tmp_path, monkeypatch):
+    """Create PresetManager instance configured to use test fixtures."""
+    # Create isolated temp directory for custom presets
+    temp_custom_presets_dir = tmp_path / "custom_presets"
+    temp_custom_presets_dir.mkdir()
+
+    # Mock the custom presets directory method to use temp directory
     monkeypatch.setattr(
-        PresetManager, "_get_custom_presets_dir", lambda self: temp_presets_dir
+        PresetManager, "_get_custom_presets_dir", lambda self: temp_custom_presets_dir
     )
 
-    # Clear any cached presets to ensure isolation
-    original_init = PresetManager.__init__
-
-    def patched_init(self):
-        original_init(self)
-        self._custom_presets_cache = None
-
-    monkeypatch.setattr(PresetManager, "__init__", patched_init)
-
-    yield temp_presets_dir
+    # Create PresetManager with test fixture preset directory
+    manager = PresetManager(preset_dir=test_preset_dir)
+    return manager
 
 
 class TestPresetManager:
     """Test cases for PresetManager preset functionality."""
 
-    def test_get_minimal_preset(self):
-        """Test getting the built-in minimal preset."""
-        preset_manager = PresetManager()
-        minimal_preset = preset_manager.get_preset("minimal")
+    def test_get_test_minimal_preset(self, preset_manager):
+        """Test getting the test minimal preset from fixtures."""
+        minimal_preset = preset_manager.get_preset("test_minimal")
 
         assert isinstance(minimal_preset, BlenderYAMLConfig)
 
-        # Check layout configuration
-        assert minimal_preset.layout.type == "cascade"
+        # Check layout configuration (from test fixture)
+        assert minimal_preset.layout.type == "random"
         assert minimal_preset.layout.config["overlap_allowed"] is False
         assert minimal_preset.layout.config["margin"] == 0.15
+        assert minimal_preset.layout.config["seed"] == 42
 
-        # Check strip_animations - minimal has RPI cameras
-        assert "RPI_FRONT.mp4" in minimal_preset.strip_animations
-        assert "RPI_RIGHT.mp4" in minimal_preset.strip_animations
+        # Check strip_animations - test fixture has generic Camera1/Camera2
+        assert "Camera1" in minimal_preset.strip_animations
+        assert "Camera2" in minimal_preset.strip_animations
 
-        # Check RPI_FRONT animations
-        camera1_anims = minimal_preset.strip_animations["RPI_FRONT.mp4"]
+        # Check Camera1 animations
+        camera1_anims = minimal_preset.strip_animations["Camera1"]
         assert len(camera1_anims) == 1
         assert camera1_anims[0]["type"] == "scale"
         assert camera1_anims[0]["trigger"] == "beat"
+        assert camera1_anims[0]["intensity"] == 0.2
 
-    def test_get_music_video_preset(self):
-        """Test getting the built-in minimal preset."""
-        preset_manager = PresetManager()
-        music_video_preset = preset_manager.get_preset("minimal")
+    def test_get_camera2_animations(self, preset_manager):
+        """Test Camera2 animations from test fixture."""
+        minimal_preset = preset_manager.get_preset("test_minimal")
 
-        assert isinstance(music_video_preset, BlenderYAMLConfig)
+        assert isinstance(minimal_preset, BlenderYAMLConfig)
 
-        # Check layout configuration
-        assert music_video_preset.layout.type == "cascade"
-        assert music_video_preset.layout.config["margin"] == 0.15
+        # Check Camera2 animations (from test fixture)
+        assert "Camera2" in minimal_preset.strip_animations
+        camera2_anims = minimal_preset.strip_animations["Camera2"]
+        assert len(camera2_anims) == 1
+        assert camera2_anims[0]["type"] == "shake"
+        assert camera2_anims[0]["trigger"] == "energy_peaks"
+        assert camera2_anims[0]["intensity"] == 1.0
+        assert camera2_anims[0]["return_frames"] == 2
 
-        # Check strip_animations - minimal has per-camera animations
-        assert "RPI_FRONT.mp4" in music_video_preset.strip_animations
-        assert "RPI_RIGHT.mp4" in music_video_preset.strip_animations
-        camera1_anims = music_video_preset.strip_animations["RPI_FRONT.mp4"]
-        animation_types = [anim["type"] for anim in camera1_anims]
-        assert "scale" in animation_types
-
-    def test_list_presets(self):
-        """Test listing all available presets."""
-        preset_manager = PresetManager()
+    def test_list_presets(self, preset_manager):
+        """Test listing all available presets from fixtures."""
         presets = preset_manager.list_presets()
 
         assert isinstance(presets, list)
-        assert len(presets) >= 1  # At least 1 built-in preset
-        assert "minimal" in presets
-        assert "minimal" in presets
-        assert "minimal" in presets
-        assert "minimal" in presets
+        assert len(presets) >= 1  # At least 1 test preset
+        assert "test_minimal" in presets
 
-    def test_get_nonexistent_preset(self):
+    def test_get_nonexistent_preset(self, preset_manager):
         """Test getting a preset that doesn't exist."""
-        preset_manager = PresetManager()
-
         with pytest.raises(ValueError, match="Preset 'nonexistent' not found"):
             preset_manager.get_preset("nonexistent")
 
-    def test_preset_config_structure(self):
+    def test_preset_config_structure(self, preset_manager):
         """Test the structure of BlenderYAMLConfig objects."""
-        preset_manager = PresetManager()
-        minimal_preset = preset_manager.get_preset("minimal")
+        minimal_preset = preset_manager.get_preset("test_minimal")
 
         # Test BlenderYAMLConfig attributes
         assert hasattr(minimal_preset, "project")
@@ -122,58 +113,58 @@ class TestPresetManager:
                 assert "type" in animation
                 assert "trigger" in animation
 
-    def test_minimal_preset_has_basic_effects(self):
-        """Test that minimal preset has only basic effects."""
-        preset_manager = PresetManager()
-        minimal_preset = preset_manager.get_preset("minimal")
+    def test_test_minimal_preset_has_basic_effects(self, preset_manager):
+        """Test that test minimal preset has only basic effects."""
+        minimal_preset = preset_manager.get_preset("test_minimal")
 
         # Should have strip_animations
         assert hasattr(minimal_preset, "strip_animations")
         strip_anims = minimal_preset.strip_animations
 
-        # Check RPI_FRONT has scale animation
-        assert "RPI_FRONT.mp4" in strip_anims
-        assert len(strip_anims["RPI_FRONT.mp4"]) == 1
-        assert strip_anims["RPI_FRONT.mp4"][0]["type"] == "scale"
-        assert strip_anims["RPI_FRONT.mp4"][0]["trigger"] == "beat"
+        # Check Camera1 has scale animation (from test fixture)
+        assert "Camera1" in strip_anims
+        assert len(strip_anims["Camera1"]) == 1
+        assert strip_anims["Camera1"][0]["type"] == "scale"
+        assert strip_anims["Camera1"][0]["trigger"] == "beat"
+        assert strip_anims["Camera1"][0]["easing"] == "EASE_IN_OUT"
 
-    def test_beat_switch_legacy_preset(self):
-        """Test that minimal preset provides legacy compatibility."""
-        preset_manager = PresetManager()
-        beat_switch_preset = preset_manager.get_preset("minimal")
+    def test_test_minimal_audio_analysis_config(self, preset_manager):
+        """Test audio analysis configuration in test fixture."""
+        minimal_preset = preset_manager.get_preset("test_minimal")
 
-        assert isinstance(beat_switch_preset, BlenderYAMLConfig)
+        assert isinstance(minimal_preset, BlenderYAMLConfig)
 
-        # Should have basic animations for cameras
-        assert "RPI_FRONT.mp4" in beat_switch_preset.strip_animations
-        camera1_anims = beat_switch_preset.strip_animations["RPI_FRONT.mp4"]
-        assert any(anim["type"] == "scale" for anim in camera1_anims)
+        # Check audio analysis configuration (from test fixture)
+        assert hasattr(minimal_preset, "audio_analysis")
+        assert (
+            minimal_preset.audio_analysis.file == "./analysis/main_audio_analysis.json"
+        )
+        assert minimal_preset.audio_analysis.beat_division == 4
+        assert minimal_preset.audio_analysis.min_onset_interval == 2.0
 
-    @pytest.fixture
-    def temp_presets_dir(self):
-        """Create temporary directory for custom presets."""
-        with tempfile.TemporaryDirectory() as temp_dir:
-            yield Path(temp_dir)
-
-    def test_corrupt_custom_preset_file_handling(self, temp_presets_dir):
+    def test_corrupt_custom_preset_file_handling(
+        self, test_preset_dir, tmp_path, monkeypatch
+    ):
         """Test handling of corrupt custom preset files."""
-        custom_presets_dir = temp_presets_dir / "custom_presets"
+        custom_presets_dir = tmp_path / "custom_presets"
         custom_presets_dir.mkdir()
 
         # Create corrupt preset file
         corrupt_file = custom_presets_dir / "corrupt-preset.json"
         corrupt_file.write_text("invalid json content")
 
-        with patch(
-            "cinemon.config.preset_manager.PresetManager._get_custom_presets_dir",
-            return_value=custom_presets_dir,
-        ):
-            preset_manager = PresetManager()
+        # Mock the custom presets directory method to use temp directory
+        monkeypatch.setattr(
+            PresetManager, "_get_custom_presets_dir", lambda self: custom_presets_dir
+        )
 
-            # Should not include corrupt preset in list
-            presets = preset_manager.list_presets()
-            assert "corrupt-preset" not in presets
+        # Create PresetManager with test fixture preset directory
+        preset_manager = PresetManager(preset_dir=test_preset_dir)
 
-            # Should raise error when trying to get corrupt preset
-            with pytest.raises(ValueError, match="Preset 'corrupt-preset' not found"):
-                preset_manager.get_preset("corrupt-preset")
+        # Should not include corrupt preset in list
+        presets = preset_manager.list_presets()
+        assert "corrupt-preset" not in presets
+
+        # Should raise error when trying to get corrupt preset
+        with pytest.raises(ValueError, match="Preset 'corrupt-preset' not found"):
+            preset_manager.get_preset("corrupt-preset")
