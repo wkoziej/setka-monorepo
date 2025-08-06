@@ -126,10 +126,15 @@ Cinemon uses **YAML configuration files** for parametric Blender execution:
 
 ```yaml
 project:
+  base_directory: /path/to/recording
   video_files: [Camera1.mp4, Camera2.mp4]
   main_audio: "main_audio.m4a"
+  output_blend: blender/project.blend  # Required for file saving
   fps: 30
   resolution: {width: 1920, height: 1080}
+
+audio_analysis:
+  file: analysis/audio_analysis.json  # Path to beatrix analysis
 
 layout:
   type: random
@@ -139,14 +144,14 @@ layout:
     margin: 0.1
 
 strip_animations:
-  Camera1:
+  Camera1.mp4:  # Must match exact filename
     - type: scale
-      trigger: bass
+      trigger: beat
       intensity: 0.3
-  Camera2:
-    - type: vintage_color
-      trigger: one_time
-      sepia_amount: 0.4
+  Camera2.mp4:
+    - type: shake
+      trigger: energy_peaks
+      intensity: 8.0
 ```
 
 The `strip_animations` format groups animations by strip name, allowing precise control over which video strips receive which effects. Each strip can have multiple animations applied.
@@ -227,6 +232,15 @@ def mock_bpy(monkeypatch):
 - **Auto-detection**: CLI checks for existing analysis files before creating new ones
 - **Beatrix integration**: Uses `analyze_audio_command()` to generate timing data
 - **File naming**: Analysis files follow pattern `{audio_stem}_analysis.json`
+- **Event format**: Audio analysis must use simple timestamps (not dict objects):
+  ```json
+  {
+    "animation_events": {
+      "beats": [0.0, 1.0, 2.0, ...],
+      "energy_peaks": [2.0, 6.0, 10.0, ...]
+    }
+  }
+  ```
 
 ## File Structure Conventions
 
@@ -339,19 +353,40 @@ strip_animations:
 
 #### Supported Animation Types
 
-**Transform Animations:**
-- `scale` - Scale changes on audio events
-- `shake` - Position shake effects
-- `rotation` - Rotation wobble effects
-- `jitter` - Continuous random position changes
+**Transform Animations (Working):**
+- `scale` - Scale changes on audio events (triggers: beat, bass, energy_peaks)
+- `shake` - Position shake effects (triggers: beat, bass, energy_peaks)
+- `rotation` - Rotation wobble effects (triggers: beat, energy_peaks)
 
-**Visual Effects:**
-- `brightness_flicker` - Brightness modulation
-- `vintage_color` - Sepia tint and contrast boost
-- `black_white` - Desaturation effects
-- `film_grain` - Grain overlay effects
+**Visual Effects (Working):**
+- `brightness_flicker` - Brightness modulation (triggers: beat, bass)
+
+**Known Issues:**
+- `jitter` - Continuous random position changes (⚠️ Issue #26: continuous trigger not implemented)
+- `vintage_color` - Sepia tint and contrast boost (⚠️ Issue #26: one_time trigger not implemented)
+- `black_white` - Desaturation effects (⚠️ Issue #26: one_time trigger not implemented)
+- `film_grain` - Grain overlay effects (⚠️ Issue #26: one_time trigger not implemented)
 
 ## Animation Verification
+
+### Animation Showcase Generator
+
+**NEW**: Complete test project generator for testing all animation types:
+
+```bash
+# Generate complete showcase project with all animations
+uv run python src/cinemon/utils/run_animation_showcase.py
+
+# Generate in specific directory
+uv run python src/cinemon/utils/run_animation_showcase.py --dir ~/path/to/showcase
+```
+
+This creates:
+- 9 colored test videos (strip_0.mp4 through strip_8.mp4)
+- Synthetic audio with regular beats and energy peaks
+- Complete audio analysis JSON with beatrix-compatible format
+- YAML configuration demonstrating all working animation types
+- Fully functional .blend file ready for testing
 
 ### Checking Animation Results
 
@@ -530,6 +565,9 @@ Common issues and solutions:
 - **Invalid configuration**: YAML validation with clear error messages
 - **Addon import errors**: Fixed by proper path ordering in `__init__.py` - vendor paths must be added BEFORE module imports
 - **Animation verification**: Use `check_blender_animations.py` to verify keyframes are created correctly
+- **.blend file not saved**: Ensure `output_blend` is specified in YAML project section
+- **Animations not applying**: Strip names in YAML must match exact video filenames (including .mp4)
+- **Event format errors**: Audio analysis events must be simple timestamps, not dict objects
 
 ## Troubleshooting
 

@@ -418,7 +418,7 @@ class BlenderVSEConfigurator:
 
     def _create_layout_from_yaml(self):
         """Create layout instance from YAML configuration."""
-        from vse.layouts import MainPipLayout, RandomLayout
+        from vse.layouts import GridLayout, MainPipLayout, RandomLayout
 
         layout = self.config.layout
         layout_type = layout.type
@@ -431,6 +431,12 @@ class BlenderVSEConfigurator:
                 min_scale=layout_config.get("min_scale", 0.3),
                 max_scale=layout_config.get("max_scale", 0.8),
                 seed=layout_config.get("seed", None),
+            )
+        elif layout_type == "grid":
+            return GridLayout(
+                rows=layout_config.get("rows", 3),
+                cols=layout_config.get("cols", 3),
+                margin=layout_config.get("margin", 0.02),
             )
         elif layout_type == "main-pip":
             return MainPipLayout(
