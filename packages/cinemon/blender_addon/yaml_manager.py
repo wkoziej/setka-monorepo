@@ -148,3 +148,145 @@ class AnimationYAMLManager:
         except Exception as e:
             print(f"Error updating YAML config: {e}")
             return False
+
+    def add_animation_to_strip(
+        self, context, strip_name: str, animation: Dict[str, Any]
+    ) -> bool:
+        """Add animation to strip in YAML file."""
+        config_path = self.resolve_config_path(context)
+        if not config_path or not config_path.exists():
+            return False
+
+        try:
+            # Read current config
+            with open(config_path, "r", encoding="utf-8") as f:
+                config = yaml.safe_load(f)
+
+            if not config:
+                config = {}
+
+            # Initialize strip_animations if needed
+            if "strip_animations" not in config:
+                config["strip_animations"] = {}
+
+            strip_animations = config["strip_animations"]
+
+            # Initialize strip list if needed
+            if strip_name not in strip_animations:
+                strip_animations[strip_name] = []
+
+            # Add animation
+            strip_animations[strip_name].append(animation)
+
+            # Write back to file
+            with open(config_path, "w", encoding="utf-8") as f:
+                yaml.dump(
+                    config,
+                    f,
+                    default_flow_style=False,
+                    allow_unicode=True,
+                    sort_keys=False,
+                )
+
+            # Clear cache
+            cache_key = str(config_path)
+            if cache_key in self._cache:
+                del self._cache[cache_key]
+
+            return True
+
+        except Exception as e:
+            print(f"Error adding animation to YAML config: {e}")
+            return False
+
+    def remove_animation_from_strip(
+        self, context, strip_name: str, animation_index: int
+    ) -> bool:
+        """Remove animation from strip in YAML file."""
+        config_path = self.resolve_config_path(context)
+        if not config_path or not config_path.exists():
+            return False
+
+        try:
+            # Read current config
+            with open(config_path, "r", encoding="utf-8") as f:
+                config = yaml.safe_load(f)
+
+            if not config or "strip_animations" not in config:
+                return False
+
+            strip_animations = config["strip_animations"]
+            if strip_name in strip_animations:
+                animations = strip_animations[strip_name]
+                if 0 <= animation_index < len(animations):
+                    animations.pop(animation_index)
+
+                    # If strip has no animations left, remove the strip entry
+                    if not animations:
+                        del strip_animations[strip_name]
+
+                    # Write back to file
+                    with open(config_path, "w", encoding="utf-8") as f:
+                        yaml.dump(
+                            config,
+                            f,
+                            default_flow_style=False,
+                            allow_unicode=True,
+                            sort_keys=False,
+                        )
+
+                    # Clear cache
+                    cache_key = str(config_path)
+                    if cache_key in self._cache:
+                        del self._cache[cache_key]
+
+                    return True
+
+            return False
+
+        except Exception as e:
+            print(f"Error removing animation from YAML config: {e}")
+            return False
+
+    def get_available_animation_types(self) -> List[str]:
+        """Get list of available animation types."""
+        return [
+            "scale",
+            "shake",
+            "rotation",
+            "jitter",
+            "brightness_flicker",
+            "black_white",
+            "film_grain",
+            "vintage_color",
+            "visibility",
+        ]
+
+    def get_available_triggers(self) -> List[str]:
+        """Get list of available triggers."""
+        return ["beat", "bass", "energy_peaks", "one_time", "continuous"]
+
+    def create_default_animation(
+        self, animation_type: str, trigger: str
+    ) -> Dict[str, Any]:
+        """Create animation with default parameters."""
+        # Default parameters by animation type
+        defaults = {
+            "scale": {"intensity": 0.3, "duration_frames": 3},
+            "shake": {"intensity": 2.0, "return_frames": 2},
+            "rotation": {"degrees": 5.0, "duration_frames": 3},
+            "jitter": {"intensity": 1.0},
+            "brightness_flicker": {"intensity": 0.1, "duration_frames": 2},
+            "black_white": {"intensity": 0.6},
+            "film_grain": {"intensity": 0.15},
+            "vintage_color": {"sepia_amount": 0.4, "contrast_boost": 0.2},
+            "visibility": {"fade_duration": 5},
+        }
+
+        animation = {"type": animation_type, "trigger": trigger}
+
+        # Add default parameters for this animation type
+        if animation_type in defaults:
+            animation.update(defaults[animation_type])
+
+        return animation

@@ -103,8 +103,7 @@ class LoadConfigOperator(Operator, ImportHelper):
             loader = YAMLConfigLoader()
             config = loader.load_from_file(self.filepath)
 
-            # Store configuration in scene for later use
-            context.scene.cinemon_config = config
+            # Don't store config object - just path (config will be reloaded when needed)
 
             # Store filepath for reference - THIS IS THE KEY FOR PANEL
             context.scene.cinemon_config_path = self.filepath
@@ -153,28 +152,33 @@ class ApplyConfigOperator(Operator):
 
     def execute(self, context):
         """Apply loaded configuration to VSE."""
-        # Check if configuration is loaded
-        if not hasattr(context.scene, "cinemon_config"):
+        # Check if configuration path is available
+        if (
+            not hasattr(context.scene, "cinemon_config_path")
+            or not context.scene.cinemon_config_path
+        ):
             self.report({"ERROR"}, "No config loaded. Use 'Load Cinemon Config' first.")
             return {"CANCELLED"}
 
         try:
-            config = context.scene.cinemon_config
+            # Re-load configuration from file (to get latest changes from YAML)
+            config_path = context.scene.cinemon_config_path
+            loader = YAMLConfigLoader()
+            config = loader.load_from_file(config_path)
 
-            # Create configurator with config object directly
-            # BlenderVSEConfiguratorDirect expects CinemonConfig object
-            configurator = BlenderVSEConfiguratorDirect(config)
+            # Use the original BlenderVSEConfigurator from vse_script directly
+            from vse_script import BlenderVSEConfigurator
+
+            # Create configurator with config file path (not object)
+            configurator = BlenderVSEConfigurator(config_path)
 
             # Apply configuration
             success = configurator.setup_vse_project()
 
             if success:
-                config_name = getattr(
-                    context.scene, "cinemon_config_path", "loaded config"
-                )
                 self.report(
                     {"INFO"},
-                    f"VSE project created successfully from {Path(config_name).name}",
+                    f"VSE project created successfully from {Path(config_path).name}",
                 )
                 return {"FINISHED"}
             else:
@@ -186,49 +190,7 @@ class ApplyConfigOperator(Operator):
             return {"CANCELLED"}
 
 
-class BlenderVSEConfiguratorDirect(BlenderVSEConfigurator):
-    """VSE Configurator that accepts config data directly instead of file path."""
-
-    def __init__(self, config):
-        """Initialize with CinemonConfig object."""
-        # Set config object directly
-        self.config = config
-        self.config_data = config
-
-        # Set attributes from config object
-        project = config.project
-        self.video_files = [Path(f) for f in project.video_files]
-        self.main_audio = Path(project.main_audio) if project.main_audio else None
-        self.output_blend = Path(project.output_blend) if project.output_blend else None
-        self.render_output = (
-            Path(project.render_output) if project.render_output else None
-        )
-        self.fps = project.fps
-        self.resolution_x = project.resolution.width
-        self.resolution_y = project.resolution.height
-        self.beat_division = project.beat_division
-
-        # Animation mode is always compositional
-        self.animation_mode = "compositional"
-
-        # Initialize project setup with config (if we have BlenderProjectSetup available)
-        try:
-            from vse.project_setup import BlenderProjectSetup
-
-            self.project_setup = BlenderProjectSetup(
-                {
-                    "fps": self.fps,
-                    "resolution_x": self.resolution_x,
-                    "resolution_y": self.resolution_y,
-                    "video_files": self.video_files,
-                    "main_audio": self.main_audio,
-                    "output_blend": self.output_blend,
-                    "render_output": self.render_output,
-                }
-            )
-        except ImportError:
-            # For testing
-            self.project_setup = None
+# Removed BlenderVSEConfiguratorDirect - using original BlenderVSEConfigurator instead
 
 
 # Operator classes for registration

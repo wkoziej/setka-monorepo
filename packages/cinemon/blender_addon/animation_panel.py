@@ -51,7 +51,9 @@ except ImportError:
         return kwargs.get("default", False)
 
     def EnumProperty(**kwargs):
-        return kwargs.get("default", "")
+        return kwargs.get(
+            "default", kwargs.get("items", [("default", "Default", "")])[0][0]
+        )
 
     def IntProperty(**kwargs):
         return kwargs.get("default", 0)
@@ -119,6 +121,15 @@ class CINEMON_PT_active_strip_animations(Panel):
                     self.draw_editable_animation_item(
                         layout, context, active_strip.name, animation, i
                     )
+
+                layout.separator()
+
+                # Add another animation button
+                layout.operator(
+                    "cinemon.add_animation_to_strip",
+                    text="Add Another Animation",
+                    icon="PLUS",
+                )
 
             layout.separator()
 
@@ -305,11 +316,27 @@ class CINEMON_OT_remove_animation(Operator):
 
     def execute(self, context):
         """Remove animation from YAML file."""
-        # TODO: Implement remove animation logic
-        self.report(
-            {"INFO"}, f"Removed animation {self.animation_index} from {self.strip_name}"
-        )
-        return {"FINISHED"}
+        try:
+            success = yaml_manager.remove_animation_from_strip(
+                context, self.strip_name, self.animation_index
+            )
+
+            if success:
+                self.report(
+                    {"INFO"},
+                    f"Removed animation {self.animation_index} from {self.strip_name}",
+                )
+
+                # Changes saved to YAML - user can apply manually with "Apply to VSE"
+
+                return {"FINISHED"}
+            else:
+                self.report({"ERROR"}, "Failed to remove animation")
+                return {"CANCELLED"}
+
+        except Exception as e:
+            self.report({"ERROR"}, f"Error removing animation: {e}")
+            return {"CANCELLED"}
 
 
 class CINEMON_OT_add_animation_to_strip(Operator):
@@ -320,34 +347,94 @@ class CINEMON_OT_add_animation_to_strip(Operator):
     bl_description = "Add new animation to this strip"
     bl_options = {"REGISTER", "UNDO"}
 
+    # Animation configuration properties - use try/except for testing compatibility
+    try:
+        animation_type: EnumProperty(
+            name="Animation Type",
+            description="Type of animation to add",
+            items=[
+                ("scale", "Scale", "Scale animation on beats/bass"),
+                ("shake", "Shake", "Position shake on energy peaks"),
+                ("rotation", "Rotation", "Rotation animation on beats"),
+                ("jitter", "Jitter", "Continuous random position changes"),
+                ("brightness_flicker", "Brightness Flicker", "Brightness modulation"),
+                ("black_white", "Black & White", "Desaturation effects"),
+                ("film_grain", "Film Grain", "Grain overlay effects"),
+                ("vintage_color", "Vintage Color", "Sepia tint and contrast boost"),
+                ("visibility", "Visibility", "Visibility/fade animations"),
+            ],
+            default="scale",
+        )
+
+        trigger: EnumProperty(
+            name="Trigger",
+            description="What triggers this animation",
+            items=[
+                ("beat", "Beat", "Trigger on beat events"),
+                ("bass", "Bass", "Trigger on bass events"),
+                ("energy_peaks", "Energy Peaks", "Trigger on energy peak events"),
+                ("one_time", "One Time", "Apply once at start"),
+                ("continuous", "Continuous", "Apply continuously"),
+            ],
+            default="beat",
+        )
+    except NameError:
+        # For testing without bpy
+        animation_type = "scale"
+        trigger = "beat"
+
+    def invoke(self, context, event):
+        """Open dialog for animation configuration."""
+        return context.window_manager.invoke_props_dialog(self)
+
+    def draw(self, context):
+        """Draw add animation dialog."""
+        layout = self.layout
+        layout.label(text="Add Animation Configuration:")
+        layout.prop(self, "animation_type")
+        layout.prop(self, "trigger")
+
     def execute(self, context):
-        """Add new animation to strip."""
-        # TODO: Implement add animation dialog
-        self.report({"INFO"}, "Add animation dialog - TODO")
-        return {"FINISHED"}
-
-
-class CINEMON_OT_reapply_animations_from_yaml(Operator):
-    """Reapply all animations from YAML to update keyframes."""
-
-    bl_idname = "cinemon.reapply_animations_from_yaml"
-    bl_label = "Reapply Animations"
-    bl_description = "Reapply animations from YAML config to update keyframes"
-    bl_options = {"REGISTER", "UNDO"}
-
-    def execute(self, context):
-        """Reapply animations by calling VSE script logic."""
+        """Add new animation to active strip."""
         try:
-            config_path = yaml_manager.resolve_config_path(context)
-            if config_path and config_path.exists():
-                # TODO: Call animation reapplication logic
-                self.report({"INFO"}, "Animations reapplied from YAML")
-            else:
-                self.report({"ERROR"}, "No config file found")
-        except Exception as e:
-            self.report({"ERROR"}, f"Failed to reapply animations: {e}")
+            # Get active strip
+            if (
+                not context.scene.sequence_editor
+                or not context.scene.sequence_editor.active_strip
+            ):
+                self.report({"ERROR"}, "No active strip selected")
+                return {"CANCELLED"}
 
-        return {"FINISHED"}
+            strip_name = context.scene.sequence_editor.active_strip.name
+
+            # Create animation with default parameters
+            animation = yaml_manager.create_default_animation(
+                self.animation_type, self.trigger
+            )
+
+            # Add to YAML file
+            success = yaml_manager.add_animation_to_strip(
+                context, strip_name, animation
+            )
+
+            if success:
+                self.report(
+                    {"INFO"}, f"Added {self.animation_type} animation to {strip_name}"
+                )
+
+                # Changes saved to YAML - user can apply manually with "Apply to VSE"
+
+                return {"FINISHED"}
+            else:
+                self.report({"ERROR"}, "Failed to add animation")
+                return {"CANCELLED"}
+
+        except Exception as e:
+            self.report({"ERROR"}, f"Error adding animation: {e}")
+            return {"CANCELLED"}
+
+
+# Removed CINEMON_OT_reapply_animations_from_yaml - use "Apply to VSE" button instead
 
 
 # Registration
@@ -356,7 +443,6 @@ classes = [
     CINEMON_OT_edit_animation_param,
     CINEMON_OT_remove_animation,
     CINEMON_OT_add_animation_to_strip,
-    CINEMON_OT_reapply_animations_from_yaml,
 ]
 
 
