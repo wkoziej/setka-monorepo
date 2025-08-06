@@ -109,7 +109,8 @@ packages/cinemon/
 │       ├── check_blender_animations.py # Verify animations in .blend files
 │       ├── check_blender_vse.py        # Test project generation
 │       ├── check_fcurves.py            # Debug FCurves and keyframes
-│       └── debug_import_context.py     # Debug addon import issues
+│       ├── debug_import_context.py     # Debug addon import issues
+│       └── run_animation_showcase.py   # Generate test project with all animations
 └── tests/
     ├── test_project_manager.py
     ├── test_animation_engine.py
