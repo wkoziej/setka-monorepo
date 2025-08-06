@@ -15,6 +15,16 @@ addon_path = Path(__file__).parent.parent.parent / "blender_addon"
 if str(addon_path) not in sys.path:
     sys.path.insert(0, str(addon_path))
 
+# Add vendor path for PyYAML (needed for test environment)
+vendor_path = addon_path / "vendor"
+if str(vendor_path) not in sys.path:
+    sys.path.insert(0, str(vendor_path))
+
+# Add vse path for vse modules (needed for test environment)
+vse_path = addon_path / "vse"
+if str(vse_path) not in sys.path:
+    sys.path.insert(0, str(vse_path))
+
 # Add setka-common path for YAMLConfigLoader
 common_path = Path(__file__).parent.parent.parent.parent.parent / "common" / "src"
 if str(common_path) not in sys.path:

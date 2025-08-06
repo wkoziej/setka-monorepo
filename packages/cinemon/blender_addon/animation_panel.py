@@ -5,8 +5,17 @@
 
 from typing import Any, Dict, List
 
-# Import YAML manager
-from yaml_manager import AnimationYAMLManager
+# Import utilities for addon detection
+try:
+    from .import_utils import is_running_as_addon
+except ImportError:
+    from import_utils import is_running_as_addon
+
+# Import YAML manager - use relative import when running as Blender addon
+if is_running_as_addon():
+    from .yaml_manager import AnimationYAMLManager
+else:
+    from yaml_manager import AnimationYAMLManager
 
 try:
     import bpy

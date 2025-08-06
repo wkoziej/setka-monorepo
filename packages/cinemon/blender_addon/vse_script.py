@@ -139,10 +139,15 @@ class BlenderVSEConfigurator:
             print("✗ Błąd konfiguracji podstawowego projektu")
             return False
 
-        # CRITICAL: Store config path in scene (required for YAML-as-single-source-of-truth)
-        # This must be done after project setup but before save
-        bpy.context.scene.cinemon_config_path = str(self.config_path)
-        print(f"✓ Stored config path in scene: {self.config_path}")
+        # Store config path in scene if addon is loaded (for UI access)
+        # This is optional - script works without it
+        if hasattr(bpy.types.Scene, "cinemon_config_path"):
+            bpy.context.scene.cinemon_config_path = str(self.config_path)
+            print(f"✓ Stored config path in scene: {self.config_path}")
+        else:
+            print(
+                f"ℹ Addon not loaded, config path not stored in scene (not required for script)"
+            )
 
         # Apply compositional animations if configured
         strip_animations = self.config.strip_animations

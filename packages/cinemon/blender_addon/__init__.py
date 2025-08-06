@@ -48,24 +48,29 @@ except ImportError:
 
     bpy = MockBpy()
 
-# Import addon modules
-try:
-    from . import animation_panel, layout_ui, operators
-except ImportError:
-    # For testing - import operators directly
-    import animation_panel
-    import layout_ui
-    import operators
-
-# Add vendor path for PyYAML
+# Add vendor and vse paths BEFORE importing modules
 vendor_path = Path(__file__).parent / "vendor"
 if str(vendor_path) not in sys.path:
     sys.path.insert(0, str(vendor_path))
 
-# Add vse path for vse modules
 vse_path = Path(__file__).parent / "vse"
 if str(vse_path) not in sys.path:
     sys.path.insert(0, str(vse_path))
+
+# Import utilities for addon detection
+try:
+    from .import_utils import is_running_as_addon
+except ImportError:
+    from import_utils import is_running_as_addon
+
+# Import addon modules with context detection
+if is_running_as_addon():
+    from . import animation_panel, layout_ui, operators
+else:
+    # For testing - import directly
+    import animation_panel
+    import layout_ui
+    import operators
 
 
 class CINEMON_PT_main_panel(Panel):

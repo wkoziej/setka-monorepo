@@ -100,11 +100,16 @@ packages/cinemon/
 │   ├── cli/
 │   │   ├── blend_setup.py # Main CLI interface
 │   │   └── generate_config.py # Config generation CLI
-│   └── config/           # YAML configuration generation
-│       ├── __init__.py
-│       ├── cinemon_config_generator.py
-│       ├── media_discovery.py
-│       └── preset_manager.py
+│   ├── config/           # YAML configuration generation
+│   │   ├── __init__.py
+│   │   ├── cinemon_config_generator.py
+│   │   ├── media_discovery.py
+│   │   └── preset_manager.py
+│   └── utils/            # Development and debugging utilities
+│       ├── check_blender_animations.py # Verify animations in .blend files
+│       ├── check_blender_vse.py        # Test project generation
+│       ├── check_fcurves.py            # Debug FCurves and keyframes
+│       └── debug_import_context.py     # Debug addon import issues
 └── tests/
     ├── test_project_manager.py
     ├── test_animation_engine.py
@@ -167,10 +172,17 @@ config_path = generator.generate_config(
 
 Due to the separation between Blender addon and Python API:
 
-1. **In blender_addon/** - Use relative imports:
+1. **In blender_addon/** - Use relative imports with context detection:
    ```python
    from .vse import AnimationConstants, BlenderLayoutManager
    from .vse.yaml_config import BlenderYAMLConfigReader
+
+   # Context-aware imports for addon vs test environments
+   from .import_utils import is_running_as_addon
+   if is_running_as_addon():
+       from .yaml_manager import AnimationYAMLManager
+   else:
+       from yaml_manager import AnimationYAMLManager
    ```
 
 2. **In src/cinemon/** - Use absolute imports:
@@ -182,6 +194,14 @@ Due to the separation between Blender addon and Python API:
 3. **project_manager.py** calls Blender with addon script:
    ```python
    self.script_path = Path(__file__).parent.parent.parent / "blender_addon" / "vse_script.py"
+   ```
+
+4. **Addon initialization order**: Critical for proper imports:
+   ```python
+   # In __init__.py - vendor paths MUST be added before imports
+   vendor_path = Path(__file__).parent / "vendor"
+   sys.path.insert(0, str(vendor_path))
+   from . import animation_panel, layout_ui, operators
    ```
 
 ### Blender Mock System
@@ -330,6 +350,42 @@ strip_animations:
 - `black_white` - Desaturation effects
 - `film_grain` - Grain overlay effects
 
+## Animation Verification
+
+### Checking Animation Results
+
+Use the provided utilities to verify animations are working correctly:
+
+```bash
+# Check animations in generated .blend file
+uv run python src/cinemon/utils/check_blender_animations.py "/path/to/file.blend"
+
+# Test full project generation
+uv run python src/cinemon/utils/check_blender_vse.py
+
+# Debug FCurves and keyframes
+uv run python src/cinemon/utils/check_fcurves.py
+
+# Debug addon import issues
+uv run python src/cinemon/utils/debug_import_context.py
+```
+
+### Animation Storage in Blender
+
+**CRITICAL**: Animations are stored in `bpy.context.scene.animation_data.action`, NOT on individual strips:
+
+```python
+# WRONG - animations are NOT here
+if strip.animation_data and strip.animation_data.action:
+    # This will be empty
+
+# CORRECT - animations are stored at scene level
+if bpy.context.scene.animation_data and bpy.context.scene.animation_data.action:
+    action = bpy.context.scene.animation_data.action
+    vse_fcurves = [fc for fc in action.fcurves if 'sequence_editor' in fc.data_path]
+    # FCurves with paths like: sequence_editor.strips_all["StripName"].transform.scale_x
+```
+
 ## Testing Considerations
 
 ### Test Isolation Issues
@@ -471,9 +527,30 @@ Common issues and solutions:
 - **Multiple audio files**: Prompts for `--main-audio` parameter selection
 - **Invalid preset**: Validates against available preset list
 - **Invalid configuration**: YAML validation with clear error messages
+- **Addon import errors**: Fixed by proper path ordering in `__init__.py` - vendor paths must be added BEFORE module imports
+- **Animation verification**: Use `check_blender_animations.py` to verify keyframes are created correctly
+
+## Troubleshooting
+
+### Addon Not Loading
+
+If Blender addon fails to load:
+1. Check import order in `__init__.py` - vendor paths must come before imports
+2. Verify `is_running_as_addon()` context detection works correctly
+3. Use `debug_import_context.py` to diagnose import issues
+
+### Animations Not Visible
+
+If animations appear to be missing:
+1. Check at scene level, not strip level: `bpy.context.scene.animation_data.action`
+2. Look for FCurves with `sequence_editor` in data_path
+3. Use `check_blender_animations.py` to get detailed keyframe analysis
+4. Verify audio analysis file exists and contains events
 
 ## Environment Requirements
 
-- **Blender 4.3+**: Must be available via `snap run blender` or custom executable
+- **Blender 4.5+**: Must be available via `snap run blender` or custom executable
 - **FFmpeg**: Required for video processing (inherited from obsession)
 - **Audio analysis**: Auto-generated via beatrix integration
+- **PyYAML**: Included in `vendor/` directory for addon compatibility
+- **Python 3.11+**: Required for Blender 4.5+ compatibility

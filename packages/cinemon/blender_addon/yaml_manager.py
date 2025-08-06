@@ -7,12 +7,22 @@ from pathlib import Path
 import sys
 from typing import Any, Dict, List
 
-# Add vendor path for YAML
-vendor_path = Path(__file__).parent / "vendor"
-if str(vendor_path) not in sys.path:
-    sys.path.insert(0, str(vendor_path))
+# Import utilities for addon detection
+try:
+    from .import_utils import is_running_as_addon
+except ImportError:
+    from import_utils import is_running_as_addon
 
-import vendor.yaml as yaml
+# Import YAML with context detection
+if is_running_as_addon():
+    # Running as Blender addon - vendor path is already in sys.path from __init__.py
+    import yaml
+else:
+    # Running standalone/tests - need to add vendor path manually
+    vendor_path = Path(__file__).parent / "vendor"
+    if str(vendor_path) not in sys.path:
+        sys.path.insert(0, str(vendor_path))
+    import yaml
 
 try:
     import bpy
