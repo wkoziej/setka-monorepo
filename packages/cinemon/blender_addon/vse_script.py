@@ -148,7 +148,7 @@ class BlenderVSEConfigurator:
         if strip_animations:
             print("🎭 Applying compositional animations...")
             sequencer = bpy.context.scene.sequence_editor
-            animation_success = self._apply_compositional_animations(sequencer)
+            animation_success = self._apply_layout_and_animations_from_config(sequencer)
             if not animation_success:
                 print(
                     "⚠ Animacje nie zostały zastosowane, ale projekt został utworzony"
@@ -200,9 +200,60 @@ class BlenderVSEConfigurator:
         print("=== Konfiguracja projektu VSE zakończona sukcesem ===")
         return True
 
-    def _apply_compositional_animations(self, sequencer) -> bool:
+    def apply_to_existing_project(self) -> bool:
         """
-        Apply compositional animations to video strips using YAML configuration.
+        Apply layout and animations to existing VSE project (for UI usage).
+        Does NOT recreate the project structure.
+
+        Returns:
+            bool: True if successfully applied
+        """
+        print("=== Applying changes to existing VSE project ===")
+
+        # Check if sequence editor exists
+        if not bpy.context.scene.sequence_editor:
+            print("✗ No sequence editor found in current scene")
+            return False
+
+        sequencer = bpy.context.scene.sequence_editor
+
+        # Check for existing strips
+        if not sequencer.sequences:
+            print("✗ No sequences found in the project")
+            return False
+
+        # Clear existing animations before applying new ones
+        try:
+            if (
+                bpy.context.scene.animation_data
+                and bpy.context.scene.animation_data.action
+            ):
+                action = bpy.context.scene.animation_data.action
+                fcurves_to_remove = [
+                    fc for fc in action.fcurves if "sequence_editor" in fc.data_path
+                ]
+                for fc in fcurves_to_remove:
+                    action.fcurves.remove(fc)
+                print(f"✓ Cleared {len(fcurves_to_remove)} existing animation curves")
+        except Exception as e:
+            print(f"⚠ Warning: Could not clear existing animations: {e}")
+
+        # Apply layout and animations
+        success = self._apply_layout_and_animations_from_config(sequencer)
+
+        if success:
+            print("✓ Changes applied to existing project successfully")
+            try:
+                bpy.ops.wm.save_mainfile()
+                print("✓ Project saved")
+            except Exception as e:
+                print(f"⚠ Warning: Could not save project: {e}")
+
+        return success
+
+    def _apply_layout_and_animations_from_config(self, sequencer) -> bool:
+        """
+        Load configuration and apply both layout and animations to video strips.
 
         Args:
             sequencer: Blender sequence editor

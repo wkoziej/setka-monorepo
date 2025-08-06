@@ -172,21 +172,32 @@ class ApplyConfigOperator(Operator):
             # Create configurator with config file path (not object)
             configurator = BlenderVSEConfigurator(config_path)
 
-            # Apply configuration
-            success = configurator.setup_vse_project()
+            # Apply to existing project (not setup from scratch)
+            success = configurator.apply_to_existing_project()
 
             if success:
-                self.report(
-                    {"INFO"},
-                    f"VSE project created successfully from {Path(config_path).name}",
-                )
+                try:
+                    self.report(
+                        {"INFO"},
+                        f"Changes applied successfully from {Path(config_path).name}",
+                    )
+                except:
+                    print(
+                        f"✓ Changes applied successfully from {Path(config_path).name}"
+                    )
                 return {"FINISHED"}
             else:
-                self.report({"ERROR"}, "Failed to setup VSE project")
+                try:
+                    self.report({"ERROR"}, "Failed to apply changes to VSE project")
+                except:
+                    print("✗ Failed to apply changes to VSE project")
                 return {"CANCELLED"}
 
         except Exception as e:
-            self.report({"ERROR"}, f"Error applying configuration: {e}")
+            try:
+                self.report({"ERROR"}, f"Error applying configuration: {e}")
+            except:
+                print(f"✗ Error applying configuration: {e}")
             return {"CANCELLED"}
 
 

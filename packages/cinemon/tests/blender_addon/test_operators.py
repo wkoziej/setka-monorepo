@@ -255,8 +255,8 @@ class TestApplyConfigOperator:
                     str(fixtures_path / "presets" / "test_minimal.yaml")
                 )
 
-                # Should call setup_vse_project
-                mock_configurator.setup_vse_project.assert_called_once()
+                # Should call apply_to_existing_project
+                mock_configurator.apply_to_existing_project.assert_called_once()
 
                 # Should return FINISHED
                 assert result == {"FINISHED"}
@@ -298,7 +298,9 @@ class TestApplyConfigOperator:
             # Mock the entire vse_script module
             mock_vse_script = Mock()
             mock_configurator = Mock()
-            mock_configurator.setup_vse_project.return_value = False  # Setup fails
+            mock_configurator.apply_to_existing_project.return_value = (
+                False  # Apply fails
+            )
             mock_vse_script.BlenderVSEConfigurator.return_value = mock_configurator
 
             with patch.dict("sys.modules", {"vse_script": mock_vse_script}):
