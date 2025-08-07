@@ -296,7 +296,7 @@ class CINEMON_OT_edit_animation_param(Operator):
             self.report({"INFO"}, f"Updated {self.param_name} to {self.new_value}")
 
             # Trigger reapplication of animations
-            bpy.ops.cinemon.reapply_animations_from_yaml()
+            bpy.ops.cinemon.apply_config()
         else:
             self.report({"ERROR"}, "Failed to update parameter")
 

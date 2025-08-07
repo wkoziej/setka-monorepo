@@ -69,6 +69,15 @@ class AnimationFactory:
         for param_name, default_value in default_params.items():
             params[param_name] = animation_spec.get(param_name, default_value)
 
+        # Handle parameter aliases for rotation animation
+        if animation_type == "rotation":
+            # Support both 'degrees' (from YAML) and 'wobble_degrees' (internal)
+            if "degrees" in animation_spec and "wobble_degrees" not in animation_spec:
+                params["wobble_degrees"] = animation_spec["degrees"]
+                print(
+                    f"🔄 Mapping 'degrees' ({animation_spec['degrees']}) to 'wobble_degrees' for rotation animation"
+                )
+
         # Handle common parameters
         params["trigger"] = animation_spec.get("trigger")
         params["target_strips"] = animation_spec.get("target_strips", [])
