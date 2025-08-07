@@ -1,21 +1,23 @@
 # ABOUTME: ScaleAnimation implementation - animates strip scale based on audio events
-# ABOUTME: Supports customizable intensity, duration, and easing for smooth scale transitions
+# ABOUTME: Refactored to use EventDrivenAnimation base class for cleaner code
 
-"""Scale animation for VSE strips."""
+"""Scale animation for VSE strips using EventDrivenAnimation base."""
 
-from typing import List, Optional
+from typing import List, Optional, Any
 
-from .base_effect_animation import BaseEffectAnimation
+from .event_driven_animation import EventDrivenAnimation
 
 
-class ScaleAnimation(BaseEffectAnimation):
+class ScaleAnimation(EventDrivenAnimation):
     """
     Animation that scales strips based on audio events.
+
+    Now uses EventDrivenAnimation base class to eliminate code duplication.
 
     Attributes:
         trigger: Event type to react to ("bass", "beat", "energy_peaks")
         intensity: Scale increase factor (0.3 = 30% larger)
-        duration_frames: How many frames the scale effect lasts
+        duration_frames: How many frames the scale effect lasts (renamed from return_frames)
         easing: Easing type (currently only "linear" supported)
     """
 
@@ -37,64 +39,49 @@ class ScaleAnimation(BaseEffectAnimation):
             easing: Type of easing (future feature)
             target_strips: List of strip names to target (None = all strips)
         """
-        super().__init__(target_strips=target_strips)
-        self.trigger = trigger
-        self.intensity = intensity
-        self.duration_frames = duration_frames
-        self.easing = easing
-
-    def apply_to_strip(self, strip, events: List[float], fps: int, **kwargs) -> bool:
-        """
-        Apply scale animation to strip based on events.
-
-        Args:
-            strip: Blender video strip object
-            events: List of event times in seconds
-            fps: Frames per second
-            **kwargs: Additional parameters (unused)
-
-        Returns:
-            True if animation was applied successfully
-        """
-        print(f"🎵 ScaleAnimation.apply_to_strip: strip={strip.name}, events={len(events)}, fps={fps}")
-        
-        if not hasattr(strip, "transform"):
-            print(f"🎵 Strip {strip.name} has no transform property")
-            return False
-
-        # Get base scale
-        base_scale_x = strip.transform.scale_x
-        base_scale_y = strip.transform.scale_y
-
-        # Set initial keyframe at frame 1
-        self.keyframe_helper.insert_transform_scale_keyframes(
-            strip.name, 1, base_scale_x, base_scale_y
+        # Pass duration_frames as return_frames to base class
+        super().__init__(
+            trigger=trigger,
+            intensity=intensity,
+            return_frames=duration_frames,
+            target_strips=target_strips,
+            easing=easing,  # Store for potential future use
         )
 
-        # Apply scale animation for each event
-        for event_time in events:
-            frame = int(event_time * fps)
+    def get_animated_property(self, strip) -> List:
+        """
+        Get scale properties to animate.
 
-            # Scale up by intensity factor
-            scale_factor = 1.0 + self.intensity
-            new_scale_x = base_scale_x * scale_factor
-            new_scale_y = base_scale_y * scale_factor
+        Args:
+            strip: Blender strip object
 
-            strip.transform.scale_x = new_scale_x
-            strip.transform.scale_y = new_scale_y
-            self.keyframe_helper.insert_transform_scale_keyframes(
-                strip.name, frame, new_scale_x, new_scale_y
-            )
+        Returns:
+            List of (property_path, base_value) tuples for scale_x and scale_y
+        """
+        if not hasattr(strip, "transform"):
+            print(f"🎵 Strip {strip.name} has no transform property")
+            return []
 
-            # Return to base scale after duration_frames
-            return_frame = frame + self.duration_frames
-            strip.transform.scale_x = base_scale_x
-            strip.transform.scale_y = base_scale_y
-            self.keyframe_helper.insert_transform_scale_keyframes(
-                strip.name, return_frame, base_scale_x, base_scale_y
-            )
+        # Return both scale_x and scale_y for uniform scaling
+        return [
+            ("transform.scale_x", strip.transform.scale_x),
+            ("transform.scale_y", strip.transform.scale_y),
+        ]
 
-        return True
+    def calculate_effect_value(self, base_value: float, prop_path: str, strip) -> float:
+        """
+        Calculate scaled value.
+
+        Args:
+            base_value: Base scale value
+            prop_path: Property path being animated
+            strip: Blender strip object (unused)
+
+        Returns:
+            Scaled value
+        """
+        # Scale up by intensity factor
+        return base_value * (1.0 + self.intensity)
 
     def get_required_properties(self) -> List[str]:
         """

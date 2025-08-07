@@ -1,23 +1,24 @@
 # ABOUTME: BrightnessFlickerAnimation implementation - creates brightness flicker effect
-# ABOUTME: Refactored from VintageFilmEffects with event-based flickering for vintage film look
+# ABOUTME: Refactored to use EventDrivenAnimation base class for cleaner code
 
-"""Brightness flicker animation for VSE strips."""
+"""Brightness flicker animation for VSE strips using EventDrivenAnimation base."""
 
 import random
-from typing import List, Optional
+from typing import List, Optional, Any
 
-from .base_effect_animation import BaseEffectAnimation
+from .event_driven_animation import EventDrivenAnimation
 
 
-class BrightnessFlickerAnimation(BaseEffectAnimation):
+class BrightnessFlickerAnimation(EventDrivenAnimation):
     """
     Animation that creates brightness flicker effect on strips.
 
-    Refactored from VintageFilmEffects.apply_brightness_flicker with enhanced options.
+    Now uses EventDrivenAnimation base class to eliminate code duplication.
+    Animates both brightness (color_multiply) and saturation for dramatic effect.
 
     Attributes:
         trigger: Event type to react to ("beat", "bass", "energy_peaks")
-        intensity: Flicker intensity (0.0 to 1.0, how much dimmer)
+        intensity: Flicker intensity (0.0 to 1.0, how much dimmer/brighter)
         return_frames: How many frames until return to normal brightness
     """
 
@@ -33,81 +34,86 @@ class BrightnessFlickerAnimation(BaseEffectAnimation):
 
         Args:
             trigger: Event type to trigger animation
-            intensity: Maximum brightness reduction (0.0 to 1.0)
+            intensity: Maximum brightness change (0.0 to 1.0)
             return_frames: Frames until brightness returns to normal
             target_strips: List of strip names to target (None = all strips)
         """
-        super().__init__(target_strips=target_strips)
-        self.trigger = trigger
-        self.intensity = intensity
-        self.return_frames = return_frames
+        super().__init__(
+            trigger=trigger,
+            intensity=intensity,
+            return_frames=return_frames,
+            target_strips=target_strips,
+        )
 
-    def apply_to_strip(self, strip, events: List[float], fps: int, **kwargs) -> bool:
+    def get_animated_property(self, strip) -> List:
         """
-        Apply brightness flicker animation to strip based on events.
-        Now animates both brightness (color_multiply) and saturation for more dramatic effect.
+        Get brightness and saturation properties to animate.
 
         Args:
-            strip: Blender video strip object
-            events: List of event times in seconds
-            fps: Frames per second
-            **kwargs: Additional parameters (unused)
+            strip: Blender strip object
 
         Returns:
-            True if animation was applied successfully
+            List of (property_path, base_value) tuples for color properties
         """
-        # Set initial brightness and saturation keyframes
-        strip.color_multiply = 1.0
-        strip.color_saturation = 1.0
-        self.keyframe_helper.insert_color_multiply_keyframe(strip.name, 1, 1.0)
-        self.keyframe_helper.insert_color_saturation_keyframe(strip.name, 1, 1.0)
+        # Check for required properties
+        if not hasattr(strip, "color_multiply") or not hasattr(
+            strip, "color_saturation"
+        ):
+            return []
 
-        # Apply flicker for each event
-        for event_time in events:
-            frame = int(event_time * fps)
+        # Return both color_multiply and color_saturation for flicker effect
+        return [
+            ("color_multiply", 1.0),  # Base brightness is 1.0
+            ("color_saturation", 1.0),  # Base saturation is 1.0
+        ]
 
-            # Determine if we're brightening or darkening (50/50 chance)
-            brighten = random.random() > 0.5
+    def calculate_effect_value(self, base_value: float, prop_path: str, strip) -> float:
+        """
+        Calculate flicker value for brightness or saturation.
 
-            if brighten:
-                # Brighten: increase multiply based on intensity (no limit)
-                flicker_brightness = 1.0 + random.uniform(0, self.intensity)
-                flicker_saturation = 1.0 + random.uniform(
-                    0, self.intensity
-                )  # Saturation boost proportional to intensity
+        Args:
+            base_value: Base value (always 1.0 for both properties)
+            prop_path: Property path being animated
+            strip: Blender strip object (unused)
+
+        Returns:
+            Flickered value for the property
+        """
+        # Determine if we're brightening or darkening (50/50 chance)
+        # Use consistent random for both properties in same frame
+        if not hasattr(self, "_current_brighten"):
+            self._current_brighten = random.random() > 0.5
+            self._flicker_calculated = False
+
+        # Calculate flicker values once per event
+        if not self._flicker_calculated:
+            if self._current_brighten:
+                # Brighten: increase values based on intensity
+                self._brightness_value = 1.0 + random.uniform(0, self.intensity)
+                self._saturation_value = 1.0 + random.uniform(0, self.intensity)
             else:
-                # Darken: decrease multiply and reduce saturation
-                # For darkening, we still need some limit to avoid negative values
+                # Darken: decrease values
                 darken_amount = min(
                     self.intensity, 1.0 / 0.7
                 )  # Max darken to near-black
-                flicker_brightness = 1.0 - random.uniform(0, darken_amount * 0.7)
-                flicker_saturation = 1.0 - random.uniform(
+                self._brightness_value = 1.0 - random.uniform(0, darken_amount * 0.7)
+                self._saturation_value = 1.0 - random.uniform(
                     0, min(self.intensity, 1.0)
-                )  # Desaturate, but cap at 0
+                )
+            self._flicker_calculated = True
 
-            # Apply flicker at event frame
-            strip.color_multiply = flicker_brightness
-            strip.color_saturation = flicker_saturation
-            self.keyframe_helper.insert_color_multiply_keyframe(
-                strip.name, frame, flicker_brightness
-            )
-            self.keyframe_helper.insert_color_saturation_keyframe(
-                strip.name, frame, flicker_saturation
-            )
+        # Return appropriate value based on property
+        if "color_multiply" in prop_path:
+            value = self._brightness_value
+        else:  # color_saturation
+            value = self._saturation_value
 
-            # Return to normal brightness and saturation
-            return_frame = frame + self.return_frames
-            strip.color_multiply = 1.0
-            strip.color_saturation = 1.0
-            self.keyframe_helper.insert_color_multiply_keyframe(
-                strip.name, return_frame, 1.0
-            )
-            self.keyframe_helper.insert_color_saturation_keyframe(
-                strip.name, return_frame, 1.0
-            )
+        # Reset flags after both properties are calculated
+        if "color_saturation" in prop_path:
+            self._current_brighten = None
+            self._flicker_calculated = False
 
-        return True
+        return value
 
     def get_required_properties(self) -> List[str]:
         """

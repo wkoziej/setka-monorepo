@@ -29,7 +29,7 @@ class TestAnimationFactory:
         assert isinstance(animation, ScaleAnimation)
         assert animation.trigger == "bass"
         assert animation.intensity == 0.5
-        assert animation.duration_frames == 4
+        assert animation.return_frames == 4  # ScaleAnimation now uses return_frames
         assert animation.target_strips == ["Camera1", "Camera2"]
 
     def test_create_animation_with_defaults(self):
