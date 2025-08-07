@@ -67,22 +67,34 @@ class AnimationCompositor:
             self._apply_layout(video_strips, positions)
 
             # 3. Apply animations independently with strip targeting
-            print(f"🎬 Starting animation loop: {len(self.animations)} animations, {len(video_strips)} strips")
+            print(
+                f"🎬 Starting animation loop: {len(self.animations)} animations, {len(video_strips)} strips"
+            )
             for animation in self.animations:
                 events = self._extract_events(audio_analysis, animation.trigger)
-                print(f"🎬 Animation {animation.__class__.__name__} trigger={animation.trigger}: found {len(events) if events else 0} events")
+                print(
+                    f"🎬 Animation {animation.__class__.__name__} trigger={animation.trigger}: found {len(events) if events else 0} events"
+                )
                 if events:  # Only apply if events exist
                     for strip_index, strip in enumerate(video_strips):
-                        print(f"🎬 Checking strip {strip.name} for animation {animation.__class__.__name__}")
+                        print(
+                            f"🎬 Checking strip {strip.name} for animation {animation.__class__.__name__}"
+                        )
                         if animation.should_apply_to_strip(strip):
-                            print(f"🎬 APPLYING animation {animation.__class__.__name__} to strip {strip.name} with {len(events)} events")
+                            print(
+                                f"🎬 APPLYING animation {animation.__class__.__name__} to strip {strip.name} with {len(events)} events"
+                            )
                             animation.apply_to_strip(
                                 strip, events, fps, strip_index=strip_index
                             )
                         else:
-                            print(f"🎬 SKIPPING animation {animation.__class__.__name__} for strip {strip.name}")
+                            print(
+                                f"🎬 SKIPPING animation {animation.__class__.__name__} for strip {strip.name}"
+                            )
                 else:
-                    print(f"🎬 NO EVENTS for animation {animation.__class__.__name__} trigger={animation.trigger}")
+                    print(
+                        f"🎬 NO EVENTS for animation {animation.__class__.__name__} trigger={animation.trigger}"
+                    )
 
             return True
 
@@ -139,6 +151,15 @@ class AnimationCompositor:
         Returns:
             List of event times or event objects
         """
+        # Special triggers that don't need real events
+        if trigger == "continuous":
+            print(f"🎧 _extract_events: trigger='continuous' -> returning dummy event")
+            return ["continuous"]  # Dummy event for continuous animations
+        elif trigger == "one_time":
+            print(f"🎧 _extract_events: trigger='one_time' -> returning dummy event")
+            return ["one_time"]  # Dummy event for one-time effects
+
+        # Audio-based triggers need real events
         events = audio_analysis.get("animation_events", {})
 
         # Map triggers to event keys
@@ -151,6 +172,8 @@ class AnimationCompositor:
 
         event_key = trigger_map.get(trigger, trigger)
         result = events.get(event_key, [])
-        print(f"🎧 _extract_events: trigger='{trigger}' -> event_key='{event_key}' -> {len(result)} events")
+        print(
+            f"🎧 _extract_events: trigger='{trigger}' -> event_key='{event_key}' -> {len(result)} events"
+        )
         print(f"🎧 Available events keys: {list(events.keys())}")
         return result

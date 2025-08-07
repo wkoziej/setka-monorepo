@@ -191,35 +191,32 @@ strip_animations:
       intensity: 0.3
 
   strip_4.mp4:
-    - type: scale
-      trigger: energy_peaks
-      intensity: 0.4
-      duration_frames: 8
+    - type: jitter
+      trigger: continuous
+      intensity: 2.0
 
   strip_5.mp4:
-    - type: shake
-      trigger: energy_peaks
-      intensity: 6.0
+    - type: black_white
+      trigger: one_time
+      intensity: 0.8
 
   strip_6.mp4:
-    - type: rotation
-      trigger: beat
-      degrees: 10.0
+    - type: film_grain
+      trigger: one_time
+      intensity: 0.2
 
   strip_7.mp4:
-    - type: scale
-      trigger: beat
-      intensity: 0.3
-      duration_frames: 4
+    - type: vintage_color
+      trigger: one_time
+      sepia_amount: 0.4
 
   strip_8.mp4:
-    - type: scale
-      trigger: bass
-      intensity: 0.3
-      duration_frames: 3
-    - type: shake
+    - type: visibility
       trigger: beat
-      intensity: 4.0
+      intensity: 1.0
+    - type: pip_switch
+      trigger: sections
+      intensity: 1.0
 """
 
     yaml_path = base_dir / "animation_showcase.yaml"
