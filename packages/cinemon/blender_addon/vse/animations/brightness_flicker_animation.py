@@ -70,19 +70,21 @@ class BrightnessFlickerAnimation(BaseEffectAnimation):
             brighten = random.random() > 0.5
 
             if brighten:
-                # Brighten: increase multiply (up to 1.5x) and slightly boost saturation
-                intensity_clamped = min(self.intensity, 0.5)  # Max 50% brighter
-                flicker_brightness = 1.0 + random.uniform(0, intensity_clamped)
+                # Brighten: increase multiply based on intensity (no limit)
+                flicker_brightness = 1.0 + random.uniform(0, self.intensity)
                 flicker_saturation = 1.0 + random.uniform(
-                    0, intensity_clamped * 0.3
-                )  # Subtle saturation boost
+                    0, self.intensity
+                )  # Saturation boost proportional to intensity
             else:
                 # Darken: decrease multiply and reduce saturation
-                intensity_clamped = min(self.intensity, 1.0)
-                flicker_brightness = 1.0 - random.uniform(0, intensity_clamped * 0.7)
+                # For darkening, we still need some limit to avoid negative values
+                darken_amount = min(
+                    self.intensity, 1.0 / 0.7
+                )  # Max darken to near-black
+                flicker_brightness = 1.0 - random.uniform(0, darken_amount * 0.7)
                 flicker_saturation = 1.0 - random.uniform(
-                    0, intensity_clamped * 0.5
-                )  # Desaturate when dark
+                    0, min(self.intensity, 1.0)
+                )  # Desaturate, but cap at 0
 
             # Apply flicker at event frame
             strip.color_multiply = flicker_brightness
