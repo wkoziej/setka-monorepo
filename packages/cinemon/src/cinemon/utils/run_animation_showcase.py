@@ -220,6 +220,7 @@ strip_animations:
     - type: rotation
       trigger: energy_peaks
       degrees: 15.0
+      duration_frames: 4
 
   strip_3.mp4:
     - type: brightness_flicker
@@ -236,7 +237,7 @@ strip_animations:
     - type: black_white
       trigger: beat
       intensity: 0.9
-      return_frames: 2
+      duration_frames: 2
 
   strip_6.mp4:
     # VINTAGE_COLOR - pulsing sepia on bass
@@ -244,12 +245,12 @@ strip_animations:
       trigger: bass
       sepia_amount: 0.7
       animate_property: sepia
-      return_frames: 3
+      duration_frames: 3
     # Add shake for dynamic effect
     - type: shake
       trigger: bass
       intensity: 3.0
-      return_frames: 3
+      duration_frames: 3
 
   strip_7.mp4:
     # VINTAGE_COLOR - pulsing on energy peaks
@@ -257,12 +258,12 @@ strip_animations:
       trigger: energy_peaks
       sepia_amount: 0.6
       animate_property: sepia
-      return_frames: 8
+      duration_frames: 8
     # Add rotation for vintage feel
     - type: rotation
       trigger: energy_peaks
       degrees: 1.0
-      return_frames: 8
+      duration_frames: 8
 
   strip_8.mp4:
     # VISIBILITY - pulse pattern on beat

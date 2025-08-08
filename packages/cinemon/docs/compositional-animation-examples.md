@@ -250,7 +250,7 @@ layout = RandomLayout(overlap_allowed=False, seed=42, margin=0.1)
 # Create animations
 animations = [
     ScaleAnimation(trigger="bass", intensity=0.3, duration_frames=2),
-    ShakeAnimation(trigger="beat", intensity=10.0, return_frames=2)
+    ShakeAnimation(trigger="beat", intensity=10.0, duration_frames=2)
 ]
 
 # Create compositor

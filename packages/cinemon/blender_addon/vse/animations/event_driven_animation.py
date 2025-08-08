@@ -20,7 +20,7 @@ class EventDrivenAnimation(BaseEffectAnimation):
     Attributes:
         trigger: Event type to react to ("beat", "bass", "energy_peaks")
         intensity: Effect intensity (meaning varies by animation type)
-        return_frames: Frames until return to base value
+        duration_frames: Frames until return to base value
         target_strips: Optional list of strip names to target
     """
 

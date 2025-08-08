@@ -52,7 +52,7 @@ class VintageFilmEffects:
 
         # Configure shake animation with specified intensity
         self.shake_animation.intensity = intensity
-        self.shake_animation.return_frames = 2
+        self.shake_animation.duration_frames = 2
         self.shake_animation.random_direction = True
 
         # Delegate to ShakeAnimation
@@ -106,7 +106,7 @@ class VintageFilmEffects:
 
         # Configure brightness flicker animation with specified intensity
         self.brightness_flicker_animation.intensity = flicker_amount
-        self.brightness_flicker_animation.return_frames = 1
+        self.brightness_flicker_animation.duration_frames = 1
 
         # Delegate to BrightnessFlickerAnimation
         return self.brightness_flicker_animation.apply_to_strip(strip, beats, fps)
@@ -130,7 +130,7 @@ class VintageFilmEffects:
 
         # Configure rotation wobble animation with specified parameters
         self.rotation_wobble_animation.wobble_degrees = wobble_degrees
-        self.rotation_wobble_animation.return_frames = 3
+        self.rotation_wobble_animation.duration_frames = 3
         self.rotation_wobble_animation.oscillate = (
             False  # Original VintageFilmEffects behavior
         )

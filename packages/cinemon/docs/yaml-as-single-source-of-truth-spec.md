@@ -307,15 +307,15 @@ class CINEMON_PT_active_strip_animations(Panel):
                 duration_op.current_value = animation['duration_frames']
 
             # Type-specific parameters
-            if anim_type == "shake" and "return_frames" in animation:
+            if anim_type == "shake" and "duration_frames" in animation:
                 row = layout.row()
                 row.label(text="Return:")
                 return_op = row.operator("cinemon.edit_animation_param",
-                                       text=f"{animation['return_frames']:.0f}f")
+                                       text=f"{animation['duration_frames']:.0f}f")
                 return_op.strip_name = strip_name
                 return_op.animation_index = index
-                return_op.param_name = "return_frames"
-                return_op.current_value = animation['return_frames']
+                return_op.param_name = "duration_frames"
+                return_op.current_value = animation['duration_frames']
 
             elif anim_type == "rotation" and "degrees" in animation:
                 row = layout.row()

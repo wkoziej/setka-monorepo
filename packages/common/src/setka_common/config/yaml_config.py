@@ -87,7 +87,6 @@ class AnimationSpec(TypedDict):
     # Optional parameters (use NotRequired for backward compatibility)
     intensity: NotRequired[float]
     duration_frames: NotRequired[int]
-    return_frames: NotRequired[int]
     degrees: NotRequired[float]
     sepia_amount: NotRequired[float]
     contrast_boost: NotRequired[float]
@@ -184,7 +183,7 @@ class YAMLConfigLoader:
 
     def __init__(self, resolve_paths: bool = True):
         """Initialize loader with optional path resolution.
-        
+
         Args:
             resolve_paths: If True, resolve relative paths using base_directory
         """
@@ -244,11 +243,11 @@ class YAMLConfigLoader:
             with open(path, "r", encoding="utf-8") as f:
                 content = f.read()
             config = self.load_from_string(content)
-            
+
             # Resolve relative paths using base_directory (only if enabled and base_directory exists)
             if self.resolve_paths and config.project.base_directory:
                 config = self._resolve_relative_paths(config)
-            
+
             return config
         except Exception as e:
             raise ConfigValidationError(f"Error reading file {file_path}: {e}")
@@ -327,11 +326,11 @@ class YAMLConfigLoader:
         It delegates to load_from_file for consistency.
         """
         config = self.load_from_file(config_path)
-        
+
         # Resolve relative paths using base_directory (only if enabled and base_directory exists)
         if self.resolve_paths and config.project.base_directory:
             config = self._resolve_relative_paths(config)
-        
+
         return config
 
     def _parse_project_config(self, data: Dict[str, Any]) -> ProjectConfig:
@@ -437,19 +436,19 @@ class YAMLConfigLoader:
                     )
 
         return len(errors) == 0, errors
-    
+
     def _resolve_relative_paths(self, config: BlenderYAMLConfig) -> BlenderYAMLConfig:
         """Resolve relative paths using base_directory.
-        
+
         Args:
             config: Configuration with potential relative paths
-            
+
         Returns:
             Configuration with resolved absolute paths
         """
         base_path = Path(config.project.base_directory)
         extracted_dir = base_path / "extracted"
-        
+
         # Resolve video files to absolute paths
         resolved_video_files = []
         for video_file in config.project.video_files:
@@ -457,7 +456,7 @@ class YAMLConfigLoader:
                 resolved_video_files.append(video_file)
             else:
                 resolved_video_files.append(str(extracted_dir / video_file))
-        
+
         # Resolve main audio
         resolved_main_audio = None
         if config.project.main_audio:
@@ -465,7 +464,7 @@ class YAMLConfigLoader:
                 resolved_main_audio = config.project.main_audio
             else:
                 resolved_main_audio = str(extracted_dir / config.project.main_audio)
-        
+
         # Resolve analysis file
         resolved_analysis_file = None
         if config.audio_analysis.file:
@@ -473,7 +472,7 @@ class YAMLConfigLoader:
                 resolved_analysis_file = config.audio_analysis.file
             else:
                 resolved_analysis_file = str(base_path / config.audio_analysis.file)
-        
+
         # Resolve output_blend
         resolved_output_blend = None
         if config.project.output_blend:
@@ -481,7 +480,7 @@ class YAMLConfigLoader:
                 resolved_output_blend = config.project.output_blend
             else:
                 resolved_output_blend = str(base_path / config.project.output_blend)
-        
+
         # Create new config with resolved paths
         return BlenderYAMLConfig(
             project=ProjectConfig(
@@ -503,22 +502,22 @@ class YAMLConfigLoader:
             layout=config.layout,
             strip_animations=config.strip_animations,
         )
-    
+
     def _validate_for_blender_execution(self, config: BlenderYAMLConfig):
         """Validate config is ready for Blender execution.
-        
+
         Args:
             config: Configuration to validate
-            
+
         Raises:
             ConfigValidationError: If validation fails
         """
         if not config.project.base_directory:
             raise ConfigValidationError("base_directory required for Blender execution")
-        
+
         if not config.project.video_files:
             raise ConfigValidationError("video_files required for Blender execution")
-        
+
         base_dir = Path(config.project.base_directory)
         if not base_dir.exists():
             raise ConfigValidationError(f"Base directory does not exist: {base_dir}")

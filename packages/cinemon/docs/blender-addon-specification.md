@@ -52,7 +52,7 @@ strip_animations:
     - type: "shake"
       trigger: "energy_peaks"
       intensity: 2.0
-      return_frames: 2
+      duration_frames: 2
 
   Camera2:
     - type: "vintage_color"
