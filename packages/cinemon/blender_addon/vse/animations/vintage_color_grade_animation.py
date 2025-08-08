@@ -22,7 +22,7 @@ class VintageColorGradeAnimation(EventDrivenAnimation):
         trigger: Event type ("one_time", "beat", "bass", "energy_peaks")
         sepia_amount: Sepia tint intensity (0.0 to 1.0)
         contrast_boost: Contrast boost amount (0.0 to 1.0)
-        return_frames: Frames to return to base (event-driven only)
+        duration_frames: Frames to return to base (event-driven only)
         animate_property: What to animate ("sepia", "contrast", "both")
     """
 
@@ -31,7 +31,7 @@ class VintageColorGradeAnimation(EventDrivenAnimation):
         trigger: str = "one_time",
         sepia_amount: float = 0.3,
         contrast_boost: float = 0.2,
-        return_frames: int = 6,
+        duration_frames: int = 6,
         animate_property: str = "sepia",
         target_strips: Optional[List[str]] = None,
     ):
@@ -42,7 +42,7 @@ class VintageColorGradeAnimation(EventDrivenAnimation):
             trigger: Event type ("one_time" for static, or "beat"/"bass"/"energy_peaks" for animated)
             sepia_amount: Sepia tint intensity (0.0 to 1.0)
             contrast_boost: Contrast boost amount (0.0 to 1.0)
-            return_frames: Frames until return to base (event-driven only)
+            duration_frames: Frames until return to base (event-driven only)
             animate_property: What to animate - "sepia", "contrast", or "both"
             target_strips: List of strip names to target (None = all strips)
         """
@@ -52,7 +52,7 @@ class VintageColorGradeAnimation(EventDrivenAnimation):
         super().__init__(
             trigger=trigger,
             intensity=intensity,
-            return_frames=return_frames,
+            duration_frames=duration_frames,
             target_strips=target_strips,
         )
         self.sepia_amount = sepia_amount

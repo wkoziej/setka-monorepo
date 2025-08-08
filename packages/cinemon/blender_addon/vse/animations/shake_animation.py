@@ -18,7 +18,7 @@ class ShakeAnimation(EventDrivenAnimation):
     Attributes:
         trigger: Event type to react to ("beat", "bass", "energy_peaks")
         intensity: Shake intensity in pixels
-        return_frames: How many frames until return to base position
+        duration_frames: How many frames until return to base position
         random_direction: Whether shake direction is random or deterministic
     """
 
@@ -26,7 +26,7 @@ class ShakeAnimation(EventDrivenAnimation):
         self,
         trigger: str = "beat",
         intensity: float = 10.0,
-        return_frames: int = 2,
+        duration_frames: int = 2,
         random_direction: bool = True,
         target_strips: Optional[List[str]] = None,
     ):
@@ -36,14 +36,14 @@ class ShakeAnimation(EventDrivenAnimation):
         Args:
             trigger: Event type to trigger animation
             intensity: Maximum shake offset in pixels
-            return_frames: Frames until position returns to normal
+            duration_frames: Frames until position returns to normal
             random_direction: If True, shake randomly; if False, shake horizontally only
             target_strips: List of strip names to target (None = all strips)
         """
         super().__init__(
             trigger=trigger,
             intensity=intensity,
-            return_frames=return_frames,
+            duration_frames=duration_frames,
             target_strips=target_strips,
             random_direction=random_direction,  # Store in extra_params
         )

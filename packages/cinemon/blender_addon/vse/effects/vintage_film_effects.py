@@ -8,7 +8,6 @@ from typing import Dict, List
 from ..animations import (
     BlackWhiteAnimation,
     BrightnessFlickerAnimation,
-    FilmGrainAnimation,
     JitterAnimation,
     RotationWobbleAnimation,
     ShakeAnimation,
@@ -32,7 +31,6 @@ class VintageFilmEffects:
         self.brightness_flicker_animation = BrightnessFlickerAnimation()
         self.rotation_wobble_animation = RotationWobbleAnimation()
         self.black_white_animation = BlackWhiteAnimation()
-        self.film_grain_animation = FilmGrainAnimation()
         self.vintage_color_grade_animation = VintageColorGradeAnimation()
 
     def apply_camera_shake(
@@ -168,7 +166,6 @@ class VintageFilmEffects:
                 "brightness_flicker": {"enabled": True, "amount": 0.1},
                 "rotation_wobble": {"enabled": True, "degrees": 0.5},
                 "black_white": {"enabled": True, "intensity": 0.6},
-                "film_grain": {"enabled": True, "intensity": 0.15},
                 "vintage_grade": {"enabled": True, "sepia": 0.01, "contrast": 0.5},
             }
 
@@ -206,12 +203,6 @@ class VintageFilmEffects:
                 strip, effects_config["black_white"]["intensity"]
             )
 
-        # Apply film grain noise
-        if effects_config.get("film_grain", {}).get("enabled", False):
-            success &= self.apply_film_grain_noise(
-                strip, effects_config["film_grain"]["intensity"]
-            )
-
         # Apply vintage color grading
         if effects_config.get("vintage_grade", {}).get("enabled", False):
             success &= self.apply_vintage_color_grade(
@@ -245,25 +236,6 @@ class VintageFilmEffects:
 
         # Delegate to BlackWhiteAnimation
         return self.black_white_animation.apply_to_strip(strip, [], 0)
-
-    def apply_film_grain_noise(self, strip, noise_intensity: float = 0.1) -> bool:
-        """
-        Apply film grain noise effect.
-
-        Args:
-            strip: Blender video strip object
-            noise_intensity: Noise intensity (0.0 to 1.0)
-
-        Returns:
-            bool: True if effect was applied successfully
-        """
-        print(f"  Applying film grain to {strip.name} (intensity: {noise_intensity})")
-
-        # Configure film grain animation with specified intensity
-        self.film_grain_animation.intensity = noise_intensity
-
-        # Delegate to FilmGrainAnimation
-        return self.film_grain_animation.apply_to_strip(strip, [], 0)
 
     def apply_vintage_color_grade(
         self, strip, sepia_amount: float = 0.3, contrast_boost: float = 0.2

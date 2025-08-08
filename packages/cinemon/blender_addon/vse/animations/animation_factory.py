@@ -136,11 +136,11 @@ AnimationFactory.register(
 )
 
 AnimationFactory.register(
-    "shake", ShakeAnimation, {"intensity": 10.0, "return_frames": 2}
+    "shake", ShakeAnimation, {"intensity": 10.0, "duration_frames": 2}
 )
 
 AnimationFactory.register(
-    "rotation", RotationWobbleAnimation, {"wobble_degrees": 1.0, "return_frames": 3}
+    "rotation", RotationWobbleAnimation, {"wobble_degrees": 1.0, "duration_frames": 3}
 )
 
 AnimationFactory.register(
@@ -150,7 +150,7 @@ AnimationFactory.register(
 AnimationFactory.register(
     "brightness_flicker",
     BrightnessFlickerAnimation,
-    {"intensity": 0.15, "return_frames": 1},
+    {"intensity": 0.15, "duration_frames": 1},
 )
 
 AnimationFactory.register("black_white", BlackWhiteAnimation, {"intensity": 0.8})

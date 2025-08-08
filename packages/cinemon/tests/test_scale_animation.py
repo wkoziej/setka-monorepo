@@ -72,7 +72,7 @@ class TestScaleAnimation:
         assert len(calls) == 3
         assert calls[0][0][1] == 1  # initial frame
         assert calls[1][0][1] == 30  # effect frame
-        assert calls[2][0][1] == 32  # return frame (30 + 2 default return_frames)
+        assert calls[2][0][1] == 32  # return frame (30 + 2 default duration_frames)
 
     def test_scale_animation_without_transform(
         self, scale_animation, mock_strip_no_transform

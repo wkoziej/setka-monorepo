@@ -257,7 +257,6 @@ class AnimationYAMLManager:
             "jitter",
             "brightness_flicker",
             "black_white",
-            "film_grain",
             "vintage_color",
             "visibility",
         ]
@@ -273,13 +272,16 @@ class AnimationYAMLManager:
         # Default parameters by animation type
         defaults = {
             "scale": {"intensity": 0.3, "duration_frames": 3},
-            "shake": {"intensity": 2.0, "return_frames": 2},
+            "shake": {"intensity": 2.0, "duration_frames": 2},
             "rotation": {"degrees": 5.0, "duration_frames": 3},
             "jitter": {"intensity": 1.0},
-            "brightness_flicker": {"intensity": 0.1, "duration_frames": 2},
-            "black_white": {"intensity": 0.6},
-            "film_grain": {"intensity": 0.15},
-            "vintage_color": {"sepia_amount": 0.4, "contrast_boost": 0.2},
+            "brightness_flicker": {"intensity": 0.1, "duration_frames": 1},
+            "black_white": {"intensity": 0.6, "duration_frames": 2},
+            "vintage_color": {
+                "sepia_amount": 0.4,
+                "contrast_boost": 0.2,
+                "duration_frames": 6,
+            },
             "visibility": {"fade_duration": 5},
         }
 

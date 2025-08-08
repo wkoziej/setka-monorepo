@@ -19,14 +19,14 @@ class BrightnessFlickerAnimation(EventDrivenAnimation):
     Attributes:
         trigger: Event type to react to ("beat", "bass", "energy_peaks")
         intensity: Flicker intensity (0.0 to 1.0, how much dimmer/brighter)
-        return_frames: How many frames until return to normal brightness
+        duration_frames: How many frames until return to normal brightness
     """
 
     def __init__(
         self,
         trigger: str = "beat",
         intensity: float = 0.15,
-        return_frames: int = 1,
+        duration_frames: int = 1,
         target_strips: Optional[List[str]] = None,
     ):
         """
@@ -35,13 +35,13 @@ class BrightnessFlickerAnimation(EventDrivenAnimation):
         Args:
             trigger: Event type to trigger animation
             intensity: Maximum brightness change (0.0 to 1.0)
-            return_frames: Frames until brightness returns to normal
+            duration_frames: Frames until brightness returns to normal
             target_strips: List of strip names to target (None = all strips)
         """
         super().__init__(
             trigger=trigger,
             intensity=intensity,
-            return_frames=return_frames,
+            duration_frames=duration_frames,
             target_strips=target_strips,
         )
 

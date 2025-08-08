@@ -28,7 +28,7 @@ strip_animations:
     - type: "shake"
       trigger: "energy_peaks"
       intensity: 1.0
-      return_frames: 2
+      duration_frames: 2
 
 audio_analysis:
   file: "./analysis/main_audio_analysis.json"

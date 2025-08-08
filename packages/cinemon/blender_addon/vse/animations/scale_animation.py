@@ -17,7 +17,7 @@ class ScaleAnimation(EventDrivenAnimation):
     Attributes:
         trigger: Event type to react to ("bass", "beat", "energy_peaks")
         intensity: Scale increase factor (0.3 = 30% larger)
-        duration_frames: How many frames the scale effect lasts (renamed from return_frames)
+        duration_frames: How many frames the scale effect lasts
         easing: Easing type (currently only "linear" supported)
     """
 
@@ -39,11 +39,11 @@ class ScaleAnimation(EventDrivenAnimation):
             easing: Type of easing (future feature)
             target_strips: List of strip names to target (None = all strips)
         """
-        # Pass duration_frames as return_frames to base class
+        # Pass duration_frames to base class
         super().__init__(
             trigger=trigger,
             intensity=intensity,
-            return_frames=duration_frames,
+            duration_frames=duration_frames,
             target_strips=target_strips,
             easing=easing,  # Store for potential future use
         )

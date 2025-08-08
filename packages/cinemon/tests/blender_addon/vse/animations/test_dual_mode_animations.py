@@ -1,5 +1,5 @@
 # ABOUTME: Test suite for dual-mode animations (static one_time and event-driven)
-# ABOUTME: Validates BlackWhiteAnimation, FilmGrainAnimation, VintageColorGradeAnimation
+# ABOUTME: Validates BlackWhiteAnimation, VintageColorGradeAnimation
 
 """Test suite for dual-mode animations supporting one_time and event-driven triggers."""
 
@@ -36,7 +36,9 @@ class TestBlackWhiteAnimation:
         from vse.keyframe_helper import KeyframeHelper
 
         # Create animation in event-driven mode
-        animation = BlackWhiteAnimation(trigger="beat", intensity=0.9, return_frames=2)
+        animation = BlackWhiteAnimation(
+            trigger="beat", intensity=0.9, duration_frames=2
+        )
         animation.keyframe_helper = KeyframeHelper()
 
         # Create mock strip with property tracking
@@ -153,7 +155,7 @@ class TestVintageColorGradeAnimation:
             trigger="sections",
             sepia_amount=0.6,
             animate_property="sepia",
-            return_frames=10,
+            duration_frames=10,
         )
         animation.keyframe_helper = KeyframeHelper()
 
@@ -198,7 +200,7 @@ class TestVintageColorGradeAnimation:
             trigger="beat",
             contrast_boost=0.3,
             animate_property="contrast",
-            return_frames=3,
+            duration_frames=3,
         )
         animation.keyframe_helper = KeyframeHelper()
 
@@ -268,8 +270,8 @@ class TestStaticToEventMigration:
         for anim in animations:
             # All should have event-driven triggers
             assert anim.trigger in ["beat", "bass", "energy_peaks"]
-            # All should have return_frames parameter
-            assert hasattr(anim, "return_frames")
+            # All should have duration_frames parameter
+            assert hasattr(anim, "duration_frames")
 
     def test_backwards_compatibility(self, mock_bpy):
         """Test that old YAML configurations still work."""

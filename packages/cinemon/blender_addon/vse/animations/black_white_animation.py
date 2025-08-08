@@ -19,7 +19,7 @@ class BlackWhiteAnimation(EventDrivenAnimation):
     Attributes:
         trigger: Event type ("one_time", "beat", "bass", "energy_peaks")
         intensity: Desaturation intensity (0.0 = color, 1.0 = full B&W)
-        return_frames: Frames to return to normal (event-driven only)
+        duration_frames: Frames to return to normal (event-driven only)
         fade_in: Enable gradual fade-in over 30 frames (one_time only)
     """
 
@@ -27,7 +27,7 @@ class BlackWhiteAnimation(EventDrivenAnimation):
         self,
         trigger: str = "one_time",
         intensity: float = 0.8,
-        return_frames: int = 3,
+        duration_frames: int = 3,
         fade_in: bool = False,
         target_strips: Optional[List[str]] = None,
     ):
@@ -37,14 +37,14 @@ class BlackWhiteAnimation(EventDrivenAnimation):
         Args:
             trigger: Event type ("one_time" for static, or "beat"/"bass"/"energy_peaks" for animated)
             intensity: Desaturation intensity (0.0 = color, 1.0 = full B&W)
-            return_frames: Frames until return to base value (event-driven only)
+            duration_frames: Frames until return to base value (event-driven only)
             fade_in: Enable gradual fade-in effect (one_time only)
             target_strips: List of strip names to target (None = all strips)
         """
         super().__init__(
             trigger=trigger,
             intensity=intensity,
-            return_frames=return_frames,
+            duration_frames=duration_frames,
             target_strips=target_strips,
         )
         self.fade_in = fade_in

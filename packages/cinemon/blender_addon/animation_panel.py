@@ -201,10 +201,24 @@ class CINEMON_PT_active_strip_animations(Panel):
                 intensity_op.current_value = animation["intensity"]
 
             # Duration frames for applicable animations
-            if (
-                anim_type in ["scale", "rotation", "brightness_flicker"]
-                and "duration_frames" in animation
-            ):
+            if anim_type in ["scale", "rotation"] and "duration_frames" in animation:
+                row = layout.row()
+                row.label(text="Duration:")
+                duration_op = row.operator(
+                    "cinemon.edit_animation_param",
+                    text=f"{animation['duration_frames']:.0f}f",
+                )
+                duration_op.strip_name = strip_name
+                duration_op.animation_index = index
+                duration_op.param_name = "duration_frames"
+                duration_op.current_value = animation["duration_frames"]
+
+            # Duration frames parameter - now universal for all animations that have it
+            if "duration_frames" in animation and anim_type not in [
+                "scale",
+                "rotation",
+            ]:
+                # Scale and rotation already handle duration_frames above
                 row = layout.row()
                 row.label(text="Duration:")
                 duration_op = row.operator(
@@ -217,19 +231,7 @@ class CINEMON_PT_active_strip_animations(Panel):
                 duration_op.current_value = animation["duration_frames"]
 
             # Type-specific parameters
-            if anim_type == "shake" and "return_frames" in animation:
-                row = layout.row()
-                row.label(text="Return:")
-                return_op = row.operator(
-                    "cinemon.edit_animation_param",
-                    text=f"{animation['return_frames']:.0f}f",
-                )
-                return_op.strip_name = strip_name
-                return_op.animation_index = index
-                return_op.param_name = "return_frames"
-                return_op.current_value = animation["return_frames"]
-
-            elif anim_type == "rotation" and "degrees" in animation:
+            if anim_type == "rotation" and "degrees" in animation:
                 row = layout.row()
                 row.label(text="Degrees:")
                 degrees_op = row.operator(
@@ -359,7 +361,6 @@ class CINEMON_OT_add_animation_to_strip(Operator):
                 ("jitter", "Jitter", "Continuous random position changes"),
                 ("brightness_flicker", "Brightness Flicker", "Brightness modulation"),
                 ("black_white", "Black & White", "Desaturation effects"),
-                ("film_grain", "Film Grain", "Grain overlay effects"),
                 ("vintage_color", "Vintage Color", "Sepia tint and contrast boost"),
                 ("visibility", "Visibility", "Visibility/fade animations"),
             ],

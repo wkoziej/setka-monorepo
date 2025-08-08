@@ -23,7 +23,7 @@ class TestRotationWobbleAnimation:
     def wobble_animation(self):
         """Create RotationWobbleAnimation instance with mocked keyframe helper."""
         animation = RotationWobbleAnimation(
-            trigger="beat", wobble_degrees=1.0, return_frames=3, oscillate=True
+            trigger="beat", wobble_degrees=1.0, duration_frames=3, oscillate=True
         )
         animation.keyframe_helper = Mock()
         return animation
@@ -70,7 +70,7 @@ class TestRotationWobbleAnimation:
     def test_rotation_wobble_oscillate(self, mock_strip):
         """Test że oscillate zmienia kierunek kołysania."""
         animation = RotationWobbleAnimation(
-            wobble_degrees=1.0, oscillate=True, return_frames=2
+            wobble_degrees=1.0, oscillate=True, duration_frames=2
         )
         animation.keyframe_helper = Mock()
 
@@ -114,9 +114,9 @@ class TestRotationWobbleAnimation:
             wobble_degrees = math.degrees(wobble_radians)
             assert -1.0 <= wobble_degrees <= 1.0
 
-    def test_rotation_wobble_return_frames(self, mock_strip):
-        """Test że return_frames kontroluje czas powrotu."""
-        animation = RotationWobbleAnimation(return_frames=5)
+    def test_rotation_wobble_duration_frames(self, mock_strip):
+        """Test że duration_frames kontroluje czas powrotu."""
+        animation = RotationWobbleAnimation(duration_frames=5)
         animation.keyframe_helper = Mock()
 
         events = [1.0]  # Event at 1 second
@@ -131,7 +131,7 @@ class TestRotationWobbleAnimation:
         assert calls[0][0][1] == 1
         # Wobble at frame 30 (1 second * 30 fps)
         assert calls[1][0][1] == 30
-        # Return at frame 35 (30 + 5 return_frames)
+        # Return at frame 35 (30 + 5 duration_frames)
         assert calls[2][0][1] == 35
 
     def test_rotation_wobble_without_transform(self):

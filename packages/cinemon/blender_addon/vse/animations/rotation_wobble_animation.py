@@ -19,7 +19,7 @@ class RotationWobbleAnimation(EventDrivenAnimation):
     Attributes:
         trigger: Event type to react to ("beat", "bass", "energy_peaks")
         wobble_degrees: Maximum wobble angle in degrees (or 'degrees' for compatibility)
-        return_frames: How many frames until return to base rotation
+        duration_frames: How many frames until return to base rotation
         oscillate: Whether to alternate wobble direction
     """
 
@@ -28,7 +28,7 @@ class RotationWobbleAnimation(EventDrivenAnimation):
         trigger: str = "beat",
         wobble_degrees: float = None,
         degrees: float = None,  # Support both parameter names
-        return_frames: int = 3,
+        duration_frames: int = 3,
         oscillate: bool = True,
         target_strips: Optional[List[str]] = None,
     ):
@@ -39,7 +39,7 @@ class RotationWobbleAnimation(EventDrivenAnimation):
             trigger: Event type to trigger animation
             wobble_degrees: Maximum rotation in degrees (legacy parameter)
             degrees: Maximum rotation in degrees (new parameter)
-            return_frames: Frames until rotation returns to normal
+            duration_frames: Frames until rotation returns to normal
             oscillate: If True, alternate wobble direction between events
             target_strips: List of strip names to target (None = all strips)
         """
@@ -51,7 +51,7 @@ class RotationWobbleAnimation(EventDrivenAnimation):
         super().__init__(
             trigger=trigger,
             intensity=rotation_amount,  # Store as intensity for base class
-            return_frames=return_frames,
+            duration_frames=duration_frames,
             target_strips=target_strips,
             oscillate=oscillate,  # Store in extra_params
         )

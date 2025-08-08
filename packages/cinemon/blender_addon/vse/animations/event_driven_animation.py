@@ -28,7 +28,7 @@ class EventDrivenAnimation(BaseEffectAnimation):
         self,
         trigger: str = "beat",
         intensity: float = 1.0,
-        return_frames: int = 3,
+        duration_frames: int = 3,
         target_strips: Optional[List[str]] = None,
         **kwargs,
     ):
@@ -38,14 +38,14 @@ class EventDrivenAnimation(BaseEffectAnimation):
         Args:
             trigger: Event type to trigger animation
             intensity: Effect intensity
-            return_frames: Frames until return to base value
+            duration_frames: Frames until return to base value
             target_strips: List of strip names to target (None = all strips)
             **kwargs: Additional parameters passed to subclasses
         """
         super().__init__(target_strips=target_strips)
         self.trigger = trigger
         self.intensity = intensity
-        self.return_frames = return_frames
+        self.duration_frames = duration_frames
         # Store additional params for subclasses
         self.extra_params = kwargs
 
@@ -103,7 +103,7 @@ class EventDrivenAnimation(BaseEffectAnimation):
                 self._insert_keyframes(strip.name, effect_values, frame)
 
                 # Return to base values
-                return_frame = frame + self.return_frames
+                return_frame = frame + self.duration_frames
                 for prop_path, base_value in properties:
                     self._set_property_value(strip, prop_path, base_value)
                 self._insert_keyframes(strip.name, properties, return_frame)

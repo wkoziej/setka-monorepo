@@ -75,7 +75,7 @@ class TestPresetManager:
         assert camera2_anims[0]["type"] == "shake"
         assert camera2_anims[0]["trigger"] == "energy_peaks"
         assert camera2_anims[0]["intensity"] == 1.0
-        assert camera2_anims[0]["return_frames"] == 2
+        assert camera2_anims[0]["duration_frames"] == 2
 
     def test_list_presets(self, preset_manager):
         """Test listing all available presets from fixtures."""

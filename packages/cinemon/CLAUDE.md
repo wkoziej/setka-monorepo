@@ -285,45 +285,7 @@ recording_name/
 
 #### Built-in Presets
 
-**vintage** - Classic film effects:
-```yaml
-layout:
-  type: random
-  config: {margin: 0.1, seed: 1950}
-strip_animations:
-  all:  # Apply to all strips
-    - {type: shake, trigger: beat, intensity: 2.0}
-    - {type: jitter, trigger: continuous, intensity: 1.0}
-    - {type: brightness_flicker, trigger: beat, intensity: 0.1}
-    - {type: black_white, trigger: beat, intensity: 0.8, return_frames: 2}
-    - {type: vintage_color, trigger: energy_peaks, sepia_amount: 0.4, return_frames: 6}
-```
-
-**music-video** - High-energy effects:
-```yaml
-layout:
-  type: random
-  config: {margin: 0.05, seed: 100, min_scale: 0.4, max_scale: 0.9}
-strip_animations:
-  all:
-    - {type: scale, trigger: bass, intensity: 0.5, duration_frames: 3}
-    - {type: shake, trigger: beat, intensity: 12.0}
-    - {type: rotation, trigger: energy_peaks, degrees: 2.0}
-```
-
-**minimal** - Basic effects:
-```yaml
-strip_animations:
-  all:
-    - {type: scale, trigger: bass, intensity: 0.2, duration_frames: 3}
-```
-
-**beat-switch** - Legacy compatibility:
-```yaml
-strip_animations:
-  all:
-    - {type: scale, trigger: beat, intensity: 0.2}
-```
+**minimal** - Basic effects preset (see `blender_addon/example_presets/minimal.yaml`)
 
 #### Selective Strip Targeting
 
