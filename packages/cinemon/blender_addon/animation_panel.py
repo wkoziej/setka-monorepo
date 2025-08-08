@@ -188,71 +188,104 @@ class CINEMON_PT_active_strip_animations(Panel):
         try:
             anim_type = animation.get("type", "")
 
-            # Common parameters - Intensity
-            if "intensity" in animation:
+            # Define which animation types support which parameters
+            ANIMATIONS_WITH_INTENSITY = [
+                "scale",
+                "shake",
+                "jitter",
+                "brightness_flicker",
+                "black_white",
+                "pip_switch",
+            ]
+
+            ANIMATIONS_WITH_DURATION = [
+                "scale",
+                "shake",
+                "rotation",
+                "brightness_flicker",
+                "black_white",
+                "vintage_color",
+                "visibility",
+            ]
+
+            # Get default values from yaml_manager
+            defaults = yaml_manager.create_default_animation(
+                anim_type, animation.get("trigger", "beat")
+            )
+
+            # Intensity parameter
+            if anim_type in ANIMATIONS_WITH_INTENSITY:
                 row = layout.row()
                 row.label(text="Intensity:")
+                intensity_value = animation.get(
+                    "intensity", defaults.get("intensity", 1.0)
+                )
                 intensity_op = row.operator(
-                    "cinemon.edit_animation_param", text=f"{animation['intensity']:.2f}"
+                    "cinemon.edit_animation_param", text=f"{intensity_value:.2f}"
                 )
                 intensity_op.strip_name = strip_name
                 intensity_op.animation_index = index
                 intensity_op.param_name = "intensity"
-                intensity_op.current_value = animation["intensity"]
+                intensity_op.current_value = intensity_value
 
-            # Duration frames for applicable animations
-            if anim_type in ["scale", "rotation"] and "duration_frames" in animation:
+            # Duration frames parameter
+            if anim_type in ANIMATIONS_WITH_DURATION:
                 row = layout.row()
                 row.label(text="Duration:")
+                duration_value = animation.get(
+                    "duration_frames", defaults.get("duration_frames", 3)
+                )
                 duration_op = row.operator(
                     "cinemon.edit_animation_param",
-                    text=f"{animation['duration_frames']:.0f}f",
+                    text=f"{duration_value:.0f}f",
                 )
                 duration_op.strip_name = strip_name
                 duration_op.animation_index = index
                 duration_op.param_name = "duration_frames"
-                duration_op.current_value = animation["duration_frames"]
-
-            # Duration frames parameter - now universal for all animations that have it
-            if "duration_frames" in animation and anim_type not in [
-                "scale",
-                "rotation",
-            ]:
-                # Scale and rotation already handle duration_frames above
-                row = layout.row()
-                row.label(text="Duration:")
-                duration_op = row.operator(
-                    "cinemon.edit_animation_param",
-                    text=f"{animation['duration_frames']:.0f}f",
-                )
-                duration_op.strip_name = strip_name
-                duration_op.animation_index = index
-                duration_op.param_name = "duration_frames"
-                duration_op.current_value = animation["duration_frames"]
+                duration_op.current_value = duration_value
 
             # Type-specific parameters
-            if anim_type == "rotation" and "degrees" in animation:
+            if anim_type == "rotation":
                 row = layout.row()
                 row.label(text="Degrees:")
+                degrees_value = animation.get("degrees", defaults.get("degrees", 5.0))
                 degrees_op = row.operator(
-                    "cinemon.edit_animation_param", text=f"{animation['degrees']:.1f}°"
+                    "cinemon.edit_animation_param", text=f"{degrees_value:.1f}°"
                 )
                 degrees_op.strip_name = strip_name
                 degrees_op.animation_index = index
                 degrees_op.param_name = "degrees"
-                degrees_op.current_value = animation["degrees"]
+                degrees_op.current_value = degrees_value
 
-            elif anim_type == "vintage_color" and "sepia_amount" in animation:
+            elif anim_type == "vintage_color":
                 row = layout.row()
                 row.label(text="Sepia:")
+                sepia_value = animation.get(
+                    "sepia_amount", defaults.get("sepia_amount", 0.4)
+                )
                 sepia_op = row.operator(
                     "cinemon.edit_animation_param",
-                    text=f"{animation['sepia_amount']:.2f}",
+                    text=f"{sepia_value:.2f}",
                 )
                 sepia_op.strip_name = strip_name
                 sepia_op.animation_index = index
                 sepia_op.param_name = "sepia_amount"
-                sepia_op.current_value = animation["sepia_amount"]
+                sepia_op.current_value = sepia_value
+
+                if "contrast_boost" in defaults or "contrast_boost" in animation:
+                    row = layout.row()
+                    row.label(text="Contrast:")
+                    contrast_value = animation.get(
+                        "contrast_boost", defaults.get("contrast_boost", 0.2)
+                    )
+                    contrast_op = row.operator(
+                        "cinemon.edit_animation_param",
+                        text=f"{contrast_value:.2f}",
+                    )
+                    contrast_op.strip_name = strip_name
+                    contrast_op.animation_index = index
+                    contrast_op.param_name = "contrast_boost"
+                    contrast_op.current_value = contrast_value
 
         except Exception as e:
             layout.label(text=f"Parameter error: {e}", icon="ERROR")
