@@ -8,7 +8,6 @@ from typing import Any, Dict, List, Optional, Tuple, Type
 from .base_effect_animation import BaseEffectAnimation
 from .black_white_animation import BlackWhiteAnimation
 from .brightness_flicker_animation import BrightnessFlickerAnimation
-from .film_grain_animation import FilmGrainAnimation
 from .jitter_animation import JitterAnimation
 from .rotation_wobble_animation import RotationWobbleAnimation
 from .scale_animation import ScaleAnimation
@@ -155,8 +154,6 @@ AnimationFactory.register(
 )
 
 AnimationFactory.register("black_white", BlackWhiteAnimation, {"intensity": 0.8})
-
-AnimationFactory.register("film_grain", FilmGrainAnimation, {"intensity": 0.1})
 
 AnimationFactory.register(
     "vintage_color",

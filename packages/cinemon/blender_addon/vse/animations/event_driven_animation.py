@@ -62,6 +62,10 @@ class EventDrivenAnimation(BaseEffectAnimation):
         Returns:
             True if animation was applied successfully
         """
+        # Special handling for one_time trigger - static mode
+        if self.trigger == "one_time":
+            return self.apply_one_time(strip, **kwargs)
+
         try:
             # Get the property to animate and its base value
             prop_data = self.get_animated_property(strip)
@@ -221,3 +225,20 @@ class EventDrivenAnimation(BaseEffectAnimation):
         raise NotImplementedError(
             f"{self.__class__.__name__} must implement calculate_effect_value()"
         )
+
+    def apply_one_time(self, strip, **kwargs) -> bool:
+        """
+        Apply static one-time effect (no animation).
+
+        Override in subclasses that support dual-mode (static + event-driven).
+
+        Args:
+            strip: Blender video strip object
+            **kwargs: Additional parameters
+
+        Returns:
+            True if effect was applied successfully
+        """
+        # Default implementation for animations that don't support one_time
+        print(f"Warning: {self.__class__.__name__} doesn't support one_time trigger")
+        return False

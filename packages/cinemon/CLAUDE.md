@@ -295,9 +295,8 @@ strip_animations:
     - {type: shake, trigger: beat, intensity: 2.0}
     - {type: jitter, trigger: continuous, intensity: 1.0}
     - {type: brightness_flicker, trigger: beat, intensity: 0.1}
-    - {type: black_white, trigger: one_time, intensity: 0.6}
-    - {type: film_grain, trigger: one_time, intensity: 0.15}
-    - {type: vintage_color, trigger: one_time, sepia_amount: 0.4}
+    - {type: black_white, trigger: beat, intensity: 0.8, return_frames: 2}
+    - {type: vintage_color, trigger: energy_peaks, sepia_amount: 0.4, return_frames: 6}
 ```
 
 **music-video** - High-energy effects:
@@ -346,8 +345,8 @@ strip_animations:
       intensity: 2.0
 
   all:  # Special key for applying to all strips
-    - type: film_grain
-      trigger: one_time
+    - type: brightness_flicker
+      trigger: beat
       intensity: 0.15
 ```
 
@@ -360,12 +359,11 @@ strip_animations:
 
 **Visual Effects (Working):**
 - `brightness_flicker` - Brightness modulation (triggers: beat, bass)
+- `black_white` - Desaturation effects (triggers: one_time, beat, bass, energy_peaks) - **NEW: dual-mode support**
+- `vintage_color` - Sepia tint and contrast boost (triggers: one_time, beat, bass, energy_peaks) - **NEW: dual-mode support**
 
 **Known Issues:**
 - `jitter` - Continuous random position changes (⚠️ Issue #26: continuous trigger not implemented)
-- `vintage_color` - Sepia tint and contrast boost (⚠️ Issue #26: one_time trigger not implemented)
-- `black_white` - Desaturation effects (⚠️ Issue #26: one_time trigger not implemented)
-- `film_grain` - Grain overlay effects (⚠️ Issue #26: one_time trigger not implemented)
 
 ## Animation Verification
 
@@ -528,7 +526,7 @@ Cinemon operates as step 3 in the Setka pipeline:
 ## Configuration Management
 
 ### Built-in Presets
-- **vintage**: Classic film effects with grain, jitter, and sepia tones
+- **vintage**: Classic film effects with jitter, sepia tones, and desaturation pulses
 - **music-video**: High-energy effects with scale, shake, and rotation
 - **minimal**: Basic scale animation for subtle effects
 - **beat-switch**: Legacy compatibility mode

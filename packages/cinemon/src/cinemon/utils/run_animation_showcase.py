@@ -1,5 +1,19 @@
 # ABOUTME: Complete showcase script that generates test media and runs cinemon
-# ABOUTME: Creates colored squares with animations for testing in Blender
+# ABOUTME: Creates colored squares with animations for testing in Blender (including dual-mode)
+
+"""
+Animation showcase generator with dual-mode animation demonstrations.
+
+Showcases the new dual-mode functionality where animations can work as:
+- Static effects (one_time trigger)
+- Event-driven animations (beat/bass/energy_peaks triggers)
+
+Special demonstrations:
+- strip_5: BlackWhiteAnimation pulsing on beat (event-driven mode)
+- strip_6: VintageColorGradeAnimation pulsing sepia on bass
+- strip_7: VintageColorGradeAnimation pulsing on energy_peaks with rotation
+- strip_8: VisibilityAnimation with pulse pattern on beat
+"""
 
 import json
 import shutil
@@ -95,17 +109,39 @@ def create_showcase_project(base_dir: Path = None):
     else:
         print(f"  ✗ Failed to create audio: {result.stderr}")
 
-    # 3. Create mock analysis file
-    print("\n3. Creating analysis file...")
+    # 3. Create mock analysis file with more realistic events
+    print("\n3. Creating analysis file with rich events...")
     analysis = {
         "audio_info": {"duration": 30.0, "sample_rate": 44100, "tempo": 120},
         "animation_events": {
+            # Beats every 0.5 seconds (120 BPM)
             "beats": [
-                float(t) for t in range(0, 30, 1)
-            ],  # Every second - simple timestamps
+                i * 0.5
+                for i in range(60)  # 0.0, 0.5, 1.0, 1.5, ...
+            ],
+            # Bass hits (subset of beats, every 2 beats)
+            "bass": [
+                i * 1.0
+                for i in range(30)  # 0.0, 1.0, 2.0, ...
+            ],
+            # Energy peaks - less frequent, stronger events
             "energy_peaks": [
-                float(t) for t in [2, 6, 10, 14, 18, 22, 26]
-            ],  # Every ~4 seconds
+                2.0,
+                3.5,
+                6.0,
+                8.0,
+                10.0,
+                12.5,
+                14.0,
+                16.0,
+                18.5,
+                20.0,
+                22.0,
+                24.5,
+                26.0,
+                28.0,
+            ],
+            # Sections for major transitions
             "sections": [
                 {"start": 0.0, "end": 10.0, "label": "intro"},
                 {"start": 10.0, "end": 20.0, "label": "main"},
@@ -196,24 +232,44 @@ strip_animations:
       intensity: 2.0
 
   strip_5.mp4:
+    # BLACK_WHITE - event-driven desaturation on beat
     - type: black_white
-      trigger: one_time
-      intensity: 0.8
+      trigger: beat
+      intensity: 0.9
+      return_frames: 2
 
   strip_6.mp4:
-    - type: film_grain
-      trigger: one_time
-      intensity: 0.2
+    # VINTAGE_COLOR - pulsing sepia on bass
+    - type: vintage_color
+      trigger: bass
+      sepia_amount: 0.7
+      animate_property: sepia
+      return_frames: 3
+    # Add shake for dynamic effect
+    - type: shake
+      trigger: bass
+      intensity: 3.0
+      return_frames: 3
 
   strip_7.mp4:
+    # VINTAGE_COLOR - pulsing on energy peaks
     - type: vintage_color
-      trigger: one_time
-      sepia_amount: 0.4
+      trigger: energy_peaks
+      sepia_amount: 0.6
+      animate_property: sepia
+      return_frames: 8
+    # Add rotation for vintage feel
+    - type: rotation
+      trigger: energy_peaks
+      degrees: 1.0
+      return_frames: 8
 
   strip_8.mp4:
+    # VISIBILITY - pulse pattern on beat
     - type: visibility
       trigger: beat
-      intensity: 1.0
+      pattern: pulse
+      duration_frames: 5
     - type: pip_switch
       trigger: sections
       intensity: 1.0

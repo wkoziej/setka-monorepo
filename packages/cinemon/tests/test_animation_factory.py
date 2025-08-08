@@ -120,7 +120,6 @@ class TestAnimationFactory:
             "jitter",
             "brightness_flicker",
             "black_white",
-            "film_grain",
             "vintage_color",
             "visibility",
         ]

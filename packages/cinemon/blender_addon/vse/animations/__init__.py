@@ -6,9 +6,9 @@
 from .animation_factory import AnimationFactory
 from .base_effect_animation import BaseEffectAnimation
 from .event_driven_animation import EventDrivenAnimation
+from .modifier_animation_mixin import ModifierAnimationMixin
 from .black_white_animation import BlackWhiteAnimation
 from .brightness_flicker_animation import BrightnessFlickerAnimation
-from .film_grain_animation import FilmGrainAnimation
 from .jitter_animation import JitterAnimation
 from .rotation_wobble_animation import RotationWobbleAnimation
 from .scale_animation import ScaleAnimation
@@ -19,13 +19,13 @@ from .visibility_animation import VisibilityAnimation
 __all__ = [
     "BaseEffectAnimation",
     "EventDrivenAnimation",
+    "ModifierAnimationMixin",
     "ScaleAnimation",
     "ShakeAnimation",
     "RotationWobbleAnimation",
     "JitterAnimation",
     "BrightnessFlickerAnimation",
     "BlackWhiteAnimation",
-    "FilmGrainAnimation",
     "VintageColorGradeAnimation",
     "VisibilityAnimation",
     "AnimationFactory",
