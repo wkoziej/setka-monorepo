@@ -23,7 +23,7 @@ class TestShakeAnimation:
     def shake_animation(self):
         """Create ShakeAnimation instance with mocked keyframe helper."""
         animation = ShakeAnimation(
-            trigger="beat", intensity=10.0, return_frames=2, random_direction=True
+            trigger="beat", intensity=10.0, duration_frames=2, random_direction=True
         )
         animation.keyframe_helper = Mock()
         return animation
@@ -63,7 +63,7 @@ class TestShakeAnimation:
     def test_shake_animation_deterministic(self, mock_strip):
         """Test deterministycznych drgań (tylko poziome)."""
         animation = ShakeAnimation(
-            intensity=5.0, random_direction=False, return_frames=3
+            intensity=5.0, random_direction=False, duration_frames=3
         )
         animation.keyframe_helper = Mock()
 
@@ -82,9 +82,9 @@ class TestShakeAnimation:
             # In deterministic mode, y should not change
             assert mock_strip.transform.offset_y == 0
 
-    def test_shake_animation_return_frames(self, mock_strip):
-        """Test że return_frames kontroluje czas powrotu."""
-        animation = ShakeAnimation(return_frames=5)
+    def test_shake_animation_duration_frames(self, mock_strip):
+        """Test że duration_frames kontroluje czas powrotu."""
+        animation = ShakeAnimation(duration_frames=5)
         animation.keyframe_helper = Mock()
 
         events = [1.0]  # Event at 1 second
@@ -99,7 +99,7 @@ class TestShakeAnimation:
         assert calls[0][0][1] == 1
         # Shake at frame 30 (1 second * 30 fps)
         assert calls[1][0][1] == 30
-        # Return at frame 35 (30 + 5 return_frames)
+        # Return at frame 35 (30 + 5 duration_frames)
         assert calls[2][0][1] == 35
 
     def test_shake_animation_without_transform(self):

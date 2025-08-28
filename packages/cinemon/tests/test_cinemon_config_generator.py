@@ -3,6 +3,7 @@
 
 """Tests for CinemonConfigGenerator class."""
 
+from pathlib import Path
 from unittest.mock import patch
 
 import pytest
@@ -26,12 +27,14 @@ class TestCinemonConfigGeneratorPreset:
         (extracted_dir / "Camera2.mp4").touch()
         (extracted_dir / "main_audio.m4a").touch()
 
-        generator = CinemonConfigGenerator()
-        config_path = generator.generate_preset(recording_dir, "minimal")
+        # Use test fixtures instead of production presets
+        test_preset_dir = Path(__file__).parent / "fixtures" / "presets"
+        generator = CinemonConfigGenerator(preset_dir=test_preset_dir)
+        config_path = generator.generate_preset(recording_dir, "test_minimal")
 
         # Verify config file was created
         assert config_path.exists()
-        assert config_path.name == "animation_config_minimal.yaml"
+        assert config_path.name == "animation_config_test_minimal.yaml"
         assert config_path.parent == recording_dir
 
         # Verify config content
@@ -59,16 +62,18 @@ class TestCinemonConfigGeneratorPreset:
         (extracted_dir / "Camera2.mp4").touch()
         (extracted_dir / "microphone.wav").touch()
 
-        generator = CinemonConfigGenerator()
+        # Use test fixtures instead of production presets
+        test_preset_dir = Path(__file__).parent / "fixtures" / "presets"
+        generator = CinemonConfigGenerator(preset_dir=test_preset_dir)
         config_path = generator.generate_preset(
-            recording_dir, "minimal", main_audio="microphone.wav"
+            recording_dir, "test_minimal", main_audio="microphone.wav"
         )
 
         with config_path.open("r") as f:
             config_data = yaml.safe_load(f)
 
         assert config_data["project"]["main_audio"] == "microphone.wav"
-        assert config_data["layout"]["config"]["margin"] == 0.02
+        assert config_data["layout"]["config"]["margin"] == 0.15
         assert "strip_animations" in config_data
 
         # Music video preset applies to specific strips

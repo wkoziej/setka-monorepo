@@ -8,7 +8,6 @@ from typing import Any, Dict, List, Optional, Tuple, Type
 from .base_effect_animation import BaseEffectAnimation
 from .black_white_animation import BlackWhiteAnimation
 from .brightness_flicker_animation import BrightnessFlickerAnimation
-from .film_grain_animation import FilmGrainAnimation
 from .jitter_animation import JitterAnimation
 from .rotation_wobble_animation import RotationWobbleAnimation
 from .scale_animation import ScaleAnimation
@@ -69,6 +68,15 @@ class AnimationFactory:
         for param_name, default_value in default_params.items():
             params[param_name] = animation_spec.get(param_name, default_value)
 
+        # Handle parameter aliases for rotation animation
+        if animation_type == "rotation":
+            # Support both 'degrees' (from YAML) and 'wobble_degrees' (internal)
+            if "degrees" in animation_spec and "wobble_degrees" not in animation_spec:
+                params["wobble_degrees"] = animation_spec["degrees"]
+                print(
+                    f"🔄 Mapping 'degrees' ({animation_spec['degrees']}) to 'wobble_degrees' for rotation animation"
+                )
+
         # Handle common parameters
         params["trigger"] = animation_spec.get("trigger")
         params["target_strips"] = animation_spec.get("target_strips", [])
@@ -128,11 +136,11 @@ AnimationFactory.register(
 )
 
 AnimationFactory.register(
-    "shake", ShakeAnimation, {"intensity": 10.0, "return_frames": 2}
+    "shake", ShakeAnimation, {"intensity": 10.0, "duration_frames": 2}
 )
 
 AnimationFactory.register(
-    "rotation", RotationWobbleAnimation, {"wobble_degrees": 1.0, "return_frames": 3}
+    "rotation", RotationWobbleAnimation, {"wobble_degrees": 1.0, "duration_frames": 3}
 )
 
 AnimationFactory.register(
@@ -142,12 +150,10 @@ AnimationFactory.register(
 AnimationFactory.register(
     "brightness_flicker",
     BrightnessFlickerAnimation,
-    {"intensity": 0.15, "return_frames": 1},
+    {"intensity": 0.15, "duration_frames": 1},
 )
 
 AnimationFactory.register("black_white", BlackWhiteAnimation, {"intensity": 0.8})
-
-AnimationFactory.register("film_grain", FilmGrainAnimation, {"intensity": 0.1})
 
 AnimationFactory.register(
     "vintage_color",

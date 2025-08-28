@@ -48,11 +48,14 @@ class TestPipelineIntegration:
         assert "main_audio.m4a" in audio_files
         assert main_audio == "main_audio.m4a"
 
-        # 2. Test PresetManager
-        preset_manager = PresetManager()
-        minimal_preset = preset_manager.get_preset("minimal")
+        # 2. Test PresetManager with fixture preset
+        from pathlib import Path
 
-        assert minimal_preset.layout.type == "cascade"
+        test_preset_dir = Path(__file__).parent / "fixtures" / "presets"
+        preset_manager = PresetManager(preset_dir=test_preset_dir)
+        minimal_preset = preset_manager.get_preset("test_minimal")
+
+        assert minimal_preset.layout.type == "random"
         assert len(minimal_preset.strip_animations) > 0
 
         # 3. Test CinemonConfigGenerator

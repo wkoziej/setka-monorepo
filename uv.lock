@@ -12,7 +12,7 @@ members = [
     "beatrix",
     "cinemon",
     "medusa",
-    "obs-canvas-recorder",
+    "obsession",
     "setka-common",
     "setka-workspace",
 ]
@@ -1266,7 +1266,7 @@ wheels = [
 ]
 
 [[package]]
-name = "obs-canvas-recorder"
+name = "obsession"
 version = "0.1.0"
 source = { editable = "packages/obsession" }
 dependencies = [

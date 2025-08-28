@@ -100,11 +100,17 @@ packages/cinemon/
 │   ├── cli/
 │   │   ├── blend_setup.py # Main CLI interface
 │   │   └── generate_config.py # Config generation CLI
-│   └── config/           # YAML configuration generation
-│       ├── __init__.py
-│       ├── cinemon_config_generator.py
-│       ├── media_discovery.py
-│       └── preset_manager.py
+│   ├── config/           # YAML configuration generation
+│   │   ├── __init__.py
+│   │   ├── cinemon_config_generator.py
+│   │   ├── media_discovery.py
+│   │   └── preset_manager.py
+│   └── utils/            # Development and debugging utilities
+│       ├── check_blender_animations.py # Verify animations in .blend files
+│       ├── check_blender_vse.py        # Test project generation
+│       ├── check_fcurves.py            # Debug FCurves and keyframes
+│       ├── debug_import_context.py     # Debug addon import issues
+│       └── run_animation_showcase.py   # Generate test project with all animations
 └── tests/
     ├── test_project_manager.py
     ├── test_animation_engine.py
@@ -120,10 +126,15 @@ Cinemon uses **YAML configuration files** for parametric Blender execution:
 
 ```yaml
 project:
+  base_directory: /path/to/recording
   video_files: [Camera1.mp4, Camera2.mp4]
   main_audio: "main_audio.m4a"
+  output_blend: blender/project.blend  # Required for file saving
   fps: 30
   resolution: {width: 1920, height: 1080}
+
+audio_analysis:
+  file: analysis/audio_analysis.json  # Path to beatrix analysis
 
 layout:
   type: random
@@ -133,14 +144,14 @@ layout:
     margin: 0.1
 
 strip_animations:
-  Camera1:
+  Camera1.mp4:  # Must match exact filename
     - type: scale
-      trigger: bass
+      trigger: beat
       intensity: 0.3
-  Camera2:
-    - type: vintage_color
-      trigger: one_time
-      sepia_amount: 0.4
+  Camera2.mp4:
+    - type: shake
+      trigger: energy_peaks
+      intensity: 8.0
 ```
 
 The `strip_animations` format groups animations by strip name, allowing precise control over which video strips receive which effects. Each strip can have multiple animations applied.
@@ -167,10 +178,17 @@ config_path = generator.generate_config(
 
 Due to the separation between Blender addon and Python API:
 
-1. **In blender_addon/** - Use relative imports:
+1. **In blender_addon/** - Use relative imports with context detection:
    ```python
    from .vse import AnimationConstants, BlenderLayoutManager
    from .vse.yaml_config import BlenderYAMLConfigReader
+
+   # Context-aware imports for addon vs test environments
+   from .import_utils import is_running_as_addon
+   if is_running_as_addon():
+       from .yaml_manager import AnimationYAMLManager
+   else:
+       from yaml_manager import AnimationYAMLManager
    ```
 
 2. **In src/cinemon/** - Use absolute imports:
@@ -182,6 +200,14 @@ Due to the separation between Blender addon and Python API:
 3. **project_manager.py** calls Blender with addon script:
    ```python
    self.script_path = Path(__file__).parent.parent.parent / "blender_addon" / "vse_script.py"
+   ```
+
+4. **Addon initialization order**: Critical for proper imports:
+   ```python
+   # In __init__.py - vendor paths MUST be added before imports
+   vendor_path = Path(__file__).parent / "vendor"
+   sys.path.insert(0, str(vendor_path))
+   from . import animation_panel, layout_ui, operators
    ```
 
 ### Blender Mock System
@@ -206,6 +232,15 @@ def mock_bpy(monkeypatch):
 - **Auto-detection**: CLI checks for existing analysis files before creating new ones
 - **Beatrix integration**: Uses `analyze_audio_command()` to generate timing data
 - **File naming**: Analysis files follow pattern `{audio_stem}_analysis.json`
+- **Event format**: Audio analysis must use simple timestamps (not dict objects):
+  ```json
+  {
+    "animation_events": {
+      "beats": [0.0, 1.0, 2.0, ...],
+      "energy_peaks": [2.0, 6.0, 10.0, ...]
+    }
+  }
+  ```
 
 ## File Structure Conventions
 
@@ -250,46 +285,7 @@ recording_name/
 
 #### Built-in Presets
 
-**vintage** - Classic film effects:
-```yaml
-layout:
-  type: random
-  config: {margin: 0.1, seed: 1950}
-strip_animations:
-  all:  # Apply to all strips
-    - {type: shake, trigger: beat, intensity: 2.0}
-    - {type: jitter, trigger: continuous, intensity: 1.0}
-    - {type: brightness_flicker, trigger: beat, intensity: 0.1}
-    - {type: black_white, trigger: one_time, intensity: 0.6}
-    - {type: film_grain, trigger: one_time, intensity: 0.15}
-    - {type: vintage_color, trigger: one_time, sepia_amount: 0.4}
-```
-
-**music-video** - High-energy effects:
-```yaml
-layout:
-  type: random
-  config: {margin: 0.05, seed: 100, min_scale: 0.4, max_scale: 0.9}
-strip_animations:
-  all:
-    - {type: scale, trigger: bass, intensity: 0.5, duration_frames: 3}
-    - {type: shake, trigger: beat, intensity: 12.0}
-    - {type: rotation, trigger: energy_peaks, degrees: 2.0}
-```
-
-**minimal** - Basic effects:
-```yaml
-strip_animations:
-  all:
-    - {type: scale, trigger: bass, intensity: 0.2, duration_frames: 3}
-```
-
-**beat-switch** - Legacy compatibility:
-```yaml
-strip_animations:
-  all:
-    - {type: scale, trigger: beat, intensity: 0.2}
-```
+**minimal** - Basic effects preset (see `blender_addon/example_presets/minimal.yaml`)
 
 #### Selective Strip Targeting
 
@@ -311,24 +307,80 @@ strip_animations:
       intensity: 2.0
 
   all:  # Special key for applying to all strips
-    - type: film_grain
-      trigger: one_time
+    - type: brightness_flicker
+      trigger: beat
       intensity: 0.15
 ```
 
 #### Supported Animation Types
 
-**Transform Animations:**
-- `scale` - Scale changes on audio events
-- `shake` - Position shake effects
-- `rotation` - Rotation wobble effects
-- `jitter` - Continuous random position changes
+**Transform Animations (Working):**
+- `scale` - Scale changes on audio events (triggers: beat, bass, energy_peaks)
+- `shake` - Position shake effects (triggers: beat, bass, energy_peaks)
+- `rotation` - Rotation wobble effects (triggers: beat, energy_peaks)
 
-**Visual Effects:**
-- `brightness_flicker` - Brightness modulation
-- `vintage_color` - Sepia tint and contrast boost
-- `black_white` - Desaturation effects
-- `film_grain` - Grain overlay effects
+**Visual Effects (Working):**
+- `brightness_flicker` - Brightness modulation (triggers: beat, bass)
+- `black_white` - Desaturation effects (triggers: one_time, beat, bass, energy_peaks) - **NEW: dual-mode support**
+- `vintage_color` - Sepia tint and contrast boost (triggers: one_time, beat, bass, energy_peaks) - **NEW: dual-mode support**
+
+**Known Issues:**
+- `jitter` - Continuous random position changes (⚠️ Issue #26: continuous trigger not implemented)
+
+## Animation Verification
+
+### Animation Showcase Generator
+
+**NEW**: Complete test project generator for testing all animation types:
+
+```bash
+# Generate complete showcase project with all animations
+uv run python src/cinemon/utils/run_animation_showcase.py
+
+# Generate in specific directory
+uv run python src/cinemon/utils/run_animation_showcase.py --dir ~/path/to/showcase
+```
+
+This creates:
+- 9 colored test videos (strip_0.mp4 through strip_8.mp4)
+- Synthetic audio with regular beats and energy peaks
+- Complete audio analysis JSON with beatrix-compatible format
+- YAML configuration demonstrating all working animation types
+- Fully functional .blend file ready for testing
+
+### Checking Animation Results
+
+Use the provided utilities to verify animations are working correctly:
+
+```bash
+# Check animations in generated .blend file
+uv run python src/cinemon/utils/check_blender_animations.py "/path/to/file.blend"
+
+# Test full project generation
+uv run python src/cinemon/utils/check_blender_vse.py
+
+# Debug FCurves and keyframes
+uv run python src/cinemon/utils/check_fcurves.py
+
+# Debug addon import issues
+uv run python src/cinemon/utils/debug_import_context.py
+```
+
+### Animation Storage in Blender
+
+**CRITICAL**: Animations are stored in `bpy.context.scene.animation_data.action`, NOT on individual strips:
+
+```python
+# WRONG - animations are NOT here
+if strip.animation_data and strip.animation_data.action:
+    # This will be empty
+
+# CORRECT - animations are stored at scene level
+if bpy.context.scene.animation_data and bpy.context.scene.animation_data.action:
+    action = bpy.context.scene.animation_data.action
+    vse_fcurves = [fc for fc in action.fcurves if 'sequence_editor' in fc.data_path]
+    # FCurves with paths like: sequence_editor.strips_all["StripName"].transform.scale_x
+```
 
 ## Testing Considerations
 
@@ -436,7 +488,7 @@ Cinemon operates as step 3 in the Setka pipeline:
 ## Configuration Management
 
 ### Built-in Presets
-- **vintage**: Classic film effects with grain, jitter, and sepia tones
+- **vintage**: Classic film effects with jitter, sepia tones, and desaturation pulses
 - **music-video**: High-energy effects with scale, shake, and rotation
 - **minimal**: Basic scale animation for subtle effects
 - **beat-switch**: Legacy compatibility mode
@@ -471,9 +523,33 @@ Common issues and solutions:
 - **Multiple audio files**: Prompts for `--main-audio` parameter selection
 - **Invalid preset**: Validates against available preset list
 - **Invalid configuration**: YAML validation with clear error messages
+- **Addon import errors**: Fixed by proper path ordering in `__init__.py` - vendor paths must be added BEFORE module imports
+- **Animation verification**: Use `check_blender_animations.py` to verify keyframes are created correctly
+- **.blend file not saved**: Ensure `output_blend` is specified in YAML project section
+- **Animations not applying**: Strip names in YAML must match exact video filenames (including .mp4)
+- **Event format errors**: Audio analysis events must be simple timestamps, not dict objects
+
+## Troubleshooting
+
+### Addon Not Loading
+
+If Blender addon fails to load:
+1. Check import order in `__init__.py` - vendor paths must come before imports
+2. Verify `is_running_as_addon()` context detection works correctly
+3. Use `debug_import_context.py` to diagnose import issues
+
+### Animations Not Visible
+
+If animations appear to be missing:
+1. Check at scene level, not strip level: `bpy.context.scene.animation_data.action`
+2. Look for FCurves with `sequence_editor` in data_path
+3. Use `check_blender_animations.py` to get detailed keyframe analysis
+4. Verify audio analysis file exists and contains events
 
 ## Environment Requirements
 
-- **Blender 4.3+**: Must be available via `snap run blender` or custom executable
+- **Blender 4.5+**: Must be available via `snap run blender` or custom executable
 - **FFmpeg**: Required for video processing (inherited from obsession)
 - **Audio analysis**: Auto-generated via beatrix integration
+- **PyYAML**: Included in `vendor/` directory for addon compatibility
+- **Python 3.11+**: Required for Blender 4.5+ compatibility

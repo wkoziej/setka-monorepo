@@ -1,33 +1,34 @@
 # ABOUTME: RotationWobbleAnimation implementation - creates subtle rotation wobble effect
-# ABOUTME: Refactored from VintageFilmEffects with oscillation support for natural movement
+# ABOUTME: Refactored to use EventDrivenAnimation base class for cleaner code
 
-"""Rotation wobble animation for VSE strips."""
+"""Rotation wobble animation for VSE strips using EventDrivenAnimation base."""
 
 import math
 import random
-from typing import List, Optional
+from typing import List, Optional, Any
 
-from .base_effect_animation import BaseEffectAnimation
+from .event_driven_animation import EventDrivenAnimation
 
 
-class RotationWobbleAnimation(BaseEffectAnimation):
+class RotationWobbleAnimation(EventDrivenAnimation):
     """
     Animation that creates rotation wobble effect on strips.
 
-    Refactored from VintageFilmEffects.apply_rotation_wobble with enhanced options.
+    Now uses EventDrivenAnimation base class to eliminate code duplication.
 
     Attributes:
         trigger: Event type to react to ("beat", "bass", "energy_peaks")
-        wobble_degrees: Maximum wobble angle in degrees
-        return_frames: How many frames until return to base rotation
+        wobble_degrees: Maximum wobble angle in degrees (or 'degrees' for compatibility)
+        duration_frames: How many frames until return to base rotation
         oscillate: Whether to alternate wobble direction
     """
 
     def __init__(
         self,
         trigger: str = "beat",
-        wobble_degrees: float = 1.0,
-        return_frames: int = 3,
+        wobble_degrees: float = None,
+        degrees: float = None,  # Support both parameter names
+        duration_frames: int = 3,
         oscillate: bool = True,
         target_strips: Optional[List[str]] = None,
     ):
@@ -36,76 +37,70 @@ class RotationWobbleAnimation(BaseEffectAnimation):
 
         Args:
             trigger: Event type to trigger animation
-            wobble_degrees: Maximum rotation in degrees
-            return_frames: Frames until rotation returns to normal
+            wobble_degrees: Maximum rotation in degrees (legacy parameter)
+            degrees: Maximum rotation in degrees (new parameter)
+            duration_frames: Frames until rotation returns to normal
             oscillate: If True, alternate wobble direction between events
             target_strips: List of strip names to target (None = all strips)
         """
-        super().__init__(target_strips=target_strips)
-        self.trigger = trigger
-        self.wobble_degrees = wobble_degrees
-        self.return_frames = return_frames
+        # Support both 'wobble_degrees' and 'degrees' parameters
+        rotation_amount = degrees if degrees is not None else wobble_degrees
+        if rotation_amount is None:
+            rotation_amount = 1.0  # Default value
+
+        super().__init__(
+            trigger=trigger,
+            intensity=rotation_amount,  # Store as intensity for base class
+            duration_frames=duration_frames,
+            target_strips=target_strips,
+            oscillate=oscillate,  # Store in extra_params
+        )
+        self.wobble_degrees = rotation_amount
         self.oscillate = oscillate
+        self.direction = 1  # Track oscillation direction
 
-    def apply_to_strip(self, strip, events: List[float], fps: int, **kwargs) -> bool:
+    def get_animated_property(self, strip) -> List:
         """
-        Apply rotation wobble animation to strip based on events.
-
-        Uses the same logic as VintageFilmEffects.apply_rotation_wobble with
-        enhanced oscillation support.
+        Get rotation property to animate.
 
         Args:
-            strip: Blender video strip object
-            events: List of event times in seconds
-            fps: Frames per second
-            **kwargs: Additional parameters (unused)
+            strip: Blender strip object
 
         Returns:
-            True if animation was applied successfully
+            List with single tuple for rotation property
         """
         if not hasattr(strip, "transform"):
-            return False
+            return []
 
-        # Set initial rotation keyframe at frame 1
-        self.keyframe_helper.insert_transform_rotation_keyframe(strip.name, 1, 0.0)
+        # Return rotation property (base value is always 0 for rotation)
+        return [("transform.rotation", 0.0)]
 
-        # Track direction for oscillation
-        direction = 1
+    def calculate_effect_value(self, base_value: float, prop_path: str, strip) -> float:
+        """
+        Calculate wobble rotation value.
 
-        # Apply wobble for each event
-        for i, event_time in enumerate(events):
-            frame = int(event_time * fps)
+        Args:
+            base_value: Base rotation value (always 0)
+            prop_path: Property path being animated
+            strip: Blender strip object (unused)
 
-            # Calculate wobble rotation - use VintageFilmEffects logic with oscillation
-            if self.oscillate and i > 0:
-                direction *= -1  # Alternate direction
-                # Use VintageFilmEffects range but with direction
-                wobble_rotation = (
-                    random.uniform(-self.wobble_degrees, self.wobble_degrees)
-                    * direction
-                )
-            else:
-                # Original VintageFilmEffects logic: random in full range
-                wobble_rotation = random.uniform(
-                    -self.wobble_degrees, self.wobble_degrees
-                )
-
-            wobble_radians = math.radians(wobble_rotation)
-
-            # Apply wobble
-            strip.transform.rotation = wobble_radians
-            self.keyframe_helper.insert_transform_rotation_keyframe(
-                strip.name, frame, wobble_radians
+        Returns:
+            Rotation in radians with wobble applied
+        """
+        # Calculate wobble rotation with oscillation support
+        if self.oscillate:
+            # Alternate direction for each event
+            wobble_rotation = (
+                random.uniform(-self.wobble_degrees, self.wobble_degrees)
+                * self.direction
             )
+            self.direction *= -1  # Flip for next event
+        else:
+            # Random in full range
+            wobble_rotation = random.uniform(-self.wobble_degrees, self.wobble_degrees)
 
-            # Return to normal rotation (same as VintageFilmEffects: 3 frames)
-            return_frame = frame + self.return_frames
-            strip.transform.rotation = 0.0
-            self.keyframe_helper.insert_transform_rotation_keyframe(
-                strip.name, return_frame, 0.0
-            )
-
-        return True
+        # Convert to radians (Blender uses radians for rotation)
+        return math.radians(wobble_rotation)
 
     def get_required_properties(self) -> List[str]:
         """

@@ -39,9 +39,13 @@ class CinemonConfigGenerator:
         )
     """
 
-    def __init__(self):
-        """Initialize CinemonConfigGenerator."""
-        self.preset_manager = PresetManager()
+    def __init__(self, preset_dir: Path = None):
+        """Initialize CinemonConfigGenerator.
+
+        Args:
+            preset_dir: Optional path to preset directory. If None, uses default.
+        """
+        self.preset_manager = PresetManager(preset_dir)
 
     def generate_config_from_preset(
         self, recording_dir: Union[str, Path], preset_name: str, **overrides
@@ -189,7 +193,7 @@ class CinemonConfigGenerator:
         # Update project settings
         config.project.video_files = video_files
         config.project.main_audio = main_audio
-        
+
         # Set output blend file path
         project_name = recording_dir.name
         config.project.output_blend = f"blender/{project_name}.blend"
@@ -254,7 +258,7 @@ class CinemonConfigGenerator:
             "strip_animations": config.strip_animations,
         }
 
-        # Remove None values for cleaner YAML  
+        # Remove None values for cleaner YAML
         if not config.project.main_audio:
             del config_dict["project"]["main_audio"]
         if not config.project.output_blend:

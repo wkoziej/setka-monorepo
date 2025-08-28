@@ -17,16 +17,6 @@ if str(addon_path) not in sys.path:
 class TestExamplePresets:
     """Test all example preset files."""
 
-    @pytest.mark.skip(reason="vintage.yaml preset file removed - issue #24")
-    def test_vintage_preset_loads(self):
-        """Test that vintage preset loads correctly."""
-        pass
-
-    @pytest.mark.skip(reason="music-video.yaml preset file removed - issue #24")
-    def test_music_video_preset_loads(self):
-        """Test that music-video preset loads correctly."""
-        pass
-
     def test_minimal_preset_loads(self):
         """Test that minimal preset loads correctly."""
         from setka_common.config import YAMLConfigLoader
@@ -39,7 +29,7 @@ class TestExamplePresets:
 
         # Verify basic structure
         assert config.project.fps == 30
-        assert config.layout.type == "cascade"
+        assert config.layout.type == "random"
         assert "RPI_FRONT.mp4" in config.strip_animations
 
         # Verify minimal-specific settings - using actual content from minimal.yaml
@@ -51,11 +41,6 @@ class TestExamplePresets:
         assert scale_animation["intensity"] == 2.0, (
             "Minimal preset scale animation should match file content"
         )
-
-    @pytest.mark.skip(reason="beat-switch.yaml preset file removed - issue #24")
-    def test_beat_switch_preset_loads(self):
-        """Test that beat-switch preset loads correctly."""
-        pass
 
     def test_preset_files_exist(self):
         """Test that all expected preset files exist."""
@@ -74,12 +59,6 @@ class TestExamplePresets:
             assert preset_path.exists(), (
                 f"Expected preset file not found: {preset_path}"
             )
-
-    @pytest.mark.skip(reason="Multiple preset files removed - issue #24, only minimal.yaml remains")
-    def test_presets_have_different_characteristics(self):
-        """Test that presets have different characteristics as expected."""
-        # This test requires multiple presets which have been removed
-        pass
 
 
 if __name__ == "__main__":

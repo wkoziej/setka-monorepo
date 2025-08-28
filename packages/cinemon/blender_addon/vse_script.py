@@ -148,7 +148,7 @@ class BlenderVSEConfigurator:
         if strip_animations:
             print("🎭 Applying compositional animations...")
             sequencer = bpy.context.scene.sequence_editor
-            animation_success = self._apply_compositional_animations(sequencer)
+            animation_success = self._apply_layout_and_animations_from_config(sequencer)
             if not animation_success:
                 print(
                     "⚠ Animacje nie zostały zastosowane, ale projekt został utworzony"
@@ -163,12 +163,97 @@ class BlenderVSEConfigurator:
                         print(f"✗ Błąd zapisywania projektu z animacjami: {e}")
                         return False
 
+        # Store config path in scene if addon is loaded (for UI access)
+        # This MUST be after setup_project() because read_factory_settings() resets scene properties
+
+        # Try to enable addon if not already enabled
+        addon_enabled = False
+        try:
+            if "cinemon_addon" not in bpy.context.preferences.addons.keys():
+                print("🔌 Enabling cinemon addon...")
+                bpy.ops.preferences.addon_enable(module="cinemon_addon")
+                addon_enabled = True
+                print("✓ Cinemon addon enabled")
+            else:
+                addon_enabled = True
+                print("✓ Cinemon addon already enabled")
+        except Exception as e:
+            print(f"⚠ Could not enable addon: {e}")
+
+        # Now try to set config path
+        if addon_enabled and hasattr(bpy.types.Scene, "cinemon_config_path"):
+            bpy.context.scene.cinemon_config_path = str(self.config_path)
+            print(f"✓ Stored config path in scene: {self.config_path}")
+
+            # Save file again to persist config path in .blend
+            if self.output_blend:
+                try:
+                    bpy.ops.wm.save_as_mainfile(filepath=str(self.output_blend))
+                    print(f"✓ Final save with config path: {self.output_blend}")
+                except Exception as e:
+                    print(f"⚠ Warning: Could not save config path to blend file: {e}")
+        else:
+            print(
+                f"ℹ Addon not available, config path not stored in scene (not required for script)"
+            )
+
         print("=== Konfiguracja projektu VSE zakończona sukcesem ===")
         return True
 
-    def _apply_compositional_animations(self, sequencer) -> bool:
+    def apply_to_existing_project(self) -> bool:
         """
-        Apply compositional animations to video strips using YAML configuration.
+        Apply layout and animations to existing VSE project (for UI usage).
+        Does NOT recreate the project structure.
+
+        Returns:
+            bool: True if successfully applied
+        """
+        print("=== Applying changes to existing VSE project ===")
+
+        # Check if sequence editor exists
+        if not bpy.context.scene.sequence_editor:
+            print("✗ No sequence editor found in current scene")
+            return False
+
+        sequencer = bpy.context.scene.sequence_editor
+
+        # Check for existing strips
+        if not sequencer.sequences:
+            print("✗ No sequences found in the project")
+            return False
+
+        # Clear existing animations before applying new ones
+        try:
+            if (
+                bpy.context.scene.animation_data
+                and bpy.context.scene.animation_data.action
+            ):
+                action = bpy.context.scene.animation_data.action
+                fcurves_to_remove = [
+                    fc for fc in action.fcurves if "sequence_editor" in fc.data_path
+                ]
+                for fc in fcurves_to_remove:
+                    action.fcurves.remove(fc)
+                print(f"✓ Cleared {len(fcurves_to_remove)} existing animation curves")
+        except Exception as e:
+            print(f"⚠ Warning: Could not clear existing animations: {e}")
+
+        # Apply layout and animations
+        success = self._apply_layout_and_animations_from_config(sequencer)
+
+        if success:
+            print("✓ Changes applied to existing project successfully")
+            try:
+                bpy.ops.wm.save_mainfile()
+                print("✓ Project saved")
+            except Exception as e:
+                print(f"⚠ Warning: Could not save project: {e}")
+
+        return success
+
+    def _apply_layout_and_animations_from_config(self, sequencer) -> bool:
+        """
+        Load configuration and apply both layout and animations to video strips.
 
         Args:
             sequencer: Blender sequence editor
@@ -333,7 +418,7 @@ class BlenderVSEConfigurator:
 
     def _create_layout_from_yaml(self):
         """Create layout instance from YAML configuration."""
-        from vse.layouts import MainPipLayout, RandomLayout
+        from vse.layouts import GridLayout, MainPipLayout, RandomLayout
 
         layout = self.config.layout
         layout_type = layout.type
@@ -346,6 +431,12 @@ class BlenderVSEConfigurator:
                 min_scale=layout_config.get("min_scale", 0.3),
                 max_scale=layout_config.get("max_scale", 0.8),
                 seed=layout_config.get("seed", None),
+            )
+        elif layout_type == "grid":
+            return GridLayout(
+                rows=layout_config.get("rows", 3),
+                cols=layout_config.get("cols", 3),
+                margin=layout_config.get("margin", 0.02),
             )
         elif layout_type == "main-pip":
             return MainPipLayout(

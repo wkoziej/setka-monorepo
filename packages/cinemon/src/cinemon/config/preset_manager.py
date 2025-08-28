@@ -28,15 +28,22 @@ class PresetManager:
 
     # No more hardcoded presets - will load from YAML files
 
-    def __init__(self):
-        """Initialize PresetManager."""
+    def __init__(self, preset_dir: Path = None):
+        """Initialize PresetManager.
+
+        Args:
+            preset_dir: Optional path to preset directory. If None, uses default.
+        """
         self._custom_presets_cache = None
         self.builtin_presets = {}
-        self.preset_dir = (
-            Path(__file__).parent.parent.parent.parent
-            / "blender_addon"
-            / "example_presets"
-        )
+        if preset_dir is not None:
+            self.preset_dir = preset_dir
+        else:
+            self.preset_dir = (
+                Path(__file__).parent.parent.parent.parent
+                / "blender_addon"
+                / "example_presets"
+            )
         self._load_builtin_presets()
 
     def get_preset(self, name: str) -> BlenderYAMLConfig:

@@ -49,7 +49,7 @@ strip_animations:
     - type: shake
       trigger: beat
       intensity: 5.0
-      return_frames: 2
+      duration_frames: 2
 """
 
         with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
@@ -84,7 +84,7 @@ strip_animations:
             assert config.strip_animations["camera2"][0]["type"] == "shake"
             assert config.strip_animations["camera2"][0]["trigger"] == "beat"
             assert config.strip_animations["camera2"][0]["intensity"] == 5.0
-            assert config.strip_animations["camera2"][0]["return_frames"] == 2
+            assert config.strip_animations["camera2"][0]["duration_frames"] == 2
 
             # Cleanup
             Path(f.name).unlink()
@@ -288,7 +288,7 @@ strip_animations: {}
 project:
   video_files: [camera1.mp4, camera2.mp4]
   main_audio: main_audio.m4a
-  
+
 audio_analysis:
   file: analysis/audio_analysis.json
 
@@ -321,10 +321,10 @@ strip_animations: {}
             base_path = Path(temp_dir)
             extracted_dir = base_path / "extracted"
             analysis_dir = base_path / "analysis"
-            
+
             extracted_dir.mkdir()
             analysis_dir.mkdir()
-            
+
             # Create test files
             (extracted_dir / "camera1.mp4").touch()
             (extracted_dir / "main_audio.m4a").touch()
@@ -335,7 +335,7 @@ project:
   base_directory: {base_path}
   video_files: [camera1.mp4, camera2.mp4]
   main_audio: main_audio.m4a
-  
+
 audio_analysis:
   file: analysis/audio_analysis.json
 
@@ -345,7 +345,9 @@ layout:
 strip_animations: {{}}
 """
 
-            with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
+            with tempfile.NamedTemporaryFile(
+                mode="w", suffix=".yaml", delete=False
+            ) as f:
                 f.write(yaml_content)
                 f.flush()
 
@@ -357,10 +359,14 @@ strip_animations: {{}}
                 assert config.project.base_directory == str(base_path)
                 assert config.project.video_files == [
                     str(extracted_dir / "camera1.mp4"),
-                    str(extracted_dir / "camera2.mp4")
+                    str(extracted_dir / "camera2.mp4"),
                 ]
-                assert config.project.main_audio == str(extracted_dir / "main_audio.m4a")
-                assert config.audio_analysis.file == str(analysis_dir / "audio_analysis.json")
+                assert config.project.main_audio == str(
+                    extracted_dir / "main_audio.m4a"
+                )
+                assert config.audio_analysis.file == str(
+                    analysis_dir / "audio_analysis.json"
+                )
 
                 # Cleanup
                 Path(f.name).unlink()
@@ -371,7 +377,7 @@ strip_animations: {{}}
 project:
   video_files: [camera1.mp4, camera2.mp4]
   main_audio: main_audio.m4a
-  
+
 audio_analysis:
   file: analysis/audio_analysis.json
 
@@ -405,10 +411,10 @@ strip_animations: {}
             base_path = Path(temp_dir)
             extracted_dir = base_path / "extracted"
             analysis_dir = base_path / "analysis"
-            
+
             extracted_dir.mkdir()
             analysis_dir.mkdir()
-            
+
             # Create test files
             (extracted_dir / "camera1.mp4").touch()
             absolute_audio_path = "/tmp/absolute_audio.m4a"
@@ -418,7 +424,7 @@ project:
   base_directory: {base_path}
   video_files: [camera1.mp4]
   main_audio: {absolute_audio_path}
-  
+
 audio_analysis:
   file: analysis/audio_analysis.json
 
@@ -428,7 +434,9 @@ layout:
 strip_animations: {{}}
 """
 
-            with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
+            with tempfile.NamedTemporaryFile(
+                mode="w", suffix=".yaml", delete=False
+            ) as f:
                 f.write(yaml_content)
                 f.flush()
 
@@ -437,9 +445,15 @@ strip_animations: {{}}
                 config = loader.load_config(Path(f.name))
 
                 # Relative paths should be resolved, absolute paths preserved
-                assert config.project.video_files == [str(extracted_dir / "camera1.mp4")]
-                assert config.project.main_audio == absolute_audio_path  # Preserved as absolute
-                assert config.audio_analysis.file == str(analysis_dir / "audio_analysis.json")
+                assert config.project.video_files == [
+                    str(extracted_dir / "camera1.mp4")
+                ]
+                assert (
+                    config.project.main_audio == absolute_audio_path
+                )  # Preserved as absolute
+                assert config.audio_analysis.file == str(
+                    analysis_dir / "audio_analysis.json"
+                )
 
                 # Cleanup
                 Path(f.name).unlink()
@@ -449,10 +463,9 @@ strip_animations: {{}}
         # Create temporary test directory
         with tempfile.TemporaryDirectory() as temp_dir:
             base_path = Path(temp_dir)
-            
+
             project = ProjectConfig(
-                video_files=["camera1.mp4"],
-                base_directory=str(base_path)
+                video_files=["camera1.mp4"], base_directory=str(base_path)
             )
             audio_analysis = AudioAnalysisConfig()
             layout = LayoutConfig()
@@ -466,7 +479,7 @@ strip_animations: {{}}
             )
 
             loader = YAMLConfigLoader()
-            
+
             # Should not raise exception for valid config
             loader._validate_for_blender_execution(config)
 
@@ -485,7 +498,7 @@ strip_animations: {{}}
         )
 
         loader = YAMLConfigLoader()
-        
+
         with pytest.raises(ConfigValidationError) as exc_info:
             loader._validate_for_blender_execution(config)
         assert "base_directory required" in str(exc_info.value)
@@ -495,10 +508,10 @@ strip_animations: {{}}
         # Create temporary test directory
         with tempfile.TemporaryDirectory() as temp_dir:
             base_path = Path(temp_dir)
-            
+
             project = ProjectConfig(
                 video_files=[],  # Empty video files
-                base_directory=str(base_path)
+                base_directory=str(base_path),
             )
             audio_analysis = AudioAnalysisConfig()
             layout = LayoutConfig()
@@ -512,7 +525,7 @@ strip_animations: {{}}
             )
 
             loader = YAMLConfigLoader()
-            
+
             with pytest.raises(ConfigValidationError) as exc_info:
                 loader._validate_for_blender_execution(config)
             assert "video_files required" in str(exc_info.value)
@@ -520,8 +533,7 @@ strip_animations: {{}}
     def test_validate_for_blender_execution_nonexistent_base_directory(self):
         """Test validation fails when base_directory doesn't exist."""
         project = ProjectConfig(
-            video_files=["camera1.mp4"],
-            base_directory="/nonexistent/path"
+            video_files=["camera1.mp4"], base_directory="/nonexistent/path"
         )
         audio_analysis = AudioAnalysisConfig()
         layout = LayoutConfig()
@@ -535,7 +547,7 @@ strip_animations: {{}}
         )
 
         loader = YAMLConfigLoader()
-        
+
         with pytest.raises(ConfigValidationError) as exc_info:
             loader._validate_for_blender_execution(config)
         assert "Base directory does not exist" in str(exc_info.value)

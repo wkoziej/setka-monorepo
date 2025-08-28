@@ -14,6 +14,9 @@ addon_path = Path(__file__).parent.parent.parent / "blender_addon"
 if str(addon_path) not in sys.path:
     sys.path.insert(0, str(addon_path))
 
+# Path to test fixtures
+fixtures_path = Path(__file__).parent.parent / "fixtures"
+
 
 class TestLoadConfigOperator:
     """Test LoadConfigOperator functionality."""
@@ -67,43 +70,45 @@ class TestLoadConfigOperator:
     def test_load_config_execute_valid_file(self):
         """Test LoadConfigOperator.execute() with valid YAML file."""
         from operators import LoadConfigOperator
-        from setka_common.config import (
-            AudioAnalysisConfig,
-            BlenderYAMLConfig,
-            LayoutConfig,
-            ProjectConfig,
-        )
 
         operator = LoadConfigOperator()
-        operator.filepath = str(addon_path / "example_presets" / "vintage.yaml")
+        operator.filepath = str(fixtures_path / "presets" / "test_minimal.yaml")
 
         mock_context = Mock()
-        mock_context.scene = Mock()
 
-        with patch("operators.YAMLConfigLoader") as mock_loader_class:
-            mock_loader = Mock()
-            mock_loader_class.return_value = mock_loader
+        # Need dict-like scene for property assignment
+        class MockScene:
+            def __init__(self):
+                self._props = {}
 
-            # Mock successful loading
-            mock_config = BlenderYAMLConfig(
-                project=ProjectConfig(video_files=[], fps=30),
-                layout=LayoutConfig(type="random"),
-                strip_animations={},
-                audio_analysis=AudioAnalysisConfig(file="./analysis/audio.json"),
-            )
-            mock_loader.load_from_file.return_value = mock_config
+            def __getitem__(self, key):
+                return self._props[key]
 
-            result = operator.execute(mock_context)
+            def __setitem__(self, key, value):
+                self._props[key] = value
 
-            # Should load file successfully
-            mock_loader.load_from_file.assert_called_once_with(operator.filepath)
+            def __setattr__(self, key, value):
+                if key.startswith("_"):
+                    super().__setattr__(key, value)
+                else:
+                    self._props[key] = value
 
-            # Should store config in scene
-            assert hasattr(mock_context.scene, "cinemon_config")
-            assert mock_context.scene.cinemon_config == mock_config
+            def __getattr__(self, key):
+                return self._props.get(key)
 
-            # Should return FINISHED
-            assert result == {"FINISHED"}
+        mock_context.scene = MockScene()
+
+        # Test real loading (no mocks)
+        result = operator.execute(mock_context)
+
+        # Should store config path in scene (not config object)
+        assert hasattr(mock_context.scene, "cinemon_config_path")
+        assert mock_context.scene.cinemon_config_path == str(
+            fixtures_path / "presets" / "test_minimal.yaml"
+        )
+
+        # Should return FINISHED for successful load
+        assert result == {"FINISHED"}
 
     def test_load_config_execute_invalid_file(self):
         """Test LoadConfigOperator.execute() with invalid YAML file."""
@@ -116,7 +121,9 @@ class TestLoadConfigOperator:
         mock_context = Mock()
         mock_context.scene = Mock()
 
-        with patch("operators.YAMLConfigLoader") as mock_loader_class:
+        with patch(
+            "operators.YAMLConfigLoader"  # Mock where it's imported in the operator
+        ) as mock_loader_class:
             mock_loader = Mock()
             mock_loader_class.return_value = mock_loader
 
@@ -208,20 +215,26 @@ class TestApplyConfigOperator:
             strip_animations={"Camera1": [{"type": "scale", "trigger": "beat"}]},
             audio_analysis=AudioAnalysisConfig(file="./analysis/audio.json"),
         )
-        mock_context.scene.cinemon_config = mock_config
-        mock_context.scene.cinemon_config_path = "/test/path/config.yaml"
+        # Don't set cinemon_config - we only use cinemon_config_path now
+        # Use a real path that the test can work with
+        mock_context.scene.cinemon_config_path = str(
+            fixtures_path / "presets" / "test_minimal.yaml"
+        )
 
-        with patch("operators.YAMLConfigLoader") as mock_loader_class:
+        with patch(
+            "operators.YAMLConfigLoader"  # Mock where it's imported in the operator
+        ) as mock_loader_class:
             mock_loader = Mock()
             mock_loader_class.return_value = mock_loader
+            mock_loader.load_from_file.return_value = mock_config
 
-            with patch(
-                "operators.BlenderVSEConfiguratorDirect"
-            ) as mock_configurator_class:
-                mock_configurator = Mock()
-                mock_configurator_class.return_value = mock_configurator
-                mock_configurator.setup_vse_project.return_value = True
+            # Mock the entire vse_script module
+            mock_vse_script = Mock()
+            mock_configurator = Mock()
+            mock_configurator.setup_vse_project.return_value = True
+            mock_vse_script.BlenderVSEConfigurator.return_value = mock_configurator
 
+            with patch.dict("sys.modules", {"vse_script": mock_vse_script}):
                 with patch.object(operator, "report") as mock_report:
                     result = operator.execute(mock_context)
 
@@ -232,11 +245,18 @@ class TestApplyConfigOperator:
                     else:
                         print("No report calls made")
 
-                # Should create configurator with config
-                mock_configurator_class.assert_called_once()
+                # Should load config from file
+                mock_loader.load_from_file.assert_called_once_with(
+                    str(fixtures_path / "presets" / "test_minimal.yaml")
+                )
 
-                # Should call setup_vse_project
-                mock_configurator.setup_vse_project.assert_called_once()
+                # Should create configurator with config path
+                mock_vse_script.BlenderVSEConfigurator.assert_called_once_with(
+                    str(fixtures_path / "presets" / "test_minimal.yaml")
+                )
+
+                # Should call apply_to_existing_project
+                mock_configurator.apply_to_existing_project.assert_called_once()
 
                 # Should return FINISHED
                 assert result == {"FINISHED"}
@@ -262,20 +282,28 @@ class TestApplyConfigOperator:
             strip_animations={},
             audio_analysis=AudioAnalysisConfig(file="./analysis/audio.json"),
         )
-        mock_context.scene.cinemon_config = mock_config
-        mock_context.scene.cinemon_config_path = "/test/path/config.yaml"
+        # Don't set cinemon_config - we only use cinemon_config_path now
+        # Use a real path that the test can work with
+        mock_context.scene.cinemon_config_path = str(
+            fixtures_path / "presets" / "test_minimal.yaml"
+        )
 
-        with patch("operators.YAMLConfigLoader") as mock_loader_class:
+        with patch(
+            "operators.YAMLConfigLoader"  # Mock where it's imported in the operator
+        ) as mock_loader_class:
             mock_loader = Mock()
             mock_loader_class.return_value = mock_loader
+            mock_loader.load_from_file.return_value = mock_config
 
-            with patch(
-                "operators.BlenderVSEConfiguratorDirect"
-            ) as mock_configurator_class:
-                mock_configurator = Mock()
-                mock_configurator_class.return_value = mock_configurator
-                mock_configurator.setup_vse_project.return_value = False  # Setup fails
+            # Mock the entire vse_script module
+            mock_vse_script = Mock()
+            mock_configurator = Mock()
+            mock_configurator.apply_to_existing_project.return_value = (
+                False  # Apply fails
+            )
+            mock_vse_script.BlenderVSEConfigurator.return_value = mock_configurator
 
+            with patch.dict("sys.modules", {"vse_script": mock_vse_script}):
                 with patch.object(operator, "report") as mock_report:
                     result = operator.execute(mock_context)
 

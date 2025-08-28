@@ -148,7 +148,7 @@ class TestAnimationCompositorStripTargeting:
         shake_animation = ShakeAnimation(
             trigger="beat",
             intensity=5.0,
-            return_frames=2,
+            duration_frames=2,
             target_strips=["Camera3"],  # Target only Camera3
         )
 

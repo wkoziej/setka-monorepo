@@ -48,23 +48,29 @@ except ImportError:
 
     bpy = MockBpy()
 
-# Import addon modules
-try:
-    from . import layout_ui, operators
-except ImportError:
-    # For testing - import operators directly
-    import layout_ui
-    import operators
-
-# Add vendor path for PyYAML
+# Add vendor and vse paths BEFORE importing modules
 vendor_path = Path(__file__).parent / "vendor"
 if str(vendor_path) not in sys.path:
     sys.path.insert(0, str(vendor_path))
 
-# Add vse path for vse modules
 vse_path = Path(__file__).parent / "vse"
 if str(vse_path) not in sys.path:
     sys.path.insert(0, str(vse_path))
+
+# Import utilities for addon detection
+try:
+    from .import_utils import is_running_as_addon
+except ImportError:
+    from import_utils import is_running_as_addon
+
+# Import addon modules with context detection
+if is_running_as_addon():
+    from . import animation_panel, layout_ui, operators
+else:
+    # For testing - import directly
+    import animation_panel
+    import layout_ui
+    import operators
 
 
 class CINEMON_PT_main_panel(Panel):
@@ -197,11 +203,14 @@ class CINEMON_OT_load_preset(bpy.types.Operator):
 
             config = SimpleConfig(config_data)
 
-            # Store configuration - for now just store as string representation
-            # TODO: Create proper PropertyGroup for complex config storage
+            # Store filepath for reference - ONLY THIS
             context.scene.cinemon_config_path = str(preset_path)
 
-            # Store basic config info as scene properties for UI display
+            # REMOVED: Don't parse and store in memory
+            # OLD CODE REMOVED:
+            # context.scene["cinemon_strip_animations"] = config.strip_animations
+
+            # Basic display info can be read on-demand or stored minimally
             layout_type = (
                 getattr(config.layout, "type", "unknown")
                 if hasattr(config, "layout")
@@ -267,9 +276,15 @@ def register():
     # Register layout UI after main panels
     layout_ui.register()
 
+    # Register animation panel
+    animation_panel.register()
+
 
 def unregister():
     """Unregister addon classes and operators."""
+    # Unregister animation panel
+    animation_panel.unregister()
+
     # Unregister layout UI
     layout_ui.unregister()
 

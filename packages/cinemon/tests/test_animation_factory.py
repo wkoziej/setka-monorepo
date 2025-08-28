@@ -29,7 +29,7 @@ class TestAnimationFactory:
         assert isinstance(animation, ScaleAnimation)
         assert animation.trigger == "bass"
         assert animation.intensity == 0.5
-        assert animation.duration_frames == 4
+        assert animation.duration_frames == 4  # ScaleAnimation now uses duration_frames
         assert animation.target_strips == ["Camera1", "Camera2"]
 
     def test_create_animation_with_defaults(self):
@@ -41,7 +41,7 @@ class TestAnimationFactory:
         assert isinstance(animation, ShakeAnimation)
         assert animation.trigger == "beat"
         assert animation.intensity == 10.0  # default
-        assert animation.return_frames == 2  # default
+        assert animation.duration_frames == 2  # default
         assert animation.target_strips == []  # default
 
     def test_create_vintage_color_animation(self):
@@ -120,7 +120,6 @@ class TestAnimationFactory:
             "jitter",
             "brightness_flicker",
             "black_white",
-            "film_grain",
             "vintage_color",
             "visibility",
         ]

@@ -1,24 +1,24 @@
 # ABOUTME: ShakeAnimation implementation - creates camera shake effect by animating strip position
-# ABOUTME: Refactored from VintageFilmEffects with support for random and deterministic shaking
+# ABOUTME: Refactored to use EventDrivenAnimation base class for cleaner code
 
-"""Shake animation for VSE strips."""
+"""Shake animation for VSE strips using EventDrivenAnimation base."""
 
 import random
-from typing import List, Optional
+from typing import List, Optional, Any
 
-from .base_effect_animation import BaseEffectAnimation
+from .event_driven_animation import EventDrivenAnimation
 
 
-class ShakeAnimation(BaseEffectAnimation):
+class ShakeAnimation(EventDrivenAnimation):
     """
     Animation that creates shaking/vibration effect on strips.
 
-    Refactored from VintageFilmEffects.apply_camera_shake with enhanced options.
+    Now uses EventDrivenAnimation base class to eliminate code duplication.
 
     Attributes:
         trigger: Event type to react to ("beat", "bass", "energy_peaks")
         intensity: Shake intensity in pixels
-        return_frames: How many frames until return to base position
+        duration_frames: How many frames until return to base position
         random_direction: Whether shake direction is random or deterministic
     """
 
@@ -26,7 +26,7 @@ class ShakeAnimation(BaseEffectAnimation):
         self,
         trigger: str = "beat",
         intensity: float = 10.0,
-        return_frames: int = 2,
+        duration_frames: int = 2,
         random_direction: bool = True,
         target_strips: Optional[List[str]] = None,
     ):
@@ -36,66 +36,61 @@ class ShakeAnimation(BaseEffectAnimation):
         Args:
             trigger: Event type to trigger animation
             intensity: Maximum shake offset in pixels
-            return_frames: Frames until position returns to normal
+            duration_frames: Frames until position returns to normal
             random_direction: If True, shake randomly; if False, shake horizontally only
             target_strips: List of strip names to target (None = all strips)
         """
-        super().__init__(target_strips=target_strips)
-        self.trigger = trigger
-        self.intensity = intensity
-        self.return_frames = return_frames
+        super().__init__(
+            trigger=trigger,
+            intensity=intensity,
+            duration_frames=duration_frames,
+            target_strips=target_strips,
+            random_direction=random_direction,  # Store in extra_params
+        )
         self.random_direction = random_direction
 
-    def apply_to_strip(self, strip, events: List[float], fps: int, **kwargs) -> bool:
+    def get_animated_property(self, strip) -> List:
         """
-        Apply shake animation to strip based on events.
+        Get position properties to animate.
 
         Args:
-            strip: Blender video strip object
-            events: List of event times in seconds
-            fps: Frames per second
-            **kwargs: Additional parameters (unused)
+            strip: Blender strip object
 
         Returns:
-            True if animation was applied successfully
+            List of (property_path, base_value) tuples for offset_x and offset_y
         """
         if not hasattr(strip, "transform"):
-            return False
+            return []
 
-        # Get base position
-        base_x = strip.transform.offset_x
-        base_y = strip.transform.offset_y
+        # Return both offset_x and offset_y for shake effect
+        return [
+            ("transform.offset_x", strip.transform.offset_x),
+            ("transform.offset_y", strip.transform.offset_y),
+        ]
 
-        # Set initial keyframe at frame 1
-        self.keyframe_helper.insert_transform_position_keyframes(strip.name, 1)
+    def calculate_effect_value(self, base_value: float, prop_path: str, strip) -> float:
+        """
+        Calculate shake offset value.
 
-        # Apply shake for each event
-        for event_time in events:
-            frame = int(event_time * fps)
+        Args:
+            base_value: Base position value
+            prop_path: Property path being animated (offset_x or offset_y)
+            strip: Blender strip object (unused)
 
-            # Calculate shake offset
-            if self.random_direction:
-                shake_x = random.uniform(-self.intensity, self.intensity)
-                shake_y = random.uniform(-self.intensity, self.intensity)
-            else:
-                # Deterministic shake (horizontal only)
-                shake_x = self.intensity
-                shake_y = 0
+        Returns:
+            Position with shake offset applied
+        """
+        if self.random_direction:
+            # Random shake in both directions
+            shake_offset = random.uniform(-self.intensity, self.intensity)
+        else:
+            # Deterministic shake (horizontal only for offset_x, no shake for offset_y)
+            if "offset_x" in prop_path:
+                shake_offset = self.intensity
+            else:  # offset_y
+                shake_offset = 0
 
-            # Apply shake
-            strip.transform.offset_x = base_x + shake_x
-            strip.transform.offset_y = base_y + shake_y
-            self.keyframe_helper.insert_transform_position_keyframes(strip.name, frame)
-
-            # Return to base position
-            return_frame = frame + self.return_frames
-            strip.transform.offset_x = base_x
-            strip.transform.offset_y = base_y
-            self.keyframe_helper.insert_transform_position_keyframes(
-                strip.name, return_frame
-            )
-
-        return True
+        return base_value + shake_offset
 
     def get_required_properties(self) -> List[str]:
         """

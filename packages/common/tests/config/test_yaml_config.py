@@ -198,7 +198,7 @@ class TestBlenderYAMLConfig:
                     "type": "shake",
                     "trigger": "beat",
                     "intensity": 5.0,
-                    "return_frames": 2,
+                    "duration_frames": 2,
                 }
             ],
         }

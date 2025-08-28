@@ -52,6 +52,7 @@ class KeyframeHelper:
         except Exception as e:
             print(f"ERROR inserting keyframe: {e}")
             import traceback
+
             traceback.print_exc()
             return False
 
@@ -102,6 +103,81 @@ class KeyframeHelper:
         except Exception as e:
             print(f"ERROR inserting keyframe: {e}")
             import traceback
+
+            traceback.print_exc()
+            return False
+
+    def insert_color_multiply_keyframe(
+        self, strip: Union[str, object], frame: int, multiply_value: float = None
+    ) -> bool:
+        """
+        Insert color_multiply keyframe for a strip.
+
+        Args:
+            strip: Strip name (str) or strip object with .name attribute
+            frame: Frame number for keyframe
+            multiply_value: Color multiply value (0.0-2.0). If None, uses strip's current value
+
+        Returns:
+            bool: True if keyframe inserted successfully
+        """
+        try:
+            # Extract strip name and multiply value
+            if isinstance(strip, str):
+                strip_name = strip
+                if multiply_value is None:
+                    multiply_value = 1.0  # Default multiply (normal brightness)
+            else:
+                strip_name = strip.name
+                if multiply_value is None:
+                    multiply_value = strip.color_multiply
+
+            # Build data path and insert keyframe
+            data_path = self.build_data_path(strip_name, "color_multiply")
+            bpy.context.scene.keyframe_insert(data_path=data_path, frame=frame)
+            return True
+
+        except Exception as e:
+            print(f"ERROR inserting color_multiply keyframe: {e}")
+            import traceback
+
+            traceback.print_exc()
+            return False
+
+    def insert_color_saturation_keyframe(
+        self, strip: Union[str, object], frame: int, saturation_value: float = None
+    ) -> bool:
+        """
+        Insert color_saturation keyframe for a strip.
+
+        Args:
+            strip: Strip name (str) or strip object with .name attribute
+            frame: Frame number for keyframe
+            saturation_value: Color saturation value (0.0 = grayscale, 1.0 = normal, 2.0 = oversaturated)
+
+        Returns:
+            bool: True if keyframe inserted successfully
+        """
+        try:
+            # Extract strip name and saturation value
+            if isinstance(strip, str):
+                strip_name = strip
+                if saturation_value is None:
+                    saturation_value = 1.0  # Default saturation (normal colors)
+            else:
+                strip_name = strip.name
+                if saturation_value is None:
+                    saturation_value = strip.color_saturation
+
+            # Build data path and insert keyframe
+            data_path = self.build_data_path(strip_name, "color_saturation")
+            bpy.context.scene.keyframe_insert(data_path=data_path, frame=frame)
+            return True
+
+        except Exception as e:
+            print(f"ERROR inserting color_saturation keyframe: {e}")
+            import traceback
+
             traceback.print_exc()
             return False
 
@@ -150,6 +226,7 @@ class KeyframeHelper:
         except Exception as e:
             print(f"ERROR inserting keyframe: {e}")
             import traceback
+
             traceback.print_exc()
             return False
 
@@ -226,5 +303,6 @@ class KeyframeHelper:
         except Exception as e:
             print(f"ERROR inserting keyframe: {e}")
             import traceback
+
             traceback.print_exc()
             return False

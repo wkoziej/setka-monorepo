@@ -140,7 +140,7 @@ animations:
   - type: shake
     trigger: beat
     intensity: 2.0
-    return_frames: 2
+    duration_frames: 2
     target_strips: []  # All strips
   - type: jitter
     trigger: continuous
@@ -151,7 +151,7 @@ animations:
   - type: brightness_flicker
     trigger: beat
     intensity: 0.1
-    return_frames: 1
+    duration_frames: 1
     target_strips: []
   - type: black_white
     trigger: one_time
@@ -188,12 +188,12 @@ animations:
   - type: shake
     trigger: beat
     intensity: 12.0
-    return_frames: 2
+    duration_frames: 2
     target_strips: []
   - type: rotation
     trigger: energy_peaks
     degrees: 2.0
-    return_frames: 5
+    duration_frames: 5
     target_strips: []
 ```
 

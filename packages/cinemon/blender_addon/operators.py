@@ -30,33 +30,23 @@ except ImportError:
 
 
 # Import setka-common configuration system
-try:
-    # Add vendor path for PyYAML first (Blender doesn't have it)
-    vendor_path = Path(__file__).parent / "vendor"
-    if str(vendor_path) not in sys.path:
-        sys.path.insert(0, str(vendor_path))
+# Add vendor path for PyYAML first (Blender doesn't have it)
+vendor_path = Path(__file__).parent / "vendor"
+if str(vendor_path) not in sys.path:
+    sys.path.insert(0, str(vendor_path))
 
-    # Add addon directory to path for local setka_common symlink
-    addon_path = Path(__file__).parent
-    if str(addon_path) not in sys.path:
-        sys.path.insert(0, str(addon_path))
+# Add addon directory to path for local setka_common symlink
+addon_path = Path(__file__).parent
+if str(addon_path) not in sys.path:
+    sys.path.insert(0, str(addon_path))
 
-    from setka_common.config.yaml_config import YAMLConfigLoader
+from setka_common.config.yaml_config import YAMLConfigLoader
 
-    class ValidationError(Exception):
-        """Validation error for compatibility."""
 
-        pass
-except ImportError as e:
-    print(f"Warning: setka-common not available in operators.py: {e}")
+class ValidationError(Exception):
+    """Validation error for compatibility."""
 
-    # Fallback for testing
-    class YAMLConfigLoader:
-        def load_config(self, path):
-            return {}
-
-    class ValidationError(Exception):
-        pass
+    pass
 
 
 # Import vse_script for applying configurations
@@ -113,11 +103,25 @@ class LoadConfigOperator(Operator, ImportHelper):
             loader = YAMLConfigLoader()
             config = loader.load_from_file(self.filepath)
 
-            # Store configuration in scene for later use
-            context.scene.cinemon_config = config
+            # Don't store config object - just path (config will be reloaded when needed)
 
-            # Store filepath for reference
+            # Store filepath for reference - THIS IS THE KEY FOR PANEL
             context.scene.cinemon_config_path = self.filepath
+
+            # REMOVED: Don't store strip_animations in memory anymore
+            # OLD CODE REMOVED:
+            # context.scene["cinemon_strip_animations"] = config.strip_animations
+
+            # Store basic info for main panel display
+            if hasattr(config, "layout") and hasattr(config.layout, "type"):
+                context.scene["cinemon_layout_type"] = config.layout.type
+
+            # Count animations by reading from config object (not storing)
+            if hasattr(config, "strip_animations") and config.strip_animations:
+                total_animations = sum(
+                    len(anims) for anims in config.strip_animations.values()
+                )
+                context.scene["cinemon_animations_count"] = total_animations
 
             self.report(
                 {"INFO"}, f"Loaded configuration from {Path(self.filepath).name}"
@@ -148,82 +152,56 @@ class ApplyConfigOperator(Operator):
 
     def execute(self, context):
         """Apply loaded configuration to VSE."""
-        # Check if configuration is loaded
-        if not hasattr(context.scene, "cinemon_config"):
+        # Check if configuration path is available
+        if (
+            not hasattr(context.scene, "cinemon_config_path")
+            or not context.scene.cinemon_config_path
+        ):
             self.report({"ERROR"}, "No config loaded. Use 'Load Cinemon Config' first.")
             return {"CANCELLED"}
 
         try:
-            config = context.scene.cinemon_config
+            # Re-load configuration from file (to get latest changes from YAML)
+            config_path = context.scene.cinemon_config_path
+            loader = YAMLConfigLoader()
+            config = loader.load_from_file(config_path)
 
-            # Create configurator with config object directly
-            # BlenderVSEConfiguratorDirect expects CinemonConfig object
-            configurator = BlenderVSEConfiguratorDirect(config)
+            # Use the original BlenderVSEConfigurator from vse_script directly
+            from vse_script import BlenderVSEConfigurator
 
-            # Apply configuration
-            success = configurator.setup_vse_project()
+            # Create configurator with config file path (not object)
+            configurator = BlenderVSEConfigurator(config_path)
+
+            # Apply to existing project (not setup from scratch)
+            success = configurator.apply_to_existing_project()
 
             if success:
-                config_name = getattr(
-                    context.scene, "cinemon_config_path", "loaded config"
-                )
-                self.report(
-                    {"INFO"},
-                    f"VSE project created successfully from {Path(config_name).name}",
-                )
+                try:
+                    self.report(
+                        {"INFO"},
+                        f"Changes applied successfully from {Path(config_path).name}",
+                    )
+                except:
+                    print(
+                        f"✓ Changes applied successfully from {Path(config_path).name}"
+                    )
                 return {"FINISHED"}
             else:
-                self.report({"ERROR"}, "Failed to setup VSE project")
+                try:
+                    self.report({"ERROR"}, "Failed to apply changes to VSE project")
+                except:
+                    print("✗ Failed to apply changes to VSE project")
                 return {"CANCELLED"}
 
         except Exception as e:
-            self.report({"ERROR"}, f"Error applying configuration: {e}")
+            try:
+                self.report({"ERROR"}, f"Error applying configuration: {e}")
+            except:
+                print(f"✗ Error applying configuration: {e}")
             return {"CANCELLED"}
 
 
-class BlenderVSEConfiguratorDirect(BlenderVSEConfigurator):
-    """VSE Configurator that accepts config data directly instead of file path."""
-
-    def __init__(self, config):
-        """Initialize with CinemonConfig object."""
-        # Set config object directly
-        self.config = config
-        self.config_data = config
-
-        # Set attributes from config object
-        project = config.project
-        self.video_files = [Path(f) for f in project.video_files]
-        self.main_audio = Path(project.main_audio) if project.main_audio else None
-        self.output_blend = Path(project.output_blend) if project.output_blend else None
-        self.render_output = (
-            Path(project.render_output) if project.render_output else None
-        )
-        self.fps = project.fps
-        self.resolution_x = project.resolution.width
-        self.resolution_y = project.resolution.height
-        self.beat_division = project.beat_division
-
-        # Animation mode is always compositional
-        self.animation_mode = "compositional"
-
-        # Initialize project setup with config (if we have BlenderProjectSetup available)
-        try:
-            from vse.project_setup import BlenderProjectSetup
-
-            self.project_setup = BlenderProjectSetup(
-                {
-                    "fps": self.fps,
-                    "resolution_x": self.resolution_x,
-                    "resolution_y": self.resolution_y,
-                    "video_files": self.video_files,
-                    "main_audio": self.main_audio,
-                    "output_blend": self.output_blend,
-                    "render_output": self.render_output,
-                }
-            )
-        except ImportError:
-            # For testing
-            self.project_setup = None
+# Removed BlenderVSEConfiguratorDirect - using original BlenderVSEConfigurator instead
 
 
 # Operator classes for registration
