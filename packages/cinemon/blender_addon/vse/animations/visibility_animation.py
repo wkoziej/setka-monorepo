@@ -88,6 +88,12 @@ class VisibilityAnimation(BaseEffectAnimation):
             # Handle both time values (beats, energy_peaks) and section objects
             if isinstance(event, dict) and "start" in event:
                 event_time = event["start"]
+            elif isinstance(event, str):
+                # Handle special trigger types like "continuous" - skip visibility animation for these
+                print(
+                    f"    ⚠️ Visibility animation doesn't support trigger type: {event}"
+                )
+                continue
             else:
                 event_time = event
             frame = int(event_time * fps)
@@ -133,10 +139,12 @@ class VisibilityAnimation(BaseEffectAnimation):
                 )
                 print(f"    📍 Return frame: {return_frame}, alpha={return_alpha}")
 
-            # Only show first 3 events to avoid spam
+            # Only show first 3 events in debug to avoid spam
             if i >= 2:
-                print(f"    📍 ... and {len(events) - 3} more events")
-                break
+                print(
+                    f"    📍 ... and {len(events) - 3} more events (processing continues)"
+                )
+                # Don't break - continue processing all events!
 
         return True
 

@@ -15,6 +15,7 @@ from beatrix import AudioValidationError
 from setka_common.config import BlenderYAMLConfig, YAMLConfigLoader
 
 from ..config import CinemonConfigGenerator
+from ..config.preset_manager import PresetManager
 from ..project_manager import BlenderProjectManager
 
 
@@ -82,6 +83,46 @@ def setup_logging(verbose: bool = False) -> None:
     )
 
 
+def get_available_presets() -> list[str]:
+    """
+    Get list of available presets dynamically.
+
+    Returns:
+        List of available preset names
+    """
+    try:
+        manager = PresetManager()
+        return manager.list_presets()
+    except Exception:
+        # Fallback to known presets if PresetManager fails
+        return ["minimal", "multi_pip"]
+
+
+def validate_preset(preset_name: str) -> None:
+    """
+    Validate that preset exists.
+
+    Args:
+        preset_name: Name of preset to validate
+
+    Raises:
+        SystemExit: If preset doesn't exist
+    """
+    try:
+        manager = PresetManager()
+        available = manager.list_presets()
+
+        if preset_name not in available:
+            print(f"❌ Preset '{preset_name}' nie istnieje")
+            print(f"📋 Dostępne presety: {', '.join(available)}")
+            print("💡 Użyj --list-presets aby zobaczyć wszystkie dostępne presety")
+            sys.exit(1)
+
+    except Exception as e:
+        print(f"⚠ Nie można sprawdzić presetów: {e}")
+        # Continue with execution - let PresetManager handle the error later
+
+
 def parse_args() -> argparse.Namespace:
     """
     Parse command line arguments.
@@ -94,15 +135,21 @@ def parse_args() -> argparse.Namespace:
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Przykłady użycia:
-  %(prog)s ./recording_20250105_143022 --preset vintage
-  %(prog)s ./recording_20250105_143022 --preset music-video --verbose
-  %(prog)s ./recording_20250105_143022 --preset beat-switch --main-audio "main_audio.m4a"
+  %(prog)s ./recording_20250105_143022 --preset minimal
+  %(prog)s ./recording_20250105_143022 --preset multi_pip --verbose
+  %(prog)s ./recording_20250105_143022 --preset minimal --main-audio "main_audio.m4a"
   %(prog)s ./recording_20250105_143022 --config custom_config.yaml
   %(prog)s ./recording_20250105_143022 --config path/to/config.yaml --force
+  %(prog)s --list-presets
         """,
     )
 
-    parser.add_argument("recording_dir", type=Path, help="Katalog nagrania OBS Canvas")
+    parser.add_argument(
+        "recording_dir",
+        nargs="?",  # Make optional
+        type=Path,
+        help="Katalog nagrania OBS Canvas",
+    )
 
     parser.add_argument(
         "--verbose", "-v", action="store_true", help="Szczegółowe logowanie"
@@ -124,8 +171,14 @@ Przykłady użycia:
         help="Automatycznie otwórz Blender po utworzeniu projektu",
     )
 
-    # Mutually exclusive group for config sources (required)
-    config_group = parser.add_mutually_exclusive_group(required=True)
+    parser.add_argument(
+        "--list-presets",
+        action="store_true",
+        help="Wyświetl listę dostępnych presetów i zakończ",
+    )
+
+    # Mutually exclusive group for config sources (required unless --list-presets)
+    config_group = parser.add_mutually_exclusive_group(required=False)
 
     config_group.add_argument(
         "--config",
@@ -133,10 +186,14 @@ Przykłady użycia:
         help="Ścieżka do pliku konfiguracji YAML",
     )
 
+    # Get available presets dynamically for help text
+    available_presets = get_available_presets()
+    preset_list = ", ".join(available_presets)
+
     config_group.add_argument(
         "--preset",
         type=str,
-        help="Nazwa presetu konfiguracji (vintage, music-video, minimal, beat-switch)",
+        help=f"Nazwa presetu konfiguracji ({preset_list})",
     )
 
     return parser.parse_args()
@@ -188,6 +245,32 @@ def main() -> int:
         int: Exit code (0 for success, 1 for error)
     """
     args = parse_args()
+
+    # Handle --list-presets first, before any validation
+    if args.list_presets:
+        try:
+            manager = PresetManager()
+            presets = manager.list_presets()
+            print("📋 Dostępne presety:")
+            for preset in presets:
+                print(f"  • {preset}")
+            return 0
+        except Exception as e:
+            print(f"❌ Błąd podczas ładowania presetów: {e}")
+            return 1
+
+    # Validate required arguments when not using --list-presets
+    if not args.recording_dir:
+        print("❌ Błąd: Wymagany jest recording_dir")
+        print("💡 Użyj --help aby zobaczyć dostępne opcje")
+        return 1
+
+    if not args.config and not args.preset:
+        print("❌ Błąd: Wymagany jest --config lub --preset")
+        print("💡 Użyj --help aby zobaczyć dostępne opcje")
+        print("📋 Użyj --list-presets aby zobaczyć dostępne presety")
+        return 1
+
     setup_logging(args.verbose)
 
     logger = logging.getLogger(__name__)
@@ -195,6 +278,9 @@ def main() -> int:
     try:
         # Handle preset configuration if provided
         if args.preset:
+            # Validate preset exists before proceeding
+            validate_preset(args.preset)
+
             logger.info(f"Generating configuration from preset: {args.preset}")
 
             # Prepare preset overrides from CLI arguments

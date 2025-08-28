@@ -17,13 +17,13 @@ class TestCLIPresetParameter:
 
     def test_parse_args_with_preset_parameter(self):
         """Test that --preset parameter is properly parsed."""
-        test_args = ["recording_dir", "--preset", "vintage"]
+        test_args = ["recording_dir", "--preset", "minimal"]
 
         with patch.object(sys, "argv", ["blend_setup.py"] + test_args):
             args = parse_args()
 
         assert hasattr(args, "preset")
-        assert args.preset == "vintage"
+        assert args.preset == "minimal"
         assert args.recording_dir == Path("recording_dir")
         assert args.config is None
 
@@ -40,18 +40,19 @@ class TestCLIPresetParameter:
         assert args.preset is None
 
     def test_parse_args_requires_preset_or_config(self):
-        """Test that either --preset or --config is required."""
+        """Test that parse_args doesn't require preset or config when using --list-presets."""
         test_args = ["recording_dir"]
 
         with patch.object(sys, "argv", ["blend_setup.py"] + test_args):
-            with pytest.raises(
-                SystemExit
-            ):  # argparse exits when required group not provided
-                parse_args()
+            # This should not raise SystemExit since preset/config is no longer required at parse time
+            args = parse_args()
+            assert args.recording_dir == Path("recording_dir")
+            assert args.preset is None
+            assert args.config is None
 
     def test_parse_args_preset_and_config_mutually_exclusive(self):
         """Test that --preset and --config are mutually exclusive."""
-        test_args = ["recording_dir", "--preset", "vintage", "--config", "config.yaml"]
+        test_args = ["recording_dir", "--preset", "minimal", "--config", "config.yaml"]
 
         with patch.object(sys, "argv", ["blend_setup.py"] + test_args):
             with pytest.raises(SystemExit):  # argparse exits on mutually exclusive args
@@ -62,7 +63,7 @@ class TestCLIPresetParameter:
         test_args = [
             "recording_dir",
             "--preset",
-            "music-video",
+            "minimal",
             "--verbose",
             "--force",
             "--main-audio",
@@ -72,7 +73,7 @@ class TestCLIPresetParameter:
         with patch.object(sys, "argv", ["blend_setup.py"] + test_args):
             args = parse_args()
 
-        assert args.preset == "music-video"
+        assert args.preset == "minimal"
         assert args.verbose is True
         assert args.force is True
         assert args.main_audio == "custom_audio.m4a"
@@ -80,11 +81,16 @@ class TestCLIPresetParameter:
     @patch("cinemon.cli.blend_setup.BlenderProjectManager")
     @patch("cinemon.cli.blend_setup.CinemonConfigGenerator")
     @patch("cinemon.cli.blend_setup.load_yaml_config")
+    @patch("cinemon.cli.blend_setup.validate_preset")
     def test_main_with_preset_generates_config(
-        self, mock_load_yaml, mock_generator_class, mock_manager_class
+        self,
+        mock_validate_preset,
+        mock_load_yaml,
+        mock_generator_class,
+        mock_manager_class,
     ):
         """Test that main() with --preset generates config via CinemonConfigGenerator."""
-        test_args = ["recording_dir", "--preset", "vintage"]
+        test_args = ["recording_dir", "--preset", "minimal"]
 
         # Setup mocks
         mock_generator = MagicMock()
@@ -103,7 +109,7 @@ class TestCLIPresetParameter:
         # Verify config generation workflow
         assert result == 0
         mock_generator.generate_config_from_preset.assert_called_once_with(
-            Path("recording_dir"), "vintage"
+            Path("recording_dir"), "minimal"
         )
         mock_manager.create_vse_project_with_yaml_file.assert_called_once_with(
             Path("recording_dir"), mock_config_path
@@ -119,7 +125,7 @@ class TestCLIPresetParameter:
         test_args = [
             "recording_dir",
             "--preset",
-            "music-video",
+            "minimal",
             "--main-audio",
             "custom_main.m4a",
         ]
@@ -141,7 +147,7 @@ class TestCLIPresetParameter:
         # Verify overrides are passed to preset generation
         assert result == 0
         mock_generator.generate_config_from_preset.assert_called_once_with(
-            Path("recording_dir"), "music-video", main_audio="custom_main.m4a"
+            Path("recording_dir"), "minimal", main_audio="custom_main.m4a"
         )
         mock_manager.create_vse_project_with_yaml_file.assert_called_once_with(
             Path("recording_dir"), mock_config_path
@@ -180,7 +186,7 @@ class TestCLIPresetParameter:
         self, mock_print, mock_load_yaml, mock_generator_class, mock_manager_class
     ):
         """Test that main() processes --force flag with presets."""
-        test_args = ["recording_dir", "--preset", "beat-switch", "--force"]
+        test_args = ["recording_dir", "--preset", "minimal", "--force"]
 
         # Setup mocks
         mock_generator = MagicMock()
@@ -202,7 +208,7 @@ class TestCLIPresetParameter:
         # Verify success message with preset name
         assert result == 0
         success_calls = [
-            call for call in mock_print.call_args_list if "beat-switch" in str(call)
+            call for call in mock_print.call_args_list if "minimal" in str(call)
         ]
         assert len(success_calls) > 0
 

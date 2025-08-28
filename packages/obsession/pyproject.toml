@@ -3,7 +3,7 @@ requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "obs-canvas-recorder"
+name = "obsession"
 version = "0.1.0"
 description = "Automatic extraction of sources from OBS canvas recordings"
 authors = [
@@ -45,6 +45,7 @@ Issues = "https://github.com/obs-canvas-recorder/obs-canvas-recorder/issues"
 
 [project.scripts]
 obs-extract = "obsession.cli.extract:main"
+obs-cameras = "obsession.cli.cameras:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]

@@ -1,0 +1,62 @@
+# ABOUTME: Multi-PiP preset with crossfading main cameras and corner picture-in-picture
+# ABOUTME: Designed for multi-camera setups with dynamic switching and corner previews
+
+# Multi-PiP Preset - Dynamic multi-camera presentation
+# Main cameras crossfade on sections, corner PiPs show additional angles
+
+project:
+  video_files: []  # Will be auto-discovered
+  fps: 30
+  resolution:
+    width: 700
+    height: 500
+
+layout:
+  type: "main-pip"
+  config:
+    pip_scale: 0.3
+    margin_percent: 0.1
+
+strip_animations:
+  # Main cameras - crossfading visibility (first two will be fullscreen)
+  "RPI_FRONT.mp4":  # First main camera
+    - type: "visibility"
+      trigger: "sections"  # Use sections for natural music-driven switching
+      pattern: "alternate"  # Crossfade pattern
+    - type: "brightness_flicker"
+      trigger: "beat"
+      intensity: 0.2  # Gentle brightness variation
+      duration_frames: 2
+
+  "RPI_RIGHT.mp4":  # Second main camera
+    - type: "visibility"
+      trigger: "sections"  # Use sections for natural music-driven switching
+      pattern: "alternate"  # Crossfade pattern
+    - type: "vintage_color"
+      trigger: "one_time"  # Apply vintage once, not on every beat
+      sepia_amount: 0.3
+      contrast_boost: 1.2
+
+  # Corner PiPs - subtle animations at 25% scale in corners
+  "Urządzenie przechwytujące obraz (V4L2).mp4":
+    - type: "scale"
+      trigger: "energy_peaks"
+      intensity: 1  # Subtle pulse on bass hits
+      easing: "EASE_IN_OUT"
+
+  "Urządzenie przechwytujące obraz (V4L2) 2.mp4":
+    - type: "brightness_flicker"
+      trigger: "beat"
+      intensity: 1  # Gentle brightness variation
+      duration_frames: 2
+
+  "Urządzenie przechwytujące obraz (V4L2) 3.mp4":
+    - type: "shake"
+      trigger: "energy_peaks"
+      intensity: 1.0  # Small shake on peaks
+      duration_frames: 3
+
+audio_analysis:
+  file: "./analysis/Przechwytywanie wejścia dźwięku (PulseAudio)_analysis.json"
+  beat_division: 4  # Quarter notes for main switching
+  min_onset_interval: 1.0  # More frequent switching for alternating cameras
