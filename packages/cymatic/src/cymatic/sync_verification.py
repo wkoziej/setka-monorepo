@@ -10,10 +10,12 @@ It verifies two pieces of *data-timing arithmetic*:
 
 1. **Beat impulse placement.** The ``beat_env`` channel is precomputed in numpy
    to peak at index ``round(t / dt)`` for each beat time ``t`` (see
-   :func:`cymatic.normalization.precompute_envelope`). Converting that
-   peak *index* back to a render *frame* is ``round((index * dt) * fps)``. We
-   compare that to the frame a renderer would target for the beat,
-   ``round(t * fps)``, and assert the deviation is ``<= N`` frames.
+   :func:`cymatic.normalization.precompute_envelope`). For each ORIGINAL beat
+   time ``t`` from the analysis JSON we find the envelope's argmax-peak frame in
+   a window around ``t`` (``round((index * dt) * fps)``) and compare it to the
+   frame a renderer would target, ``round(t * fps)``, asserting the deviation is
+   ``<= N`` frames. Using the original times (not times reconstructed from the
+   same envelope) is what makes a wrong placement produce a real deviation.
 
 2. **Value sampling (``Seconds/dt`` mapping).** At render frame ``f`` the live
    Geometry Nodes graph computes scene time ``f / fps`` and indexes the stored
@@ -153,22 +155,29 @@ class SyncReport:
     dt: float = 0.0
 
 
+# Search window half-width, expressed in render frames. It must be strictly
+# wider than the tolerance so a misplaced impulse can land *outside* tolerance
+# and still be found by the argmax — that is what lets the harness FAIL on a
+# wrong envelope instead of silently clamping the search to the expected index.
+_SEARCH_HALF_FRAMES = DEFAULT_N_TOLERANCE_FRAMES + 4
+
+
 def _peak_frame_near(beat_env: np.ndarray, beat_time: float, dt: float, fps: int) -> int:
-    """Frame of the ``beat_env`` peak sample nearest ``beat_time``.
+    """Frame of the ``beat_env`` peak sample near ``beat_time``.
 
     The envelope was precomputed to peak (==1.0) at ``round(beat_time/dt)`` and
-    decay afterward. We search a small index window around that expected index
-    for the argmax, then convert the winning *index* to a *frame* via
-    ``round((index * dt) * fps)``. Searching a window (rather than trusting the
-    exact index) is what makes this a measurement, not a tautology restatement:
-    if the precompute or the index arithmetic were off, the argmax would land
-    on a different sample and the deviation would grow.
+    decay afterward. We search an index window around the expected index
+    (``+/- _SEARCH_HALF_FRAMES`` render frames, converted to samples) for the
+    argmax, then convert the winning *index* to a *frame* via
+    ``round((index * dt) * fps)``. The window is deliberately WIDER than the
+    tolerance: if the precompute or the index arithmetic were off, the argmax
+    lands on a different sample and the deviation grows past tolerance — this is
+    what makes the harness a real measurement, not a tautology against itself.
     """
     n = len(beat_env)
     center = _clamp_index(int(round(beat_time / dt)), n)
-    # Window spans roughly +/- one frame in samples (>= 1), so the argmax is
-    # free to drift to an adjacent sample if the placement were wrong.
-    half = max(1, int(round((1.0 / fps) / dt)))
+    # Window spans +/- several render frames in samples (>= 1).
+    half = max(1, int(round((_SEARCH_HALF_FRAMES / fps) / dt)))
     lo = _clamp_index(center - half, n)
     hi = _clamp_index(center + half, n)
     window = beat_env[lo : hi + 1]
@@ -182,13 +191,19 @@ def verify_sync(
 ) -> SyncReport:
     """Verify data-timing sync of the precomputed beat envelope (R2/R3).
 
-    For each beat time ``t`` derived from ``beat_env`` (reconstructed from the
-    envelope's peaks): the expected render frame is ``round(t * fps)``; the
-    measured peak frame comes from the envelope's argmax near ``t`` converted
-    to a frame. The deviation is ``|peak_frame - round(t * fps)|`` and must be
-    ``<= n_tolerance_frames``.
+    For each ORIGINAL beat time ``t`` taken from the analysis JSON
+    (``analysis_data.raw_beat_times`` — the ground truth, NOT reconstructed from
+    the envelope): the expected render frame is ``round(t * fps)``; the measured
+    peak frame comes from the ``beat_env`` argmax in a small window around ``t``
+    converted to a frame. The deviation is ``|peak_frame - round(t * fps)|`` and
+    must be ``<= n_tolerance_frames``.
 
-    A beatless track (all-zero ``beat_env``) yields an empty, vacuously-passing
+    Comparing against the original times (rather than times reconstructed from
+    the same envelope) keeps the harness honest: if the precompute placed the
+    impulse at the wrong index, the argmax frame diverges from ``round(t*fps)``
+    and the deviation grows — a tautology would have hidden that.
+
+    A beatless track (no ``raw_beat_times``) yields an empty, vacuously-passing
     report — it does not crash.
 
     See the module docstring for the scope/honesty note: this is a proof of
@@ -206,7 +221,7 @@ def verify_sync(
     dt = analysis_data.dt
     fps = analysis_data.fps
 
-    beat_times = _reconstruct_beat_times(beat_env, dt)
+    beat_times = analysis_data.raw_beat_times
 
     deviations: List[BeatDeviation] = []
     for t in beat_times:
@@ -231,27 +246,3 @@ def verify_sync(
         fps=fps,
         dt=dt,
     )
-
-
-def _reconstruct_beat_times(beat_env: np.ndarray, dt: float) -> List[float]:
-    """Recover beat times (seconds) from the precomputed ``beat_env`` peaks.
-
-    A beat sets its sample to exactly ``1.0`` (the envelope's max) and then
-    decays. We treat the rising edges into a ``1.0`` sample as beat onsets:
-    indices where ``env == 1.0`` whose previous sample is strictly smaller (or
-    which start the array). Converting index -> seconds is ``index * dt``.
-
-    Working from the envelope (rather than re-reading the source beat list)
-    keeps this harness honest about what was actually baked into the data
-    object the GN graph samples.
-    """
-    if len(beat_env) == 0:
-        return []
-    is_peak = np.isclose(beat_env, 1.0)
-    if not is_peak.any():
-        return []
-    prev = np.empty_like(beat_env)
-    prev[0] = -1.0
-    prev[1:] = beat_env[:-1]
-    onsets = np.flatnonzero(is_peak & (beat_env > prev))
-    return [float(i * dt) for i in onsets]

@@ -19,10 +19,14 @@ Notes:
 from __future__ import annotations
 
 import json
-from dataclasses import asdict, dataclass, field
+import shutil
+from dataclasses import asdict, dataclass, field, fields
 from typing import Any, Dict, Optional, Tuple
 
-DEFAULT_BLENDER_EXECUTABLE = "/Applications/Blender.app/Contents/MacOS/Blender"
+# Cross-platform default: resolve "blender" on PATH. May be None when Blender is
+# not installed/on PATH — the runner raises a clear RuntimeError before spawning
+# a subprocess in that case (pass --blender-executable or set it in config).
+DEFAULT_BLENDER_EXECUTABLE: Optional[str] = shutil.which("blender")
 
 
 @dataclass
@@ -40,6 +44,12 @@ class PresetParams:
     decay: float = 0.25
     tau: float = 0.15
 
+    def __post_init__(self) -> None:
+        if self.decay <= 0:
+            raise ValueError(f"PresetParams.decay must be > 0, got {self.decay}")
+        if self.tau <= 0:
+            raise ValueError(f"PresetParams.tau must be > 0, got {self.tau}")
+
     def to_dict(self) -> Dict[str, Any]:
         return asdict(self)
 
@@ -48,13 +58,9 @@ class PresetParams:
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "PresetParams":
-        return cls(
-            palette=data["palette"],
-            primitive=data["primitive"],
-            accent_intensity=data["accent_intensity"],
-            decay=data["decay"],
-            tau=data["tau"],
-        )
+        # Rebuild from the dataclass fields so adding a new field does not
+        # silently break round-trips (missing keys surface as a clear KeyError).
+        return cls(**{f.name: data[f.name] for f in fields(cls)})
 
     @classmethod
     def from_json(cls, text: str) -> "PresetParams":
@@ -71,8 +77,12 @@ class VisualizerConfig:
         base_directory: Recording base directory (for audio resolution).
         fps: Render fps. From config, NOT from analysis. Default 30.
         resolution: ``(width, height)`` or ``None`` for the scene default.
-        blender_executable: Path to the Blender binary (default: macOS).
+        blender_executable: Path to the Blender binary (default: ``shutil.which
+            ("blender")``, may be ``None`` if Blender is not on PATH — the
+            runner then raises a clear error before spawning a subprocess).
         preset: Optional visual preset parameters.
+        blender_timeout_sec: Hard timeout for the Blender render subprocess.
+        ffmpeg_timeout_sec: Hard timeout for the ffmpeg mux subprocess.
     """
 
     analysis_file: str
@@ -80,13 +90,16 @@ class VisualizerConfig:
     base_directory: str
     fps: int = 30
     resolution: Optional[Tuple[int, int]] = None
-    blender_executable: str = DEFAULT_BLENDER_EXECUTABLE
+    blender_executable: Optional[str] = DEFAULT_BLENDER_EXECUTABLE
     preset: Optional[PresetParams] = field(default=None)
     # Render/mux fields (Unit 9 follow-up — frames -> ffmpeg mux):
     audio_file: Optional[str] = None  # source wav/flac to mux into the mp4
     frame_start: int = 1
     frame_end: Optional[int] = None  # None -> derive from analysis duration
     frames_dir: Optional[str] = None  # when set, build_scene renders PNG sequence here
+    # Subprocess timeouts (seconds); None disables the timeout.
+    blender_timeout_sec: Optional[int] = 3600
+    ffmpeg_timeout_sec: Optional[int] = 600
 
     def to_dict(self) -> Dict[str, Any]:
         """Serialize to a plain dict. ``resolution`` becomes a list in JSON."""
@@ -104,6 +117,8 @@ class VisualizerConfig:
             "frame_start": self.frame_start,
             "frame_end": self.frame_end,
             "frames_dir": self.frames_dir,
+            "blender_timeout_sec": self.blender_timeout_sec,
+            "ffmpeg_timeout_sec": self.ffmpeg_timeout_sec,
         }
 
     def to_json(self) -> str:
@@ -133,6 +148,8 @@ class VisualizerConfig:
             frame_start=data.get("frame_start", 1),
             frame_end=data.get("frame_end"),
             frames_dir=data.get("frames_dir"),
+            blender_timeout_sec=data.get("blender_timeout_sec", 3600),
+            ffmpeg_timeout_sec=data.get("ffmpeg_timeout_sec", 600),
         )
 
     @classmethod

@@ -62,7 +62,14 @@ class TestVisualizerConfig:
         assert isinstance(restored.resolution, tuple)
 
     def test_defaults_fps_and_resolution_and_executable(self):
-        """fps defaults to 30, resolution defaults to None, executable to macOS path."""
+        """fps defaults to 30, resolution defaults to None, executable resolves via PATH.
+
+        The executable default is ``shutil.which("blender")`` (cross-platform),
+        so it equals that lookup rather than a hardcoded platform path — it may
+        legitimately be ``None`` when Blender is not installed.
+        """
+        import shutil
+
         from cymatic.config import VisualizerConfig
 
         cfg = VisualizerConfig(
@@ -72,9 +79,7 @@ class TestVisualizerConfig:
         )
         assert cfg.fps == 30
         assert cfg.resolution is None
-        assert cfg.blender_executable == (
-            "/Applications/Blender.app/Contents/MacOS/Blender"
-        )
+        assert cfg.blender_executable == shutil.which("blender")
 
     def test_resolution_none_roundtrip(self):
         """resolution=None survives serialization round-trip."""
@@ -120,6 +125,61 @@ class TestPresetParams:
         params = self._make()
         restored = PresetParams.from_json(params.to_json())
         assert restored == params
+
+    def test_from_dict_rebuilds_from_fields(self):
+        # from_dict iterates dataclass fields, so a full dict round-trips and a
+        # missing key surfaces as a clear KeyError (not a silent wrong value).
+        from cymatic.config import PresetParams
+
+        params = self._make()
+        assert PresetParams.from_dict(params.to_dict()) == params
+        with pytest.raises(KeyError):
+            PresetParams.from_dict({"palette": "x"})
+
+    def test_decay_must_be_positive(self):
+        from cymatic.config import PresetParams
+
+        with pytest.raises(ValueError, match="decay"):
+            PresetParams(decay=0.0)
+
+    def test_tau_must_be_positive(self):
+        from cymatic.config import PresetParams
+
+        with pytest.raises(ValueError, match="tau"):
+            PresetParams(tau=-0.1)
+
+
+class TestExecutableDefaultAndTimeouts:
+    def test_executable_default_matches_which_blender(self):
+        import shutil
+
+        from cymatic.config import DEFAULT_BLENDER_EXECUTABLE
+
+        assert DEFAULT_BLENDER_EXECUTABLE == shutil.which("blender")
+
+    def test_timeout_fields_roundtrip(self):
+        from cymatic.config import VisualizerConfig
+
+        cfg = VisualizerConfig(
+            analysis_file="/a.json",
+            output_mp4="/o.mp4",
+            base_directory="/b",
+            blender_timeout_sec=120,
+            ffmpeg_timeout_sec=45,
+        )
+        restored = VisualizerConfig.from_json(cfg.to_json())
+        assert restored.blender_timeout_sec == 120
+        assert restored.ffmpeg_timeout_sec == 45
+        assert restored == cfg
+
+    def test_timeout_defaults(self):
+        from cymatic.config import VisualizerConfig
+
+        cfg = VisualizerConfig(
+            analysis_file="/a.json", output_mp4="/o.mp4", base_directory="/b"
+        )
+        assert cfg.blender_timeout_sec == 3600
+        assert cfg.ffmpeg_timeout_sec == 600
 
 
 def test_visualizer_config_can_embed_preset_params():

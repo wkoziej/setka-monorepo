@@ -77,6 +77,7 @@ def _synthetic(
         sample_rate=sample_rate,
         duration=duration,
         fps=fps,
+        raw_beat_times=list(beats),
     )
 
 
@@ -124,6 +125,35 @@ class TestHappyPath:
         report = verify_sync(data)
         assert report.passed
         assert all(d.deviation <= DEFAULT_N_TOLERANCE_FRAMES for d in report.deviations)
+
+
+# --------------------------------------------------------------------------- #
+# Regression: a deliberately SHIFTED envelope must fail (harness can detect a   #
+# wrong placement — proves the check is not a tautology against itself).        #
+# --------------------------------------------------------------------------- #
+class TestHarnessCanFail:
+    def test_shifted_envelope_exceeds_tolerance(self):
+        # Build a correct envelope for a beat at 1.0s (expected frame 30), then
+        # move the impulse 4 render frames later while leaving raw_beat_times
+        # claiming the beat is still at 1.0s. The shift (4 frames) sits inside
+        # the search window but well beyond the 2-frame tolerance, so the
+        # harness must report a failure — proving it is NOT a tautology.
+        fps = 30
+        dt = 0.01
+        beat_time = 1.0
+        data = _synthetic([beat_time], fps=fps, dt=dt, duration=3.0)
+
+        shift_frames = 4
+        correct_index = int(round(beat_time / dt))
+        wrong_index = correct_index + int(round((shift_frames / fps) / dt))
+        shifted = np.zeros_like(data.beat_env)
+        shifted[wrong_index] = 1.0
+        data.beat_env = shifted  # envelope no longer matches the claimed beat
+
+        report = verify_sync(data)
+        assert not report.passed
+        assert report.max_deviation > DEFAULT_N_TOLERANCE_FRAMES
+        assert report.deviations[0].expected_frame == 30
 
 
 # --------------------------------------------------------------------------- #

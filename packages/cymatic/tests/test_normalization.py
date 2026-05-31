@@ -139,3 +139,30 @@ class TestPrecomputeEnvelope:
         times = np.arange(100) * 0.01
         env = precompute_envelope([0.0, 0.5], times, decay=0.05)
         assert env.min() >= 0.0
+
+    def test_single_sample_times_returns_zeros_no_index_error(self):
+        # len(times) < 2 must not raise IndexError on times[1]; it yields a
+        # zero envelope of the same length.
+        env = precompute_envelope([0.0], np.array([0.0]), decay=0.05)
+        assert env.shape == (1,)
+        assert np.all(env == 0.0)
+        assert env.dtype == np.float32
+
+    def test_empty_times_returns_empty(self):
+        env = precompute_envelope([0.0], np.array([]), decay=0.05)
+        assert len(env) == 0
+
+
+class TestNonFiniteBands:
+    def test_non_finite_values_coerced_to_zero(self, caplog):
+        # NaN/inf must not poison percentile or make the band vanish; they are
+        # coerced to 0 with a logged warning, leaving finite values intact.
+        arr = np.array([0.0, np.nan, 1.0, np.inf, 2.0, -np.inf])
+        with caplog.at_level("WARNING"):
+            out = normalize_band(arr)
+        assert np.all(np.isfinite(out))
+        assert out.max() <= 1.0
+        assert out.min() >= 0.0
+        # the finite, non-zero entries still produce signal
+        assert out.max() > 0.0
+        assert any("non-finite" in r.message for r in caplog.records)

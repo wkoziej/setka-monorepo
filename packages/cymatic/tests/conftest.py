@@ -16,6 +16,18 @@ if str(blender_script_path) not in sys.path:
     sys.path.insert(0, str(blender_script_path))
 
 
+# Markers are registered in pyproject.toml. Tests are unit tests by default, so
+# tag any test that carries no explicit marker as `unit` — this keeps
+# ``pytest -m unit`` meaningful (non-empty) without retagging every module.
+_EXPLICIT_MARKERS = {"integration", "slow", "unit"}
+
+
+def pytest_collection_modifyitems(config, items):
+    for item in items:
+        if not any(m.name in _EXPLICIT_MARKERS for m in item.iter_markers()):
+            item.add_marker(pytest.mark.unit)
+
+
 @pytest.fixture(autouse=True)
 def mock_bpy(monkeypatch):
     """Mock bpy module for tests running outside Blender."""

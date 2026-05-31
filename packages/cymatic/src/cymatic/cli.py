@@ -5,7 +5,7 @@
 
 Usage:
     cymatic-render <recording_dir> [--main-audio NAME] [--analysis-file PATH]
-                   [--fps N] [--blender-executable PATH]
+                   [--audio-file PATH] [--fps N] [--blender-executable PATH]
 
 Resolves the beatrix ``*_analysis.json`` (explicit ``--analysis-file`` or, when
 omitted, via ``AudioValidator.detect_main_audio`` on ``<recording_dir>/extracted``
@@ -22,18 +22,34 @@ import argparse
 import sys
 from pathlib import Path
 
+from beatrix.exceptions import MultipleAudioFilesError, NoAudioFileError
 from setka_common.file_structure.specialized import RecordingStructureManager
 
 from cymatic.config import DEFAULT_BLENDER_EXECUTABLE, VisualizerConfig
 from cymatic.runner import render
 
 
+def _detect_audio(recording_dir: Path, main_audio: str | None) -> Path:
+    """Detect the main audio file in ``<recording_dir>/extracted``.
+
+    AudioValidator takes the extracted/ dir, NOT the recording root.
+
+    Raises:
+        NoAudioFileError / MultipleAudioFilesError: from beatrix validation.
+    """
+    from beatrix.core.audio_validator import AudioValidator
+
+    extracted_dir = recording_dir / RecordingStructureManager.EXTRACTED_DIRNAME
+    validator = AudioValidator()
+    return validator.detect_main_audio(extracted_dir, specified_audio=main_audio)
+
+
 def _resolve_analysis_file(
     recording_dir: Path,
     analysis_file: str | None,
     main_audio: str | None,
-) -> Path:
-    """Resolve the analysis JSON path for a recording directory.
+) -> tuple[Path, Path | None]:
+    """Resolve the analysis JSON path (and detected audio) for a recording dir.
 
     Args:
         recording_dir: Recording base directory.
@@ -41,7 +57,8 @@ def _resolve_analysis_file(
         main_audio: Optional main-audio filename hint for detection.
 
     Returns:
-        Path to the ``*_analysis.json`` file.
+        ``(analysis_path, audio_path_or_None)``. The audio path is ``None`` when
+        an explicit ``--analysis-file`` was given (no detection performed).
 
     Raises:
         FileNotFoundError: If the resolved analysis file does not exist.
@@ -50,25 +67,22 @@ def _resolve_analysis_file(
         path = Path(analysis_file)
         if not path.exists():
             raise FileNotFoundError(f"Analysis file not found: {path}")
-        return path
+        return path, None
 
     # Detect the main audio in extracted/ and derive its analysis path.
-    # AudioValidator takes the extracted/ dir, NOT the recording root.
-    from beatrix.core.audio_validator import AudioValidator
-
-    extracted_dir = recording_dir / RecordingStructureManager.EXTRACTED_DIRNAME
-    validator = AudioValidator()
-    audio_path = validator.detect_main_audio(extracted_dir, specified_audio=main_audio)
+    audio_path = _detect_audio(recording_dir, main_audio)
 
     analysis_path = (
-        recording_dir / "analysis" / f"{Path(audio_path).stem}_analysis.json"
+        recording_dir
+        / RecordingStructureManager.ANALYSIS_DIRNAME
+        / f"{Path(audio_path).stem}_analysis.json"
     )
     if not analysis_path.exists():
         raise FileNotFoundError(
             f"Analysis file not found: {analysis_path}. "
             "Run beatrix to generate the analysis first."
         )
-    return analysis_path
+    return analysis_path, Path(audio_path)
 
 
 def main(argv=None) -> int:
@@ -96,6 +110,11 @@ def main(argv=None) -> int:
         help="Explicit path to the beatrix *_analysis.json (overrides detection)",
     )
     parser.add_argument(
+        "--audio-file",
+        default=None,
+        help="Audio file to mux into the render (overrides auto-detection)",
+    )
+    parser.add_argument(
         "--fps", type=int, default=30, help="Render fps (default: 30)"
     )
     parser.add_argument(
@@ -108,18 +127,35 @@ def main(argv=None) -> int:
 
     recording_dir = Path(args.recording_dir)
     if not recording_dir.is_dir():
-        print(f"cymatic-render: recording directory not found: {recording_dir}")
+        print(
+            f"cymatic-render: recording directory not found: {recording_dir}",
+            file=sys.stderr,
+        )
         return 1
 
     try:
-        analysis_file = _resolve_analysis_file(
+        analysis_file, detected_audio = _resolve_analysis_file(
             recording_dir, args.analysis_file, args.main_audio
         )
-    except Exception as exc:
+    except (
+        FileNotFoundError,
+        NoAudioFileError,
+        MultipleAudioFilesError,
+        ValueError,
+    ) as exc:
         # Surfaces FileNotFoundError plus beatrix audio-validation errors
         # (NoAudioFileError / MultipleAudioFilesError, Polish messages).
-        print(f"cymatic-render: {exc}")
+        print(f"cymatic-render: {exc}", file=sys.stderr)
         return 1
+
+    # Forward audio so renders aren't silent: explicit --audio-file wins,
+    # otherwise the auto-detected main audio (if any).
+    if args.audio_file:
+        audio_file = args.audio_file
+    elif detected_audio is not None:
+        audio_file = str(detected_audio)
+    else:
+        audio_file = None
 
     config = VisualizerConfig(
         analysis_file=str(analysis_file),
@@ -127,12 +163,13 @@ def main(argv=None) -> int:
         base_directory=str(recording_dir),
         fps=args.fps,
         blender_executable=args.blender_executable,
+        audio_file=audio_file,
     )
 
     try:
         output = render(config)
-    except RuntimeError as exc:
-        print(f"cymatic-render: {exc}")
+    except (RuntimeError, FileNotFoundError, ValueError) as exc:
+        print(f"cymatic-render: {exc}", file=sys.stderr)
         return 1
 
     print(f"cymatic-render: output -> {output}")

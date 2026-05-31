@@ -19,7 +19,7 @@ import numpy as np
 import pytest
 
 from cymatic.analysis_loader import load_analysis
-from cymatic.config import VisualizerConfig
+from cymatic.config import PresetParams, VisualizerConfig
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 FIX_48K = REPO_ROOT / "research/audio/analysis/jazz_120s_48k_analysis.json"
@@ -147,6 +147,57 @@ class TestErrorPaths:
         missing = tmp_path / "does_not_exist_analysis.json"
         with pytest.raises(FileNotFoundError):
             load_analysis(_config(missing))
+
+    def test_missing_required_key_raises_value_error_with_path(self, tmp_path):
+        # Malformed JSON missing 'frequency_bands' -> clear ValueError naming the
+        # missing key AND the file path (not a bare KeyError).
+        bad = {"sample_rate": 44100, "duration": 1.0}
+        p = tmp_path / "broken_analysis.json"
+        p.write_text(json.dumps(bad))
+        with pytest.raises(ValueError) as exc:
+            load_analysis(_config(p))
+        msg = str(exc.value)
+        assert "frequency_bands" in msg
+        assert str(p) in msg
+
+    def test_missing_sample_rate_key_raises_value_error(self, tmp_path):
+        d = json.loads(FIX_48K.read_text())
+        del d["sample_rate"]
+        p = tmp_path / "nosr_analysis.json"
+        p.write_text(json.dumps(d))
+        with pytest.raises(ValueError) as exc:
+            load_analysis(_config(p))
+        assert "sample_rate" in str(exc.value)
+
+
+class TestRawEventTimesAndPreset:
+    def test_raw_beat_times_populated_from_json(self):
+        d = json.loads(FIX_48K.read_text())
+        res = load_analysis(_config(FIX_48K))
+        # raw times are the ORIGINAL JSON beats, kept as sync ground truth.
+        assert res.raw_beat_times == [
+            float(t) for t in d["animation_events"]["beats"]
+        ]
+
+    def test_preset_decay_changes_beat_envelope(self):
+        cfg_fast = _config(FIX_48K)
+        cfg_fast.preset = PresetParams(decay=0.05, tau=0.05)
+        cfg_slow = _config(FIX_48K)
+        cfg_slow.preset = PresetParams(decay=0.5, tau=0.5)
+
+        env_fast = load_analysis(cfg_fast).beat_env
+        env_slow = load_analysis(cfg_slow).beat_env
+        # Different decay -> different envelope (slower decay holds higher).
+        assert not np.array_equal(env_fast, env_slow)
+        assert env_slow.sum() > env_fast.sum()
+
+    def test_analysis_data_equality_does_not_raise(self):
+        # eq=False on AnalysisData means identity comparison; comparing two
+        # results must not raise the ambiguous-array-truth ValueError.
+        a = load_analysis(_config(FIX_48K))
+        b = load_analysis(_config(FIX_48K))
+        assert (a == b) is False  # distinct instances, identity-based eq
+        assert (a == a) is True
 
 
 class TestFullPipeline:

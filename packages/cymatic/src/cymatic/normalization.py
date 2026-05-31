@@ -19,9 +19,12 @@ via ``foreach_set``.
 
 from __future__ import annotations
 
+import logging
 from typing import Sequence, Union
 
 import numpy as np
+
+logger = logging.getLogger(__name__)
 
 ArrayLike = Union[Sequence[float], np.ndarray]
 
@@ -32,6 +35,10 @@ def normalize_band(arr: ArrayLike) -> np.ndarray:
     ``clip(arr / p99, 0, 1)``. If ``p99 <= 0`` (constant/near-zero band) the
     result is all zeros — the zero-guard prevents division by zero.
 
+    Non-finite values (NaN/inf, e.g. a corrupt analysis band) are coerced to
+    ``0`` with a logged warning before percentile/clip, so a single bad sample
+    does not poison ``np.percentile`` and make the whole band silently vanish.
+
     Args:
         arr: Raw band magnitudes (e.g. ``frequency_bands.bass_energy``).
 
@@ -39,6 +46,12 @@ def normalize_band(arr: ArrayLike) -> np.ndarray:
         ``float32`` array of the same length, values in ``[0, 1]``.
     """
     a = np.asarray(arr, dtype=float)
+    if not np.all(np.isfinite(a)):
+        logger.warning(
+            "normalize_band: non-finite values in band (n=%d), coercing to 0",
+            int(np.count_nonzero(~np.isfinite(a))),
+        )
+        a = np.nan_to_num(a, nan=0.0, posinf=0.0, neginf=0.0)
     p = np.percentile(a, 99)
     if p > 0:
         out = np.clip(a / p, 0.0, 1.0)
@@ -70,6 +83,10 @@ def precompute_envelope(
     """
     times = np.asarray(times, dtype=float)
     n = len(times)
+    # dt needs at least two samples; a degenerate grid yields a zero envelope
+    # instead of an IndexError on ``times[1]``.
+    if n < 2:
+        return np.zeros(n, dtype=np.float32)
     dt = float(times[1] - times[0])
     env = np.zeros(n, dtype=np.float32)
 

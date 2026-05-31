@@ -4,12 +4,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Setka is a monorepo containing six interconnected media processing and automation packages:
+Setka is a monorepo containing seven interconnected media processing and automation packages:
 
 - **setka-common**: Shared utilities for file structure management
 - **obsession**: OBS Canvas Recorder with FFmpeg extraction and metadata collection
 - **beatrix**: Dedicated audio analysis for animation timing and beat detection
 - **cinemon**: Blender VSE project creation with audio-driven animations
+- **cymatic**: Blender Geometry Nodes 3D audio visualizer driven by beatrix analysis
 - **medusa**: Media upload automation to YouTube/Vimeo and social media publishing
 - **fermata**: Tauri-based desktop GUI for managing recordings and batch operations
 
@@ -90,6 +91,7 @@ medusa ←──┼─┐
           │ │
 cinemon ←─┼─┼─── setka-common (file_structure, utils)
           │ │       ↘ beatrix (audio analysis)
+cymatic ←─┼─┤
           │ │
 obsession ←┘ │
           │
@@ -100,10 +102,12 @@ beatrix ←─┘
 
 - **File Structure**: All packages use `setka-common.file_structure.specialized.RecordingStructureManager`
 - **Audio Processing**: Dedicated audio analysis via `beatrix.core.AudioAnalyzer`
+- **3D Visualization**: `cymatic` consumes the beatrix `*_analysis.json` to drive a Blender Geometry Nodes scene
 - **CLI Integration**:
   - `obs-extract` → extract sources from OBS recordings
   - `beatrix` → analyze audio for animation timing
   - `cinemon-blend-setup` → create Blender projects with animations
+  - `cymatic-render` → render a 3D Geometry Nodes audio visualizer from a beatrix analysis
   - `medusa` → upload and publish media
 - **GUI Integration**:
   - `fermata` → Tauri desktop app for batch operations and recording management
@@ -244,6 +248,7 @@ Each package provides specific commands:
 - `beatrix` - Analyze audio for animation timing (beatrix)
 - `cinemon-blend-setup` - Create animated Blender VSE projects (cinemon)
 - `cinemon-generate-config` - Generate YAML configuration files (cinemon)
+- `cymatic-render` - Render a 3D Geometry Nodes audio visualizer from a beatrix analysis (cymatic)
 - Direct module execution for medusa: `python -m medusa.cli`
 
 ## Practical Usage Examples

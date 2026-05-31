@@ -21,17 +21,24 @@ from cymatic.runner import CymaticRunner, render
 # Capture the real mux before the autouse fixture below patches it to a no-op,
 # so the dedicated mux test can exercise the real implementation.
 _REAL_MUX = CymaticRunner._mux_frames
+_REAL_VALIDATE = CymaticRunner._validate_frame_count
 
 
 @pytest.fixture(autouse=True)
 def _skip_mux(monkeypatch):
-    """Stub out frame muxing for command/subprocess/cleanup tests.
+    """Stub out frame muxing + frame-count validation for invocation tests.
 
     These tests verify the Blender invocation, not video encoding; the mocked
     subprocess never renders real frames, so the real _mux_frames would raise
-    "No frames rendered". The dedicated mux test uses _REAL_MUX directly.
+    "No frames rendered" and _validate_frame_count would have nothing to count.
+    The dedicated mux test uses _REAL_MUX directly.
     """
-    monkeypatch.setattr(CymaticRunner, "_mux_frames", lambda self, fdir, out: None)
+    monkeypatch.setattr(
+        CymaticRunner, "_mux_frames", lambda self, fdir, out, cfg=None: None
+    )
+    monkeypatch.setattr(
+        CymaticRunner, "_validate_frame_count", lambda self, fdir, cfg: None
+    )
 
 
 @pytest.fixture
@@ -204,3 +211,98 @@ def test_mux_frames_no_frames_raises(config, tmp_path, monkeypatch):
     monkeypatch.setattr(shutil, "which", lambda name: "/usr/bin/ffmpeg")
     with pytest.raises(RuntimeError, match="No frames"):
         _REAL_MUX(CymaticRunner(config), tmp_path / "empty", tmp_path / "o.mp4")
+
+
+def test_run_does_not_mutate_caller_config(config):
+    """run() must not mutate the caller's VisualizerConfig.frames_dir."""
+    assert config.frames_dir is None
+    runner = CymaticRunner(config)
+    runner.run()
+    # The runner works on a dataclasses.replace() copy; caller's stays None.
+    assert config.frames_dir is None
+
+
+def test_missing_blender_executable_raises_before_subprocess(config, monkeypatch):
+    """A None/empty executable raises a clear RuntimeError before spawning."""
+    config.blender_executable = None
+    called = {"ran": False}
+
+    def boom(*a, **k):
+        called["ran"] = True
+        raise AssertionError("subprocess.run must not be called")
+
+    monkeypatch.setattr(subprocess, "run", boom)
+    runner = CymaticRunner(config)
+    with pytest.raises(RuntimeError, match="Blender executable not found"):
+        runner.run()
+    assert called["ran"] is False
+
+
+def test_blender_timeout_raises_runtime_error(config, monkeypatch):
+    """A Blender subprocess timeout becomes a RuntimeError with context."""
+    config.blender_timeout_sec = 5
+    timeout = subprocess.TimeoutExpired(cmd=["blender"], timeout=5)
+    monkeypatch.setattr(subprocess, "run", Mock(side_effect=timeout))
+
+    runner = CymaticRunner(config)
+    with pytest.raises(RuntimeError, match="timed out after 5s"):
+        runner.run()
+
+
+def test_blender_timeout_value_forwarded(config):
+    """The configured blender_timeout_sec is forwarded to subprocess.run."""
+    config.blender_timeout_sec = 1234
+    CymaticRunner(config).run()
+    _args, kwargs = subprocess.run.call_args
+    assert kwargs.get("timeout") == 1234
+
+
+def test_short_frame_count_raises(config, monkeypatch, tmp_path):
+    """Fewer rendered frames than expected -> RuntimeError (incomplete render)."""
+    # Re-enable the real validator (the autouse fixture stubbed it).
+    monkeypatch.setattr(
+        CymaticRunner, "_validate_frame_count", _REAL_VALIDATE
+    )
+    # frame_end set explicitly so we don't need a real analysis file.
+    config.frame_start = 1
+    config.frame_end = 10  # expect 10 frames
+
+    # Make build_scene render only 3 frames into the temp frames_dir.
+    def fake_run(cmd, *a, **k):
+        cmd = list(cmd)
+        cfg_path = cmd[cmd.index("--config") + 1]
+        import json as _json
+
+        cfg = _json.loads(Path(cfg_path).read_text())
+        fdir = Path(cfg["frames_dir"])
+        for i in range(1, 4):  # only 3 frames
+            (fdir / f"frame_{i:04d}.png").write_bytes(b"\x89PNG")
+        return Mock(returncode=0, stdout="", stderr="")
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+
+    runner = CymaticRunner(config)
+    with pytest.raises(RuntimeError, match="expected 10"):
+        runner.run()
+
+
+def test_full_frame_count_passes(config, monkeypatch):
+    """Exactly the expected frame count passes validation."""
+    monkeypatch.setattr(CymaticRunner, "_validate_frame_count", _REAL_VALIDATE)
+    config.frame_start = 1
+    config.frame_end = 5
+
+    def fake_run(cmd, *a, **k):
+        cmd = list(cmd)
+        cfg_path = cmd[cmd.index("--config") + 1]
+        import json as _json
+
+        cfg = _json.loads(Path(cfg_path).read_text())
+        fdir = Path(cfg["frames_dir"])
+        for i in range(1, 6):  # exactly 5 frames
+            (fdir / f"frame_{i:04d}.png").write_bytes(b"\x89PNG")
+        return Mock(returncode=0, stdout="", stderr="")
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+    # mux is still stubbed by the autouse fixture; should not raise.
+    CymaticRunner(config).run()

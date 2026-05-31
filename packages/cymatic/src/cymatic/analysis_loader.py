@@ -26,7 +26,7 @@ from __future__ import annotations
 
 import json
 import logging
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional
 
@@ -52,11 +52,18 @@ _BEAT_DECAY = 0.13
 _PEAK_DECAY = 0.25
 
 
-@dataclass
+# eq=False: this dataclass holds np.ndarray fields, and the auto-generated
+# __eq__ would do `arr == arr` -> an array, which raises when truthy-tested.
+@dataclass(eq=False)
 class AnalysisData:
     """Structured, GN-ready result of loading + normalizing an analysis file.
 
     All arrays are ``float32`` and equal length (== ``len(times)``).
+
+    ``raw_beat_times`` / ``raw_peak_times`` are the ORIGINAL event timestamps
+    (seconds) straight from the analysis JSON — kept as the ground truth the
+    sync-verification harness compares against (so a wrong envelope index
+    produces a real, nonzero deviation rather than a tautology).
     """
 
     bass: np.ndarray
@@ -69,6 +76,8 @@ class AnalysisData:
     sample_rate: int
     duration: float
     fps: int
+    raw_beat_times: list[float] = field(default_factory=list)
+    raw_peak_times: list[float] = field(default_factory=list)
     audio_file: Optional[Path] = None
 
 
@@ -115,8 +124,13 @@ def load_analysis(config: VisualizerConfig) -> AnalysisData:
 
     data = json.loads(path.read_text())
 
-    fb = data["frequency_bands"]
-    times = np.asarray(fb["times"], dtype=float)
+    # Required-key access is wrapped so a malformed analysis file fails with a
+    # clear, path-carrying ValueError instead of a bare KeyError.
+    try:
+        fb = data["frequency_bands"]
+        times = np.asarray(fb["times"], dtype=float)
+    except KeyError as exc:
+        raise ValueError(f"Analysis file missing required key {exc}: {path}")
 
     if len(times) < 2:
         raise ValueError(
@@ -125,8 +139,14 @@ def load_analysis(config: VisualizerConfig) -> AnalysisData:
         )
 
     dt = float(times[1] - times[0])
-    sample_rate = int(data["sample_rate"])
-    duration = float(data["duration"])
+    try:
+        sample_rate = int(data["sample_rate"])
+        duration = float(data["duration"])
+        bass_raw = fb["bass_energy"]
+        mid_raw = fb["mid_energy"]
+        high_raw = fb["high_energy"]
+    except KeyError as exc:
+        raise ValueError(f"Analysis file missing required key {exc}: {path}")
 
     # Sanity: dt should match hop_length / sample_rate (advisory log only).
     expected_dt = HOP_LENGTH / sample_rate
@@ -138,15 +158,20 @@ def load_analysis(config: VisualizerConfig) -> AnalysisData:
             sample_rate,
         )
 
-    bass = normalize_band(fb["bass_energy"])
-    mid = normalize_band(fb["mid_energy"])
-    high = normalize_band(fb["high_energy"])
+    bass = normalize_band(bass_raw)
+    mid = normalize_band(mid_raw)
+    high = normalize_band(high_raw)
+
+    # Preset can override the envelope decays (PresetParams validates > 0);
+    # otherwise fall back to the module defaults.
+    beat_decay = config.preset.decay if config.preset is not None else _BEAT_DECAY
+    peak_decay = config.preset.tau if config.preset is not None else _PEAK_DECAY
 
     ae = data.get("animation_events", {})
-    beat_env = precompute_envelope(ae.get("beats", []), times, decay=_BEAT_DECAY)
-    peak_env = precompute_envelope(
-        ae.get("energy_peaks", []), times, decay=_PEAK_DECAY
-    )
+    raw_beat_times = [float(t) for t in ae.get("beats", [])]
+    raw_peak_times = [float(t) for t in ae.get("energy_peaks", [])]
+    beat_env = precompute_envelope(raw_beat_times, times, decay=beat_decay)
+    peak_env = precompute_envelope(raw_peak_times, times, decay=peak_decay)
 
     audio_file = _resolve_audio(config)
 
@@ -161,5 +186,7 @@ def load_analysis(config: VisualizerConfig) -> AnalysisData:
         sample_rate=sample_rate,
         duration=duration,
         fps=config.fps,
+        raw_beat_times=raw_beat_times,
+        raw_peak_times=raw_peak_times,
         audio_file=audio_file,
     )

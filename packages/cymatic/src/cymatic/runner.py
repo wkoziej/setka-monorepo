@@ -15,9 +15,11 @@ Pattern mirrors ``cinemon`` (``BlenderProjectManager``):
 with ``subprocess.run(..., capture_output=True, text=True, check=True)`` and a
 ``RuntimeError`` carrying stderr on ``CalledProcessError``.
 
-macOS note: the default ``blender_executable`` in ``VisualizerConfig`` is the
-explicit ``/Applications/Blender.app/...`` path. The snap branch only fires for
-the literal ``"blender"`` command (Linux), mirroring cinemon.
+Executable note: the default ``blender_executable`` is ``shutil.which("blender")``
+(cross-platform). The snap branch only fires for the literal ``"blender"`` command
+(Linux), mirroring cinemon; any other explicit path is used directly. If no
+executable resolves, ``run()`` raises a clear ``RuntimeError`` before spawning a
+subprocess.
 
 RENDER CAVEAT (documented, NOT solved here):
     The dev Blender 5.1.2 has NO internal FFMPEG encoder and no system ``ffmpeg``
@@ -32,6 +34,7 @@ RENDER CAVEAT (documented, NOT solved here):
 
 from __future__ import annotations
 
+import dataclasses
 import logging
 import os
 import shutil
@@ -90,19 +93,18 @@ class CymaticRunner:
         name = Path(self.config.analysis_file).stem or base_directory.name
         return render_dir / f"{name}.mp4"
 
-    def _build_command(self, config_path: str) -> List[str]:
+    def _build_command(self, config_path: str, executable: str) -> List[str]:
         """Build the Blender headless command list.
 
         Args:
             config_path: Path to the serialized config temp file.
+            executable: Resolved (non-None) Blender executable.
 
         Returns:
             The argv list for ``subprocess.run``.
         """
-        executable = self.config.blender_executable
-
         # Snap branch is Linux-only and only for the literal "blender" command.
-        # On macOS the config default is the explicit Blender.app path -> direct.
+        # An explicit path (e.g. /Applications/Blender.app/...) -> direct.
         if executable == "blender":
             prefix: List[str] = ["snap", "run", "blender"]
         else:
@@ -125,41 +127,62 @@ class CymaticRunner:
             Path to the intended render output under ``blender/render/``.
 
         Raises:
-            RuntimeError: If the in-Blender script is missing or Blender exits
-                with a non-zero status (stderr is propagated).
+            RuntimeError: If the Blender executable cannot be found, the
+                in-Blender script is missing, Blender exits non-zero or times
+                out, or the rendered frame count is short of expectation.
         """
         if not self.script_path.exists():
             raise RuntimeError(f"cymatic build_scene script not found: {self.script_path}")
 
+        executable = self.config.blender_executable
+        if not executable:
+            raise RuntimeError(
+                "Blender executable not found; pass --blender-executable or set "
+                "it in config"
+            )
+
         output_path = self._resolve_output_path()
 
-        # Render PNG frames to a temp dir, then mux to mp4 (this Blender build has
-        # no internal FFMPEG encoder). Point the in-Blender script at the frames
-        # dir via the config so build_scene renders the sequence.
-        frames_dir = Path(tempfile.mkdtemp(prefix="cymatic_frames_"))
-        self.config.frames_dir = str(frames_dir)
-
-        # Serialize the config to a temp file passed via --config; cleaned up
-        # after the subprocess so we never leave config layout on disk.
-        tmp = tempfile.NamedTemporaryFile(
-            mode="w",
-            suffix=".json",
-            prefix="cymatic_config_",
-            delete=False,
-            encoding="utf-8",
-        )
-        config_path = tmp.name
+        # Do NOT mutate the caller's config. Work on a local copy carrying the
+        # frames_dir we render into; the caller's VisualizerConfig.frames_dir
+        # stays untouched.
+        config_path: Optional[str] = None
+        frames_dir: Optional[Path] = None
         try:
-            tmp.write(self.config.to_json())
+            # Allocate the temp frames dir inside the try so it can't leak if a
+            # later allocation raises; finally still cleans it up.
+            frames_dir = Path(tempfile.mkdtemp(prefix="cymatic_frames_"))
+            cfg = dataclasses.replace(self.config, frames_dir=str(frames_dir))
+
+            # Serialize the (local) config to a temp file passed via --config;
+            # cleaned up after the subprocess so we never leave config on disk.
+            tmp = tempfile.NamedTemporaryFile(
+                mode="w",
+                suffix=".json",
+                prefix="cymatic_config_",
+                delete=False,
+                encoding="utf-8",
+            )
+            config_path = tmp.name
+            tmp.write(cfg.to_json())
             tmp.close()
 
-            cmd = self._build_command(config_path)
+            cmd = self._build_command(config_path, executable)
             logger.debug("Executing Blender command: %s", " ".join(cmd))
             logger.debug("Working directory: %s", os.getcwd())
 
             try:
                 result = subprocess.run(
-                    cmd, capture_output=True, text=True, check=True
+                    cmd,
+                    capture_output=True,
+                    text=True,
+                    check=True,
+                    timeout=cfg.blender_timeout_sec,
+                )
+            except subprocess.TimeoutExpired as exc:
+                raise RuntimeError(
+                    f"Blender render timed out after {cfg.blender_timeout_sec}s: "
+                    f"{exc}"
                 )
             except subprocess.CalledProcessError as exc:
                 logger.error("Blender execution failed (rc=%s)", exc.returncode)
@@ -172,34 +195,74 @@ class CymaticRunner:
             if result.stderr and result.stderr.strip():
                 logger.debug("Blender stderr: %s", result.stderr)
 
+            # Validate the rendered frame count against expectation before mux,
+            # so a partial/aborted render fails loudly instead of silently
+            # producing a short clip.
+            self._validate_frame_count(frames_dir, cfg)
+
             # Mux the rendered PNG frames (+ optional audio) into the mp4.
-            self._mux_frames(frames_dir, output_path)
+            self._mux_frames(frames_dir, output_path, cfg)
 
             logger.info("cymatic render finished, output: %s", output_path)
             return output_path
         finally:
-            try:
-                os.unlink(config_path)
-            except OSError:
-                logger.warning("Could not remove temp config: %s", config_path)
-            shutil.rmtree(frames_dir, ignore_errors=True)
+            if config_path is not None:
+                try:
+                    os.unlink(config_path)
+                except OSError:
+                    logger.warning("Could not remove temp config: %s", config_path)
+            if frames_dir is not None:
+                shutil.rmtree(frames_dir, ignore_errors=True)
 
-    def _mux_frames(self, frames_dir: Path, output_path: Path) -> None:
+    def _expected_frame_count(self, cfg: VisualizerConfig) -> int:
+        """Expected rendered frame count: ``frame_end - frame_start + 1``.
+
+        ``frame_end`` falls back to ``int(duration * fps)`` derived from the
+        analysis (consistent with how ``build_scene.py`` sets the frame range).
+        """
+        frame_end = cfg.frame_end
+        if frame_end is None:
+            from cymatic.analysis_loader import load_analysis
+
+            data = load_analysis(cfg)
+            frame_end = int(data.duration * cfg.fps)
+        return int(frame_end) - int(cfg.frame_start) + 1
+
+    def _validate_frame_count(self, frames_dir: Path, cfg: VisualizerConfig) -> None:
+        """Raise if fewer frames were rendered than expected."""
+        expected = self._expected_frame_count(cfg)
+        actual = len(list(frames_dir.glob("frame_*.png")))
+        if actual < expected:
+            raise RuntimeError(
+                f"Render produced {actual} frame(s) but expected {expected} "
+                f"(frame_start={cfg.frame_start}, frame_end={cfg.frame_end}); "
+                "the render appears incomplete."
+            )
+
+    def _mux_frames(
+        self,
+        frames_dir: Path,
+        output_path: Path,
+        cfg: Optional[VisualizerConfig] = None,
+    ) -> None:
         """Mux a PNG frame sequence (+ optional audio) into mp4 via ffmpeg.
 
         Blender writes frames named ``frame_0001.png`` (4-digit pad). We feed
         them to ffmpeg as an image2 sequence starting at ``frame_start`` and
         encode H.264 (yuv420p for broad compatibility), muxing the source audio
-        with ``-shortest`` when ``config.audio_file`` is set.
+        with ``-shortest`` when ``audio_file`` is set.
 
         Args:
             frames_dir: Directory holding the rendered ``frame_####.png`` files.
             output_path: Destination ``.mp4`` path.
+            cfg: The (local) config to read fps/frame_start/audio/timeout from;
+                defaults to ``self.config`` for direct callers/tests.
 
         Raises:
-            RuntimeError: if ffmpeg is missing, no frames were produced, or the
-                ffmpeg invocation fails.
+            RuntimeError: if ffmpeg is missing, no frames were produced, the
+                ffmpeg invocation fails, or it times out.
         """
+        cfg = cfg if cfg is not None else self.config
         ffmpeg = shutil.which("ffmpeg")
         if ffmpeg is None:
             raise RuntimeError(
@@ -215,20 +278,30 @@ class CymaticRunner:
         pattern = str(frames_dir / "frame_%04d.png")
         cmd: List[str] = [
             ffmpeg, "-y",
-            "-framerate", str(self.config.fps),
-            "-start_number", str(self.config.frame_start),
+            "-framerate", str(cfg.fps),
+            "-start_number", str(cfg.frame_start),
             "-i", pattern,
         ]
-        if self.config.audio_file and Path(self.config.audio_file).exists():
-            cmd += ["-i", str(self.config.audio_file)]
+        if cfg.audio_file and Path(cfg.audio_file).exists():
+            cmd += ["-i", str(cfg.audio_file)]
         cmd += ["-c:v", "libx264", "-pix_fmt", "yuv420p"]
-        if self.config.audio_file and Path(self.config.audio_file).exists():
+        if cfg.audio_file and Path(cfg.audio_file).exists():
             cmd += ["-c:a", "aac", "-b:a", "192k", "-shortest"]
         cmd += [str(output_path)]
 
         logger.debug("ffmpeg mux: %s", " ".join(cmd))
         try:
-            subprocess.run(cmd, capture_output=True, text=True, check=True)
+            subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                check=True,
+                timeout=cfg.ffmpeg_timeout_sec,
+            )
+        except subprocess.TimeoutExpired as exc:
+            raise RuntimeError(
+                f"ffmpeg mux timed out after {cfg.ffmpeg_timeout_sec}s: {exc}"
+            )
         except subprocess.CalledProcessError as exc:
             raise RuntimeError(f"ffmpeg mux failed: {exc.stderr}")
 
