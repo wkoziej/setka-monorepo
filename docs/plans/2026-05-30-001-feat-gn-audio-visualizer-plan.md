@@ -41,7 +41,7 @@ Nowy pakiet workspace (`cymatic`, nazwa robocza) generuje **abstrakcyjny wizuali
 
 **Potwierdzone w tej sesji (Spike 0/1/2/3a):** kroki 1-5 zadziałały end-to-end na żywej maszynie — Claude napędził Blender 5.1.2 przez socket MCP, zbudował reaktywną scenę z realnej analizy, sync potwierdzony.
 
-**⚠ Uwaga render (krok 6):** ten build Blendera 5.1.2 jest **bez wewnętrznego enkodera FFMPEG** i brak systemowego `ffmpeg`. Render do mp4 wymaga instalacji `ffmpeg` (i tak wymagany w CLAUDE.md) → render klatek PNG + mux. Podgląd/akceptacja (krok 5) działa bez tego (Play w Blenderze z sound strip).
+**Render (krok 6) — DZIAŁA end-to-end (2026-05-31):** ten build Blendera 5.1.2 jest bez wewnętrznego enkodera FFMPEG, więc render idzie ścieżką **klatki PNG → mux `ffmpeg`** (zainstalowany `ffmpeg` 8.1.1). Potwierdzone przez `cymatic.render()`: tor beat 120BPM → headless Blender (scena + 360 klatek) → mux → `beat_120bpm_12s_analysis.mp4` (H.264 960×540 + AAC, 12.0s, 2.9MB). Podgląd/akceptacja (krok 5) działa też bez renderu (Play w Blenderze z sound strip).
 
 ## Problem Frame
 
@@ -511,7 +511,7 @@ Scene Time.Seconds ──► [÷ dt] ──► index_f
 - Edge case: brak `blender/render/` → `ensure_blender_dir()` tworzy.
 - Integration: pełny przebieg na fixture recording (mock subprocess) generuje oczekiwaną ścieżkę output zgodną ze strukturą katalogów.
 
-**Verification:** Runner odpala Blender headless i produkuje mp4 w `blender/render/` (na realnym Blenderze — manualnie).
+**Verification:** Runner odpala Blender headless i produkuje mp4 w `blender/render/`. **STATUS: DONE (2026-05-31)** — `cymatic.render()` zweryfikowany end-to-end na realnym Blenderze 5.1.2: headless render 360 klatek PNG → mux `ffmpeg` (frames+audio) → `beat_120bpm_12s_analysis.mp4` (H.264 960×540 + AAC, 12.0s). Mux-seam zamknięty (config `frames_dir/audio_file/frame_*`; `_mux_frames` H.264/yuv420p/AAC `-shortest`).
 
 ---
 
