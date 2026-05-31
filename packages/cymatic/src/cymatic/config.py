@@ -82,6 +82,11 @@ class VisualizerConfig:
     resolution: Optional[Tuple[int, int]] = None
     blender_executable: str = DEFAULT_BLENDER_EXECUTABLE
     preset: Optional[PresetParams] = field(default=None)
+    # Render/mux fields (Unit 9 follow-up — frames -> ffmpeg mux):
+    audio_file: Optional[str] = None  # source wav/flac to mux into the mp4
+    frame_start: int = 1
+    frame_end: Optional[int] = None  # None -> derive from analysis duration
+    frames_dir: Optional[str] = None  # when set, build_scene renders PNG sequence here
 
     def to_dict(self) -> Dict[str, Any]:
         """Serialize to a plain dict. ``resolution`` becomes a list in JSON."""
@@ -95,6 +100,10 @@ class VisualizerConfig:
             ),
             "blender_executable": self.blender_executable,
             "preset": self.preset.to_dict() if self.preset is not None else None,
+            "audio_file": self.audio_file,
+            "frame_start": self.frame_start,
+            "frame_end": self.frame_end,
+            "frames_dir": self.frames_dir,
         }
 
     def to_json(self) -> str:
@@ -120,6 +129,10 @@ class VisualizerConfig:
                 "blender_executable", DEFAULT_BLENDER_EXECUTABLE
             ),
             preset=preset,
+            audio_file=data.get("audio_file"),
+            frame_start=data.get("frame_start", 1),
+            frame_end=data.get("frame_end"),
+            frames_dir=data.get("frames_dir"),
         )
 
     @classmethod

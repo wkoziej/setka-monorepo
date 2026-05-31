@@ -34,6 +34,7 @@ from __future__ import annotations
 
 import logging
 import os
+import shutil
 import subprocess
 import tempfile
 from pathlib import Path
@@ -132,6 +133,12 @@ class CymaticRunner:
 
         output_path = self._resolve_output_path()
 
+        # Render PNG frames to a temp dir, then mux to mp4 (this Blender build has
+        # no internal FFMPEG encoder). Point the in-Blender script at the frames
+        # dir via the config so build_scene renders the sequence.
+        frames_dir = Path(tempfile.mkdtemp(prefix="cymatic_frames_"))
+        self.config.frames_dir = str(frames_dir)
+
         # Serialize the config to a temp file passed via --config; cleaned up
         # after the subprocess so we never leave config layout on disk.
         tmp = tempfile.NamedTemporaryFile(
@@ -165,14 +172,65 @@ class CymaticRunner:
             if result.stderr and result.stderr.strip():
                 logger.debug("Blender stderr: %s", result.stderr)
 
+            # Mux the rendered PNG frames (+ optional audio) into the mp4.
+            self._mux_frames(frames_dir, output_path)
+
             logger.info("cymatic render finished, output: %s", output_path)
             return output_path
         finally:
-            # Clean up the temp config regardless of success/failure.
             try:
                 os.unlink(config_path)
             except OSError:
                 logger.warning("Could not remove temp config: %s", config_path)
+            shutil.rmtree(frames_dir, ignore_errors=True)
+
+    def _mux_frames(self, frames_dir: Path, output_path: Path) -> None:
+        """Mux a PNG frame sequence (+ optional audio) into mp4 via ffmpeg.
+
+        Blender writes frames named ``frame_0001.png`` (4-digit pad). We feed
+        them to ffmpeg as an image2 sequence starting at ``frame_start`` and
+        encode H.264 (yuv420p for broad compatibility), muxing the source audio
+        with ``-shortest`` when ``config.audio_file`` is set.
+
+        Args:
+            frames_dir: Directory holding the rendered ``frame_####.png`` files.
+            output_path: Destination ``.mp4`` path.
+
+        Raises:
+            RuntimeError: if ffmpeg is missing, no frames were produced, or the
+                ffmpeg invocation fails.
+        """
+        ffmpeg = shutil.which("ffmpeg")
+        if ffmpeg is None:
+            raise RuntimeError(
+                "ffmpeg not found on PATH — required to mux frames to mp4 "
+                "(this Blender build has no internal FFMPEG encoder)."
+            )
+
+        frames = sorted(frames_dir.glob("frame_*.png"))
+        if not frames:
+            raise RuntimeError(f"No frames rendered in {frames_dir}")
+
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        pattern = str(frames_dir / "frame_%04d.png")
+        cmd: List[str] = [
+            ffmpeg, "-y",
+            "-framerate", str(self.config.fps),
+            "-start_number", str(self.config.frame_start),
+            "-i", pattern,
+        ]
+        if self.config.audio_file and Path(self.config.audio_file).exists():
+            cmd += ["-i", str(self.config.audio_file)]
+        cmd += ["-c:v", "libx264", "-pix_fmt", "yuv420p"]
+        if self.config.audio_file and Path(self.config.audio_file).exists():
+            cmd += ["-c:a", "aac", "-b:a", "192k", "-shortest"]
+        cmd += [str(output_path)]
+
+        logger.debug("ffmpeg mux: %s", " ".join(cmd))
+        try:
+            subprocess.run(cmd, capture_output=True, text=True, check=True)
+        except subprocess.CalledProcessError as exc:
+            raise RuntimeError(f"ffmpeg mux failed: {exc.stderr}")
 
 
 def render(config: VisualizerConfig) -> Path:

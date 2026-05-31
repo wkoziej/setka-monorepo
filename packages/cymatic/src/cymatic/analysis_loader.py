@@ -32,10 +32,14 @@ from typing import Optional
 
 import numpy as np
 
-from beatrix.core.audio_validator import AudioValidator
-
 from .config import VisualizerConfig
 from .normalization import normalize_band, precompute_envelope
+
+# NOTE: beatrix.core.audio_validator is imported LAZILY inside _resolve_audio.
+# Audio detection is advisory; the analysis JSON is the data source. A top-level
+# import would pull beatrix -> setka_common -> PyYAML, which the bundled python
+# in headless Blender lacks (build_scene runs there). Lazy import keeps the
+# in-Blender path clean while host-side behavior is unchanged.
 
 logger = logging.getLogger(__name__)
 
@@ -81,6 +85,8 @@ def _resolve_audio(config: VisualizerConfig) -> Optional[Path]:
     if not extracted_dir.exists():
         return None
     try:
+        from beatrix.core.audio_validator import AudioValidator  # lazy: see module note
+
         return AudioValidator().detect_main_audio(extracted_dir)
     except Exception as exc:  # noqa: BLE001 — advisory only, don't fail the load
         logger.debug("Audio detection skipped: %s", exc)

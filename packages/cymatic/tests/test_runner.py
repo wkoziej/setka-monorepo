@@ -8,6 +8,7 @@ Mirrors cinemon's BlenderProjectManager subprocess pattern:
 with capture_output/text/check, RuntimeError carrying stderr on failure.
 """
 
+import shutil
 import subprocess
 from pathlib import Path
 from unittest.mock import Mock
@@ -16,6 +17,21 @@ import pytest
 
 from cymatic.config import VisualizerConfig
 from cymatic.runner import CymaticRunner, render
+
+# Capture the real mux before the autouse fixture below patches it to a no-op,
+# so the dedicated mux test can exercise the real implementation.
+_REAL_MUX = CymaticRunner._mux_frames
+
+
+@pytest.fixture(autouse=True)
+def _skip_mux(monkeypatch):
+    """Stub out frame muxing for command/subprocess/cleanup tests.
+
+    These tests verify the Blender invocation, not video encoding; the mocked
+    subprocess never renders real frames, so the real _mux_frames would raise
+    "No frames rendered". The dedicated mux test uses _REAL_MUX directly.
+    """
+    monkeypatch.setattr(CymaticRunner, "_mux_frames", lambda self, fdir, out: None)
 
 
 @pytest.fixture
@@ -149,3 +165,42 @@ def test_render_convenience_function(config, recording_dir):
     """The module-level render() helper drives the runner end-to-end."""
     output = render(config)
     assert Path(output).parent == recording_dir / "blender" / "render"
+
+
+def test_mux_frames_builds_ffmpeg_command(config, tmp_path, monkeypatch):
+    """_mux_frames feeds the PNG sequence (+audio) to ffmpeg with H.264/yuv420p."""
+    frames_dir = tmp_path / "frames"
+    frames_dir.mkdir()
+    (frames_dir / "frame_0001.png").write_bytes(b"\x89PNG\r\n")  # fake frame
+    output = tmp_path / "out.mp4"
+
+    config.fps = 24
+    config.frame_start = 1
+    config.audio_file = str(tmp_path / "a.wav")
+    (tmp_path / "a.wav").write_bytes(b"RIFF")  # exists -> audio muxed
+
+    monkeypatch.setattr(shutil, "which", lambda name: "/usr/bin/ffmpeg")
+    captured = {}
+
+    def fake_run(cmd, *a, **k):
+        captured["cmd"] = list(cmd)
+        return Mock(returncode=0, stdout="", stderr="")
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+
+    _REAL_MUX(CymaticRunner(config), frames_dir, output)
+
+    cmd = captured["cmd"]
+    assert cmd[0] == "/usr/bin/ffmpeg"
+    assert "-framerate" in cmd and "24" in cmd
+    assert "-start_number" in cmd
+    assert "libx264" in cmd and "yuv420p" in cmd
+    assert "aac" in cmd and "-shortest" in cmd  # audio present
+    assert str(output) == cmd[-1]
+
+
+def test_mux_frames_no_frames_raises(config, tmp_path, monkeypatch):
+    """Empty frames dir -> clear RuntimeError (not a silent empty mp4)."""
+    monkeypatch.setattr(shutil, "which", lambda name: "/usr/bin/ffmpeg")
+    with pytest.raises(RuntimeError, match="No frames"):
+        _REAL_MUX(CymaticRunner(config), tmp_path / "empty", tmp_path / "o.mp4")

@@ -38,7 +38,15 @@ except ImportError:
 # so inject both. Blender's bundled python provides numpy.
 _script_dir = Path(__file__).parent
 _src_dir = _script_dir.parent / "src"
-for _p in (str(_script_dir), str(_src_dir)):
+# Sibling workspace packages cymatic depends on (beatrix, setka-common) are not
+# on Blender's bundled-python path either; inject their src/ dirs too so the
+# host-side modules import cleanly inside headless Blender.
+_packages_dir = _script_dir.parent.parent
+_sibling_srcs = [
+    str(_packages_dir / "beatrix" / "src"),
+    str(_packages_dir / "common" / "src"),
+]
+for _p in (str(_script_dir), str(_src_dir), *_sibling_srcs):
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
@@ -118,6 +126,24 @@ def main(argv=None) -> int:
         fps=config.fps,
         resolution=config.resolution,
     )
+
+    # 5. optional headless render of the PNG frame sequence (Unit 9 mux seam).
+    # When the runner sets config.frames_dir, render the animation to PNG frames
+    # there; the host-side runner then muxes them + audio to mp4 via ffmpeg
+    # (this Blender build has no internal FFMPEG encoder).
+    if bpy is not None and config.frames_dir:
+        scene = bpy.context.scene
+        scene.frame_start = config.frame_start
+        scene.frame_end = config.frame_end or int(analysis.duration * config.fps)
+        scene.render.image_settings.file_format = "PNG"
+        frames_dir = Path(config.frames_dir)
+        frames_dir.mkdir(parents=True, exist_ok=True)
+        scene.render.filepath = str(frames_dir / "frame_")
+        print(
+            f"cymatic build_scene: rendering frames "
+            f"{scene.frame_start}-{scene.frame_end} -> {frames_dir}"
+        )
+        bpy.ops.render.render(animation=True)
 
     print(f"cymatic build_scene: scene built from {config_path}")
     return 0
