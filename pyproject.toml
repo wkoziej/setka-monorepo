@@ -8,6 +8,7 @@ members = [
     "packages/cinemon",
     "packages/medusa",
     "packages/beatrix",
+    "packages/cymatic",
 ]
 
 [project]
@@ -23,6 +24,7 @@ obsession = { workspace = true }
 cinemon = { workspace = true }
 medusa = { workspace = true }
 beatrix = { workspace = true }
+cymatic = { workspace = true }
 
 [tool.pytest.ini_options]
 testpaths = [
@@ -31,6 +33,7 @@ testpaths = [
     "packages/cinemon/tests",
     "packages/medusa/tests",
     "packages/beatrix/tests",
+    "packages/cymatic/tests",
 ]
 pythonpath = [
     "packages/obsession/src",
@@ -38,6 +41,7 @@ pythonpath = [
     "packages/cinemon/src",
     "packages/medusa/src",
     "packages/beatrix/src",
+    "packages/cymatic/src",
 ]
 addopts = [
     "--strict-markers",

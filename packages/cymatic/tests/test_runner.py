@@ -1,0 +1,151 @@
+# ABOUTME: Tests for the host-side cymatic runner (Blender subprocess orchestration).
+# ABOUTME: Uses the autouse mock_subprocess fixture from conftest; no real Blender.
+
+"""Unit 9 — host-side runner tests.
+
+Mirrors cinemon's BlenderProjectManager subprocess pattern:
+  [blender_exec, "--background", "--python", build_scene.py, "--", "--config", <file>]
+with capture_output/text/check, RuntimeError carrying stderr on failure.
+"""
+
+import subprocess
+from pathlib import Path
+from unittest.mock import Mock
+
+import pytest
+
+from cymatic.config import VisualizerConfig
+from cymatic.runner import CymaticRunner, render
+
+
+@pytest.fixture
+def recording_dir(tmp_path):
+    """A recording directory with the expected analysis layout."""
+    (tmp_path / "analysis").mkdir()
+    analysis_file = tmp_path / "analysis" / "song_analysis.json"
+    analysis_file.write_text("{}")
+    return tmp_path
+
+
+@pytest.fixture
+def config(recording_dir):
+    return VisualizerConfig(
+        analysis_file=str(recording_dir / "analysis" / "song_analysis.json"),
+        output_mp4="",  # runner resolves it under blender/render/
+        base_directory=str(recording_dir),
+        blender_executable="/Applications/Blender.app/Contents/MacOS/Blender",
+    )
+
+
+def _captured_cmd(mock_run):
+    """Return the command list passed to the mocked subprocess.run."""
+    assert mock_run.called, "subprocess.run was not called"
+    args, _kwargs = mock_run.call_args
+    return list(args[0])
+
+
+def test_command_built_with_config_and_build_scene_path(config):
+    """Command includes --config <file> and the resolved build_scene.py path."""
+    runner = CymaticRunner(config)
+    runner.run()
+
+    cmd = _captured_cmd(subprocess.run)
+
+    # Resolved build_scene.py path (mirrors cinemon resolution from runner.py).
+    expected_script = (
+        Path(__file__).parent.parent / "blender_script" / "build_scene.py"
+    )
+    assert str(expected_script) in cmd
+    assert expected_script.exists()
+
+    # Blender headless invocation structure.
+    assert "--background" in cmd
+    assert "--python" in cmd
+    assert "--" in cmd  # separator between Blender args and script args
+    assert "--config" in cmd
+
+    # --config is followed by a path, and after the "--" separator.
+    cfg_idx = cmd.index("--config")
+    assert cfg_idx > cmd.index("--")
+    config_path = cmd[cfg_idx + 1]
+    assert Path(config_path).name  # non-empty path token
+
+
+def test_explicit_executable_used_directly_macos(config):
+    """An explicit blender_executable path is used directly (no snap wrapper)."""
+    config.blender_executable = "/Applications/Blender.app/Contents/MacOS/Blender"
+    runner = CymaticRunner(config)
+    runner.run()
+
+    cmd = _captured_cmd(subprocess.run)
+    assert cmd[0] == "/Applications/Blender.app/Contents/MacOS/Blender"
+    assert "snap" not in cmd
+
+
+def test_default_blender_executable_uses_snap_branch_linux(config):
+    """blender_executable == 'blender' -> snap run blender (Linux branch)."""
+    config.blender_executable = "blender"
+    runner = CymaticRunner(config)
+    runner.run()
+
+    cmd = _captured_cmd(subprocess.run)
+    assert cmd[:3] == ["snap", "run", "blender"]
+
+
+def test_called_process_error_raises_runtime_error_with_stderr(config, monkeypatch):
+    """CalledProcessError is re-raised as RuntimeError carrying stderr."""
+    error = subprocess.CalledProcessError(
+        returncode=1, cmd=["blender"], output="", stderr="boom: GN build failed"
+    )
+    monkeypatch.setattr(subprocess, "run", Mock(side_effect=error))
+
+    runner = CymaticRunner(config)
+    with pytest.raises(RuntimeError) as exc_info:
+        runner.run()
+
+    assert "boom: GN build failed" in str(exc_info.value)
+
+
+def test_output_path_under_blender_render(config, recording_dir):
+    """Output mp4 is resolved under blender/render/ via ensure_blender_dir."""
+    runner = CymaticRunner(config)
+    output = runner.run()
+
+    output = Path(output)
+    assert output.parent == recording_dir / "blender" / "render"
+    assert output.suffix == ".mp4"
+    # ensure_blender_dir created the directory tree.
+    assert (recording_dir / "blender" / "render").is_dir()
+
+
+def test_temp_config_file_cleaned_up(config):
+    """The serialized temp config file is removed after the subprocess."""
+    runner = CymaticRunner(config)
+
+    captured_paths = []
+
+    real_run = subprocess.run  # the mock from conftest
+
+    def capturing_run(cmd, *a, **k):
+        # Record the --config path and confirm it exists DURING the call.
+        cmd = list(cmd)
+        idx = cmd.index("--config")
+        cfg_path = cmd[idx + 1]
+        captured_paths.append(cfg_path)
+        assert Path(cfg_path).exists(), "config file must exist during subprocess"
+        return real_run(cmd, *a, **k)
+
+    import unittest.mock as _mock
+
+    with _mock.patch.object(subprocess, "run", side_effect=capturing_run):
+        runner.run()
+
+    assert captured_paths, "subprocess.run was not invoked"
+    for p in captured_paths:
+        assert not Path(p).exists(), f"temp config not cleaned up: {p}"
+
+
+def test_render_convenience_function(config, recording_dir):
+    """The module-level render() helper drives the runner end-to-end."""
+    output = render(config)
+    assert Path(output).parent == recording_dir / "blender" / "render"

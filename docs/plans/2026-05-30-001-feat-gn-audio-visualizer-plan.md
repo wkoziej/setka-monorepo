@@ -220,7 +220,7 @@ Scene Time.Seconds ──► [÷ dt] ──► index_f
 
 ### Faza 0 — Pożądalność (przed inżynierią)
 
-- [ ] **Unit 0: Spike — pożądalność outputu 3D (throwaway)**
+- [x] **Unit 0: Spike — pożądalność outputu 3D (throwaway)**
 
 **Goal:** Tanio potwierdzić, że abstrakcyjny wizualizer 3D to output, który twórca faktycznie chce — **zanim** ruszy jakikolwiek scaffold/spike techniczny.
 
@@ -244,7 +244,7 @@ Scene Time.Seconds ──► [÷ dt] ──► index_f
 
 ### Faza A — De-ryzykowanie (spike'y z bramkami)
 
-- [ ] **Unit 1: Spike — normalizacja pasm (per-track 0..1)**
+- [x] **Unit 1: Spike — normalizacja pasm (per-track 0..1)**
 
 **Goal:** Potwierdzić, że deterministyczny per-track transform surowych magnitud STFT daje wizualnie czytelny ruch W OBRĘBIE utworu.
 
@@ -272,7 +272,7 @@ Scene Time.Seconds ──► [÷ dt] ──► index_f
 
 ---
 
-- [ ] **Unit 2: Spike — GN time-sampling (most B) na ≥2 sr**
+- [x] **Unit 2: Spike — GN time-sampling (most B) na ≥2 sr**
 
 **Goal:** Potwierdzić, że drzewo GN czyta atrybut po czasie z poprawnym `time→index`, na ≥2 utworach o RÓŻNYM `sample_rate`.
 
@@ -304,7 +304,7 @@ Scene Time.Seconds ──► [÷ dt] ──► index_f
 
 ---
 
-- [ ] **Unit 3: Spike — MCP/bridge (binarny 3a)**
+- [x] **Unit 3: Spike — MCP/bridge (binarny 3a)**
 
 **Goal:** Potwierdzić binarnie, że wybrana ścieżka MCP/bridge umie uruchomić Python (`bpy`) w żywym Blenderze i zwrócić screenshot viewportu, którego agent „widzi".
 
@@ -335,7 +335,7 @@ Scene Time.Seconds ──► [÷ dt] ──► index_f
 
 ### Faza B — Build MVP
 
-- [ ] **Unit 4: Scaffold pakietu + config dataclass**
+- [x] **Unit 4: Scaffold pakietu + config dataclass**
 
 **Goal:** Utworzyć pakiet workspace `cymatic` z podziałem host/in-Blender i dataclass config.
 
@@ -365,7 +365,7 @@ Scene Time.Seconds ──► [÷ dt] ──► index_f
 
 ---
 
-- [ ] **Unit 5: Loader analizy + normalizacja + prekomputacja obwiedni**
+- [x] **Unit 5: Loader analizy + normalizacja + prekomputacja obwiedni**
 
 **Goal:** Host-side moduł: wczytuje `*_analysis.json`, wybiera audio, normalizuje pasma per-track, prekomputuje obwiednie beatów/peaków, wyprowadza `dt` z `times[]`.
 
@@ -398,7 +398,7 @@ Scene Time.Seconds ──► [÷ dt] ──► index_f
 
 ---
 
-- [ ] **Unit 6: Data-object builder (numpy → mesh + atrybuty)** *(in-Blender)*
+- [x] **Unit 6: Data-object builder (numpy → mesh + atrybuty)** *(in-Blender)*
 
 **Goal:** Zbudować w Blenderze obiekt-danych: mesh N wierzch., X=czas, float-atrybuty `bass_n/mid_n/high_n/beat_env/peak_env`.
 
@@ -426,7 +426,7 @@ Scene Time.Seconds ──► [÷ dt] ──► index_f
 
 ---
 
-- [ ] **Unit 7: GN sampler tree builder** *(in-Blender)*
+- [x] **Unit 7: GN sampler tree builder** *(in-Blender)*
 
 **Goal:** Programowo zbudować drzewo GN próbkujące data-object po czasie i wystawiające interpolowane `bass/mid/high/beat/peak`.
 
@@ -454,7 +454,7 @@ Scene Time.Seconds ──► [÷ dt] ──► index_f
 
 ---
 
-- [ ] **Unit 8: Preset wizualny + montaż sceny** *(in-Blender)*
+- [x] **Unit 8: Preset wizualny + montaż sceny** *(in-Blender)*
 
 **Goal:** Jeden hybrydowy preset: pasma → ciągła forma/ruch tła, impulsy (beat/peak) → dyskretne akcenty (skala/błysk/wyrzut). Codyfikowany w builderze.
 
@@ -483,7 +483,7 @@ Scene Time.Seconds ──► [÷ dt] ──► index_f
 
 ---
 
-- [ ] **Unit 9: Host-side runner + render do mp4**
+- [x] **Unit 9: Host-side runner + render do mp4**
 
 **Goal:** Host-side: zbudować komendę subprocess, uruchomić Blender headless, wyrenderować mp4 do `blender/render/`.
 
@@ -515,7 +515,7 @@ Scene Time.Seconds ──► [÷ dt] ──► index_f
 
 ---
 
-- [ ] **Unit 10: Harness weryfikacji sync (z danych)**
+- [x] **Unit 10: Harness weryfikacji sync (z danych)**
 
 **Goal:** Obiektywnie zmierzyć, że akcenty wizualne padają w ±N klatek od beatów/peaków beatrix — z danych, nie z obrazu.
 

@@ -1,5 +1,5 @@
 version = 1
-revision = 2
+revision = 3
 requires-python = ">=3.10"
 resolution-markers = [
     "python_full_version >= '3.13'",
@@ -11,6 +11,7 @@ resolution-markers = [
 members = [
     "beatrix",
     "cinemon",
+    "cymatic",
     "medusa",
     "obsession",
     "setka-common",
@@ -524,6 +525,35 @@ wheels = [
 [package.optional-dependencies]
 toml = [
     { name = "tomli", marker = "python_full_version <= '3.11'" },
+]
+
+[[package]]
+name = "cymatic"
+version = "0.1.0"
+source = { editable = "packages/cymatic" }
+dependencies = [
+    { name = "beatrix" },
+    { name = "setka-common" },
+]
+
+[package.dev-dependencies]
+dev = [
+    { name = "pre-commit" },
+    { name = "pytest" },
+    { name = "pytest-cov" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "beatrix", editable = "packages/beatrix" },
+    { name = "setka-common", editable = "packages/common" },
+]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "pre-commit", specifier = ">=4.2.0" },
+    { name = "pytest", specifier = ">=7.0.0" },
+    { name = "pytest-cov", specifier = ">=4.0.0" },
 ]
 
 [[package]]
