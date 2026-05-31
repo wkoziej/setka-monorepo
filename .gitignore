@@ -242,3 +242,9 @@ pnpm-lock.yaml
 
 # Tauri bundle outputs
 packages/fermata/src-tauri/bundle/
+
+# Prior-art clones — study only, not vendored (GPL/MIT mix)
+research/prior-art/
+
+# CC audio test tracks (binary scratch)
+research/audio/
