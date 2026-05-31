@@ -157,6 +157,53 @@ class TestHarnessCanFail:
 
 
 # --------------------------------------------------------------------------- #
+# Regression: adjacent-beat MASKING. A beat present in raw_beat_times but with  #
+# no fresh impulse in beat_env must FAIL even when a NEIGHBOR's peak sits inside #
+# the search window within tolerance — the argmax alone would mask it.          #
+# --------------------------------------------------------------------------- #
+class TestHarnessCatchesMaskedBeat:
+    def test_masked_beat_fails_when_neighbor_peak_in_window(self):
+        # Two beats 40 ms apart: 1.0s (frame 30) and 1.04s (frame 31). The
+        # envelope is built from ONLY the first beat, so 1.04s has no fresh
+        # impulse. Its expected index (104) holds just the DECAY TAIL of beat A
+        # (~0.69), and beat A's fresh 1.0 peak at index 100 sits inside the
+        # search window — argmax would report peak_frame=30, deviation=1 <= tol,
+        # a FALSE pass. The presence check (value ~1.0 at the expected index)
+        # must catch the absent impulse and fail the report.
+        fps, dt = 30, 0.01
+        raw_beats = [1.0, 1.04]
+        n = int(round(2.0 / dt))
+        times = np.arange(n, dtype=float) * dt
+        # Envelope deliberately MISSING the second beat (precompute from [1.0]).
+        beat_env = precompute_envelope([1.0], times, decay=0.13)
+        zeros = np.zeros(n, dtype=np.float32)
+        data = AnalysisData(
+            bass=zeros, mid=zeros.copy(), high=zeros.copy(),
+            beat_env=beat_env, peak_env=zeros.copy(), times=times,
+            dt=dt, sample_rate=48000, duration=2.0, fps=fps,
+            raw_beat_times=list(raw_beats),
+        )
+
+        report = verify_sync(data)
+
+        assert not report.passed, "masked beat must fail, not be hidden by neighbor"
+        masked = report.deviations[1]
+        assert masked.beat_time == pytest.approx(1.04)
+        assert masked.present is False  # no fresh impulse at the expected index
+        # The first beat IS present and on-time.
+        assert report.deviations[0].present is True
+
+    def test_consistent_close_beats_still_pass(self):
+        # Same two close beats, but the envelope is built from BOTH — each has a
+        # fresh 1.0 impulse at its own index. No false-fail: presence holds and
+        # deviations stay within tolerance.
+        data = _synthetic([1.0, 1.04], fps=30, dt=0.01, duration=2.0)
+        report = verify_sync(data)
+        assert report.passed
+        assert all(d.present for d in report.deviations)
+
+
+# --------------------------------------------------------------------------- #
 # R3: real fixtures of different sample_rate -> sync holds on both              #
 # --------------------------------------------------------------------------- #
 class TestR3RealFixturesBothSampleRates:

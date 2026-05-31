@@ -81,6 +81,30 @@ class AnalysisData:
     audio_file: Optional[Path] = None
 
 
+def _finite_times(raw, label: str, path: Path) -> list[float]:
+    """Coerce event times to float and drop non-finite (NaN/inf) values.
+
+    A corrupt analysis with a NaN/inf timestamp would otherwise crash downstream
+    at ``int(round(t/dt))``. Dropped values are logged once with a count.
+    """
+    out: list[float] = []
+    dropped = 0
+    for t in raw:
+        f = float(t)
+        if np.isfinite(f):
+            out.append(f)
+        else:
+            dropped += 1
+    if dropped:
+        logger.warning(
+            "analysis_loader: dropped %d non-finite %s time(s): %s",
+            dropped,
+            label,
+            path,
+        )
+    return out
+
+
 def _resolve_audio(config: VisualizerConfig) -> Optional[Path]:
     """Best-effort audio selection via AudioValidator from ``extracted/``.
 
@@ -168,8 +192,12 @@ def load_analysis(config: VisualizerConfig) -> AnalysisData:
     peak_decay = config.preset.tau if config.preset is not None else _PEAK_DECAY
 
     ae = data.get("animation_events", {})
-    raw_beat_times = [float(t) for t in ae.get("beats", [])]
-    raw_peak_times = [float(t) for t in ae.get("energy_peaks", [])]
+    # Drop non-finite event times (NaN/inf from a corrupt analysis) before they
+    # reach precompute_envelope / verify_sync, where int(round(nan/dt)) would
+    # raise "cannot convert float NaN to integer". Mirrors the NaN coercion in
+    # normalize_band: a single bad sample must not crash the whole load.
+    raw_beat_times = _finite_times(ae.get("beats", []), "beats", path)
+    raw_peak_times = _finite_times(ae.get("energy_peaks", []), "energy_peaks", path)
     beat_env = precompute_envelope(raw_beat_times, times, decay=beat_decay)
     peak_env = precompute_envelope(raw_peak_times, times, decay=peak_decay)
 

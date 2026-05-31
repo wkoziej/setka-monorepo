@@ -200,6 +200,42 @@ class TestRawEventTimesAndPreset:
         assert (a == a) is True
 
 
+class TestNonFiniteEventTimes:
+    def test_nan_beat_time_filtered_not_loaded(self, tmp_path):
+        # A corrupt/hand-crafted analysis with NaN/inf beat times must not reach
+        # verify_sync as a non-finite value (int(round(nan*fps)) -> ValueError).
+        # The loader drops non-finite event times with a warning.
+        d = json.loads(FIX_48K.read_text())
+        good = [float(t) for t in d["animation_events"]["beats"][:3]]
+        d["animation_events"]["beats"] = [float("nan"), good[0], float("inf"), good[1]]
+        d["animation_events"]["energy_peaks"] = [good[2], float("-inf")]
+        p = tmp_path / "nan_analysis.json"
+        p.write_text(json.dumps(d))
+
+        res = load_analysis(_config(p))
+
+        assert all(np.isfinite(t) for t in res.raw_beat_times)
+        assert all(np.isfinite(t) for t in res.raw_peak_times)
+        # Only the finite originals survive, order preserved.
+        assert res.raw_beat_times == [good[0], good[1]]
+        assert res.raw_peak_times == [good[2]]
+
+    def test_nan_beat_time_does_not_crash_verify_sync(self, tmp_path):
+        from cymatic.sync_verification import verify_sync
+
+        d = json.loads(FIX_48K.read_text())
+        d["animation_events"]["beats"] = [float("nan")] + [
+            float(t) for t in d["animation_events"]["beats"][:5]
+        ]
+        p = tmp_path / "nan2_analysis.json"
+        p.write_text(json.dumps(d))
+
+        res = load_analysis(_config(p))
+        # Must produce a SyncReport, not raise ValueError on the NaN.
+        report = verify_sync(res)
+        assert report is not None
+
+
 class TestFullPipeline:
     def test_real_file_equal_length_arrays(self):
         res = load_analysis(_config(FIX_44K))

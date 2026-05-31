@@ -129,6 +129,7 @@ class BeatDeviation:
     expected_frame: int  # round(beat_time * fps)
     peak_frame: int  # frame of the beat_env peak nearest beat_time
     deviation: int  # |peak_frame - expected_frame|
+    present: bool = True  # a fresh impulse (~1.0) exists at the expected index
 
 
 @dataclass
@@ -139,8 +140,9 @@ class SyncReport:
         deviations: per-beat measurements (empty for a beatless track).
         max_deviation: largest per-beat deviation in frames (0 if no beats).
         n_tolerance_frames: the internal tolerance applied.
-        passed: ``True`` iff ``max_deviation <= n_tolerance_frames`` (vacuously
-            ``True`` for a beatless track).
+        passed: ``True`` iff every beat is on-time (``max_deviation <=
+            n_tolerance_frames``) AND has its own fresh impulse in the envelope
+            (``all(d.present)``); vacuously ``True`` for a beatless track.
         sample_rate: source track sample rate (R3 traceability).
         fps: fps used for the frame arithmetic.
         dt: sample spacing used.
@@ -160,6 +162,26 @@ class SyncReport:
 # and still be found by the argmax — that is what lets the harness FAIL on a
 # wrong envelope instead of silently clamping the search to the expected index.
 _SEARCH_HALF_FRAMES = DEFAULT_N_TOLERANCE_FRAMES + 4
+
+# A beat is "present" only when its OWN fresh impulse sits at the expected index.
+# precompute_envelope sets env[round(t/dt)] to exactly 1.0 for every event time,
+# so a genuine beat always reads 1.0 there; any value below means there is no
+# fresh impulse at that index — only the decay tail of a NEIGHBORING beat. That
+# distinction is what closes adjacent-beat masking: when a beat is absent from
+# the envelope but a neighbor's peak falls inside the search window, the argmax
+# would report a small deviation (a false pass); the presence check fails it.
+# The threshold sits just below 1.0 so float round-trips never false-fail a real
+# beat, while any decayed-neighbor value (strictly < 1.0) is rejected.
+_PRESENCE_THRESHOLD = 0.999
+
+
+def _impulse_present(beat_env: np.ndarray, beat_time: float, dt: float) -> bool:
+    """True iff a fresh impulse (~1.0) sits at the beat's expected index."""
+    n = len(beat_env)
+    if n == 0:
+        return False
+    index = _clamp_index(int(round(beat_time / dt)), n)
+    return float(beat_env[index]) >= _PRESENCE_THRESHOLD
 
 
 def _peak_frame_near(beat_env: np.ndarray, beat_time: float, dt: float, fps: int) -> int:
@@ -233,15 +255,21 @@ def verify_sync(
                 expected_frame=expected_frame,
                 peak_frame=peak_frame,
                 deviation=abs(peak_frame - expected_frame),
+                present=_impulse_present(beat_env, t, dt),
             )
         )
 
     max_dev = max((d.deviation for d in deviations), default=0)
+    all_present = all(d.present for d in deviations)
     return SyncReport(
         deviations=deviations,
         max_deviation=max_dev,
         n_tolerance_frames=n_tolerance_frames,
-        passed=max_dev <= n_tolerance_frames,
+        # Pass requires BOTH on-time placement AND a fresh impulse per beat: the
+        # presence check defeats adjacent-beat masking, where a neighbor's peak
+        # inside the search window would otherwise yield a small (passing)
+        # deviation for a beat that has no impulse of its own.
+        passed=max_dev <= n_tolerance_frames and all_present,
         sample_rate=analysis_data.sample_rate,
         fps=fps,
         dt=dt,
