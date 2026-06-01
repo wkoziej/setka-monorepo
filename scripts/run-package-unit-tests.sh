@@ -21,7 +21,6 @@ echo "Changed packages: $packages"
 get_package_name() {
     case "$1" in
         "common") echo "setka-common" ;;
-        "obsession") echo "obs-canvas-recorder" ;;
         *) echo "$1" ;;
     esac
 }
@@ -37,9 +36,11 @@ for package_dir in $packages; do
         continue
     fi
 
-    # Run unit tests only (exclude integration, manual, audio, and slow tests)
-    echo "  uv run --package $package_name pytest packages/$package_dir/tests/ -m 'not integration and not manual and not audio and not slow' --tb=short -q"
-    if ! (cd "packages/$package_dir" && uv run --package "$package_name" pytest tests/ -m "not integration and not manual and not audio and not slow" --tb=short -q); then
+    # Run unit tests only (exclude integration, manual, audio, and slow tests).
+    # Disable coverage: this hook is a pass/fail gate on a unit-only subset, so the
+    # package's full-suite --cov-fail-under threshold does not apply here.
+    echo "  uv run --package $package_name pytest packages/$package_dir/tests/ -m 'not integration and not manual and not audio and not slow' --no-cov --tb=short -q"
+    if ! (cd "packages/$package_dir" && uv run --package "$package_name" pytest tests/ -m "not integration and not manual and not audio and not slow" --no-cov --tb=short -q); then
         echo "Unit tests failed for package: $package_dir"
         exit 1
     fi
