@@ -1,0 +1,37 @@
+{# ABOUTME: HTMX partial for PACER button card in song edit form. #}
+{# ABOUTME: button_idx must be set before including this partial. #}
+<div class="pacer-button-card border border-gray-200 rounded-lg p-4" data-button-idx="{{ button_idx }}">
+    <div class="flex justify-between items-center mb-2">
+        <span class="button-number bg-indigo-600 text-white px-2 py-1 rounded text-sm font-bold">#{{ button_idx + 1 }}</span>
+        <div class="flex items-center gap-2">
+            <button type="button" onclick="moveButtonUp(this)"
+                    class="text-gray-500 hover:text-indigo-600 text-lg" title="Przesuń w górę">↑</button>
+            <button type="button" onclick="moveButtonDown(this)"
+                    class="text-gray-500 hover:text-indigo-600 text-lg" title="Przesuń w dół">↓</button>
+            <button type="button" onclick="this.closest('.pacer-button-card').remove(); renumberButtons();"
+                    class="text-red-500 hover:text-red-700">🗑️</button>
+        </div>
+    </div>
+    <div class="mb-4">
+        <input type="text" name="button_{{ button_idx }}_name"
+               value="{{ button.name if button else '' }}"
+               placeholder="Nazwa przycisku" required
+               class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500">
+    </div>
+
+    <div id="actions-{{ button_idx }}" class="actions-container space-y-2">
+        {% if button and button.actions %}
+            {% for action in button.actions %}
+            {% set action_idx = loop.index0 %}
+            {% include "partials/action_row.html" %}
+            {% endfor %}
+        {% endif %}
+    </div>
+
+    <button type="button"
+            hx-get="/partials/action-row"
+            hx-target="#actions-{{ button_idx }}"
+            hx-swap="beforeend"
+            hx-vals="js:{button_idx: {{ button_idx }}, action_idx: event.target.closest('.pacer-button-card').querySelectorAll('.action-row').length}"
+            class="mt-2 text-sm text-indigo-600 hover:text-indigo-800">+ Dodaj akcję</button>
+</div>

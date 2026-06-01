@@ -1,0 +1,8 @@
+{# ABOUTME: HTMX partial for action type select options. #}
+{# ABOUTME: Rendered when device selection changes (cascade). #}
+<option value="">Typ...</option>
+{% for atype in action_types %}
+<option value="{{ atype.value }}">
+    {{ 'Preset' if atype.value == 'preset' else 'Pattern' if atype.value == 'pattern' else 'CC' if atype.value == 'cc' else 'Note' }}
+</option>
+{% endfor %}

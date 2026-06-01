@@ -1,0 +1,84 @@
+song:
+  id: a1-w-ciszy-learn
+  name: cisza (LEARN ONLY)
+  author: Wojtas
+  created: '2026-05-22'
+  notes: |
+    Tymczasowy preset dla Bitwig Mappings Browser Learn. Bazuje na a1-w-ciszy.
+    Każdy z 6 buttonów wysyła JEDEN unikalny CC marker na ch 15 (start_stop).
+    Workflow:
+      1. Upload tego presetu do Pacera (target A1 nadpisuje produkcyjny).
+      2. W Bitwig: usuń stare scene mappings, otwórz Mappings Browser.
+      3. Per scena: kliknij Scene N launch, naciśnij Pacer button N - Learn łapie
+         deterministycznie CC N ch 15 (jedyna akcja per button).
+      4. Po Learn 6 scen: upload z powrotem a1-w-ciszy (z hardware actions).
+      5. Bitwig mappings w .bwproject zostają - są niezależne od preset Pacera.
+  pacer_export:
+    target_preset: A1
+pacer:
+  - name: Scene 1 marker - Uruchomienie
+    actions:
+      - device: start_stop
+        type: cc
+        cc: 1
+        value: 127
+        label: Bitwig Scene 1
+        bank_lsb: 0
+        bank_msb: 0
+        note: null
+        velocity: null
+  - name: Scene 2 marker - Zakoncz gitara
+    actions:
+      - device: start_stop
+        type: cc
+        cc: 2
+        value: 127
+        label: Bitwig Scene 2
+        bank_lsb: 0
+        bank_msb: 0
+        note: null
+        velocity: null
+  - name: Scene 3 marker - Drum A3 + bass
+    actions:
+      - device: start_stop
+        type: cc
+        cc: 3
+        value: 127
+        label: Bitwig Scene 3
+        bank_lsb: 0
+        bank_msb: 0
+        note: null
+        velocity: null
+  - name: Scene 4 marker - Zakoncz bass
+    actions:
+      - device: start_stop
+        type: cc
+        cc: 4
+        value: 127
+        label: Bitwig Scene 4
+        bank_lsb: 0
+        bank_msb: 0
+        note: null
+        velocity: null
+  - name: Scene 5 marker - Powrot
+    actions:
+      - device: start_stop
+        type: cc
+        cc: 5
+        value: 127
+        label: Bitwig Scene 5
+        bank_lsb: 0
+        bank_msb: 0
+        note: null
+        velocity: null
+  - name: Scene 6 marker - Fill + A3
+    actions:
+      - device: start_stop
+        type: cc
+        cc: 6
+        value: 127
+        label: Bitwig Scene 6
+        bank_lsb: 0
+        bank_msb: 0
+        note: null
+        velocity: null

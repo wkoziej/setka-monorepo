@@ -1,0 +1,138 @@
+song:
+  id: zen
+  name: Zen
+  author: Wojtas
+  created: '2026-04-16'
+  notes: tempo 117 :)
+  pacer_export:
+    target_preset: A3
+pacer:
+- name: Uruchomienie beatów i gotowości nagrywania. M:S gra na Freaku
+  actions:
+  - device: boss
+    type: preset
+    value: 2
+    cc: null
+    label: W ciszy
+    bank_lsb: 0
+    bank_msb: 0
+    note: null
+    velocity: null
+  - device: freak
+    type: preset
+    value: 66
+    cc: null
+    label: None
+    bank_lsb: 0
+    bank_msb: 0
+    note: null
+    velocity: null
+  - device: ms
+    type: pattern
+    value: C01
+    cc: null
+    label: nabij
+    bank_lsb: 0
+    bank_msb: 0
+    note: null
+    velocity: null
+  - device: boss
+    type: cc
+    value: 1
+    cc: 1
+    label: Track 1 Rec/Play
+    bank_lsb: 0
+    bank_msb: 0
+    note: null
+    velocity: null
+- name: Zmień drum i zakończ nagrywanie
+  actions:
+  - device: ms
+    type: pattern
+    value: C02
+    cc: null
+    label: None
+    bank_lsb: 0
+    bank_msb: 0
+    note: null
+    velocity: null
+  - device: boss
+    type: cc
+    value: 1
+    cc: 1
+    label: nagraj gitarę (track2)
+    bank_lsb: 0
+    bank_msb: 0
+    note: null
+    velocity: null
+- name: Zmień drum i ZACZNIJ  nagrywanie
+  actions:
+  - device: ms
+    type: pattern
+    value: C03
+    cc: null
+    label: None
+    bank_lsb: 0
+    bank_msb: 0
+    note: null
+    velocity: null
+  - device: boss
+    type: cc
+    value: 1
+    cc: 2
+    label: None
+    bank_lsb: 0
+    bank_msb: 0
+    note: null
+    velocity: null
+- name: Zmień drum i zakoncz nagrywanie
+  actions:
+  - device: boss
+    type: cc
+    value: 1
+    cc: 2
+    label: None
+    bank_lsb: 0
+    bank_msb: 0
+    note: null
+    velocity: null
+  - device: ms
+    type: pattern
+    value: C04
+    cc: null
+    label: None
+    bank_lsb: 0
+    bank_msb: 0
+    note: null
+    velocity: null
+- name: efekt na ścieżce i perkusja A3
+  actions:
+  - device: boss
+    type: cc
+    value: 1
+    cc: 3
+    label: perkusję przyspiesz
+    bank_lsb: 0
+    bank_msb: 0
+    note: null
+    velocity: null
+  - device: ms
+    type: pattern
+    value: C03
+    cc: null
+    label: None
+    bank_lsb: 0
+    bank_msb: 0
+    note: null
+    velocity: null
+- name: step
+  actions:
+  - device: boss
+    type: cc
+    value: 1
+    cc: 4
+    label: null
+    bank_lsb: 0
+    bank_msb: 0
+    note: null
+    velocity: null

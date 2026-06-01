@@ -1,0 +1,201 @@
+song:
+  id: a1-w-ciszy
+  name: cisza
+  author: Wojtas
+  created: '2026-05-22'
+  notes: tempo 117 :)
+  pacer_export:
+    target_preset: A1
+pacer:
+- name: Uruchomienie beatów i gotowości nagrywania. M:S gra na Freaku. Nagrywamy akustyka
+  actions:
+  - device: boss
+    type: preset
+    value: 0
+    cc: null
+    label: W ciszy
+    bank_lsb: 0
+    bank_msb: 0
+    note: null
+    velocity: null
+  - device: freak
+    type: preset
+    value: 64
+    cc: null
+    label: W ciszy
+    bank_lsb: 0
+    bank_msb: 0
+    note: null
+    velocity: null
+  - device: ms
+    type: pattern
+    value: A01
+    cc: null
+    label: Gramy melodię na MicroFreak
+    bank_lsb: 0
+    bank_msb: 0
+    note: null
+    velocity: null
+  - device: boss
+    type: cc
+    value: 127
+    cc: 1
+    label: Track 1 Rec/Play
+    bank_lsb: 0
+    bank_msb: 0
+    note: null
+    velocity: null
+  - device: start_stop
+    type: cc
+    value: 127
+    cc: 1
+    label: None
+    bank_lsb: 0
+    bank_msb: 0
+    note: null
+    velocity: null
+- name: Zakończ nagranie gitary
+  actions:
+  - device: boss
+    type: cc
+    value: 127
+    cc: 1
+    label: None
+    bank_lsb: 0
+    bank_msb: 0
+    note: null
+    velocity: null
+  - device: ms
+    type: pattern
+    value: a02
+    cc: null
+    label: None
+    bank_lsb: 0
+    bank_msb: 0
+    note: null
+    velocity: null
+  - device: start_stop
+    type: cc
+    value: 127
+    cc: 2
+    label: None
+    bank_lsb: 0
+    bank_msb: 0
+    note: null
+    velocity: null
+- name: Drum A3 i efekt na IN. Nagrywamy bass
+  actions:
+  - device: ms
+    type: pattern
+    value: A03
+    cc: null
+    label: None
+    bank_lsb: 0
+    bank_msb: 0
+    note: null
+    velocity: null
+  - device: boss
+    type: cc
+    value: 127
+    cc: 2
+    label: Track 2 Rec/Play
+    bank_lsb: 0
+    bank_msb: 0
+    note: null
+    velocity: null
+  - device: start_stop
+    type: cc
+    value: 127
+    cc: 3
+    label: None
+    bank_lsb: 0
+    bank_msb: 0
+    note: null
+    velocity: null
+- name: zakoncz nagrywanie basu
+  actions:
+  - device: boss
+    type: cc
+    value: 127
+    cc: 2
+    label: None
+    bank_lsb: 0
+    bank_msb: 0
+    note: null
+    velocity: null
+  - device: ms
+    type: pattern
+    value: a04
+    cc: null
+    label: None
+    bank_lsb: 0
+    bank_msb: 0
+    note: null
+    velocity: null
+  - device: start_stop
+    type: cc
+    value: 127
+    cc: 4
+    label: None
+    bank_lsb: 0
+    bank_msb: 0
+    note: null
+    velocity: null
+- name: '4'
+  actions:
+  - device: boss
+    type: cc
+    value: 127
+    cc: 4
+    label: None
+    bank_lsb: 0
+    bank_msb: 0
+    note: null
+    velocity: null
+  - device: freak
+    type: preset
+    value: 64
+    cc: null
+    label: None
+    bank_lsb: 0
+    bank_msb: 0
+    note: null
+    velocity: null
+  - device: start_stop
+    type: cc
+    value: 127
+    cc: 5
+    label: None
+    bank_lsb: 0
+    bank_msb: 0
+    note: null
+    velocity: null
+- name: efekt na ścieżce i perkusja A3
+  actions:
+  - device: boss
+    type: cc
+    value: 127
+    cc: 3
+    label: None
+    bank_lsb: 0
+    bank_msb: 0
+    note: null
+    velocity: null
+  - device: ms
+    type: pattern
+    value: a03
+    cc: null
+    label: None
+    bank_lsb: 0
+    bank_msb: 0
+    note: null
+    velocity: null
+  - device: start_stop
+    type: cc
+    value: 127
+    cc: 6
+    label: None
+    bank_lsb: 0
+    bank_msb: 0
+    note: null
+    velocity: null

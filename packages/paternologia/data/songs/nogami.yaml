@@ -1,0 +1,118 @@
+song:
+  id: nogami
+  name: Nogami
+  author: ''
+  created: '2026-01-25'
+  notes: ''
+  pacer_export:
+    target_preset: B1
+pacer:
+- name: setup i A4
+  actions:
+  - device: boss
+    type: preset
+    value: 8
+    cc: null
+    label: None
+    bank_lsb: 0
+    bank_msb: 0
+    note: null
+    velocity: null
+  - device: ms
+    type: pattern
+    value: b09
+    cc: null
+    label: None
+    bank_lsb: 0
+    bank_msb: 0
+    note: null
+    velocity: null
+  - device: freak
+    type: preset
+    value: 192
+    cc: null
+    label: None
+    bank_lsb: 0
+    bank_msb: 0
+    note: null
+    velocity: null
+- name: E4
+  actions:
+  - device: freak
+    type: note
+    value: null
+    cc: null
+    label: None
+    bank_lsb: 0
+    bank_msb: 0
+    note: e4
+    velocity: 100
+  - device: boss
+    type: cc
+    value: 127
+    cc: 10
+    label: None
+    bank_lsb: 0
+    bank_msb: 0
+    note: null
+    velocity: null
+- name: a4
+  actions:
+  - device: freak
+    type: note
+    value: null
+    cc: null
+    label: None
+    bank_lsb: 0
+    bank_msb: 0
+    note: a4
+    velocity: 100
+  - device: boss
+    type: cc
+    value: 127
+    cc: 11
+    label: None
+    bank_lsb: 0
+    bank_msb: 0
+    note: null
+    velocity: null
+- name: d4
+  actions:
+  - device: freak
+    type: note
+    value: null
+    cc: null
+    label: None
+    bank_lsb: 0
+    bank_msb: 0
+    note: d4
+    velocity: 100
+  - device: boss
+    type: cc
+    value: 127
+    cc: 12
+    label: None
+    bank_lsb: 0
+    bank_msb: 0
+    note: null
+    velocity: null
+- name: h4
+  actions:
+  - device: freak
+    type: note
+    value: null
+    cc: null
+    label: None
+    bank_lsb: 0
+    bank_msb: 0
+    note: b4
+    velocity: 100
+  - device: boss
+    type: cc
+    value: 127
+    cc: 13
+    label: None
+    bank_lsb: 0
+    bank_msb: 0
+    note: null
+    velocity: null

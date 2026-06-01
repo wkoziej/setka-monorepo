@@ -1,0 +1,133 @@
+{% extends "base.html" %}
+
+{% block title %}{{ song.song.name }} - Paternologia{% endblock %}
+
+{% block content %}
+<div class="flex justify-between items-center mb-6">
+    <div class="flex items-center gap-4">
+        <a href="/" class="text-indigo-600 hover:text-indigo-800">&larr; Powrót</a>
+        <h1 class="text-2xl font-bold text-gray-800 uppercase">{{ song.song.name }}</h1>
+    </div>
+    <div class="flex gap-2">
+        <a href="/songs/{{ song.song.id }}/edit"
+           class="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition">
+            Edytuj
+        </a>
+        <button hx-delete="/songs/{{ song.song.id }}"
+                hx-confirm="Czy na pewno chcesz usunąć ten utwór?"
+                class="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition">
+            Usuń
+        </button>
+    </div>
+</div>
+
+{% if song.song.notes %}
+<p class="text-gray-600 mb-6 italic">{{ song.song.notes }}</p>
+{% endif %}
+
+<!-- PACER Buttons -->
+<section>
+    <h2 class="text-lg font-semibold text-gray-700 mb-4">
+        PACER ({{ song.pacer | length }} {{ 'przycisk' if song.pacer | length == 1 else 'przyciski' if song.pacer | length < 5 else 'przycisków' }})
+    </h2>
+
+    <!-- Export Section -->
+    <div class="bg-white rounded-lg shadow p-4 mb-6">
+        <h3 class="text-md font-semibold text-gray-700 mb-3">Export to Pacer</h3>
+        <div class="flex items-center gap-4">
+            <label for="preset" class="text-sm text-gray-600">Target Preset:</label>
+            <select id="preset" class="border border-gray-300 rounded px-2 py-1 text-sm">
+                {% for row in "ABCD" %}
+                    {% for col in range(1, 7) %}
+                        <option value="{{ row }}{{ col }}"
+                                {% if song.song.pacer_export.target_preset == row ~ col|string %}selected{% endif %}>
+                            {{ row }}{{ col }}
+                        </option>
+                    {% endfor %}
+                {% endfor %}
+            </select>
+            <a id="download-syx"
+               href="/pacer/export/{{ song.song.id | urlencode }}.syx?preset={{ song.song.pacer_export.target_preset }}"
+               download="{{ song.song.id }}_{{ song.song.pacer_export.target_preset }}.syx"
+               class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition text-sm">
+                Download .syx
+            </a>
+            <button type="button"
+                    hx-post="/pacer/send/{{ song.song.id }}"
+                    hx-target="#send-result"
+                    hx-swap="innerHTML"
+                    hx-vals="js:{preset: document.getElementById('preset').value}"
+                    hx-indicator="#send-indicator"
+                    class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition text-sm">
+                Wyślij do Pacer
+            </button>
+            <span id="send-indicator" class="htmx-indicator">⏳</span>
+        </div>
+        <div id="send-result" class="mt-2 text-sm"></div>
+        <details class="mt-3 text-sm text-gray-600">
+            <summary class="cursor-pointer hover:text-indigo-600">Usage instructions</summary>
+            <ol class="list-decimal list-inside mt-2 space-y-1">
+                <li>List MIDI ports: <code class="bg-gray-100 px-1 rounded">amidi -l</code></li>
+                <li>Send to Pacer: <code class="bg-gray-100 px-1 rounded">amidi -p hw:X,0,0 --sysex-interval=20 -s <em>filename.syx</em></code></li>
+                <li>Replace <strong>hw:X,0,0</strong> with your PACER port</li>
+                <li><strong class="text-red-600">CRITICAL:</strong> The <code class="bg-gray-100 px-1 rounded">--sysex-interval=20</code> flag is required!</li>
+            </ol>
+        </details>
+    </div>
+
+    {% if song.pacer %}
+    <div style="display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 0.5rem; width: 100%;">
+        {% for button in song.pacer %}
+        {% set button_idx = loop.index %}
+        <div class="bg-white rounded-lg shadow overflow-hidden pacer-btn">
+            <div class="bg-indigo-600 text-white px-3 py-2 font-bold text-center text-sm">
+                #{{ button_idx }} {{ button.name }}
+            </div>
+            <div class="p-3 action-list space-y-3">
+                {% for action in button.actions %}
+                {% set device = devices_map.get(action.device) %}
+                <div class="border-l-4 pl-2 device-{{ action.device }}">
+                    <div class="text-xs text-gray-500">
+                        {% if action.label %}{{ action.label }}{% else %}&nbsp;{% endif %}
+                    </div>
+                    <div class="font-semibold text-sm text-gray-800">
+                        {{ device.name if device else action.device }}
+                    </div>
+                    <div class="text-sm text-gray-700">
+                        {% if action.type.value == 'preset' %}
+                        preset {{ action.value }}
+                        {% elif action.type.value == 'pattern' %}
+                        pattern {{ action.value }}
+                        {% elif action.type.value == 'cc' %}
+                        CC{{ action.cc }}
+                        {% elif action.type.value == 'note' %}
+                        note {{ action.note }} vel={{ action.velocity or 100 }}
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+                {% if not button.actions %}
+                <p class="text-gray-400 italic text-sm">Brak akcji</p>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="bg-white rounded-lg shadow p-8 text-center text-gray-500">
+        <p>Brak skonfigurowanych przycisków PACER</p>
+    </div>
+    {% endif %}
+</section>
+
+<script>
+// Update download link when preset changes (HTMX cannot modify href attributes)
+const songId = {{ song.song.id | tojson }};
+document.getElementById('preset').addEventListener('change', (e) => {
+    const preset = e.target.value;
+    const link = document.getElementById('download-syx');
+    link.href = `/pacer/export/${encodeURIComponent(songId)}.syx?preset=${encodeURIComponent(preset)}`;
+    link.download = `${songId}_${preset}.syx`;
+});
+</script>
+{% endblock %}

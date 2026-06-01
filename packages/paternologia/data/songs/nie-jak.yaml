@@ -1,0 +1,58 @@
+song:
+  id: nie-jak
+  name: Nie jak blues
+  author: ''
+  created: '2026-04-20'
+  notes: ''
+  pacer_export:
+    target_preset: B3
+pacer:
+- name: beat
+  actions:
+  - device: ms
+    type: pattern
+    value: e1
+    cc: null
+    label: None
+    bank_lsb: 0
+    bank_msb: 0
+    note: null
+    velocity: null
+  - device: freak
+    type: preset
+    value: 134
+    cc: null
+    label: None
+    bank_lsb: 0
+    bank_msb: 0
+    note: null
+    velocity: null
+  - device: boss
+    type: preset
+    value: 28
+    cc: null
+    label: None
+    bank_lsb: 0
+    bank_msb: 0
+    note: null
+    velocity: null
+- name: afg
+  actions:
+  - device: ms
+    type: pattern
+    value: e2
+    cc: null
+    label: None
+    bank_lsb: 0
+    bank_msb: 0
+    note: null
+    velocity: null
+  - device: freak
+    type: preset
+    value: 137
+    cc: null
+    label: None
+    bank_lsb: 0
+    bank_msb: 0
+    note: null
+    velocity: null

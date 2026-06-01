@@ -1,0 +1,50 @@
+<div class="mb-4">
+    <h2 class="text-2xl font-bold text-gray-800 uppercase">{{ song.song.name }}</h2>
+    {% if song.song.notes %}
+    <p class="text-gray-600 italic mt-1">{{ song.song.notes }}</p>
+    {% endif %}
+</div>
+
+{% if song.pacer %}
+<div style="display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 0.5rem; width: 100%;">
+    {% for button in song.pacer %}
+    {% set button_idx = loop.index %}
+    <div class="bg-white rounded-lg shadow overflow-hidden pacer-btn">
+        <div class="bg-indigo-600 text-white px-3 py-2 font-bold text-center text-sm">
+            #{{ button_idx }} {{ button.name }}
+        </div>
+        <div class="p-3 action-list space-y-3">
+            {% for action in button.actions %}
+            {% set device = devices_map.get(action.device) %}
+            <div class="border-l-4 pl-2 device-{{ action.device }}">
+                <div class="text-xs text-gray-500">
+                    {% if action.label %}{{ action.label }}{% else %}&nbsp;{% endif %}
+                </div>
+                <div class="font-semibold text-sm text-gray-800">
+                    {{ device.name if device else action.device }}
+                </div>
+                <div class="text-sm text-gray-700">
+                    {% if action.type.value == 'preset' %}
+                    preset {{ action.value }}
+                    {% elif action.type.value == 'pattern' %}
+                    pattern {{ action.value }}
+                    {% elif action.type.value == 'cc' %}
+                    CC{{ action.cc }}
+                    {% elif action.type.value == 'note' %}
+                    note {{ action.note }} vel={{ action.velocity or 100 }}
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+            {% if not button.actions %}
+            <p class="text-gray-400 italic text-sm">Brak akcji</p>
+            {% endif %}
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="bg-white rounded-lg shadow p-8 text-center text-gray-500">
+    <p>Brak skonfigurowanych przycisków PACER</p>
+</div>
+{% endif %}

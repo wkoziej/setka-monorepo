@@ -1,0 +1,15 @@
+# ABOUTME: Konfiguracja portu amidi dla Nektar Pacer.
+# ABOUTME: Ten plik jest wymagany do wysyłania .syx bezpośrednio do Pacera.
+
+# Nazwa urządzenia MIDI do auto-detekcji.
+# Aplikacja automatycznie znajdzie port (hw:X,Y,Z) po tej nazwie.
+# Sprawdź dostępne urządzenia: amidi -l
+device_name: PACER
+
+# Timeout w sekundach dla polecenia amidi (1-30)
+amidi_timeout_seconds: 5
+
+# CRITICAL: Interwał między wiadomościami SysEx w milisekundach.
+# Pacer wymaga --sysex-interval=20 dla niezawodnego transferu!
+# Bez tego wiadomości mogą być gubione lub uszkodzone.
+sysex_interval_ms: 20

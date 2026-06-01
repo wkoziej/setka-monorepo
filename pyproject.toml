@@ -9,6 +9,7 @@ members = [
     "packages/medusa",
     "packages/beatrix",
     "packages/cymatic",
+    "packages/paternologia",
 ]
 
 [project]
@@ -16,7 +17,7 @@ name = "setka-workspace"
 version = "1.0.0"
 description = "Setka media processing and automation workspace"
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.12"
 
 [tool.uv.sources]
 setka-common = { workspace = true }
@@ -25,6 +26,7 @@ cinemon = { workspace = true }
 medusa = { workspace = true }
 beatrix = { workspace = true }
 cymatic = { workspace = true }
+paternologia = { workspace = true }
 
 [tool.pytest.ini_options]
 testpaths = [
@@ -34,6 +36,7 @@ testpaths = [
     "packages/medusa/tests",
     "packages/beatrix/tests",
     "packages/cymatic/tests",
+    "packages/paternologia/tests",
 ]
 pythonpath = [
     "packages/obsession/src",
@@ -42,7 +45,9 @@ pythonpath = [
     "packages/medusa/src",
     "packages/beatrix/src",
     "packages/cymatic/src",
+    "packages/paternologia/src",
 ]
+asyncio_mode = "auto"
 addopts = [
     "--strict-markers",
     "--strict-config",

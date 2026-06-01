@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+
+{% block title %}Live - Paternologia{% endblock %}
+
+{% block content %}
+<div class="mb-6">
+    <h1 class="text-2xl font-bold text-gray-800">Live View</h1>
+    <p class="text-gray-600 mt-1">
+        {% if midi_connected %}
+        <span id="status" class="inline-flex items-center gap-1">
+            <span class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+            MIDI podłączone — oczekiwanie na Program Change...
+        </span>
+        {% else %}
+        <span id="status" class="inline-flex items-center gap-1">
+            <span class="w-2 h-2 bg-yellow-500 rounded-full"></span>
+            MIDI nie podłączone — strona działa, ale brak aktywnego portu MIDI
+        </span>
+        {% endif %}
+    </p>
+</div>
+
+<div id="live-content">
+    <div class="bg-white rounded-lg shadow p-12 text-center text-gray-400">
+        <p class="text-xl">Oczekiwanie na MIDI...</p>
+        <p class="mt-2 text-sm">Naciśnij przycisk na Pacerze, aby wyświetlić utwór</p>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function() {
+    const evtSource = new EventSource('/live/events');
+    const statusEl = document.getElementById('status');
+    const contentEl = document.getElementById('live-content');
+
+    evtSource.addEventListener('connected', function() {
+        if (statusEl) {
+            statusEl.innerHTML = '<span class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span> Połączono z SSE — oczekiwanie na MIDI...';
+        }
+    });
+
+    evtSource.addEventListener('song-change', function(e) {
+        const songId = e.data;
+        if (statusEl) {
+            statusEl.innerHTML = '<span class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span> Aktywny utwór: ' + songId;
+        }
+        fetch('/live/song/' + encodeURIComponent(songId))
+            .then(r => r.text())
+            .then(html => { contentEl.innerHTML = html; });
+    });
+
+    evtSource.onerror = function() {
+        if (statusEl) {
+            statusEl.innerHTML = '<span class="w-2 h-2 bg-red-500 rounded-full"></span> Rozłączono — próba ponownego połączenia...';
+        }
+    };
+})();
+</script>
+{% endblock %}

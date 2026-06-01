@@ -1,0 +1,147 @@
+song:
+  id: wnetrz
+  name: Wnętrze
+  author: Wojtas
+  created: '2026-03-07'
+  notes: AC
+  pacer_export:
+    target_preset: A2
+pacer:
+- name: ustaw presety i nagraj gitarę (1,2,3)
+  actions:
+  - device: boss
+    type: preset
+    value: 1
+    cc: null
+    label: None
+    bank_lsb: 0
+    bank_msb: 0
+    note: null
+    velocity: null
+  - device: freak
+    type: preset
+    value: 65
+    cc: null
+    label: None
+    bank_lsb: 0
+    bank_msb: 0
+    note: null
+    velocity: null
+  - device: ms
+    type: pattern
+    value: B01
+    cc: null
+    label: None
+    bank_lsb: 0
+    bank_msb: 0
+    note: null
+    velocity: null
+  - device: boss
+    type: cc
+    value: 127
+    cc: 1
+    label: Track 1 Rec/Play
+    bank_lsb: 0
+    bank_msb: 0
+    note: null
+    velocity: null
+- name: zakoncz nagrywanie i zmień perkusję
+  actions:
+  - device: ms
+    type: pattern
+    value: B02
+    cc: null
+    label: None
+    bank_lsb: 0
+    bank_msb: 0
+    note: null
+    velocity: null
+  - device: boss
+    type: cc
+    value: 127
+    cc: 1
+    label: None
+    bank_lsb: 0
+    bank_msb: 0
+    note: null
+    velocity: null
+- name: nagraj bas i jeszcze inna perkusja?
+  actions:
+  - device: boss
+    type: cc
+    value: 127
+    cc: 2
+    label: null
+    bank_lsb: 0
+    bank_msb: 0
+    note: null
+    velocity: null
+  - device: ms
+    type: pattern
+    value: B03
+    cc: null
+    label: null
+    bank_lsb: 0
+    bank_msb: 0
+    note: null
+    velocity: null
+- name: zakoncz nagrywanie basu
+  actions:
+  - device: boss
+    type: cc
+    value: 127
+    cc: 2
+    label: null
+    bank_lsb: 0
+    bank_msb: 0
+    note: null
+    velocity: null
+  - device: ms
+    type: pattern
+    value: b04
+    cc: null
+    label: null
+    bank_lsb: 0
+    bank_msb: 0
+    note: null
+    velocity: null
+- name: efekty
+  actions:
+  - device: boss
+    type: cc
+    value: 127
+    cc: 11
+    label: track1
+    bank_lsb: 0
+    bank_msb: 0
+    note: null
+    velocity: null
+  - device: boss
+    type: cc
+    value: 127
+    cc: 12
+    label: track2
+    bank_lsb: 0
+    bank_msb: 0
+    note: null
+    velocity: null
+  - device: boss
+    type: cc
+    value: 127
+    cc: 4
+    label: perkusja
+    bank_lsb: 0
+    bank_msb: 0
+    note: null
+    velocity: null
+- name: perc
+  actions:
+  - device: boss
+    type: cc
+    value: 127
+    cc: 5
+    label: śpiesz
+    bank_lsb: 0
+    bank_msb: 0
+    note: null
+    velocity: null

@@ -1,0 +1,147 @@
+song:
+  id: zima
+  name: Zima
+  author: ''
+  created: '2026-04-20'
+  notes: ''
+  pacer_export:
+    target_preset: A5
+pacer:
+- name: presety i nabij beat
+  actions:
+  - device: boss
+    type: preset
+    value: 3
+    cc: null
+    label: None
+    bank_lsb: 0
+    bank_msb: 0
+    note: null
+    velocity: null
+  - device: ms
+    type: pattern
+    value: d01
+    cc: null
+    label: None
+    bank_lsb: 0
+    bank_msb: 0
+    note: null
+    velocity: null
+  - device: freak
+    type: preset
+    value: 67
+    cc: null
+    label: None
+    bank_lsb: 0
+    bank_msb: 0
+    note: null
+    velocity: null
+  - device: boss
+    type: cc
+    value: 1
+    cc: 1
+    label: None
+    bank_lsb: 0
+    bank_msb: 0
+    note: null
+    velocity: null
+- name: zakoncz nagrywanie basu
+  actions:
+  - device: ms
+    type: pattern
+    value: d02
+    cc: null
+    label: None
+    bank_lsb: 0
+    bank_msb: 0
+    note: null
+    velocity: null
+  - device: freak
+    type: preset
+    value: 68
+    cc: null
+    label: None
+    bank_lsb: 0
+    bank_msb: 0
+    note: null
+    velocity: null
+  - device: boss
+    type: cc
+    value: 1
+    cc: 1
+    label: None
+    bank_lsb: 0
+    bank_msb: 0
+    note: null
+    velocity: null
+- name: nagraj gitare
+  actions:
+  - device: ms
+    type: pattern
+    value: d03
+    cc: null
+    label: None
+    bank_lsb: 0
+    bank_msb: 0
+    note: null
+    velocity: null
+  - device: boss
+    type: cc
+    value: 1
+    cc: 2
+    label: track2
+    bank_lsb: 0
+    bank_msb: 0
+    note: null
+    velocity: null
+  - device: freak
+    type: preset
+    value: 1
+    cc: null
+    label: None
+    bank_lsb: 0
+    bank_msb: 0
+    note: null
+    velocity: null
+- name: zakoncz nagrywanie gitary
+  actions:
+  - device: boss
+    type: cc
+    value: 1
+    cc: 2
+    label: None
+    bank_lsb: 0
+    bank_msb: 0
+    note: null
+    velocity: null
+  - device: ms
+    type: pattern
+    value: d04
+    cc: null
+    label: None
+    bank_lsb: 0
+    bank_msb: 0
+    note: null
+    velocity: null
+- name: perk
+  actions:
+  - device: boss
+    type: cc
+    value: 1
+    cc: 3
+    label: perk przusp
+    bank_lsb: 0
+    bank_msb: 0
+    note: null
+    velocity: null
+- name: step
+  actions:
+  - device: boss
+    type: cc
+    value: 1
+    cc: 4
+    label: None
+    bank_lsb: 0
+    bank_msb: 0
+    note: null
+    velocity: null
