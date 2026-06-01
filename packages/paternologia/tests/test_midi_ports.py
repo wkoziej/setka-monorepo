@@ -84,6 +84,9 @@ class TestFindRtmidiPort:
         import rtmidi
 
         class FakeMidiIn:
+            def delete(self):
+                pass
+
             def get_ports(self):
                 return fake_ports
 
@@ -95,6 +98,9 @@ class TestFindRtmidiPort:
         import rtmidi
 
         class FakeMidiIn:
+            def delete(self):
+                pass
+
             def get_ports(self):
                 return ["Midi Through:Midi Through Port-0 14:0"]
 
@@ -106,6 +112,9 @@ class TestFindRtmidiPort:
         import rtmidi
 
         class FakeMidiIn:
+            def delete(self):
+                pass
+
             def get_ports(self):
                 return ["pacer:pacer midi 1 20:0"]
 

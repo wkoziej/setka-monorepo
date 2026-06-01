@@ -6,6 +6,7 @@ import asyncio
 import pytest
 import rtmidi
 
+from paternologia.midi import listener as listener_mod
 from paternologia.midi.events import EventBus
 from paternologia.midi.index import SongMidiIndex
 from paternologia.midi.listener import MidiListener
@@ -58,6 +59,46 @@ def _make_song(song_id: str, device: str, preset_value: int) -> Song:
             )
         ],
     )
+
+
+class TestReplugReconnect:
+    """Tests for poll_reconnect() replug handling (no hardware required)."""
+
+    def _listener(self) -> MidiListener:
+        return MidiListener(
+            song_index=SongMidiIndex.build([], []), event_bus=EventBus()
+        )
+
+    def test_reopens_when_port_returns(self, monkeypatch):
+        """Inactive listener reopens by name when the PACER port reappears."""
+        listener = self._listener()
+        listener._device_name = "PACER"
+        monkeypatch.setattr(listener_mod, "find_rtmidi_port", lambda name: 0)
+        calls = []
+        monkeypatch.setattr(listener, "start", lambda name: calls.append(name) or True)
+        listener.poll_reconnect()
+        assert calls == ["PACER"]
+
+    def test_releases_when_unplugged(self, monkeypatch):
+        """Active listener releases its handle when the PACER port disappears."""
+        listener = self._listener()
+        listener._device_name = "PACER"
+        listener._midi_in = object()  # simulate an open port
+        monkeypatch.setattr(listener_mod, "find_rtmidi_port", lambda name: None)
+        stopped = []
+        monkeypatch.setattr(listener, "stop", lambda: stopped.append(True))
+        listener.poll_reconnect()
+        assert stopped == [True]
+
+    def test_noop_without_device_name(self, monkeypatch):
+        """poll_reconnect does nothing before any start() set a device name."""
+        listener = self._listener()
+        called = []
+        monkeypatch.setattr(
+            listener_mod, "find_rtmidi_port", lambda name: called.append(name)
+        )
+        listener.poll_reconnect()
+        assert called == []
 
 
 class TestMidiListenerParsing:

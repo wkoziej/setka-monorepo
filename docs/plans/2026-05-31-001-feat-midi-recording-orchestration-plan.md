@@ -329,7 +329,7 @@ się poprawnie niezależnie od cwd.
 
 ### Faza 2 — Model A: własność PACER + fan-out
 
-- [ ] **Unit 3: Fan-out PACER → Bitwig przez wirtualny port MIDI**
+- [x] **Unit 3: Fan-out PACER → Bitwig przez wirtualny port MIDI**
 
 **Goal:** paternologia jako jedyny czytelnik PACER forwarduje CC/PC na stabilny wirtualny port
 seq, który Bitwig subskrybuje. Konflikt `EBUSY` zniknął.
@@ -376,7 +376,7 @@ adresowanie po nazwie.
 **Verification:** drugi klient ALSA seq odbiera forwardowane CC/PC; brak `EBUSY` gdy „Bitwig"
 (symulowany subskrybent) i paternologia działają równocześnie.
 
-- [ ] **Unit 4: Niezawodność live — systemd user service, health, replug**
+- [x] **Unit 4: Niezawodność live — systemd user service, health, replug**
 
 **Goal:** paternologia auto-startuje, restartuje się po crashu/zawiśnięciu i raportuje realny
 stan; wejście PACER reotwiera się po replug.

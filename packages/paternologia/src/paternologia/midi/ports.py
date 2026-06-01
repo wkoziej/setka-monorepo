@@ -51,7 +51,8 @@ def find_rtmidi_port(device_name: str) -> int | None:
 
         midi_in = rtmidi.MidiIn()
         ports = midi_in.get_ports()
-        del midi_in
+        # delete() frees the ALSA seq client immediately; plain `del` leaks it.
+        midi_in.delete()
     except Exception as e:
         logger.warning("Cannot enumerate rtmidi ports: %s", e)
         return None

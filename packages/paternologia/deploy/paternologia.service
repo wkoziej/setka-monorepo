@@ -1,0 +1,23 @@
+# ABOUTME: systemd --user unit running paternologia as the live MIDI orchestrator.
+# ABOUTME: Restart=always + Type=notify watchdog keep the PACER bridge up during a set.
+
+[Unit]
+Description=Paternologia — PACER MIDI bridge and recording orchestrator
+After=sound.target pipewire.service
+# Do not give up after repeated quick restarts during a performance.
+StartLimitIntervalSec=0
+
+[Service]
+Type=notify
+# Adjust to your checkout; %h expands to the user's home directory.
+WorkingDirectory=%h/dev/setka-monorepo
+# Adjust the uv path if it is not on the user-service PATH (see README).
+ExecStart=%h/.local/bin/uv run --package paternologia paternologia
+Restart=always
+RestartSec=2
+# The app pings WATCHDOG=1 every ~2s from the MIDI/replug loop; allow some slack.
+WatchdogSec=10
+Environment=PYTHONUNBUFFERED=1
+
+[Install]
+WantedBy=default.target
