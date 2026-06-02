@@ -1,0 +1,170 @@
+{% extends "base.html" %}
+
+{% block title %}{% if is_new %}Nowy utwór{% else %}Edycja: {{ song.song.name }}{% endif %} - Paternologia{% endblock %}
+
+{% block content %}
+<div class="flex justify-between items-center mb-6">
+    <div class="flex items-center gap-4">
+        <a href="{% if is_new %}/{% else %}/songs/{{ song.song.id }}{% endif %}"
+           class="text-indigo-600 hover:text-indigo-800">&larr; Anuluj</a>
+        <h1 class="text-2xl font-bold text-gray-800 uppercase">
+            {% if is_new %}NOWY UTWÓR{% else %}EDYCJA: {{ song.song.name }}{% endif %}
+        </h1>
+    </div>
+</div>
+
+<form method="post"
+      action="{% if is_new %}/songs{% else %}/songs/{{ song.song.id }}{% endif %}"
+      {% if not is_new %}hx-put="/songs/{{ song.song.id }}"{% endif %}
+      class="space-y-8">
+
+    <!-- Song Metadata -->
+    <section class="bg-white rounded-lg shadow p-6">
+        <h2 class="text-lg font-semibold text-gray-700 mb-4">Informacje o utworze</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {% if is_new %}
+            <div>
+                <label for="song_id" class="block text-sm font-medium text-gray-700 mb-1">ID (nazwa pliku)</label>
+                <input type="text" name="song_id" id="song_id" required
+                       pattern="[a-z0-9-]+"
+                       placeholder="np. w-ciszy"
+                       class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                <p class="text-xs text-gray-500 mt-1">Tylko małe litery, cyfry i myślniki</p>
+            </div>
+            {% endif %}
+            <div>
+                <label for="song_name" class="block text-sm font-medium text-gray-700 mb-1">Nazwa</label>
+                <input type="text" name="song_name" id="song_name" required
+                       value="{{ song.song.name if song else '' }}"
+                       placeholder="np. W ciszy"
+                       class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+            </div>
+            <div>
+                <label for="song_author" class="block text-sm font-medium text-gray-700 mb-1">Autor</label>
+                <input type="text" name="song_author" id="song_author"
+                       value="{{ song.song.author if song else '' }}"
+                       placeholder="np. Wojtek"
+                       class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+            </div>
+            <div class="md:col-span-2">
+                <label for="song_notes" class="block text-sm font-medium text-gray-700 mb-1">Notatki</label>
+                <input type="text" name="song_notes" id="song_notes"
+                       value="{{ song.song.notes if song else '' }}"
+                       placeholder="np. Ballada, tempo 72 BPM"
+                       class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+            </div>
+            <div>
+                <label for="pacer_export_target_preset" class="block text-sm font-medium text-gray-700 mb-1">Domyślny preset eksportu</label>
+                <select name="pacer_export_target_preset" id="pacer_export_target_preset"
+                        class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                    {% set current_preset = song.song.pacer_export.target_preset if song else 'A1' %}
+                    {% for row in "ABCD" %}
+                        {% for col in range(1, 7) %}
+                            <option value="{{ row }}{{ col }}"
+                                    {% if current_preset == row ~ col|string %}selected{% endif %}>
+                                {{ row }}{{ col }}
+                            </option>
+                        {% endfor %}
+                    {% endfor %}
+                </select>
+                <p class="text-xs text-gray-500 mt-1">Preset do którego zostanie wysłana piosenka</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- PACER Buttons -->
+    <section class="bg-white rounded-lg shadow p-6">
+        <div class="flex justify-between items-center mb-4">
+            <h2 class="text-lg font-semibold text-gray-700">Przyciski PACER</h2>
+            <div class="flex items-center gap-2">
+                <button type="button"
+                        hx-get="/partials/pacer-button"
+                        hx-target="#pacer-buttons"
+                        hx-swap="beforeend"
+                        hx-vals="js:{button_idx: document.querySelectorAll('#pacer-buttons .pacer-button-card').length}"
+                        hx-indicator="#loading-indicator"
+                        class="text-indigo-600 hover:text-indigo-800 text-sm font-medium">
+                    + Dodaj przycisk
+                </button>
+                <span id="loading-indicator" class="htmx-indicator">⏳</span>
+            </div>
+        </div>
+
+        <div id="pacer-buttons" class="space-y-6">
+            {% if song and song.pacer %}
+                {% for button in song.pacer %}
+                {% set button_idx = loop.index0 %}
+                {% include "partials/pacer_button.html" with context %}
+                {% endfor %}
+            {% endif %}
+        </div>
+    </section>
+
+    <!-- Submit -->
+    <div class="flex justify-end gap-4">
+        <a href="{% if is_new %}/{% else %}/songs/{{ song.song.id }}{% endif %}"
+           class="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition">
+            Anuluj
+        </a>
+        <button type="submit"
+                class="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition">
+            {% if is_new %}Utwórz{% else %}Zapisz{% endif %}
+        </button>
+    </div>
+</form>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function moveButtonUp(btn) {
+    const card = btn.closest('.pacer-button-card');
+    const prev = card.previousElementSibling;
+    if (prev && prev.classList.contains('pacer-button-card')) {
+        card.parentNode.insertBefore(card, prev);
+        renumberButtons();
+    }
+}
+
+function moveButtonDown(btn) {
+    const card = btn.closest('.pacer-button-card');
+    const next = card.nextElementSibling;
+    if (next && next.classList.contains('pacer-button-card')) {
+        card.parentNode.insertBefore(next, card);
+        renumberButtons();
+    }
+}
+
+function renumberButtons() {
+    const container = document.getElementById('pacer-buttons');
+    const cards = container.querySelectorAll('.pacer-button-card');
+
+    cards.forEach((card, newIdx) => {
+        // Update data attribute
+        card.dataset.buttonIdx = newIdx;
+
+        // Update button number display
+        card.querySelector('.button-number').textContent = '#' + (newIdx + 1);
+
+        // Update actions container id
+        const actionsContainer = card.querySelector('.actions-container');
+        if (actionsContainer) {
+            actionsContainer.id = 'actions-' + newIdx;
+        }
+
+        // Update "Add action" button hx-target and hx-vals
+        const addActionBtn = card.querySelector('button[hx-get*="/partials/action-row"]');
+        if (addActionBtn) {
+            addActionBtn.setAttribute('hx-target', '#actions-' + newIdx);
+            addActionBtn.setAttribute('hx-vals',
+                'js:{button_idx: ' + newIdx + ', action_idx: event.target.closest(\'.pacer-button-card\').querySelectorAll(\'.action-row\').length}');
+            htmx.process(addActionBtn);
+        }
+
+        // Update all input/select names within this card
+        card.querySelectorAll('input[name], select[name]').forEach(el => {
+            el.name = el.name.replace(/button_\d+/, 'button_' + newIdx);
+        });
+    });
+}
+</script>
+{% endblock %}

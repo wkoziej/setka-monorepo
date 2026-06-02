@@ -1,0 +1,30 @@
+<div data-song-id="{{ song.song.id }}"
+     class="bg-white rounded-lg shadow p-3 hover:shadow-md transition cursor-move">
+    <div class="flex justify-between items-start gap-2">
+        <a href="/songs/{{ song.song.id }}"
+           class="font-semibold text-gray-800 hover:text-indigo-600 truncate flex-1">
+            {{ song.song.name }}
+        </a>
+        <div class="flex items-center gap-2 shrink-0">
+            <span class="text-xs font-mono bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded">
+                {{ song.song.pacer_export.target_preset }}
+            </span>
+            <a href="/songs/{{ song.song.id }}/edit"
+               class="text-indigo-600 hover:text-indigo-800"
+               title="Edytuj">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                </svg>
+            </a>
+        </div>
+    </div>
+    {% if song.song.notes %}
+    <p class="text-xs text-gray-500 mt-1 truncate" title="{{ song.song.notes }}">{{ song.song.notes }}</p>
+    {% endif %}
+    {% if song.pacer %}
+    <div class="mt-1 text-xs text-gray-400">
+        {{ song.pacer | length }} btn
+    </div>
+    {% endif %}
+</div>

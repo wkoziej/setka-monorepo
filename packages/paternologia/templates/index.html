@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+
+{% block title %}Utwory - Paternologia{% endblock %}
+
+{% block content %}
+<div class="flex justify-between items-center mb-6">
+    <h1 class="text-2xl font-bold text-gray-800">Utwory</h1>
+    <a href="/songs/new"
+       class="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition">
+        + Nowy utwór
+    </a>
+</div>
+
+{% if songs %}
+<div id="songs-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+    {% for song in songs %}
+    {% include "partials/song_card.html" %}
+    {% endfor %}
+</div>
+{% else %}
+<div class="bg-white rounded-lg shadow p-8 text-center text-gray-500">
+    <p class="mb-4">Brak utworów. Dodaj pierwszy utwór!</p>
+    <a href="/songs/new"
+       class="inline-block bg-indigo-600 text-white px-6 py-2 rounded-lg hover:bg-indigo-700 transition">
+        + Nowy utwór
+    </a>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const grid = document.getElementById('songs-grid');
+    if (grid) {
+        Sortable.create(grid, {
+            animation: 150,
+            ghostClass: 'opacity-50',
+            onEnd: function() {
+                const order = Array.from(grid.querySelectorAll('[data-song-id]'))
+                    .map(el => el.dataset.songId);
+                fetch('/api/songs/order', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(order)
+                });
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

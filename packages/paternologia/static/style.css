@@ -1,0 +1,84 @@
+/* ABOUTME: Custom styles for Paternologia beyond TailwindCSS defaults. */
+/* ABOUTME: Contains PACER button visualizations and form enhancements. */
+
+/* PACER button grid visualization */
+.pacer-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 1rem;
+}
+
+/* PACER 6-button grid layout */
+.pacer-grid-six {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 0.5rem;
+    width: 100%;
+}
+
+.pacer-grid-six .pacer-btn {
+    min-width: 0;
+}
+
+@media (max-width: 1400px) {
+    .pacer-grid-six {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 768px) {
+    .pacer-grid-six {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 480px) {
+    .pacer-grid-six {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Action list styling */
+.action-list {
+    font-size: 0.875rem;
+    line-height: 1.4;
+}
+
+/* Device indicator colors */
+.device-boss { border-left-color: #ef4444; }
+.device-ms { border-left-color: #3b82f6; }
+.device-freak { border-left-color: #10b981; }
+.device-model { border-left-color: #f59e0b; }
+.device-arturia { border-left-color: #8b5cf6; }
+
+/* HTMX loading indicator */
+.htmx-indicator {
+    display: none;
+}
+
+.htmx-request .htmx-indicator {
+    display: inline-block;
+}
+
+.htmx-request.htmx-indicator {
+    display: inline-block;
+}
+
+/* Form action row transitions */
+.action-row {
+    transition: opacity 0.2s ease-in-out;
+}
+
+.action-row.removing {
+    opacity: 0;
+}
+
+/* Button hover effects */
+.pacer-btn {
+    transition: transform 0.1s ease-in-out, box-shadow 0.1s ease-in-out;
+}
+
+.pacer-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}

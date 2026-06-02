@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+
+{% block title %}Urządzenia - Paternologia{% endblock %}
+
+{% block content %}
+<h1 class="text-2xl font-bold text-gray-800 mb-6">Urządzenia MIDI</h1>
+
+{% if devices %}
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+    {% for device in devices %}
+    <div class="bg-white rounded-lg shadow p-4 border-l-4 device-{{ device.id }}">
+        <h2 class="text-lg font-bold text-gray-800">{{ device.name }}</h2>
+        <p class="text-sm text-gray-500 mb-3">{{ device.description }}</p>
+
+        <div class="text-xs text-gray-600">
+            <span class="font-medium">Obsługiwane akcje:</span>
+            {% for atype in device.action_types %}
+            <span class="inline-block bg-gray-100 px-2 py-0.5 rounded ml-1">
+                {{ 'Preset' if atype.value == 'preset' else 'Pattern' if atype.value == 'pattern' else 'CC' }}
+            </span>
+            {% endfor %}
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="bg-white rounded-lg shadow p-8 text-center text-gray-500">
+    <p>Brak skonfigurowanych urządzeń.</p>
+    <p class="text-sm mt-2">Utwórz plik <code class="bg-gray-100 px-1 rounded">data/devices.yaml</code></p>
+</div>
+{% endif %}
+{% endblock %}

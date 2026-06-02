@@ -1,0 +1,51 @@
+{# ABOUTME: HTMX partial for single action row in PACER button. #}
+{# ABOUTME: Uses HTMX cascades for device → types → fields. #}
+<div class="action-row grid grid-cols-[1fr_auto_1fr_auto] gap-2 items-center">
+    <select name="button_{{ button_idx }}_action_{{ action_idx }}_device" required
+            class="border border-gray-300 rounded px-2 py-1 text-sm w-full"
+            hx-get="/partials/action-types"
+            hx-target="next .action-type-select"
+            hx-swap="innerHTML"
+            hx-trigger="change"
+            hx-indicator="#loading-indicator"
+            hx-vals="js:{device_id: event.target.value, button_idx: {{ button_idx }}, action_idx: {{ action_idx }}}">
+        <option value="">Urządzenie...</option>
+        {% for device in devices %}
+        <option value="{{ device.id }}" {% if action and action.device == device.id %}selected{% endif %}>
+            {{ device.name }}
+        </option>
+        {% endfor %}
+    </select>
+
+    <select name="button_{{ button_idx }}_action_{{ action_idx }}_type" required
+            class="border border-gray-300 rounded px-2 py-1 text-sm action-type-select"
+            hx-get="/partials/action-fields"
+            hx-target="next .action-fields"
+            hx-swap="innerHTML"
+            hx-trigger="change"
+            hx-indicator="#loading-indicator"
+            hx-vals="js:{action_type: event.target.value, button_idx: {{ button_idx }}, action_idx: {{ action_idx }}}">
+        <option value="">Typ...</option>
+        {% if action %}
+            {% for device in devices %}
+                {% if device.id == action.device %}
+                    {% for atype in device.action_types %}
+                    <option value="{{ atype.value }}" {% if action.type.value == atype.value %}selected{% endif %}>
+                        {{ 'Preset' if atype.value == 'preset' else 'Pattern' if atype.value == 'pattern' else 'CC' if atype.value == 'cc' else 'Note' }}
+                    </option>
+                    {% endfor %}
+                {% endif %}
+            {% endfor %}
+        {% endif %}
+    </select>
+
+    <div class="action-fields flex gap-2">
+        {% if action %}
+            {% set action_type = action.type.value %}
+            {% include "partials/action_fields.html" with context %}
+        {% endif %}
+    </div>
+
+    <button type="button" onclick="this.closest('.action-row').remove()"
+            class="text-red-500 hover:text-red-700 text-sm justify-self-end">🗑️</button>
+</div>
