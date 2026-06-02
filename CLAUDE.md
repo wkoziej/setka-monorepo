@@ -259,19 +259,30 @@ Each package provides specific commands:
 # 1. Extract sources from OBS recording
 obs-extract /path/to/recording.mkv
 
-# 2. Analyze audio for animation timing
+# 2. Mix/level audio manually in Bitwig, then export the master mix to mixed/
+#    (File -> Export Audio -> Project Master). The polished master from mixed/
+#    drives analysis AND becomes the final clip soundtrack; extracted/ stays as
+#    the video source. The mixed/ directory is managed by RecordingStructureManager.
+
+# 3. Analyze audio for animation timing (analyze the Bitwig master)
 uv run --package beatrix python -m beatrix.cli.analyze_audio \
-  "/path/to/recording/extracted/main_audio.m4a" \
+  "/path/to/recording/mixed/master.wav" \
   "/path/to/recording/analysis"
 
-# 3. Create Blender VSE project with preset-based animations
+# 4. Create Blender VSE project with preset-based animations
+#    Point --main-audio at the master using an ABSOLUTE path. Cinemon is
+#    master-aware: it picks analysis/master_analysis.json matching the master.
 cinemon-blend-setup /path/to/recording \
   --preset vintage \
-  --main-audio "main_audio.m4a"
+  --main-audio "/path/to/recording/mixed/master.wav"
 
-# 4. Upload and publish to social media
+# 5. Upload and publish to social media
 python -m medusa.cli upload /path/to/recording/blender/render/output.mp4
 ```
+
+> Audio/video drift is compensated manually in Blender (the pipeline does not
+> auto-sync). Per-instrument stems (`mixed/stems/`) and per-track animation
+> targeting are a future phase.
 
 ### Beatrix Audio Analysis Examples
 
