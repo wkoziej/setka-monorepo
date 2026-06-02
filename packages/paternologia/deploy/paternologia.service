@@ -9,6 +9,10 @@ StartLimitIntervalSec=0
 
 [Service]
 Type=notify
+# READY=1 / WATCHDOG=1 are sent by the python process under `uv run` (not the
+# main pid), so accept notifications from any process in the unit's cgroup.
+NotifyAccess=all
+TimeoutStartSec=30
 # Adjust to your checkout; %h expands to the user's home directory.
 WorkingDirectory=%h/dev/setka-monorepo
 # Adjust the uv path if it is not on the user-service PATH (see README).

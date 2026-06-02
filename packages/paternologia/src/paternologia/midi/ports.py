@@ -64,3 +64,55 @@ def find_rtmidi_port(device_name: str) -> int | None:
 
     logger.warning("No rtmidi port matching '%s' in: %s", device_name, ports)
     return None
+
+
+def find_rtmidi_ports(device_name: str) -> list[int]:
+    """Find ALL rtmidi input port indices matching device_name.
+
+    A single hardware device (e.g. PACER) often exposes several ports
+    (MIDI1, MIDI2); Model A must read all of them.
+
+    Returns:
+        List of port indices for rtmidi.MidiIn.open_port() (possibly empty).
+    """
+    try:
+        import rtmidi
+
+        midi_in = rtmidi.MidiIn()
+        ports = midi_in.get_ports()
+        midi_in.delete()
+    except Exception as e:
+        logger.warning("Cannot enumerate rtmidi ports: %s", e)
+        return []
+
+    matches = [i for i, name in enumerate(ports) if device_name.upper() in name.upper()]
+    if matches:
+        logger.info(
+            "Found %d rtmidi port(s) for '%s': %s", len(matches), device_name, matches
+        )
+    else:
+        logger.warning("No rtmidi port matching '%s' in: %s", device_name, ports)
+    return matches
+
+
+def find_rtmidi_output_port(name_substring: str) -> int | None:
+    """Find the first rtmidi OUTPUT port index whose name contains name_substring.
+
+    Used to target a snd-virmidi port (visible to Bitwig as raw MIDI) for the
+    bridge output. Returns None if no match.
+    """
+    try:
+        import rtmidi
+
+        midi_out = rtmidi.MidiOut()
+        ports = midi_out.get_ports()
+        midi_out.delete()
+    except Exception as e:
+        logger.warning("Cannot enumerate rtmidi output ports: %s", e)
+        return None
+
+    for i, port_name in enumerate(ports):
+        if name_substring.upper() in port_name.upper():
+            logger.info("Found rtmidi output port %d: %s", i, port_name)
+            return i
+    return None

@@ -101,9 +101,49 @@ class TestMidiBridgeUnit:
 
     def test_send_when_inactive_is_noop(self):
         """Sending before open() must not raise."""
-        bridge = MidiBridge("setka-bridge-inactive")
+        bridge = MidiBridge("setka-bridge-inactive", virmidi_hint="__no_virmidi_test__")
         assert bridge.is_active is False
         bridge.send([0xB0, 1, 1])  # no exception
+
+    def test_open_prefers_virmidi(self, monkeypatch):
+        """When a virmidi port exists, the bridge opens it (Bitwig-visible)."""
+        from paternologia.midi import bridge as bridge_mod
+
+        opened = {}
+
+        class FakeOut:
+            def open_port(self, idx):
+                opened["port"] = idx
+
+            def open_virtual_port(self, name):
+                opened["virtual"] = name
+
+        monkeypatch.setattr(bridge_mod.rtmidi, "MidiOut", FakeOut)
+        monkeypatch.setattr(bridge_mod, "find_rtmidi_output_port", lambda hint: 3)
+        bridge = MidiBridge("setka-x", virmidi_hint="VirMIDI")
+        assert bridge.open() is True
+        assert bridge.mode == "virmidi"
+        assert opened == {"port": 3}
+
+    def test_open_falls_back_to_virtual(self, monkeypatch):
+        """Without a virmidi port, the bridge creates its own virtual seq port."""
+        from paternologia.midi import bridge as bridge_mod
+
+        opened = {}
+
+        class FakeOut:
+            def open_port(self, idx):
+                opened["port"] = idx
+
+            def open_virtual_port(self, name):
+                opened["virtual"] = name
+
+        monkeypatch.setattr(bridge_mod.rtmidi, "MidiOut", FakeOut)
+        monkeypatch.setattr(bridge_mod, "find_rtmidi_output_port", lambda hint: None)
+        bridge = MidiBridge("setka-x", virmidi_hint="nope")
+        assert bridge.open() is True
+        assert bridge.mode == "virtual"
+        assert opened == {"virtual": "setka-x"}
 
 
 @requires_alsa
@@ -112,7 +152,7 @@ class TestMidiBridgeLoopback:
 
     def test_open_creates_subscribable_port(self):
         """open() creates a virtual port visible to other ALSA seq clients."""
-        bridge = MidiBridge("setka-bridge-open")
+        bridge = MidiBridge("setka-bridge-open", virmidi_hint="__no_virmidi_test__")
         try:
             assert bridge.open() is True
             assert bridge.is_active is True
@@ -125,7 +165,7 @@ class TestMidiBridgeLoopback:
 
     async def test_cc_forwarded_byte_for_byte(self):
         """A CC message arrives byte-for-byte on the bridge port."""
-        bridge = MidiBridge("setka-bridge-cc")
+        bridge = MidiBridge("setka-bridge-cc", virmidi_hint="__no_virmidi_test__")
         index = SongMidiIndex.build([], [])
         bus = EventBus()
         bus.set_loop(asyncio.get_running_loop())
@@ -149,7 +189,7 @@ class TestMidiBridgeLoopback:
 
     async def test_pc_forwarded_and_published(self):
         """A Program Change is both forwarded raw and published as song-change."""
-        bridge = MidiBridge("setka-bridge-pc")
+        bridge = MidiBridge("setka-bridge-pc", virmidi_hint="__no_virmidi_test__")
         devices = [_make_device("boss", midi_channel=13)]  # channel index 12
         index = SongMidiIndex.build([_make_song("zen", "boss", 2)], devices)
         bus = EventBus()
@@ -181,7 +221,7 @@ class TestMidiBridgeLoopback:
 
     async def test_note_forwarded_but_not_published(self):
         """Non-PC messages (e.g. Note On) are forwarded but never published."""
-        bridge = MidiBridge("setka-bridge-note")
+        bridge = MidiBridge("setka-bridge-note", virmidi_hint="__no_virmidi_test__")
         index = SongMidiIndex.build([], [])
         bus = EventBus()
         bus.set_loop(asyncio.get_running_loop())
@@ -210,7 +250,7 @@ class TestMidiBridgeLoopback:
 
     async def test_realtime_not_forwarded(self):
         """System Real-Time messages (>=0xF8) are not relayed to the bridge."""
-        bridge = MidiBridge("setka-bridge-rt")
+        bridge = MidiBridge("setka-bridge-rt", virmidi_hint="__no_virmidi_test__")
         index = SongMidiIndex.build([], [])
         bus = EventBus()
         bus.set_loop(asyncio.get_running_loop())
@@ -234,7 +274,7 @@ class TestMidiBridgeLoopback:
 
     def test_bridge_active_even_without_pacer(self):
         """Bridge opens its output port even when no PACER input exists."""
-        bridge = MidiBridge("setka-bridge-nopacer")
+        bridge = MidiBridge("setka-bridge-nopacer", virmidi_hint="__no_virmidi_test__")
         index = SongMidiIndex.build([], [])
         bus = EventBus()
         listener = MidiListener(song_index=index, event_bus=bus, bridge=bridge)

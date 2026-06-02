@@ -70,21 +70,21 @@ class TestReplugReconnect:
         )
 
     def test_reopens_when_port_returns(self, monkeypatch):
-        """Inactive listener reopens by name when the PACER port reappears."""
+        """Inactive listener reopens by name when the PACER ports reappear."""
         listener = self._listener()
         listener._device_name = "PACER"
-        monkeypatch.setattr(listener_mod, "find_rtmidi_port", lambda name: 0)
+        monkeypatch.setattr(listener_mod, "find_rtmidi_ports", lambda name: [0, 1])
         calls = []
         monkeypatch.setattr(listener, "start", lambda name: calls.append(name) or True)
         listener.poll_reconnect()
         assert calls == ["PACER"]
 
     def test_releases_when_unplugged(self, monkeypatch):
-        """Active listener releases its handle when the PACER port disappears."""
+        """Active listener releases its handles when the PACER ports disappear."""
         listener = self._listener()
         listener._device_name = "PACER"
-        listener._midi_in = object()  # simulate an open port
-        monkeypatch.setattr(listener_mod, "find_rtmidi_port", lambda name: None)
+        listener._midi_ins = [object()]  # simulate an open port
+        monkeypatch.setattr(listener_mod, "find_rtmidi_ports", lambda name: [])
         stopped = []
         monkeypatch.setattr(listener, "stop", lambda: stopped.append(True))
         listener.poll_reconnect()
@@ -95,7 +95,7 @@ class TestReplugReconnect:
         listener = self._listener()
         called = []
         monkeypatch.setattr(
-            listener_mod, "find_rtmidi_port", lambda name: called.append(name)
+            listener_mod, "find_rtmidi_ports", lambda name: called.append(name) or []
         )
         listener.poll_reconnect()
         assert called == []

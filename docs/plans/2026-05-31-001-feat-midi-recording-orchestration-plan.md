@@ -142,10 +142,14 @@ planu (zob. Overview).
 
 ## Key Technical Decisions
 
-- **KTD1 — fan-out przez `python-rtmidi open_virtual_port`** (nie `snd-virmidi`/`aconnect`):
-  port seq należący do procesu, przeżywa replug PACER, brak dodatkowych warstw/latencji, Bitwig
-  Flatpak widzi go przez `--device=all`. `snd-virmidi` tylko jako fallback gdy testy pokażą, że
-  Bitwig nie re-subskrybuje po crashu hosta.
+- **KTD1 — fan-out do portu, który Bitwig WIDZI (ZREWIDOWANE 2026-06-02 po teście na sprzęcie).**
+  `open_virtual_port` (czysty seq) okazał się **niewidoczny dla Bitwiga** — Bitwig na Linuksie
+  enumeruje tylko porty rawmidi/sprzętowe, nie wirtualne porty seq (to nie sandbox Flatpaka,
+  `--device=all` jest nadane). Dlatego **`snd-virmidi` jest ścieżką główną, nie fallbackiem**:
+  most (`MidiBridge`) otwiera pierwszy port `VirMIDI` (`open_port`), a Bitwig czyta sprzętową
+  stronę `hw:Virmidi` („Virtual Raw MIDI 1"). Fallback do `open_virtual_port` zostaje, gdy
+  virmidi nieobecny (konsumenci seq-aware). Port nadal należy do procesu → przeżywa replug.
+  Pełna analiza: [docs/solutions/2026-06-02-bitwig-alsa-seq-invisible-virmidi-bridge.md](../solutions/2026-06-02-bitwig-alsa-seq-invisible-virmidi-bridge.md).
 - **KTD2 — paternologia jedynym czytelnikiem sprzętu**: w jednym procesie `MidiIn.open_port(PACER)`
   + `MidiOut.open_virtual_port("setka-bridge")`; callback forwarduje surowe CC/PC. To eliminuje
   `EBUSY` z definicji (Bitwig dotyka tylko portu mostka).
@@ -177,19 +181,23 @@ planu (zob. Overview).
 
 ### Deferred to Implementation
 
-- **Konkretne numery CC/note** przycisków start/stop PACER — konfiguracja w `pacer.yaml` /
-  `PacerConfig`; ustalić przy implementacji + dodać do modelu.
-- **Czy Bitwig re-subskrybuje czysto po crashu hosta** → decyduje czy potrzebny fallback
-  `snd-virmidi`. Wymaga testu runtime (poza zakresem planu).
+- **Konkretne numery CC/note** przycisków start/stop PACER — **CZĘŚCIOWO ROZSTRZYGNIĘTE
+  2026-06-02:** przycisk „start nagrania" wysyła **Note 95 na PACER MIDI2** (nie ch15 CC).
+  Trigger w Bitwigu mapuje się przez MIDI-learn na tę notę. Dedykowane CC na ch15 (`start_stop`
+  device) nie było emitowane w testowanych presetach — do ewentualnego skonfigurowania w Unit 6.
+- **Czy Bitwig re-subskrybuje czysto po crashu hosta** → **ROZSTRZYGNIĘTE 2026-06-02:** Bitwig
+  słucha sprzętowego `hw:Virmidi`, który trwa niezależnie od paternologii; link most→virmidi
+  wraca sam po restarcie usługi. `snd-virmidi` jest ścieżką główną (KTD1 zrewidowane), nie
+  awaryjną.
 - **Współistnienie rtmidi-input + raw-`amidi`-output na tym samym PACER** (intra-proces): listener
   trzyma `MidiIn.open_port(PACER)` ciągle, a `/pacer/export` woła `amidi -p hw:X` (output). Czy
   obie operacje współistnieją bez EBUSY, gdy live konfigurujesz presety? Test runtime przed
   uznaniem KTD2 za „eliminuje EBUSY z definicji"; jeśli kolidują — export musi koordynować/zwalniać
   listener.
-- **Czy PACER wysyła Program Change do wyboru utworu**, czy CC? Wiki opisuje go jako „master CC
-  source", a `MidiListener._callback` filtruje **tylko** PC (`0xC0`). Jeśli wybór utworu jest
-  CC-based, live view (R3) może nic nie złapać — zweryfikować na realnym sprzęcie. (Dotyczy też
-  planu 002 — keying timeline.)
+- **Czy PACER wysyła Program Change do wyboru utworu** → **ROZSTRZYGNIĘTE 2026-06-02: TAK.**
+  Na MIDI1 idą Program Change (ch13 boss / ch14 M:S patterny / ch1 MicroFreak) + Bank Select CC.
+  Filtr PC w listenerze łapie zmianę → live view (R3) działa. Listener czyta teraz **oba** porty
+  PACER (MIDI1+MIDI2), bo trigger record jest notą z MIDI2.
 
 ## High-Level Technical Design
 

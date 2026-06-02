@@ -32,17 +32,28 @@ UI dostępne pod `http://127.0.0.1:8000`.
 
 ## Model A — orkiestracja MIDI (OBS + Bitwig)
 
-paternologia jest **jedynym czytelnikiem sprzętowego portu PACER** i robi fan-out
-całego strumienia (poza System Real-Time) na stabilny wirtualny port MIDI
-**`setka-bridge`**. Bitwig subskrybuje ten port — nie otwiera sprzętowego PACER.
+paternologia jest **jedynym czytelnikiem PACER** (czyta **oba** porty USB: MIDI1 +
+MIDI2) i robi fan-out całego strumienia (poza System Real-Time) na port MIDI widoczny
+dla Bitwiga.
 
-**Precondycja (warunek zniknięcia konfliktu `EBUSY`):** w ustawieniach MIDI Bitwiga
-**odznacz sprzętowe wejście PACER** i włącz wejście **`setka-bridge`**. Record w
-Bitwigu mapuje się przez **MIDI-learn**: zmapuj komunikat triggera (z `setka-bridge`)
-na Transport Record. Arm ścieżek robisz ręcznie (do czasu opcjonalnego rozszerzenia).
+**Most → snd-virmidi (wymagane dla Bitwiga).** Bitwig na Linuksie widzi tylko porty
+rawmidi/sprzętowe, **nie** wirtualne porty ALSA seq. Dlatego most pisze wprost do
+portu **`snd-virmidi`** (widocznego jako „Virtual Raw MIDI" w Bitwigu); gdy virmidi nie
+ma — fallback do własnego portu seq `setka-bridge` (niewidocznego dla Bitwiga).
 
-Host Pythona musi być **natywny** (nie Flatpak), żeby wirtualny port seq był widoczny
-dla Bitwiga (Flatpak ma `--device=all`).
+```bash
+# Załaduj moduł (i utrwal na reboot):
+sudo modprobe snd-virmidi midi_devs=2
+echo snd-virmidi | sudo tee /etc/modules-load.d/snd-virmidi.conf
+echo "options snd-virmidi midi_devs=2" | sudo tee /etc/modprobe.d/snd-virmidi.conf
+```
+
+**W Bitwigu (Settings → Controllers, Generic MIDI):** MIDI Input = **„Virtual Raw MIDI 1"**
+(pierwszy port virmidi — ten sam, który otwiera most). **Wyłącz surowe `PACER MIDI1/2`**
+jako wejścia — to usuwa błąd `Device or resource busy` (EBUSY). Record mapujesz przez
+**MIDI-learn** na trigger (obecnie **Note 95** z PACER MIDI2). Arm ścieżek ręcznie.
+
+Host Pythona musi być **natywny** (nie Flatpak).
 
 ### Usługa systemd (--user)
 
@@ -55,9 +66,10 @@ systemctl --user enable --now paternologia
 loginctl enable-linger "$USER"   # serwis działa bez aktywnej sesji
 ```
 
-`Restart=always` + watchdog `Type=notify` podnoszą proces po crashu/zawiśnięciu
-(~2 s). Po crashu wirtualny port znika i jest odtwarzany pod tą samą nazwą —
-jeśli Bitwig nie re-subskrybuje czysto, fallbackiem jest `snd-virmidi` (odłożone).
+`Restart=always` + watchdog `Type=notify` (z `NotifyAccess=all`, bo READY/WATCHDOG idzie
+spod `uv run`) podnoszą proces po crashu/zawiśnięciu (~2 s). Bitwig słucha sprzętowego
+`hw:Virmidi`, który trwa niezależnie od paternologii — link most→virmidi wraca sam po
+restarcie usługi.
 
 ### Zdrowie i replug
 
