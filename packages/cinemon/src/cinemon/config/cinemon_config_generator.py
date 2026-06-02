@@ -183,12 +183,19 @@ class CinemonConfigGenerator:
         # Get video files from the discovery instance
         video_files = discovery.discover_video_files()
 
-        # Auto-detect audio analysis file
+        # Auto-detect audio analysis file. Master-aware: when main_audio is
+        # known, prefer the analysis matching it (master.wav ->
+        # master_analysis.json) so a stale analysis from a previous run is not
+        # silently used. Fall back to the first sorted file otherwise.
         analysis_files = discovery.discover_analysis_files()
         analysis_file = None
         if analysis_files:
-            # Use the first analysis file found
-            analysis_file = f"analysis/{analysis_files[0]}"
+            chosen = analysis_files[0]
+            if main_audio:
+                expected = f"{Path(main_audio).stem}_analysis.json"
+                if expected in analysis_files:
+                    chosen = expected
+            analysis_file = f"analysis/{chosen}"
 
         # Update project settings
         config.project.video_files = video_files

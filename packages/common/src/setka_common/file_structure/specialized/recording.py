@@ -24,6 +24,7 @@ class RecordingStructure(MediaStructure):
     """Structure for OBS recording projects."""
 
     extracted_dir: Path
+    mixed_dir: Path
 
     def exists(self) -> bool:
         """Check if recording structure exists."""
@@ -58,6 +59,7 @@ class RecordingStructureManager(StructureManager):
     EXTRACTED_DIRNAME = "extracted"
     BLENDER_DIRNAME = "blender"
     ANALYSIS_DIRNAME = "analysis"
+    MIXED_DIRNAME = "mixed"
 
     @staticmethod
     def get_structure(video_path: Path) -> RecordingStructure:
@@ -85,6 +87,7 @@ class RecordingStructureManager(StructureManager):
         metadata_file = project_dir / RecordingStructureManager.METADATA_FILENAME
         processed_dir = project_dir / RecordingStructureManager.PROCESSED_DIRNAME
         extracted_dir = project_dir / RecordingStructureManager.EXTRACTED_DIRNAME
+        mixed_dir = project_dir / RecordingStructureManager.MIXED_DIRNAME
 
         return RecordingStructure(
             project_dir=project_dir,
@@ -92,6 +95,7 @@ class RecordingStructureManager(StructureManager):
             metadata_file=metadata_file,
             processed_dir=processed_dir,
             extracted_dir=extracted_dir,
+            mixed_dir=mixed_dir,
         )
 
     @staticmethod
@@ -113,6 +117,7 @@ class RecordingStructureManager(StructureManager):
         try:
             # Create all directories
             structure.extracted_dir.mkdir(parents=True, exist_ok=True)
+            structure.mixed_dir.mkdir(parents=True, exist_ok=True)
             logger.info(f"Created recording structure: {structure.project_dir}")
         except (OSError, PermissionError) as e:
             raise DirectoryCreationError(
@@ -262,6 +267,50 @@ class RecordingStructureManager(StructureManager):
         except (OSError, PermissionError) as e:
             raise DirectoryCreationError(
                 f"Failed to create analysis directory at {analysis_dir}: {e}"
+            )
+
+    @staticmethod
+    def ensure_mixed_dir(recording_dir: Path) -> Path:
+        """Ensure mixed directory exists.
+
+        Holds the polished audio mix exported from Bitwig (master now,
+        per-instrument stems later). Distinct from extracted/ which holds
+        raw OBS sources.
+
+        Args:
+            recording_dir: Recording directory path
+
+        Returns:
+            Path to mixed directory
+
+        Raises:
+            InvalidPathError: When recording_dir is invalid
+            DirectoryCreationError: When directory creation fails
+        """
+        if not recording_dir:
+            raise InvalidPathError("Recording directory cannot be empty")
+
+        recording_dir = Path(recording_dir)
+
+        if not recording_dir.exists():
+            raise InvalidPathError(
+                f"Recording directory does not exist: {recording_dir}"
+            )
+
+        if not recording_dir.is_dir():
+            raise InvalidPathError(
+                f"Recording path is not a directory: {recording_dir}"
+            )
+
+        mixed_dir = recording_dir / RecordingStructureManager.MIXED_DIRNAME
+
+        try:
+            mixed_dir.mkdir(parents=True, exist_ok=True)
+            logger.info(f"Created mixed directory: {mixed_dir}")
+            return mixed_dir
+        except (OSError, PermissionError) as e:
+            raise DirectoryCreationError(
+                f"Failed to create mixed directory at {mixed_dir}: {e}"
             )
 
     @staticmethod

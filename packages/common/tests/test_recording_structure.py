@@ -25,6 +25,7 @@ class TestRecordingStructure:
             metadata_file=metadata_file,
             processed_dir=processed_dir,
             extracted_dir=extracted_dir,
+            mixed_dir=project_dir / "mixed",
         )
 
         assert structure.project_dir == project_dir
@@ -32,6 +33,7 @@ class TestRecordingStructure:
         assert structure.metadata_file == metadata_file
         assert structure.processed_dir == processed_dir
         assert structure.extracted_dir == extracted_dir
+        assert structure.mixed_dir == project_dir / "mixed"
 
     def test_exists_all_present(self, tmp_path):
         """Test exists() gdy wszystkie pliki istnieją."""
@@ -56,6 +58,7 @@ class TestRecordingStructure:
             metadata_file=metadata_file,
             processed_dir=processed_dir,
             extracted_dir=extracted_dir,
+            mixed_dir=project_dir / "mixed",
         )
 
         assert structure.exists() is True
@@ -83,6 +86,7 @@ class TestRecordingStructure:
             metadata_file=metadata_file,
             processed_dir=processed_dir,
             extracted_dir=extracted_dir,
+            mixed_dir=project_dir / "mixed",
         )
 
         assert structure.exists() is False
@@ -110,6 +114,7 @@ class TestRecordingStructure:
             metadata_file=metadata_file,
             processed_dir=processed_dir,
             extracted_dir=extracted_dir,
+            mixed_dir=project_dir / "mixed",
         )
 
         assert structure.is_valid() is True
@@ -137,6 +142,7 @@ class TestRecordingStructure:
             metadata_file=metadata_file,
             processed_dir=processed_dir,
             extracted_dir=extracted_dir,
+            mixed_dir=project_dir / "mixed",
         )
 
         assert structure.is_valid() is False
@@ -164,6 +170,7 @@ class TestRecordingStructure:
             metadata_file=metadata_file,
             processed_dir=processed_dir,
             extracted_dir=extracted_dir,
+            mixed_dir=project_dir / "mixed",
         )
 
         assert structure.is_valid() is True  # metadata jest opcjonalna
@@ -185,6 +192,16 @@ class TestRecordingStructureManager:
         assert structure.processed_dir == project_dir / "processed"
         assert structure.extracted_dir == project_dir / "extracted"
 
+    def test_get_structure_mixed_dir(self, tmp_path):
+        """Test get_structure() zwraca mixed_dir bez tworzenia katalogu."""
+        project_dir = tmp_path / "test_recording"
+        video_file = project_dir / "recording.mkv"
+
+        structure = RecordingStructureManager.get_structure(video_file)
+
+        assert structure.mixed_dir == project_dir / "mixed"
+        assert not structure.mixed_dir.exists()
+
     def test_create_structure(self, tmp_path):
         """Test create_structure()."""
         project_dir = tmp_path / "test_recording"
@@ -195,6 +212,17 @@ class TestRecordingStructureManager:
 
         assert structure.extracted_dir.exists()
         assert structure.extracted_dir.is_dir()
+
+    def test_create_structure_creates_mixed_dir(self, tmp_path):
+        """Test create_structure() tworzy katalog mixed/ obok extracted/."""
+        project_dir = tmp_path / "test_recording"
+        project_dir.mkdir()
+        video_file = project_dir / "recording.mkv"
+
+        structure = RecordingStructureManager.create_structure(video_file)
+
+        assert structure.mixed_dir.exists()
+        assert structure.mixed_dir.is_dir()
 
     def test_get_extracted_dir(self, tmp_path):
         """Test get_extracted_dir()."""
@@ -335,6 +363,31 @@ class TestRecordingStructureManager:
         assert analysis_dir.exists()
         assert analysis_dir.is_dir()
 
+    def test_ensure_mixed_dir(self, tmp_path):
+        """Test ensure_mixed_dir()."""
+        recording_dir = tmp_path / "test_recording"
+        recording_dir.mkdir()
+
+        mixed_dir = RecordingStructureManager.ensure_mixed_dir(recording_dir)
+
+        assert mixed_dir == recording_dir / "mixed"
+        assert mixed_dir.exists()
+        assert mixed_dir.is_dir()
+
+    def test_ensure_mixed_dir_already_exists(self, tmp_path):
+        """Test ensure_mixed_dir() gdy katalog już istnieje (idempotentność)."""
+        recording_dir = tmp_path / "test_recording"
+        recording_dir.mkdir()
+
+        existing_mixed_dir = recording_dir / "mixed"
+        existing_mixed_dir.mkdir()
+
+        mixed_dir = RecordingStructureManager.ensure_mixed_dir(recording_dir)
+
+        assert mixed_dir == existing_mixed_dir
+        assert mixed_dir.exists()
+        assert mixed_dir.is_dir()
+
     def test_get_analysis_file_path(self, tmp_path):
         """Test get_analysis_file_path()."""
         project_dir = tmp_path / "test_recording"
@@ -390,5 +443,6 @@ class TestRecordingStructureManager:
         assert RecordingStructureManager.EXTRACTED_DIRNAME == "extracted"
         assert RecordingStructureManager.BLENDER_DIRNAME == "blender"
         assert RecordingStructureManager.ANALYSIS_DIRNAME == "analysis"
+        assert RecordingStructureManager.MIXED_DIRNAME == "mixed"
         assert RecordingStructureManager.METADATA_FILENAME == "metadata.json"
         assert RecordingStructureManager.PROCESSED_DIRNAME == "processed"
