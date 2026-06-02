@@ -374,4 +374,111 @@ class TestCinemonConfigGeneratorPreset:
                 assert "trigger" in animation
 
 
+class TestCinemonConfigGeneratorAnalysisSelection:
+    """Master-aware selection of the analysis file (P0 fix).
+
+    When main_audio is known, the generator must pick the analysis matching
+    that audio (master_analysis.json) instead of the first alphabetically
+    sorted file in analysis/ — otherwise a stale analysis from a previous run
+    silently desyncs animations from the soundtrack.
+    """
+
+    def _make_recording(self, tmp_path):
+        recording_dir = tmp_path / "recording_20250105_143022"
+        extracted_dir = recording_dir / "extracted"
+        extracted_dir.mkdir(parents=True)
+        (extracted_dir / "Camera1.mp4").touch()
+        (extracted_dir / "main_audio.m4a").touch()
+        analysis_dir = recording_dir / "analysis"
+        analysis_dir.mkdir(parents=True)
+        return recording_dir, analysis_dir
+
+    def test_prefers_master_analysis_over_stale_alphabetical_first(self, tmp_path):
+        """Stale main_audio_analysis.json sorts first, but master must win."""
+        recording_dir, analysis_dir = self._make_recording(tmp_path)
+        # "main_audio_analysis.json" < "master_analysis.json" alphabetically
+        (analysis_dir / "main_audio_analysis.json").write_text("{}")
+        (analysis_dir / "master_analysis.json").write_text("{}")
+
+        mixed_dir = recording_dir / "mixed"
+        mixed_dir.mkdir()
+        master = mixed_dir / "master.wav"
+        master.touch()
+
+        generator = CinemonConfigGenerator()
+        config_path = generator.generate_preset(
+            recording_dir, "minimal", main_audio=str(master)
+        )
+
+        with config_path.open("r") as f:
+            config_data = yaml.safe_load(f)
+
+        assert config_data["audio_analysis"]["file"] == "analysis/master_analysis.json"
+
+    def test_picks_master_analysis_when_only_one(self, tmp_path):
+        """main_audio stem=master, only master_analysis.json present → picked."""
+        recording_dir, analysis_dir = self._make_recording(tmp_path)
+        (analysis_dir / "master_analysis.json").write_text("{}")
+
+        generator = CinemonConfigGenerator()
+        config_path = generator.generate_preset(
+            recording_dir, "minimal", main_audio="master.wav"
+        )
+
+        with config_path.open("r") as f:
+            config_data = yaml.safe_load(f)
+
+        assert config_data["audio_analysis"]["file"] == "analysis/master_analysis.json"
+
+    def test_falls_back_when_no_matching_analysis(self, tmp_path):
+        """main_audio given but no {stem}_analysis.json → fallback to first."""
+        recording_dir, analysis_dir = self._make_recording(tmp_path)
+        (analysis_dir / "main_audio_analysis.json").write_text("{}")
+
+        generator = CinemonConfigGenerator()
+        config_path = generator.generate_preset(
+            recording_dir, "minimal", main_audio="master.wav"
+        )
+
+        with config_path.open("r") as f:
+            config_data = yaml.safe_load(f)
+
+        assert (
+            config_data["audio_analysis"]["file"] == "analysis/main_audio_analysis.json"
+        )
+
+    def test_autodetect_main_audio_keeps_legacy_selection(self, tmp_path):
+        """No explicit main_audio (auto-detect) → selection unchanged (first)."""
+        recording_dir, analysis_dir = self._make_recording(tmp_path)
+        (analysis_dir / "aaa_analysis.json").write_text("{}")
+        (analysis_dir / "zzz_analysis.json").write_text("{}")
+
+        generator = CinemonConfigGenerator()
+        # single .m4a → auto-detected as main_audio; analysis pick = first sorted
+        config_path = generator.generate_preset(recording_dir, "minimal")
+
+        with config_path.open("r") as f:
+            config_data = yaml.safe_load(f)
+
+        assert config_data["audio_analysis"]["file"] == "analysis/aaa_analysis.json"
+
+    def test_empty_analysis_dir_does_not_fabricate_master(self, tmp_path):
+        """Empty analysis/ → must not inject a non-existent master_analysis.json."""
+        recording_dir, _ = self._make_recording(tmp_path)
+
+        generator = CinemonConfigGenerator()
+        # No exception, and master-aware logic does not invent a missing file.
+        config_path = generator.generate_preset(
+            recording_dir, "minimal", main_audio="master.wav"
+        )
+
+        with config_path.open("r") as f:
+            config_data = yaml.safe_load(f)
+
+        assert (
+            config_data.get("audio_analysis", {}).get("file")
+            != "analysis/master_analysis.json"
+        )
+
+
 # TestCinemonConfigGeneratorCustom removed - generate_config method was removed from API
