@@ -145,6 +145,23 @@ class PacerConfig(BaseModel):
         le=127,
         description="Nota zatrzymująca nagranie OBS + Bitwig (PACER MIDI2)",
     )
+    record_trigger_port: str | None = Field(
+        default=None,
+        description=(
+            "Opcjonalny fragment nazwy portu, na którym akceptowane są noty "
+            "triggera record (np. 'MIDI2'). None = dowolny port PACER."
+        ),
+    )
+
+    @model_validator(mode="after")
+    def _distinct_record_notes(self) -> "PacerConfig":
+        """Start i stop muszą się różnić, inaczej stop nigdy nie zadziała."""
+        if self.record_start_note == self.record_stop_note:
+            raise ValueError(
+                "record_start_note i record_stop_note muszą się różnić "
+                f"(oba = {self.record_start_note})"
+            )
+        return self
 
 
 class ObsConfig(BaseModel):

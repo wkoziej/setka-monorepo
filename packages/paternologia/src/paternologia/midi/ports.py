@@ -37,35 +37,6 @@ def find_amidi_port(device_name: str) -> str | None:
         return None
 
 
-def find_rtmidi_port(device_name: str) -> int | None:
-    """Find rtmidi input port index by device name.
-
-    Args:
-        device_name: Fragment of device name to search for (e.g. "PACER")
-
-    Returns:
-        Port index for rtmidi.MidiIn.open_port() or None if not found.
-    """
-    try:
-        import rtmidi
-
-        midi_in = rtmidi.MidiIn()
-        ports = midi_in.get_ports()
-        # delete() frees the ALSA seq client immediately; plain `del` leaks it.
-        midi_in.delete()
-    except Exception as e:
-        logger.warning("Cannot enumerate rtmidi ports: %s", e)
-        return None
-
-    for i, port_name in enumerate(ports):
-        if device_name.upper() in port_name.upper():
-            logger.info("Found rtmidi port %d: %s", i, port_name)
-            return i
-
-    logger.warning("No rtmidi port matching '%s' in: %s", device_name, ports)
-    return None
-
-
 def find_rtmidi_ports(device_name: str) -> list[int]:
     """Find ALL rtmidi input port indices matching device_name.
 

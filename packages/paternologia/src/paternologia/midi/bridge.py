@@ -71,7 +71,7 @@ class MidiBridge:
             return False
         return True
 
-    def send(self, message) -> None:
+    def send(self, message: list[int]) -> None:
         """Forward a raw MIDI message to the bridge port (no-op if inactive)."""
         if self._midi_out is None:
             return

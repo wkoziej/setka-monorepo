@@ -7,7 +7,6 @@ import subprocess
 from paternologia.midi.ports import (
     find_amidi_port,
     find_rtmidi_output_port,
-    find_rtmidi_port,
     find_rtmidi_ports,
 )
 
@@ -74,57 +73,6 @@ class TestFindAmidiPort:
 
         monkeypatch.setattr(subprocess, "run", raise_fnf)
         assert find_amidi_port("PACER") is None
-
-
-class TestFindRtmidiPort:
-    """Tests for find_rtmidi_port - searching rtmidi port list."""
-
-    def test_finds_port_by_name(self, monkeypatch):
-        """Should find port index matching device name."""
-        fake_ports = [
-            "Midi Through:Midi Through Port-0 14:0",
-            "PACER:PACER MIDI 1 20:0",
-        ]
-
-        import rtmidi
-
-        class FakeMidiIn:
-            def delete(self):
-                pass
-
-            def get_ports(self):
-                return fake_ports
-
-        monkeypatch.setattr(rtmidi, "MidiIn", FakeMidiIn)
-        assert find_rtmidi_port("PACER") == 1
-
-    def test_returns_none_when_not_found(self, monkeypatch):
-        """Should return None when no port matches."""
-        import rtmidi
-
-        class FakeMidiIn:
-            def delete(self):
-                pass
-
-            def get_ports(self):
-                return ["Midi Through:Midi Through Port-0 14:0"]
-
-        monkeypatch.setattr(rtmidi, "MidiIn", FakeMidiIn)
-        assert find_rtmidi_port("PACER") is None
-
-    def test_case_insensitive(self, monkeypatch):
-        """Should match case-insensitively."""
-        import rtmidi
-
-        class FakeMidiIn:
-            def delete(self):
-                pass
-
-            def get_ports(self):
-                return ["pacer:pacer midi 1 20:0"]
-
-        monkeypatch.setattr(rtmidi, "MidiIn", FakeMidiIn)
-        assert find_rtmidi_port("PACER") == 0
 
 
 class TestFindRtmidiPorts:

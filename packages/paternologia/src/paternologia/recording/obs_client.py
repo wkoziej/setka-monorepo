@@ -16,7 +16,7 @@ def _default_req_factory(host: str, port: int, password: str):
 def _default_event_factory(host: str, port: int, password: str):
     from obsws_python import EventClient
 
-    return EventClient(host=host, port=port, password=password)
+    return EventClient(host=host, port=port, password=password, timeout=3)
 
 
 class ObsClient:
@@ -74,15 +74,42 @@ class ObsClient:
                     client.disconnect()
             except Exception as e:
                 logger.debug("OBS disconnect error: %s", e)
+        self._mark_disconnected()
+
+    def _mark_disconnected(self) -> None:
+        """Drop the clients and flag the link down so the watcher reconnects."""
         self._req = None
         self._event = None
         self._connected = False
+
+    def ensure_connected(self) -> bool:
+        """Reconnect if down, or probe liveness and reconnect on a silent drop.
+
+        obsws never tells us when the websocket dies (OBS quit, network blip), so
+        `connected` alone is sticky-true. The watcher calls this each cycle: when
+        connected, a cheap status probe detects a dead socket and forces a
+        reconnect. This call may block, so it must run off the event loop.
+        """
+        if not self._connected:
+            return self.connect()
+        try:
+            self._req.get_record_status()
+            return True
+        except Exception as e:
+            logger.warning("OBS link lost (%s); reconnecting", e)
+            self.disconnect()
+            return self.connect()
 
     def is_recording(self) -> bool:
         """True if OBS is currently recording (output_active)."""
         if self._req is None:
             return False
-        return bool(self._req.get_record_status().output_active)
+        try:
+            return bool(self._req.get_record_status().output_active)
+        except Exception as e:
+            logger.warning("OBS is_recording failed (%s); marking disconnected", e)
+            self._mark_disconnected()
+            return False
 
     def start_record(self) -> bool:
         """Start recording if not already active. Returns True if it issued start."""
@@ -92,7 +119,14 @@ class ObsClient:
         if self.is_recording():
             logger.info("start_record is a no-op — OBS already recording")
             return False
-        self._req.start_record()
+        if self._req is None:  # is_recording() may have dropped a dead link
+            return False
+        try:
+            self._req.start_record()
+        except Exception as e:
+            logger.warning("start_record failed (%s); marking disconnected", e)
+            self._mark_disconnected()
+            return False
         logger.info("OBS StartRecord sent")
         return True
 
@@ -104,7 +138,14 @@ class ObsClient:
         if not self.is_recording():
             logger.info("stop_record is a no-op — OBS not recording")
             return None
-        response = self._req.stop_record()
+        if self._req is None:  # is_recording() may have dropped a dead link
+            return None
+        try:
+            response = self._req.stop_record()
+        except Exception as e:
+            logger.warning("stop_record failed (%s); marking disconnected", e)
+            self._mark_disconnected()
+            return None
         output_path = getattr(response, "output_path", None)
         logger.info("OBS StopRecord sent (output_path=%s)", output_path)
         return output_path

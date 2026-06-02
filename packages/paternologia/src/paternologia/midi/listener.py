@@ -2,6 +2,7 @@
 # ABOUTME: Listens for Program Change messages and publishes events via EventBus.
 
 import logging
+from collections.abc import Callable
 
 import rtmidi
 
@@ -30,23 +31,35 @@ class MidiListener:
         self._bridge = bridge
         self._midi_ins: list[rtmidi.MidiIn] = []
         self._device_name: str | None = None
-        self._on_record_trigger = None
+        self._on_record_trigger: Callable[[str], None] | None = None
         self._trigger_channel: int | None = None
         self._start_note: int | None = None
         self._stop_note: int | None = None
+        self._trigger_port: str | None = None
 
     def configure_record_trigger(
-        self, channel: int, start_note: int, stop_note: int, callback
+        self,
+        channel: int,
+        start_note: int,
+        stop_note: int,
+        callback: Callable[[str], None],
+        port: str | None = None,
     ) -> None:
         """Wire PACER record triggers: Note On(start/stop) on `channel` -> callback.
 
         callback is invoked from the rtmidi C thread with "start" / "stop"; the
         caller is responsible for marshalling off this thread (network I/O).
+
+        When ``port`` is set, only Note On messages arriving on a port whose name
+        contains that substring (e.g. "MIDI2") fire the trigger — so a stray
+        note 94/93 on a different PACER port can't start/stop recording. ``None``
+        accepts the trigger on any open port.
         """
         self._trigger_channel = channel
         self._start_note = start_note
         self._stop_note = stop_note
         self._on_record_trigger = callback
+        self._trigger_port = port
 
     @property
     def song_index(self) -> SongMidiIndex:
@@ -79,10 +92,16 @@ class MidiListener:
             try:
                 midi_in = rtmidi.MidiIn()
                 midi_in.open_port(port_idx)
-                midi_in.set_callback(self._callback)
+                try:
+                    port_name = midi_in.get_port_name(port_idx)
+                except Exception:
+                    port_name = device_name
+                # Pass the port name as callback data so record-trigger scoping
+                # can tell which physical PACER port a note arrived on.
+                midi_in.set_callback(self._callback, data=port_name)
                 self._midi_ins.append(midi_in)
                 logger.info(
-                    "MIDI listener started on port %d (%s)", port_idx, device_name
+                    "MIDI listener started on port %d (%s)", port_idx, port_name
                 )
             except Exception as e:
                 logger.warning("Failed to open MIDI port %d: %s", port_idx, e)
@@ -93,7 +112,7 @@ class MidiListener:
         """Start listening on a virtual MIDI port (for testing)."""
         midi_in = rtmidi.MidiIn()
         midi_in.open_virtual_port(port_name)
-        midi_in.set_callback(self._callback)
+        midi_in.set_callback(self._callback, data=port_name)
         self._midi_ins.append(midi_in)
         logger.info("MIDI listener started on virtual port '%s'", port_name)
 
@@ -127,8 +146,24 @@ class MidiListener:
             logger.info("PACER '%s' reappeared; reopening inputs", self._device_name)
             self.start(self._device_name)
 
+    def _trigger_port_matches(self, data) -> bool:
+        """True if the record trigger is allowed on the port that delivered it."""
+        if self._trigger_port is None:
+            return True
+        return data is not None and self._trigger_port.upper() in str(data).upper()
+
     def _callback(self, event, data=None) -> None:
-        """rtmidi callback - called from a separate thread."""
+        """rtmidi callback - runs on a separate C thread.
+
+        Wraps the handler so no exception escapes into the rtmidi C thread (which
+        could silently kill MIDI input). ``data`` is the originating port name.
+        """
+        try:
+            self._handle(event, data)
+        except Exception as e:
+            logger.warning("MIDI callback error: %s", e)
+
+    def _handle(self, event, data) -> None:
         message, _deltatime = event
         if not message:
             return
@@ -136,17 +171,23 @@ class MidiListener:
         status = message[0]
 
         # Fan-out (Model A): relay everything except System Real-Time to the
-        # bridge so Bitwig sees the full PACER stream (CC/PC/Note triggers).
+        # bridge so Bitwig sees the full PACER stream (CC/PC/Note triggers). A
+        # bridge failure must not skip record-trigger detection below.
         if self._bridge is not None and status < _SYSTEM_REALTIME_MIN:
-            self._bridge.send(message)
+            try:
+                self._bridge.send(message)
+            except Exception as e:
+                logger.warning("bridge fan-out failed: %s", e)
 
-        # Record triggers: Note On (velocity > 0) on the configured channel/notes.
+        # Record triggers: Note On (velocity > 0) on the configured channel/notes,
+        # optionally scoped to a specific port (e.g. PACER MIDI2).
         if (
             self._on_record_trigger is not None
             and (status & 0xF0) == 0x90
             and len(message) >= 3
             and message[2] > 0
             and (status & 0x0F) == self._trigger_channel
+            and self._trigger_port_matches(data)
         ):
             if message[1] == self._start_note:
                 logger.info("PACER record trigger: START")

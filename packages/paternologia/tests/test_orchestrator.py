@@ -87,3 +87,63 @@ class TestRecordTriggerDetection:
         listener = self._listener()
         # No configure_record_trigger() call.
         self._fire(listener, [0x90, 94, 127])  # must not raise
+
+
+class _RaisingBridge:
+    """A bridge whose send() always fails (e.g. virmidi port torn down)."""
+
+    def send(self, message):
+        raise RuntimeError("virmidi gone")
+
+
+class TestCallbackResilience:
+    """The rtmidi callback must isolate bridge failures and never raise."""
+
+    def _listener(self, bridge=None):
+        return MidiListener(
+            song_index=SongMidiIndex.build([], []),
+            event_bus=EventBus(),
+            bridge=bridge,
+        )
+
+    def test_bridge_failure_does_not_block_record_trigger(self):
+        listener = self._listener(bridge=_RaisingBridge())
+        actions = []
+        listener.configure_record_trigger(0, 94, 93, actions.append)
+        listener._callback(([0x90, 94, 127], 0.0))
+        # Fan-out raised, but the START trigger still fired.
+        assert actions == ["start"]
+
+    def test_callback_never_raises_on_malformed_message(self):
+        listener = self._listener()
+        listener._callback(([], 0.0))  # empty message must not raise
+
+
+class TestRecordTriggerPortScoping:
+    """When a trigger port is configured, only that port may fire it."""
+
+    def _listener(self):
+        return MidiListener(
+            song_index=SongMidiIndex.build([], []), event_bus=EventBus()
+        )
+
+    def test_fires_on_matching_port(self):
+        listener = self._listener()
+        actions = []
+        listener.configure_record_trigger(0, 94, 93, actions.append, port="MIDI2")
+        listener._callback(([0x90, 94, 127], 0.0), "PACER MIDI2 48:1")
+        assert actions == ["start"]
+
+    def test_ignored_on_other_port(self):
+        listener = self._listener()
+        actions = []
+        listener.configure_record_trigger(0, 94, 93, actions.append, port="MIDI2")
+        listener._callback(([0x90, 94, 127], 0.0), "PACER MIDI1 48:0")
+        assert actions == []
+
+    def test_none_port_accepts_any(self):
+        listener = self._listener()
+        actions = []
+        listener.configure_record_trigger(0, 94, 93, actions.append)
+        listener._callback(([0x90, 94, 127], 0.0), "PACER MIDI1 48:0")
+        assert actions == ["start"]

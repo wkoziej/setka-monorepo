@@ -294,6 +294,23 @@ class TestPacerConfig:
         with pytest.raises(ValidationError):
             PacerConfig(amidi_timeout_seconds=31)
 
+    def test_default_record_notes_differ(self):
+        """Defaults: start 94 / stop 93, no trigger-port scoping."""
+        config = PacerConfig()
+        assert config.record_start_note == 94
+        assert config.record_stop_note == 93
+        assert config.record_trigger_port is None
+
+    def test_equal_record_notes_rejected(self):
+        """start == stop would make stop unreachable, so it is rejected."""
+        with pytest.raises(ValidationError):
+            PacerConfig(record_start_note=94, record_stop_note=94)
+
+    def test_custom_trigger_port(self):
+        """A trigger-port substring scopes which port may fire the trigger."""
+        config = PacerConfig(record_trigger_port="MIDI2")
+        assert config.record_trigger_port == "MIDI2"
+
 
 class TestSongMetadataWithPacerExport:
     """Tests for SongMetadata with pacer_export field."""

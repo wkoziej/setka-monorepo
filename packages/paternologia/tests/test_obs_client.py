@@ -129,3 +129,67 @@ def test_state_synced_on_connect_while_recording():
     client, _req, _ = _client(req=FakeReq(recording=True))
     client.connect()
     assert client.is_recording() is True
+
+
+class DeadReq:
+    """A ReqClient whose socket has silently died — every call raises."""
+
+    def get_record_status(self):
+        raise ConnectionError("websocket closed")
+
+    def start_record(self):
+        raise ConnectionError("websocket closed")
+
+    def stop_record(self):
+        raise ConnectionError("websocket closed")
+
+    def disconnect(self):
+        pass
+
+
+def test_disconnect_resets_state():
+    client, _req, _ = _client()
+    client.connect()
+    client.disconnect()
+    assert client.connected is False
+
+
+def test_is_recording_failure_marks_disconnected():
+    client, _req, _ = _client(req=DeadReq())
+    client.connect()
+    assert client.is_recording() is False
+    assert client.connected is False  # link drop detected
+
+
+def test_start_record_failure_marks_disconnected():
+    client, _req, _ = _client(req=DeadReq())
+    client.connect()
+    assert client.start_record() is False
+    assert client.connected is False
+
+
+def test_ensure_connected_reconnects_after_silent_drop():
+    """Sticky 'connected' is corrected: a dead socket triggers a reconnect."""
+    reqs = [DeadReq(), FakeReq(recording=False)]
+    events = [FakeEvent(), FakeEvent()]
+
+    def req_factory(h, p, w):
+        return reqs.pop(0)
+
+    def event_factory(h, p, w):
+        return events.pop(0)
+
+    client = ObsClient(req_factory=req_factory, event_factory=event_factory)
+    assert client.connect() is True  # first (dead) client
+    # Liveness probe hits the dead socket, disconnects, then reconnects to the
+    # healthy client.
+    assert client.ensure_connected() is True
+    assert client.connected is True
+    assert client.is_recording() is False  # served by the fresh client
+
+
+def test_ensure_connected_when_down_connects():
+    client, _req, _ = _client()
+    assert client.connected is False
+    assert client.ensure_connected() is True
+    assert client.connected is True

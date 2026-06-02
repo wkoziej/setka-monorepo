@@ -18,6 +18,7 @@ from paternologia.midi.events import EventBus
 from paternologia.midi.index import SongMidiIndex
 from paternologia.midi.listener import MidiListener
 from paternologia.models import PacerConfig
+from paternologia.recording.dispatcher import RecordDispatcher
 from paternologia.recording.obs_client import ObsClient
 from paternologia.recording.orchestrator import RecordingOrchestrator
 from paternologia.routers import (
@@ -28,7 +29,7 @@ from paternologia.routers import (
     songs_router,
 )
 
-# Configure logging to show ERROR and above
+# Configure logging at DEBUG for live diagnostics (journald captures the unit).
 logging.basicConfig(
     level=logging.DEBUG, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
@@ -64,23 +65,37 @@ def _sd_notify(message: str) -> None:
         logger.debug("sd_notify failed: %s", e)
 
 
+async def _watch_tick(app: FastAPI) -> None:
+    """One watcher cycle: ping the watchdog first, then maintain subsystems.
+
+    The watchdog ping is sent FIRST and unconditionally: an OBS or PACER fault
+    must never starve WATCHDOG=1 and let systemd kill the unit (which would tear
+    down the latency-critical MIDI fan-out). Subsystem maintenance runs afterwards
+    in isolated try blocks, and the (possibly blocking) OBS reconnect is pushed
+    off the event loop so it can never delay the ping above.
+    """
+    app.state.last_heartbeat_ts = time.time()
+    _sd_notify("WATCHDOG=1")
+    try:
+        listener = app.state.midi_listener
+        if listener is not None:
+            listener.poll_reconnect()
+    except Exception as e:
+        logger.warning("PACER replug poll error: %s", e)
+    try:
+        obs = getattr(app.state, "obs_client", None)
+        if obs is not None:
+            await asyncio.to_thread(obs.ensure_connected)
+            app.state.obs_connected = obs.connected
+    except Exception as e:
+        logger.warning("OBS maintenance error: %s", e)
+
+
 async def _replug_heartbeat_watcher(app: FastAPI) -> None:
     """Reopen PACER after replug and ping the systemd watchdog periodically."""
     while True:
         await asyncio.sleep(_WATCHER_INTERVAL_SEC)
-        try:
-            listener = app.state.midi_listener
-            if listener is not None:
-                listener.poll_reconnect()
-            obs = getattr(app.state, "obs_client", None)
-            if obs is not None:
-                if not obs.connected:
-                    obs.connect()
-                app.state.obs_connected = obs.connected
-            app.state.last_heartbeat_ts = time.time()
-            _sd_notify("WATCHDOG=1")
-        except Exception as e:  # never let the supervisor loop die
-            logger.warning("replug/heartbeat watcher error: %s", e)
+        await _watch_tick(app)
 
 
 @asynccontextmanager
@@ -97,14 +112,13 @@ async def lifespan(app: FastAPI):
     midi_index = _build_midi_index(storage)
     app.state.midi_index = midi_index
 
-    # Bridge (Model A fan-out): create the virtual output port first so Bitwig
-    # can subscribe even before/without a physical PACER being present.
     app.state.obs_connected = False
     app.state.last_heartbeat_ts = None
     app.state.midi_bridge = None
     app.state.midi_listener = None
     app.state.obs_client = None
     app.state.recording_orchestrator = None
+    app.state.record_dispatcher = None
     watcher: asyncio.Task | None = None
 
     if os.environ.get("PATERNOLOGIA_DISABLE_MIDI"):
@@ -156,22 +170,21 @@ async def lifespan(app: FastAPI):
             orchestrator = RecordingOrchestrator(obs_client)
             app.state.recording_orchestrator = orchestrator
 
-            # PACER record triggers run in the rtmidi C thread; marshal to the
-            # loop and run the (blocking) OBS call off both threads.
+            # PACER record triggers run in the rtmidi C thread and routinely
+            # double (footswitch bounce). The dispatcher marshals each onto the
+            # loop and serializes them through a single worker, so two near-
+            # simultaneous "start" notes can't race the OBS idempotency check.
             loop = asyncio.get_running_loop()
-
-            def _dispatch_record(action: str) -> None:
-                target = orchestrator.start if action == "start" else orchestrator.stop
-                asyncio.create_task(asyncio.to_thread(target))
-
-            def _record_trigger(action: str) -> None:
-                loop.call_soon_threadsafe(_dispatch_record, action)
+            dispatcher = RecordDispatcher(loop, orchestrator)
+            dispatcher.start_consumer()
+            app.state.record_dispatcher = dispatcher
 
             listener.configure_record_trigger(
                 pacer_config.record_trigger_channel,
                 pacer_config.record_start_note,
                 pacer_config.record_stop_note,
-                _record_trigger,
+                dispatcher.submit,
+                port=pacer_config.record_trigger_port,
             )
 
         watcher = asyncio.create_task(_replug_heartbeat_watcher(app))
@@ -188,6 +201,8 @@ async def lifespan(app: FastAPI):
             pass
     if app.state.midi_listener is not None:
         app.state.midi_listener.stop()
+    if app.state.record_dispatcher is not None:
+        await app.state.record_dispatcher.aclose()
     if app.state.midi_bridge is not None:
         app.state.midi_bridge.close()
     if app.state.obs_client is not None:
