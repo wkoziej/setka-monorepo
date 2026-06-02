@@ -31,7 +31,7 @@ impl ProcessRunner {
         log::info!("🎵 Running beatrix analyze: audio={}, output={}", audio_path.display(), analysis_dir.display());
 
         let mut cmd = AsyncCommand::new(&self.uv_path);
-        cmd.args(&["run", "--package", "beatrix", "beatrix"])
+        cmd.args(&["run", "--package", "beatrix", "beatrix", "analyze"])
             .arg(&audio_path)
             .arg(&analysis_dir)
             .current_dir(&self.workspace_root);
@@ -254,7 +254,7 @@ mod tests {
         let recording_path = temp_dir.path().join("test_recording");
         fs::create_dir_all(&recording_path).unwrap();
 
-        let result = runner.run_cinemon_render(&recording_path, "beat-switch").await;
+        let result = runner.run_cinemon_render(&recording_path, "beat-switch", None).await;
 
         // Should not panic and should return some result
         assert!(result.is_ok());
