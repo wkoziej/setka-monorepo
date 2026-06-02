@@ -1,0 +1,12 @@
+# ABOUTME: Konfiguracja połączenia z OBS przez obs-websocket v5.
+# ABOUTME: Włącz w OBS: Tools → WebSocket Server Settings → Enable + ustaw hasło tutaj.
+
+# Czy paternologia steruje nagrywaniem OBS (start/stop na trigger PACER).
+enabled: true
+
+# Host i port serwera obs-websocket (domyślnie localhost:4455).
+host: localhost
+port: 4455
+
+# Hasło z OBS → WebSocket Server Settings (puste = brak uwierzytelnienia).
+password: ""

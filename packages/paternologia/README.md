@@ -55,6 +55,26 @@ jako wejścia — to usuwa błąd `Device or resource busy` (EBUSY). Record mapu
 
 Host Pythona musi być **natywny** (nie Flatpak).
 
+### Nagrywanie OBS (one-button)
+
+paternologia steruje nagrywaniem OBS przez **obs-websocket v5** (`obsws-python`).
+Dedykowane przyciski PACER (noty z MIDI2) startują i zatrzymują nagranie:
+
+- **START** = Note 94 → `OBS StartRecord` (+ ta sama nota mostem do Bitwiga → Record).
+- **STOP** = Note 93 → `OBS StopRecord`.
+
+Konfiguracja w `data/obs.yaml` (host/port/hasło, `enabled`) oraz w `pacer.yaml`
+(`record_trigger_channel`, `record_start_note`, `record_stop_note`). Włącz w OBS:
+**Tools → WebSocket Server Settings → Enable** i wpisz hasło do `obs.yaml`.
+
+> „One button" = **dwa nieskoordynowane triggery**: OBS startuje kodem (websocket,
+> asynchronicznie + reconnect), Bitwig dostaje tę samą notę mostem (natychmiast,
+> passthrough). Jeśli OBS jest rozłączony przy wciśnięciu — Bitwig nagrywa, OBS nie.
+> `/health` (`obs_connected`) ujawnia rozjazd. Start nie jest atomowy.
+
+Komendy są **idempotentne** (powtórny START w trakcie nagrania = no-op) i izolowane:
+awaria OBS nie wywala listenera MIDI (fan-out do Bitwiga to ścieżka krytyczna live).
+
 ### Usługa systemd (--user)
 
 ```bash

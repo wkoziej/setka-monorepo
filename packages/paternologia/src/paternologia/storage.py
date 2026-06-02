@@ -5,7 +5,7 @@ from pathlib import Path
 
 import yaml
 
-from paternologia.models import Device, DevicesConfig, PacerConfig, Song
+from paternologia.models import Device, DevicesConfig, ObsConfig, PacerConfig, Song
 
 
 class Storage:
@@ -16,6 +16,7 @@ class Storage:
         self.devices_file = self.data_dir / "devices.yaml"
         self.songs_dir = self.data_dir / "songs"
         self.pacer_config_file = self.data_dir / "pacer.yaml"
+        self.obs_config_file = self.data_dir / "obs.yaml"
         self.songs_order_file = self.data_dir / "songs_order.yaml"
 
     def _ensure_dirs(self) -> None:
@@ -154,6 +155,16 @@ class Storage:
             return None
 
         return PacerConfig.model_validate(data)
+
+    def get_obs_config(self) -> ObsConfig:
+        """Load OBS websocket config from obs.yaml (defaults when missing)."""
+        if not self.obs_config_file.exists():
+            return ObsConfig()
+
+        with open(self.obs_config_file, encoding="utf-8") as f:
+            data = yaml.safe_load(f) or {}
+
+        return ObsConfig.model_validate(data)
 
     def save_pacer_config(self, config: PacerConfig) -> None:
         """Save Pacer configuration to pacer.yaml."""

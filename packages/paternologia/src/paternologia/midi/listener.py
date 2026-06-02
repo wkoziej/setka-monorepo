@@ -30,6 +30,23 @@ class MidiListener:
         self._bridge = bridge
         self._midi_ins: list[rtmidi.MidiIn] = []
         self._device_name: str | None = None
+        self._on_record_trigger = None
+        self._trigger_channel: int | None = None
+        self._start_note: int | None = None
+        self._stop_note: int | None = None
+
+    def configure_record_trigger(
+        self, channel: int, start_note: int, stop_note: int, callback
+    ) -> None:
+        """Wire PACER record triggers: Note On(start/stop) on `channel` -> callback.
+
+        callback is invoked from the rtmidi C thread with "start" / "stop"; the
+        caller is responsible for marshalling off this thread (network I/O).
+        """
+        self._trigger_channel = channel
+        self._start_note = start_note
+        self._stop_note = stop_note
+        self._on_record_trigger = callback
 
     @property
     def song_index(self) -> SongMidiIndex:
@@ -122,6 +139,21 @@ class MidiListener:
         # bridge so Bitwig sees the full PACER stream (CC/PC/Note triggers).
         if self._bridge is not None and status < _SYSTEM_REALTIME_MIN:
             self._bridge.send(message)
+
+        # Record triggers: Note On (velocity > 0) on the configured channel/notes.
+        if (
+            self._on_record_trigger is not None
+            and (status & 0xF0) == 0x90
+            and len(message) >= 3
+            and message[2] > 0
+            and (status & 0x0F) == self._trigger_channel
+        ):
+            if message[1] == self._start_note:
+                logger.info("PACER record trigger: START")
+                self._on_record_trigger("start")
+            elif message[1] == self._stop_note:
+                logger.info("PACER record trigger: STOP")
+                self._on_record_trigger("stop")
 
         # Program Change: 0xCn where n is channel (0-15)
         if len(message) < 2 or (status & 0xF0) != 0xC0:

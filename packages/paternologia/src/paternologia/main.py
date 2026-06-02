@@ -17,6 +17,9 @@ from paternologia.midi.bridge import MidiBridge
 from paternologia.midi.events import EventBus
 from paternologia.midi.index import SongMidiIndex
 from paternologia.midi.listener import MidiListener
+from paternologia.models import PacerConfig
+from paternologia.recording.obs_client import ObsClient
+from paternologia.recording.orchestrator import RecordingOrchestrator
 from paternologia.routers import (
     devices_router,
     health_router,
@@ -69,6 +72,11 @@ async def _replug_heartbeat_watcher(app: FastAPI) -> None:
             listener = app.state.midi_listener
             if listener is not None:
                 listener.poll_reconnect()
+            obs = getattr(app.state, "obs_client", None)
+            if obs is not None:
+                if not obs.connected:
+                    obs.connect()
+                app.state.obs_connected = obs.connected
             app.state.last_heartbeat_ts = time.time()
             _sd_notify("WATCHDOG=1")
         except Exception as e:  # never let the supervisor loop die
@@ -91,14 +99,16 @@ async def lifespan(app: FastAPI):
 
     # Bridge (Model A fan-out): create the virtual output port first so Bitwig
     # can subscribe even before/without a physical PACER being present.
-    app.state.obs_connected = False  # set by the OBS client (plan 001 Unit 5)
+    app.state.obs_connected = False
     app.state.last_heartbeat_ts = None
     app.state.midi_bridge = None
     app.state.midi_listener = None
+    app.state.obs_client = None
+    app.state.recording_orchestrator = None
     watcher: asyncio.Task | None = None
 
     if os.environ.get("PATERNOLOGIA_DISABLE_MIDI"):
-        logger.info("MIDI subsystem disabled (PATERNOLOGIA_DISABLE_MIDI set)")
+        logger.info("MIDI/OBS subsystem disabled (PATERNOLOGIA_DISABLE_MIDI set)")
     else:
         # Bridge (Model A fan-out): create the virtual output port first so Bitwig
         # can subscribe even before/without a physical PACER being present.
@@ -108,8 +118,8 @@ async def lifespan(app: FastAPI):
 
         # Start MIDI listener (graceful degradation if no device). Always keep the
         # listener object so the replug watcher can reopen it when PACER returns.
-        pacer_config = storage.get_pacer_config()
-        device_name = pacer_config.device_name if pacer_config else "PACER"
+        pacer_config = storage.get_pacer_config() or PacerConfig()
+        device_name = pacer_config.device_name
 
         listener = MidiListener(
             song_index=midi_index, event_bus=event_bus, bridge=bridge
@@ -125,6 +135,44 @@ async def lifespan(app: FastAPI):
                 )
         except Exception as e:
             logger.warning("MIDI listener failed to start: %s", e)
+
+        # OBS recording orchestration (graceful if OBS/websocket absent).
+        obs_config = storage.get_obs_config()
+        if obs_config.enabled:
+            obs_client = ObsClient(
+                host=obs_config.host,
+                port=obs_config.port,
+                password=obs_config.password,
+                on_record_state=lambda data: logger.info(
+                    "OBS record state: active=%s state=%s",
+                    getattr(data, "output_active", None),
+                    getattr(data, "output_state", None),
+                ),
+            )
+            obs_client.connect()
+            app.state.obs_client = obs_client
+            app.state.obs_connected = obs_client.connected
+
+            orchestrator = RecordingOrchestrator(obs_client)
+            app.state.recording_orchestrator = orchestrator
+
+            # PACER record triggers run in the rtmidi C thread; marshal to the
+            # loop and run the (blocking) OBS call off both threads.
+            loop = asyncio.get_running_loop()
+
+            def _dispatch_record(action: str) -> None:
+                target = orchestrator.start if action == "start" else orchestrator.stop
+                asyncio.create_task(asyncio.to_thread(target))
+
+            def _record_trigger(action: str) -> None:
+                loop.call_soon_threadsafe(_dispatch_record, action)
+
+            listener.configure_record_trigger(
+                pacer_config.record_trigger_channel,
+                pacer_config.record_start_note,
+                pacer_config.record_stop_note,
+                _record_trigger,
+            )
 
         watcher = asyncio.create_task(_replug_heartbeat_watcher(app))
         _sd_notify("READY=1")
@@ -142,6 +190,8 @@ async def lifespan(app: FastAPI):
         app.state.midi_listener.stop()
     if app.state.midi_bridge is not None:
         app.state.midi_bridge.close()
+    if app.state.obs_client is not None:
+        app.state.obs_client.disconnect()
 
 
 app = FastAPI(

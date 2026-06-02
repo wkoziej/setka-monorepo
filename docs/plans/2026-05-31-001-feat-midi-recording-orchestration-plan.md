@@ -427,7 +427,7 @@ zdrowy; ubicie procesu → automatyczny restart; `/health` odzwierciedla rzeczyw
 
 ### Faza 3 — Orkiestracja nagrywania
 
-- [ ] **Unit 5: Klient obs-websocket (start/stop + stan nagrania)**
+- [x] **Unit 5: Klient obs-websocket (start/stop + stan nagrania)**
 
 **Goal:** paternologia łączy się z OBS, startuje/zatrzymuje nagrywanie idempotentnie i zna
 autorytatywny moment startu z eventu STARTED.
@@ -475,7 +475,7 @@ config jak `storage.py`.
 **Verification:** wobec atrapy/realnego OBS: `start_record` tworzy plik, event STARTED emituje
 „recording-started", `stop_record` zwraca ścieżkę; reconnect odzyskuje stan.
 
-- [ ] **Unit 6: Trigger przyciskami PACER (start/stop OBS + Bitwig)**
+- [x] **Unit 6: Trigger przyciskami PACER (start/stop OBS + Bitwig)**
 
 **Goal:** dedykowany przycisk PACER startuje OBS (Unit 5) i record w Bitwigu (przez mostek +
 MIDI-learn); drugi przycisk zatrzymuje oba.

@@ -127,6 +127,35 @@ class PacerConfig(BaseModel):
         le=100,
         description="Interwał między wiadomościami SysEx w ms (CRITICAL: 20 wymagane!)",
     )
+    record_trigger_channel: int = Field(
+        default=0,
+        ge=0,
+        le=15,
+        description="Kanał MIDI (0-15) not triggera record na PACER (MIDI2 = ch1 = 0)",
+    )
+    record_start_note: int = Field(
+        default=94,
+        ge=0,
+        le=127,
+        description="Nota startująca nagranie OBS + Bitwig (PACER MIDI2)",
+    )
+    record_stop_note: int = Field(
+        default=93,
+        ge=0,
+        le=127,
+        description="Nota zatrzymująca nagranie OBS + Bitwig (PACER MIDI2)",
+    )
+
+
+class ObsConfig(BaseModel):
+    """Połączenie z OBS przez obs-websocket v5."""
+
+    enabled: bool = Field(
+        default=True, description="Czy paternologia steruje nagrywaniem OBS"
+    )
+    host: str = Field(default="localhost", description="Host obs-websocket")
+    port: int = Field(default=4455, ge=1, le=65535, description="Port obs-websocket")
+    password: str = Field(default="", description="Hasło obs-websocket (puste = brak)")
 
 
 class SongMetadata(BaseModel):
