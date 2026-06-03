@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# ABOUTME: Czeka aż serwer paternologii odpowie, potem otwiera /live w brave kiosk.
+# ABOUTME: Czeka aż serwer paternologii odpowie, potem otwiera /live w google-chrome --kiosk.
 # ABOUTME: Uruchamiany jako kiosk.service (członek live-recording.target).
 set -euo pipefail
 URL="http://localhost:8000/live"
@@ -10,14 +10,14 @@ for _ in $(seq 1 60); do
   sleep 0.5
 done
 
-# Osobny profil wymusza niezależną instancję kiosku, nawet gdy brave już działa
-# (bez tego URL trafia do istniejącego okna i --kiosk jest ignorowany).
-# Profil MUSI leżeć w obszarze zapisywalnym dla snapa (~/snap/brave/common) — Brave to snap
-# (/snap/bin/brave); --user-data-dir poza confinementem (np. ~/.local/share) jest ignorowany,
-# brave forwarduje URL do zwykłej przeglądarki i wychodzi, a okno kiosku się nie pojawia.
-# --class=setka-kiosk nadaje oknu stały, unikalny WM_CLASS — pewny uchwyt dla układania
-# okien (setka-live show), nie kolidujący ze zwykłym Brave operatora.
-exec brave --kiosk --noerrdialogs \
+# Używamy nie-snapowego google-chrome (/opt/google/chrome): snap Brave dwoił pozycję okna
+# (wmctrl -e lądował poza ekranem) i odłączał się od kiosk.service (Type=exec → inactive).
+# Osobny profil wymusza niezależną instancję kiosku, nawet gdy przeglądarka już działa
+# (bez tego URL trafia do istniejącego okna i --kiosk jest ignorowany). Bez confinementu
+# profil może leżeć w ~/.local/share. --class=setka-kiosk nadaje oknu stały, unikalny WM_CLASS —
+# pewny uchwyt dla układania okien (setka-live show), nie kolidujący ze zwykłą przeglądarką.
+exec google-chrome --kiosk --noerrdialogs \
+  --no-first-run --no-default-browser-check \
   --disable-session-crashed-bubble --disable-infobars \
   --class=setka-kiosk \
-  --user-data-dir="$HOME/snap/brave/common/paternologia-kiosk" "$URL"
+  --user-data-dir="$HOME/.local/share/paternologia-kiosk" "$URL"
