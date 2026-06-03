@@ -1,0 +1,8 @@
+# ABOUTME: Target spinający warstwę live (OBS + Bitwig + kiosk) w tryb na żądanie.
+# ABOUTME: Bez WantedBy=default.target — nic nie wstaje przy logowaniu, dopiero `setka-live start`.
+
+[Unit]
+Description=Środowisko nagrań live (OBS + Bitwig + kiosk paternologii)
+# Members odpalają się przez własne WantedBy=live-recording.target; preflight wciągany
+# tranzytywnie przez ich Requires=. Sam target nie ma logiki.
+Wants=obs.service bitwig.service kiosk.service

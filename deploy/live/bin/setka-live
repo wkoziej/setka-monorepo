@@ -1,0 +1,76 @@
+#!/usr/bin/env bash
+# ABOUTME: Komenda operatorska warstwy live — start/stop/restart/status całego środowiska nagrań.
+# ABOUTME: Owija pułapki: restart = stop+start (nie `restart .target`); nigdy nie tyka paternologii ani PipeWire.
+set -euo pipefail
+
+# Indirekcja przez env wyłącznie dla testów — domyślnie realny systemctl --user.
+SYSTEMCTL_BIN="${SYSTEMCTL_BIN:-systemctl}"
+HEALTH_URL="${HEALTH_URL:-http://127.0.0.1:8000/health}"
+
+TARGET="live-recording.target"
+MEMBERS="live-preflight.service obs.service bitwig.service kiosk.service"
+
+sctl() { "$SYSTEMCTL_BIN" --user "$@"; }
+
+usage() {
+  cat >&2 <<EOF
+Użycie: setka-live <start|stop|restart|status>
+
+  start    postaw komplet live (OBS + Bitwig + kiosk) po preflighcie
+  stop     zatrzymaj całą warstwę GUI
+  restart  całościowy restart warstwy GUI (stop+start; re-weryfikuje preflight)
+  status   stan członków + paternologia /health + środowisko graficzne
+
+Most MIDI (paternologia.service) jest poza zakresem — rzadki restart ręcznie:
+  systemctl --user restart paternologia.service
+EOF
+}
+
+cmd_start() {
+  sctl start "$TARGET"
+}
+
+cmd_stop() {
+  sctl stop "$TARGET"
+}
+
+cmd_restart() {
+  # NIE `systemctl restart <target>` — to restartuje tylko pusty target, NIE jego członków
+  # (Wants/Requires to zależności startu, nie propagacja restartu; systemd #13841/#24068/#32382).
+  # stop pociąga członków przez PartOf=; jawnie dorzucamy live-preflight.service, by start
+  # przeszedł ponowny cykl preflightu (operator restartuje BO coś się rozjechało — audio/MIDI
+  # mają być RE-WERYFIKOWANE, nie pominięte przez wiszący active(exited)).
+  sctl stop "$TARGET" live-preflight.service
+  sctl start "$TARGET"
+}
+
+cmd_status() {
+  echo "=== członkowie live-recording.target ==="
+  # shellcheck disable=SC2086  # MEMBERS to celowo dzielona, stała lista wewnętrzna.
+  sctl status --no-pager $MEMBERS || true
+  echo
+  echo "=== paternologia /health ==="
+  if health="$(curl -sf "$HEALTH_URL" 2>/dev/null)"; then
+    echo "$health"
+  else
+    echo "/health niedostępne ($HEALTH_URL) — paternologia.service może nie żyć"
+  fi
+  echo
+  echo "=== środowisko graficzne (diagnostyka) ==="
+  # X11 na tej maszynie: DISPLAY ma być obecny. Jego brak = GUI usługi nie wstaną
+  # (ConditionEnvironment=DISPLAY). Po ewentualnym przejściu na Wayland szukaj WAYLAND_DISPLAY.
+  sctl show-environment 2>/dev/null | grep -E '^(DISPLAY|WAYLAND_DISPLAY)=' \
+    || echo "brak DISPLAY/WAYLAND_DISPLAY w activation env — GUI nie wstanie"
+}
+
+main() {
+  case "${1:-}" in
+    start)   cmd_start ;;
+    stop)    cmd_stop ;;
+    restart) cmd_restart ;;
+    status)  cmd_status ;;
+    *)       usage; exit 2 ;;
+  esac
+}
+
+main "$@"
