@@ -11,7 +11,10 @@ ConditionEnvironment=DISPLAY
 [Service]
 Type=exec
 # Main PID = bwrap (flatpak), więc Type=exec/simple — nie forking.
-ExecStart=/usr/bin/flatpak run com.bitwig.BitwigStudio
+# Otwiera od razu szablon live (nowy projekt z szablonu — nie nadpisuje szablonu), zamiast pytać
+# w dashboardzie „co otworzyć". Flatpak ma filesystem=host, więc widzi ~/Bitwig Studio. Ścieżka
+# ze spacjami w cudzysłowie (systemd traktuje ją jako jeden argument); %h = katalog domowy.
+ExecStart=/usr/bin/flatpak run com.bitwig.BitwigStudio "%h/Bitwig Studio/Library/Templates/template.bwtemplate"
 # Czyste domknięcie sandboxa flatpaka (ubicie samego cgroup nie zamyka go porządnie).
 ExecStop=/usr/bin/flatpak kill com.bitwig.BitwigStudio
 Restart=no
