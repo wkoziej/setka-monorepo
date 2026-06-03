@@ -13,7 +13,7 @@ async def health(request: Request) -> dict:
     listener = getattr(state, "midi_listener", None)
     bridge = getattr(state, "midi_bridge", None)
     return {
-        "pacer_input_open": bool(listener is not None and listener.is_active),
+        "pacer_input_open": bool(listener is not None and listener.input_subscribed),
         "bridge_port_active": bool(bridge is not None and bridge.is_active),
         "obs_connected": bool(getattr(state, "obs_connected", False)),
         "last_heartbeat_ts": getattr(state, "last_heartbeat_ts", None),

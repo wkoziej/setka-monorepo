@@ -79,6 +79,57 @@ class TestReplugReconnect:
         listener.poll_reconnect()
         assert calls == ["PACER"]
 
+    def test_resubscribes_when_handles_stale(self, monkeypatch):
+        """Ports present and handles open, but ALSA subscription lost -> reopen.
+
+        This is the re-enumeration trap: rtmidi keeps the MidiIn handle "open"
+        (is_active stays True) after PACER re-enumerates, so the old code never
+        re-subscribed. The honest signal is pacer_input_subscribed.
+        """
+        listener = self._listener()
+        listener._device_name = "PACER"
+        listener._midi_ins = [object()]  # handles look open
+        monkeypatch.setattr(listener_mod, "find_rtmidi_ports", lambda name: [0, 1])
+        monkeypatch.setattr(listener_mod, "pacer_input_subscribed", lambda name: False)
+        events = []
+        monkeypatch.setattr(listener, "stop", lambda: events.append("stop"))
+        monkeypatch.setattr(
+            listener, "start", lambda name: events.append("start") or True
+        )
+        listener.poll_reconnect()
+        assert events == ["stop", "start"]
+
+    def test_noop_when_subscription_alive(self, monkeypatch):
+        """Active and still subscribed -> leave the open handles untouched."""
+        listener = self._listener()
+        listener._device_name = "PACER"
+        listener._midi_ins = [object()]
+        monkeypatch.setattr(listener_mod, "find_rtmidi_ports", lambda name: [0, 1])
+        monkeypatch.setattr(listener_mod, "pacer_input_subscribed", lambda name: True)
+        events = []
+        monkeypatch.setattr(listener, "stop", lambda: events.append("stop"))
+        monkeypatch.setattr(
+            listener, "start", lambda name: events.append("start") or True
+        )
+        listener.poll_reconnect()
+        assert events == []
+
+    def test_input_subscribed_false_when_inactive(self):
+        """No open handle -> input_subscribed is False without touching ALSA."""
+        listener = self._listener()
+        listener._device_name = "PACER"
+        assert listener.input_subscribed is False
+
+    def test_input_subscribed_reflects_alsa(self, monkeypatch):
+        """With handles open, input_subscribed delegates to the ALSA check."""
+        listener = self._listener()
+        listener._device_name = "PACER"
+        listener._midi_ins = [object()]
+        monkeypatch.setattr(listener_mod, "pacer_input_subscribed", lambda name: True)
+        assert listener.input_subscribed is True
+        monkeypatch.setattr(listener_mod, "pacer_input_subscribed", lambda name: False)
+        assert listener.input_subscribed is False
+
     def test_releases_when_unplugged(self, monkeypatch):
         """Active listener releases its handles when the PACER ports disappear."""
         listener = self._listener()

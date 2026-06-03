@@ -9,7 +9,7 @@ import rtmidi
 from paternologia.midi.bridge import MidiBridge
 from paternologia.midi.events import EventBus, MidiEvent
 from paternologia.midi.index import SongMidiIndex
-from paternologia.midi.ports import find_rtmidi_ports
+from paternologia.midi.ports import find_rtmidi_ports, pacer_input_subscribed
 
 logger = logging.getLogger(__name__)
 
@@ -74,6 +74,18 @@ class MidiListener:
         """True when at least one hardware input port is currently open."""
         return len(self._midi_ins) > 0
 
+    @property
+    def input_subscribed(self) -> bool:
+        """True only if a port is open AND ALSA still subscribes it to the device.
+
+        Honest signal for /health: ``is_active`` alone stays True after the PACER
+        re-enumerates, even though the subscription is gone (see
+        ``pacer_input_subscribed``).
+        """
+        if not self.is_active or self._device_name is None:
+            return False
+        return pacer_input_subscribed(self._device_name)
+
     def start(self, device_name: str) -> bool:
         """Open ALL ports matching device_name (e.g. PACER MIDI1 + MIDI2).
 
@@ -129,21 +141,37 @@ class MidiListener:
         logger.info("MIDI listener stopped")
 
     def poll_reconnect(self) -> None:
-        """Reopen the PACER inputs after replug, or release stale handles.
+        """Reopen the PACER inputs after replug/re-enumeration, or release them.
 
         ALSA port indices shift on replug, so we re-match by name. The bridge
         output port is unaffected and stays open the whole time.
+
+        Re-enumeration (replug, suspend/resume, card-number change) is the subtle
+        case: rtmidi keeps the MidiIn handle "open" (``is_active`` stays True)
+        while ALSA silently drops the subscription. Handle count alone can't see
+        that, so when ports are present and handles are open we additionally
+        verify the real subscription and reopen if it was lost.
         """
         if self._device_name is None:
             return
         ports_present = bool(find_rtmidi_ports(self._device_name))
-        if self.is_active and not ports_present:
+        if not ports_present:
+            if self.is_active:
+                logger.warning(
+                    "PACER '%s' disappeared; releasing inputs", self._device_name
+                )
+                self.stop()
+            return
+        if not self.is_active:
+            logger.info("PACER '%s' reappeared; reopening inputs", self._device_name)
+            self.start(self._device_name)
+            return
+        if not pacer_input_subscribed(self._device_name):
             logger.warning(
-                "PACER '%s' disappeared; releasing inputs", self._device_name
+                "PACER '%s' input subscription lost (re-enumeration); reopening",
+                self._device_name,
             )
             self.stop()
-        elif not self.is_active and ports_present:
-            logger.info("PACER '%s' reappeared; reopening inputs", self._device_name)
             self.start(self._device_name)
 
     def _trigger_port_matches(self, data) -> bool:
