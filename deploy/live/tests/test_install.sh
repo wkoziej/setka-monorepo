@@ -93,7 +93,30 @@ assert_exit "$rc" 0 "path-warn: BIN_DIR poza PATH = nadal sukces"
 grep -qi 'PATH' "$T6/src/out.log" && pass "path-warn: instalator ostrzega o PATH" \
   || fail "path-warn: brak ostrzeżenia o PATH"
 
-rm -rf "$T1" "$T4" "$T5" "$T6"
+# --- Test 7: brak wmctrl = ostrzeżenie, ale NIE błąd (niefatalna zależność show) ---
+T7="$(mktemp -d)"
+make_src "$T7/src"
+# PATH bez wmctrl → instalator ma ostrzec, lecz dokończyć (układanie okien to tylko nakładka).
+run_install "$T7/src" "$T7/systemd" "$T7/bin" "$T7/autostart" "/usr/bin:/bin"
+rc=$?
+assert_exit "$rc" 0 "wmctrl-missing: brak wmctrl NIE przerywa instalacji (niefatalne)"
+grep -qi 'wmctrl' "$T7/src/out.log" && pass "wmctrl-missing: instalator ostrzega o braku wmctrl" \
+  || fail "wmctrl-missing: brak ostrzeżenia o wmctrl"
+
+# --- Test 8: wmctrl obecny = sukces bez fałszywego ostrzeżenia o instalacji ---
+T8="$(mktemp -d)"
+make_src "$T8/src"
+mkdir -p "$T8/fakebin"
+printf '#!/usr/bin/env bash\nexit 0\n' >"$T8/fakebin/wmctrl"
+chmod +x "$T8/fakebin/wmctrl"
+run_install "$T8/src" "$T8/systemd" "$T8/bin" "$T8/autostart" "$T8/fakebin:/usr/bin:/bin"
+rc=$?
+assert_exit "$rc" 0 "wmctrl-present: instalacja z dostępnym wmctrl = sukces"
+grep -qi 'install wmctrl\|brak wmctrl' "$T8/src/out.log" \
+  && fail "wmctrl-present: zbędne ostrzeżenie o wmctrl mimo obecności" \
+  || pass "wmctrl-present: brak fałszywego ostrzeżenia gdy wmctrl jest"
+
+rm -rf "$T1" "$T4" "$T5" "$T6" "$T7" "$T8"
 
 printf '\n=== %d passed, %d failed ===\n' "$PASS" "$FAIL"
 [ "$FAIL" -eq 0 ]

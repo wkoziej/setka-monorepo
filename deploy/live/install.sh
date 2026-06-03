@@ -71,6 +71,13 @@ main() {
     *) printf 'UWAGA: %s nie jest w PATH — dodaj go, by komendy (np. setka-live) były widoczne.\n' "$BIN_DIR" ;;
   esac
 
+  # wmctrl jest potrzebny tylko dla `setka-live show` (układanie okien). Jego brak NIE blokuje
+  # instalacji unitów/skryptów — to nakładka okienkowa, nie rdzeń nagrywania (FAIL FAST dotyczy
+  # błędów krytycznych, nie braku opcjonalnego narzędzia okiennego). Ostrzegamy, nie przerywamy.
+  if ! command -v wmctrl >/dev/null 2>&1; then
+    printf 'UWAGA: brak wmctrl — "setka-live show" (układanie okien) nie zadziała. Zainstaluj: sudo apt install wmctrl\n'
+  fi
+
   printf 'Gotowe.\n'
 }
 

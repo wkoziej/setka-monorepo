@@ -260,7 +260,10 @@ Each package provides specific commands:
 ```bash
 # 0. Stand up the live recording environment in one shot (OBS + Bitwig + paternologia
 #    kiosk) before recording. On-demand systemd --user target; see deploy/live/README.md.
-#    Holistic restart of the whole GUI layer: `setka-live restart`.
+#    Holistic restart of the whole GUI layer: `setka-live restart`. `setka-live show`
+#    arranges the windows across the two monitors (Bitwig left; OBS + Paternologia right) —
+#    start auto-arranges at the end (best-effort); run show manually if windows drift.
+#    Needs wmctrl on X11 (sudo apt install wmctrl).
 setka-live start
 
 # 1. Extract sources from OBS recording
