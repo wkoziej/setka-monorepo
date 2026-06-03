@@ -1,0 +1,19 @@
+# ABOUTME: Oneshot brama gotowości warstwy live — weryfikuje virmidi + PipeWire 44100 + paternologia /health.
+# ABOUTME: Członkowie GUI mają na niej Requires= + After=, więc brak gotowości twardo blokuje ich start.
+
+[Unit]
+Description=Live preflight — weryfikacja audio/MIDI/paternologii przed startem GUI
+# Most MIDI musi żyć, zanim sprawdzimy /health.
+After=paternologia.service
+# PartOf: stop/restart live-recording.target gasi i odpala preflight od nowa, więc
+# `setka-live restart` realnie RE-WERYFIKUJE warunki (oneshot+RemainAfterExit inaczej
+# zostałby active(exited) i zostałby pominięty).
+PartOf=live-recording.target
+
+[Service]
+Type=oneshot
+# Po sukcesie zostaje active(exited) — Requires= członków jest wtedy spełniony bez ponownego biegu.
+RemainAfterExit=yes
+# Zapas na pełne okno retry/grace wszystkich warunków (virmidi 2s + rate 8s + health 8s + bufor).
+TimeoutStartSec=60
+ExecStart=%h/.local/bin/live-preflight.sh
