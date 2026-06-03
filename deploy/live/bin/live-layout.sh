@@ -74,11 +74,14 @@ layout_window_exists() {
 }
 poll_window_exists() { poll_ok "$GRACE_WINDOW" layout_window_exists "$1"; }
 
-# Ustaw geometrię okna i wyciągnij na wierzch. Zmaksymalizowane okno ignoruje -e, więc najpierw
-# zdejmujemy maksymalizację; -x każe wmctrl interpretować argument jako WM_CLASS (nie tytuł).
+# Ustaw geometrię okna i wyciągnij na wierzch. Zmaksymalizowane LUB pełnoekranowe okno (kiosk
+# startuje w --kiosk = fullscreen) ignoruje -e, więc najpierw zdejmujemy oba stany. wmctrl -b
+# zmienia max 2 właściwości na wywołanie (limit EWMH), stąd fullscreen osobnym wywołaniem.
+# -x każe wmctrl interpretować argument jako WM_CLASS (nie tytuł).
 layout_place() {
   local cls="$1" x="$2" y="$3" w="$4" h="$5"
   "$WMCTRL_BIN" -x -r "$cls" -b remove,maximized_vert,maximized_horz 2>/dev/null || true
+  "$WMCTRL_BIN" -x -r "$cls" -b remove,fullscreen 2>/dev/null || true
   "$WMCTRL_BIN" -x -r "$cls" -e "0,$x,$y,$w,$h"
   "$WMCTRL_BIN" -x -a "$cls"
 }

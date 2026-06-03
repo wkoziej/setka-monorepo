@@ -117,6 +117,11 @@ for cls in obs.obs com.bitwig.BitwigStudio setka-kiosk; do
   grep -q -- "-a $cls" "$WMLOG" && pass "live happy: $cls aktywowany (-a, na wierzch)" \
     || fail "live happy: brak aktywacji $cls"
 done
+# Pełnoekranowe okno (kiosk --kiosk) ignoruje -e — przed ustawieniem geometrii trzeba zdjąć
+# stan fullscreen (osobne -b: EWMH pozwala zmienić max 2 właściwości na wywołanie).
+grep -q -- '-b remove,fullscreen' "$WMLOG" \
+  && pass "live happy: zdejmuje fullscreen przed geometrią (kiosk jest pełnoekranowy)" \
+  || fail "live happy: brak remove,fullscreen"
 
 # --- Integration (cross-layer): współrzędne liczone z podstawionego XRANDR_BIN, nie zaszyte ---
 # Dowód: gdyby zaszyte, zmiana wyjścia xrandr nic by nie dała. Podmieniamy szerokość lewego

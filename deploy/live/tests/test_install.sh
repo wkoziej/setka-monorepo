@@ -96,8 +96,11 @@ grep -qi 'PATH' "$T6/src/out.log" && pass "path-warn: instalator ostrzega o PATH
 # --- Test 7: brak wmctrl = ostrzeżenie, ale NIE błąd (niefatalna zależność show) ---
 T7="$(mktemp -d)"
 make_src "$T7/src"
-# PATH bez wmctrl → instalator ma ostrzec, lecz dokończyć (układanie okien to tylko nakładka).
-run_install "$T7/src" "$T7/systemd" "$T7/bin" "$T7/autostart" "/usr/bin:/bin"
+# Sandbox PATH: tylko narzędzia, których install.sh używa — BEZ wmctrl, niezależnie od tego,
+# czy wmctrl jest zainstalowany w systemie (inaczej test fałszywie zielenił/czerwienił).
+mkdir -p "$T7/nowmctrl"
+for tool in bash mkdir cmp cp install basename date mv; do ln -s "$(command -v "$tool")" "$T7/nowmctrl/"; done
+run_install "$T7/src" "$T7/systemd" "$T7/bin" "$T7/autostart" "$T7/nowmctrl"
 rc=$?
 assert_exit "$rc" 0 "wmctrl-missing: brak wmctrl NIE przerywa instalacji (niefatalne)"
 grep -qi 'wmctrl' "$T7/src/out.log" && pass "wmctrl-missing: instalator ostrzega o braku wmctrl" \
