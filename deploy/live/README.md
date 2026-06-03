@@ -58,16 +58,19 @@ Pułapki:
   `wmctrl -lx` przy żywych oknach i nadpisz przez env. Brak dopasowanego okna → pominięte +
   raport (nie błąd).
 - **Kiosk musi wstać przez `paternologia-kiosk.sh`** (np. `setka-live start`/`restart`), żeby miał
-  klasę `setka-kiosk`. Zwykła Brave to `brave.Brave` — kiosk uruchomiony „ręcznie" nie zostanie
-  rozpoznany (i celowo nie zderza się z prywatną Brave operatora).
+  klasę `setka-kiosk`. Kiosk celowo używa **nie-snapowego `google-chrome`** (`/opt/google/chrome`):
+  snap Brave dwoił raportowaną pozycję okna i odłączał się od `kiosk.service` (`Type=exec` → usługa
+  natychmiast `inactive`, okno osierocone). Świeży profil chrome wymaga `--no-first-run`
+  `--no-default-browser-check`, inaczej zamiast `/live` pokazuje ekran powitalny.
+- **`wmctrl -lG` MYLNIE raportuje geometrię okien Chromium** — pokazuje pozycję ~2× rzeczywistej.
+  Samo ustawianie (`wmctrl -e`) działa poprawnie; weryfikuj WZROKOWO, nie po `wmctrl -lG`. Kiosk
+  faktycznie ląduje w dolnej połowie prawego monitora, mimo że `-lG` zawyża współrzędne.
 - **Geometria** liczona na żywo z `xrandr --listmonitors` (offsety, nie zaszyte nazwy), więc
   przeżywa zamianę kabli/nazw monitorów.
-- **OBS nie trafia pixel-perfect w połowę monitora.** Zweryfikowane na żywo: Bitwig ląduje 1:1,
-  ale OBS ma `gravity: Static`, ramkę ~37 px i wymuszony minimalny rozmiar przez zadokowane
-  panele (bez ich schowania nie zmniejszysz okna nawet myszą) — więc ląduje w prawym górnym
-  obszarze z offsetem, nie idealnie w połowie. To ograniczenie OBS/Muttera, nie błąd układania;
-  okno i tak jest wyciągnięte na wierzch i widoczne. Ewentualna korekta `_NET_FRAME_EXTENTS`
-  w `layout_place` sama tego nie zlikwiduje (offset jest większy niż ramka).
+- **OBS nie zwęża się poniżej swojego minimum** (zadokowane panele wymuszają min-rozmiar; bez ich
+  schowania nie zmniejszysz okna nawet myszą), więc górna połowa prawego monitora może być przez
+  OBS nadpisana większym oknem. To ograniczenie OBS, nie błąd układania — okno i tak jest wyciągane
+  na wierzch i widoczne.
 
 ## Mapa unitów
 
@@ -77,7 +80,7 @@ Pułapki:
 | `live-preflight.service` | oneshot gate: virmidi + PipeWire 44100 + paternologia `/health` |
 | `obs.service` | OBS Studio (`/usr/bin/obs`), `Restart=no` |
 | `bitwig.service` | Bitwig (flatpak), `ExecStop=flatpak kill`, `Restart=no` |
-| `kiosk.service` | `/live` w `brave --kiosk` (osobny `--user-data-dir`), `Restart=no` |
+| `kiosk.service` | `/live` w `google-chrome --kiosk` (nie-snap, osobny `--user-data-dir`), `Restart=no` |
 
 Kolejność: `paternologia.service` → `live-preflight.service` → {`obs`, `bitwig`, `kiosk`}
 (trójka startuje równolegle — OBS i Bitwig są rozdzielne urządzeniowo, nie współdzielą `/dev`).
