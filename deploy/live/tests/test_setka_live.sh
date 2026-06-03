@@ -22,9 +22,20 @@ exit 0
 EOF
 chmod +x "$REC"
 
+# Rejestrator udający live-layout.sh: loguje znacznik do TEGO SAMEGO REC_LOG (widać kolejność
+# względem systemctl) i kończy kodem LAYOUT_RC (domyślnie 0; 1 testuje best-effort w start).
+LAYOUT_REC="$WORK/layout-rec"
+cat >"$LAYOUT_REC" <<'EOF'
+#!/usr/bin/env bash
+printf 'LAYOUT_BIN_CALLED\n' >> "$SETKA_REC_LOG"
+exit "${LAYOUT_RC:-0}"
+EOF
+chmod +x "$LAYOUT_REC"
+
 run_setka() {
   : >"$REC_LOG"
   SYSTEMCTL_BIN="$REC" SETKA_REC_LOG="$REC_LOG" \
+    LAYOUT_BIN="$LAYOUT_REC" LAYOUT_RC="${LAYOUT_RC:-0}" \
     HEALTH_URL="http://127.0.0.1:59999/health" \
     bash "$SETKA" "$@" >"$WORK/out.log" 2>&1
   echo $?
@@ -77,9 +88,32 @@ rc="$(run_setka status)"
 [ "$rc" = "0" ] && pass "status: exit 0 mimo martwego /health" || fail "status: exit $rc"
 grep -qi 'health' "$WORK/out.log" && pass "status: raportuje sekcję /health" || fail "status: brak /health w wyjściu"
 
+# --- show: woła LAYOUT_BIN, exit 0 ---
+rc="$(run_setka show)"
+[ "$rc" = "0" ] && pass "show: exit 0" || fail "show: exit $rc"
+grep -q -- 'LAYOUT_BIN_CALLED' "$REC_LOG" \
+  && pass "show: woła LAYOUT_BIN (układanie okien)" || fail "show: nie wywołał LAYOUT_BIN"
+grep -q -- '--user start' "$REC_LOG" \
+  && fail "show: niepotrzebnie ruszył systemd" || pass "show: nie dotyka systemd (czysto okienkowe)"
+
+# --- start: woła start targetu ORAZ następnie LAYOUT_BIN (layout po starcie) ---
+rc="$(run_setka start)"
+[ "$rc" = "0" ] && pass "start: exit 0 (z auto-layoutem)" || fail "start: exit $rc"
+grep -q -- 'LAYOUT_BIN_CALLED' "$REC_LOG" \
+  && pass "start: po starcie układa okna (auto-layout)" || fail "start: brak auto-layoutu"
+start_ln="$(grep -n -- '--user start live-recording.target' "$REC_LOG" | head -1 | cut -d: -f1)"
+layout_ln="$(grep -n -- 'LAYOUT_BIN_CALLED' "$REC_LOG" | head -1 | cut -d: -f1)"
+[ -n "$start_ln" ] && [ -n "$layout_ln" ] && [ "$start_ln" -lt "$layout_ln" ] \
+  && pass "start: layout następuje PO starcie targetu" || fail "start: zła kolejność start/layout"
+
+# --- start: layout best-effort — błąd układania NIE wywraca startu (R3/R5) ---
+rc="$(LAYOUT_RC=1 run_setka start)"
+[ "$rc" = "0" ] && pass "start: exit 0 mimo błędu layoutu (best-effort)" || fail "start: błąd layoutu wywrócił start (exit $rc)"
+
 # --- nieznana komenda → niezerowy exit, usage ---
 rc="$(run_setka frobnicate)"
 [ "$rc" != "0" ] && pass "unknown: niezerowy exit dla nieznanej komendy" || fail "unknown: exit 0 (powinno != 0)"
+grep -qi 'show' "$WORK/out.log" && pass "unknown: usage wymienia komendę show" || fail "unknown: usage bez show"
 
 rm -rf "$WORK"
 printf '\n=== %d passed, %d failed ===\n' "$PASS" "$FAIL"

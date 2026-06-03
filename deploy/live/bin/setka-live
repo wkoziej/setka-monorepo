@@ -6,6 +6,8 @@ set -euo pipefail
 # Indirekcja przez env wyłącznie dla testów — domyślnie realny systemctl --user.
 SYSTEMCTL_BIN="${SYSTEMCTL_BIN:-systemctl}"
 HEALTH_URL="${HEALTH_URL:-http://127.0.0.1:8000/health}"
+# Siostrzany skrypt układania okien (w tym samym katalogu bin); env override dla testów.
+LAYOUT_BIN="${LAYOUT_BIN:-$(dirname "$0")/live-layout.sh}"
 
 TARGET="live-recording.target"
 MEMBERS="live-preflight.service obs.service bitwig.service kiosk.service"
@@ -14,12 +16,13 @@ sctl() { "$SYSTEMCTL_BIN" --user "$@"; }
 
 usage() {
   cat >&2 <<EOF
-Użycie: setka-live <start|stop|restart|status>
+Użycie: setka-live <start|stop|restart|status|show>
 
-  start    postaw komplet live (OBS + Bitwig + kiosk) po preflighcie
+  start    postaw komplet live (OBS + Bitwig + kiosk) po preflighcie; na końcu układa okna
   stop     zatrzymaj całą warstwę GUI
   restart  całościowy restart warstwy GUI (stop+start; re-weryfikuje preflight)
   status   stan członków + paternologia /health + środowisko graficzne
+  show     wyciągnij na wierzch i ułóż okna: Bitwig (lewy) | OBS+Paternologia (prawy)
 
 Most MIDI (paternologia.service) jest poza zakresem — rzadki restart ręcznie:
   systemctl --user restart paternologia.service
@@ -28,6 +31,15 @@ EOF
 
 cmd_start() {
   sctl start "$TARGET"
+  # Po starcie ułóż okna — best-effort: błąd układania NIE może wywrócić startu (R3/R5).
+  # (live-layout.sh czeka aż okna się pojawią; brakujące pomija, niezerowo kończy tylko dla
+  # realnej awarii środowiska — Wayland/brak DISPLAY/wmctrl.)
+  "$LAYOUT_BIN" || true
+}
+
+cmd_show() {
+  # Czysto okienkowe: wyciągnij na wierzch i ułóż. Niezerowy exit tylko dla awarii środowiska.
+  "$LAYOUT_BIN"
 }
 
 cmd_stop() {
@@ -69,6 +81,7 @@ main() {
     stop)    cmd_stop ;;
     restart) cmd_restart ;;
     status)  cmd_status ;;
+    show)    cmd_show ;;
     *)       usage; exit 2 ;;
   esac
 }
