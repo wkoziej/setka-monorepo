@@ -15,21 +15,62 @@ deploy/live/install.sh
 
 Instalator (idempotentny, backupuje różniące się pliki):
 - kopiuje unity → `~/.config/systemd/user/`,
-- kopiuje skrypty → `~/.local/bin/` (`setka-live`, `live-preflight.sh`, `paternologia-kiosk.sh`),
+- kopiuje skrypty → `~/.local/bin/` (`setka-live`, `live-preflight.sh`, `paternologia-kiosk.sh`,
+  `live-layout.sh`),
 - robi `systemctl --user daemon-reload`,
 - **wycofuje stary kiosk-autostart** `~/.config/autostart/paternologia-kiosk.desktop`
   (zmienia nazwę na `.disabled-<stamp>` — odwracalne; kiosk przechodzi pod systemd).
 
 Upewnij się, że `~/.local/bin` jest w `PATH` (instalator ostrzeże, jeśli nie).
 
+Do `setka-live show` (układanie okien) potrzebny jest `wmctrl` — instalator tylko ostrzega, gdy
+go brak (nie blokuje instalacji): `sudo apt install wmctrl`.
+
 ## Komendy operatorskie
 
 ```bash
-setka-live start     # postaw komplet (OBS + Bitwig + kiosk) po preflighcie
+setka-live start     # postaw komplet (OBS + Bitwig + kiosk) po preflighcie; na końcu układa okna
 setka-live stop      # zatrzymaj całą warstwę GUI
 setka-live restart   # całościowy restart GUI (stop+start; re-weryfikuje preflight)
 setka-live status    # stan członków + paternologia /health + środowisko graficzne
+setka-live show      # wyciągnij na wierzch i ułóż okna na dwóch monitorach (patrz niżej)
 ```
+
+### `setka-live show` — układanie okien
+
+Wyciąga na wierzch i układa komplet okien w stałym układzie na dwóch monitorach:
+
+| Monitor | Okno |
+|---------|------|
+| **lewy** (najmniejszy offset X) | Bitwig — cała powierzchnia |
+| **prawy**, górna połowa | OBS |
+| **prawy**, dolna połowa | Paternologia (kiosk) |
+
+`setka-live start` wykonuje to samo układanie na końcu (best-effort — błąd układania nie wywraca
+startu). `show` można odpalić ręcznie, kiedy okna się rozjadą. Komenda jest idempotentna.
+
+Pułapki:
+- **Tylko X11.** Układanie idzie przez `wmctrl` (EWMH na GNOME/Xorg). Na Wayland komenda jawnie
+  odmawia zamiast cicho zawieść.
+- **WM_CLASS OBS/Bitwiga** są konfigurowalne na górze `live-layout.sh` (`OBS_CLASS`,
+  `BITWIG_CLASS`); kiosk ma własny `--class=setka-kiosk`. Potwierdzone realnie na tej maszynie:
+  OBS = `obs.obs`, Bitwig (flatpak) = `com.bitwig.BitwigStudio`. Gdyby się zmieniły, sprawdź
+  `wmctrl -lx` przy żywych oknach i nadpisz przez env. Brak dopasowanego okna → pominięte +
+  raport (nie błąd).
+- **Kiosk musi wstać przez `paternologia-kiosk.sh`** (np. `setka-live start`/`restart`), żeby miał
+  klasę `setka-kiosk`. Kiosk celowo używa **nie-snapowego `google-chrome`** (`/opt/google/chrome`):
+  snap Brave dwoił raportowaną pozycję okna i odłączał się od `kiosk.service` (`Type=exec` → usługa
+  natychmiast `inactive`, okno osierocone). Świeży profil chrome wymaga `--no-first-run`
+  `--no-default-browser-check`, inaczej zamiast `/live` pokazuje ekran powitalny.
+- **`wmctrl -lG` MYLNIE raportuje geometrię okien Chromium** — pokazuje pozycję ~2× rzeczywistej.
+  Samo ustawianie (`wmctrl -e`) działa poprawnie; weryfikuj WZROKOWO, nie po `wmctrl -lG`. Kiosk
+  faktycznie ląduje w dolnej połowie prawego monitora, mimo że `-lG` zawyża współrzędne.
+- **Geometria** liczona na żywo z `xrandr --listmonitors` (offsety, nie zaszyte nazwy), więc
+  przeżywa zamianę kabli/nazw monitorów.
+- **OBS nie zwęża się poniżej swojego minimum** (zadokowane panele wymuszają min-rozmiar; bez ich
+  schowania nie zmniejszysz okna nawet myszą), więc górna połowa prawego monitora może być przez
+  OBS nadpisana większym oknem. To ograniczenie OBS, nie błąd układania — okno i tak jest wyciągane
+  na wierzch i widoczne.
 
 ## Mapa unitów
 
@@ -39,7 +80,7 @@ setka-live status    # stan członków + paternologia /health + środowisko graf
 | `live-preflight.service` | oneshot gate: virmidi + PipeWire 44100 + paternologia `/health` |
 | `obs.service` | OBS Studio (`/usr/bin/obs`), `Restart=no` |
 | `bitwig.service` | Bitwig (flatpak), `ExecStop=flatpak kill`, `Restart=no` |
-| `kiosk.service` | `/live` w `brave --kiosk` (osobny `--user-data-dir`), `Restart=no` |
+| `kiosk.service` | `/live` w `google-chrome --kiosk` (nie-snap, osobny `--user-data-dir`), `Restart=no` |
 
 Kolejność: `paternologia.service` → `live-preflight.service` → {`obs`, `bitwig`, `kiosk`}
 (trójka startuje równolegle — OBS i Bitwig są rozdzielne urządzeniowo, nie współdzielą `/dev`).
@@ -81,6 +122,8 @@ systemctl --user restart paternologia.service
 deploy/live/tests/test_install.sh
 deploy/live/tests/test_live_preflight.sh
 deploy/live/tests/test_setka_live.sh
+deploy/live/tests/test_live_layout.sh
+deploy/live/tests/test_kiosk_class.sh
 ```
 
 Plain shell (`bats` nie jest wymagany). Logikę warunków/dyspozytora testujemy na realnych
