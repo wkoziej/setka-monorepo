@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Setka is a monorepo containing seven interconnected media processing and automation packages:
+Setka is a monorepo containing eight interconnected media processing and automation packages:
 
 - **setka-common**: Shared utilities for file structure management
 - **obsession**: OBS Canvas Recorder with FFmpeg extraction and metadata collection
@@ -13,6 +13,7 @@ Setka is a monorepo containing seven interconnected media processing and automat
 - **cymatic**: Blender Geometry Nodes 3D audio visualizer driven by beatrix analysis
 - **medusa**: Media upload automation to YouTube/Vimeo and social media publishing
 - **fermata**: Tauri-based desktop GUI for managing recordings and batch operations
+- **paternologia**: FastAPI/HTMX web app for managing per-song MIDI configurations of a live rig (Nektar Pacer foot controller + Boss RC-600, Elektron Model:Samples, Arturia MicroFreak). Edits songs, exports `.syx` to the Pacer, bridges the Pacer MIDI stream to Bitwig, and drives OBS one-button recording.
 
 ## Monorepo Structure and Workflow
 
@@ -250,12 +251,18 @@ Each package provides specific commands:
 - `cinemon-generate-config` - Generate YAML configuration files (cinemon)
 - `cymatic-render` - Render a 3D Geometry Nodes audio visualizer from a beatrix analysis (cymatic)
 - Direct module execution for medusa: `python -m medusa.cli`
+- `uv run --package paternologia fastapi run src/paternologia/main.py` - Web UI for live-rig MIDI/song management (paternologia). Songs live in `packages/paternologia/data/songs/*.yaml`, ordered by `songs_order.yaml`; devices in `data/devices.yaml`. See `packages/paternologia/SPEC.md` and `README.md` for the data format and Pacer/Bitwig/OBS integration. **Critical Pacer warnings**: always send SysEx with `--sysex-interval=20`; never send `TARGET_GLOBAL (0x05) + elm=0x1E` (bricks the Pacer).
 
 ## Practical Usage Examples
 
 ### Complete Pipeline Workflow
 
 ```bash
+# 0. Stand up the live recording environment in one shot (OBS + Bitwig + paternologia
+#    kiosk) before recording. On-demand systemd --user target; see deploy/live/README.md.
+#    Holistic restart of the whole GUI layer: `setka-live restart`.
+setka-live start
+
 # 1. Extract sources from OBS recording
 obs-extract /path/to/recording.mkv
 

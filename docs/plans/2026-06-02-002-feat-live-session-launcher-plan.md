@@ -1,7 +1,7 @@
 ---
 title: "feat: Orkiestracja uruchamiania środowiska live (OBS + Bitwig + kiosk paternologii)"
 type: feat
-status: active
+status: completed
 date: 2026-06-02
 deepened: 2026-06-02
 ---
@@ -228,7 +228,7 @@ Operator (skrypt setka-live owija pułapki):
 
 ## Implementation Units
 
-- [ ] **Unit 1: Szkielet repo `deploy/live/` + instalator**
+- [x] **Unit 1: Szkielet repo `deploy/live/` + instalator**
 
 **Goal:** Miejsce na wersjonowane unity i skrypty + jedna komenda instalująca je do
 katalogów użytkownika.
@@ -267,7 +267,7 @@ nowe unity; stary kiosk-autostart nieobecny w `~/.config/autostart/`.
 
 ---
 
-- [ ] **Unit 2: `live-preflight.service` (oneshot gate) + skrypt warunków**
+- [x] **Unit 2: `live-preflight.service` (oneshot gate) + skrypt warunków**
 
 **Goal:** Twarda, jednomiejscowa weryfikacja gotowości audio/MIDI/paternologii zanim
 wstanie warstwa GUI.
@@ -332,7 +332,7 @@ realnie gotowe; `systemctl --user status` pokazuje `active (exited)` i log warun
 
 ---
 
-- [ ] **Unit 3: `obs.service`**
+- [x] **Unit 3: `obs.service`**
 
 **Goal:** OBS Studio jako nadzorowany przez systemd, bez auto-restartu, gated preflightem.
 
@@ -368,7 +368,7 @@ realnie gotowe; `systemctl --user status` pokazuje `active (exited)` i log warun
 
 ---
 
-- [ ] **Unit 4: `bitwig.service` (flatpak)**
+- [x] **Unit 4: `bitwig.service` (flatpak)**
 
 **Goal:** Bitwig (flatpak) jako nadzorowany przez systemd, czysto zatrzymywalny, bez
 auto-restartu.
@@ -405,7 +405,7 @@ auto-restartu.
 
 ---
 
-- [ ] **Unit 5: `kiosk.service` (migracja kiosku pod systemd)**
+- [x] **Unit 5: `kiosk.service` (migracja kiosku pod systemd)**
 
 **Goal:** Okno `/live` paternologii w `brave --kiosk` jako członek targetu (zamiast
 XDG autostartu przy logowaniu).
@@ -442,7 +442,7 @@ osieroconych procesów Brave; logowanie do GNOME **nie** odpala już kiosku samo
 
 ---
 
-- [ ] **Unit 6: `live-recording.target` + skrypt operatorski `setka-live`**
+- [x] **Unit 6: `live-recording.target` + skrypt operatorski `setka-live`**
 
 **Goal:** Jeden target spinający członków (tryb na żądanie) i jedna komenda do
 start/stop/restart, omijająca pułapkę restartu targetu (R3).
