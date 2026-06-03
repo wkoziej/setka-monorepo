@@ -1,0 +1,26 @@
+# ABOUTME: OBS Studio jako członek warstwy live — nadzorowany przez systemd, gated preflightem.
+# ABOUTME: Restart=no celowo: crash nie wznawia się sam, by nie nadpisać/uszkodzić pliku nagrania.
+
+[Unit]
+Description=OBS Studio (warstwa live)
+# Twardy gate: bez gotowego audio/MIDI OBS nie wstaje.
+Requires=live-preflight.service
+After=live-preflight.service graphical-session.target
+# PartOf: stop/restart targetu pociąga OBS (omija pułapkę „restart .target nie rusza członków").
+PartOf=live-recording.target
+# Bezpiecznik środowiska graficznego (sesja X11: DISPLAY=:1 jest w activation env usera).
+ConditionEnvironment=DISPLAY
+
+[Service]
+Type=exec
+ExecStart=/usr/bin/obs
+# Świadoma polityka (R4): operator decyduje o restarcie, nie automat — chroni plik nagrania.
+Restart=no
+# Sprzątanie całego drzewa procesów OBS przy stopie.
+KillMode=control-group
+# Zapas, by OBS zdążył domknąć/flush plik nagrania na SIGTERM (za krótko = SIGKILL = uszkodzony plik).
+TimeoutStopSec=30
+
+[Install]
+# Tryb na żądanie: członkiem jest tylko live-recording.target, nie default.target.
+WantedBy=live-recording.target

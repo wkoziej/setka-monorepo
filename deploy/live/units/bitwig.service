@@ -1,0 +1,28 @@
+# ABOUTME: Bitwig Studio (flatpak) jako członek warstwy live — czysto zatrzymywalny, bez auto-restartu.
+# ABOUTME: Preflight gwarantuje PipeWire 44100 + virmidi PRZED startem (RC-600 taktowany na 44100).
+
+[Unit]
+Description=Bitwig Studio (warstwa live, flatpak)
+Requires=live-preflight.service
+After=live-preflight.service graphical-session.target
+PartOf=live-recording.target
+ConditionEnvironment=DISPLAY
+
+[Service]
+Type=exec
+# Main PID = bwrap (flatpak), więc Type=exec/simple — nie forking.
+ExecStart=/usr/bin/flatpak run com.bitwig.BitwigStudio
+# Czyste domknięcie sandboxa flatpaka (ubicie samego cgroup nie zamyka go porządnie).
+ExecStop=/usr/bin/flatpak kill com.bitwig.BitwigStudio
+Restart=no
+KillMode=control-group
+# Większy zapas niż OBS — Bitwig zapisuje sesję przy zamknięciu.
+TimeoutStopSec=60
+
+# Po starcie wymagana JEDNORAZOWA ręczna weryfikacja w Bitwigu (nieautomatyzowalne):
+#  - Settings → Controllers: MIDI Input = „Virtual Raw MIDI 1" (surowe PACER wyłączone).
+#  - Po replug/restarcie PipeWire: ręczny „Restart Audio Engine" w UI.
+# Szczegóły: docs/solutions/2026-06-02-bitwig-alsa-seq-invisible-virmidi-bridge.md
+
+[Install]
+WantedBy=live-recording.target

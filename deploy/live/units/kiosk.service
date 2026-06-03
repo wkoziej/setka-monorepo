@@ -1,0 +1,20 @@
+# ABOUTME: Okno /live paternologii w brave --kiosk jako członek warstwy live (zamiast XDG autostartu).
+# ABOUTME: Tryb na żądanie (R5) — wstaje z targetem, nie przy każdym zalogowaniu.
+
+[Unit]
+Description=Paternologia kiosk (/live w brave --kiosk)
+Requires=live-preflight.service
+After=live-preflight.service graphical-session.target
+PartOf=live-recording.target
+ConditionEnvironment=DISPLAY
+
+[Service]
+Type=exec
+ExecStart=%h/.local/bin/paternologia-kiosk.sh
+Restart=no
+# Sprząta wszystkie renderery/helpery Brave przy stopie (osobny --user-data-dir kiosku,
+# więc stop nie rusza zwykłej przeglądarki).
+KillMode=control-group
+
+[Install]
+WantedBy=live-recording.target
