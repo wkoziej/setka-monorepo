@@ -10,6 +10,12 @@ HEALTH_URL="${HEALTH_URL:-http://127.0.0.1:8000/health}"
 GRACE_VIRMIDI="${GRACE_VIRMIDI:-2}"
 GRACE_RATE="${GRACE_RATE:-8}"
 GRACE_HEALTH="${GRACE_HEALTH:-8}"
+GRACE_AUDIO="${GRACE_AUDIO:-8}"
+
+# Karty audio rigu, które MUSZĄ być widoczne w PipeWire przed startem GUI. Po re-enumeracji
+# USB WirePlumber bywa, że gubi kartę (przegapiony hotplug add) — wtedy wejście na set bez
+# interfejsu. Lista po fragmencie nazwy karty (pactl list cards short); konfigurowalna.
+REQUIRED_AUDIO_CARDS="${REQUIRED_AUDIO_CARDS:-RC-600 Notepad}"
 
 log() { printf 'preflight: %s\n' "$*"; }
 err() { printf 'preflight: %s\n' "$*" >&2; }
@@ -26,6 +32,16 @@ preflight_rate_ok() {
 
 preflight_virmidi_ok() {
   printf '%s\n' "$1" | grep -q 'snd_virmidi'
+}
+
+# Każda karta z REQUIRED_AUDIO_CARDS musi wystąpić w `pactl list cards short`. Brak choć
+# jednej = WirePlumber nie ma interfejsu (najczęściej przegapiony hotplug po re-enumeracji).
+preflight_audio_cards_ok() {
+  local cards="$1" name
+  for name in $REQUIRED_AUDIO_CARDS; do
+    printf '%s\n' "$cards" | grep -qi -- "$name" || return 1
+  done
+  return 0
 }
 
 # /health musi mieć pacer_input_open && bridge_port_active. obs_connected celowo POMIJANE:
@@ -48,9 +64,10 @@ poll_ok() {
 }
 
 # --- Warstwa pobierająca świeże dane przy każdej próbie (realne komendy) ---
-virmidi_check_live() { preflight_virmidi_ok "$(lsmod 2>/dev/null)"; }
-rate_check_live()    { preflight_rate_ok "$(pw-metadata -n settings 2>/dev/null)"; }
-health_check_live()  { preflight_health_ok "$(curl -sf "$HEALTH_URL" 2>/dev/null)"; }
+virmidi_check_live()     { preflight_virmidi_ok "$(lsmod 2>/dev/null)"; }
+rate_check_live()        { preflight_rate_ok "$(pw-metadata -n settings 2>/dev/null)"; }
+health_check_live()      { preflight_health_ok "$(curl -sf "$HEALTH_URL" 2>/dev/null)"; }
+audio_cards_check_live() { preflight_audio_cards_ok "$(pactl list cards short 2>/dev/null)"; }
 
 main() {
   local rc=0
@@ -67,6 +84,13 @@ main() {
     log "  [OK] PipeWire clock.rate == 44100"
   else
     err "  [FAIL] PipeWire clock.rate != 44100 — RC-600 jest taktowany na 44100; ustaw graf na 44100 PRZED Bitwigiem"
+    rc=1
+  fi
+
+  if poll_ok "$GRACE_AUDIO" audio_cards_check_live; then
+    log "  [OK] karty audio rigu obecne w PipeWire ($REQUIRED_AUDIO_CARDS)"
+  else
+    err "  [FAIL] brak karty audio w PipeWire ($REQUIRED_AUDIO_CARDS) — WirePlumber zgubił interfejs po re-enumeracji USB; odzysk: systemctl --user restart wireplumber"
     rc=1
   fi
 

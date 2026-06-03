@@ -15,8 +15,25 @@ Kontekst: 2026-06-03 MIDI przestało działać — PACER re-enumerował się (zm
 most wejściowy paternologii zgubił subskrypcję ALSA do PACER-a i jej nie odtworzył.
 `/health` dalej raportował `pacer_input_open=true`, mimo że `aconnect -l` nie pokazywał
 żadnego połączenia z PACER-em. Ręczny fix: `systemctl --user restart paternologia.service`.
-- [ ] Auto-reconnect: gdy subskrypcja wejścia PACER znika (re-enumeracja/replug), most ma
+- [x] Auto-reconnect: gdy subskrypcja wejścia PACER znika (re-enumeracja/replug), most ma
       re-otworzyć port zamiast tylko logować „Found N rtmidi port(s)" co ~2,5 s.
-- [ ] `/health` ma sprawdzać REALNĄ subskrypcję wejścia (np. po `aconnect`/stanie portu),
+      `poll_reconnect` sprawdza teraz realną subskrypcję (`pacer_input_subscribed` po
+      `aconnect -l`) i przy zwietrzałych uchwytach robi stop+start.
+- [x] `/health` ma sprawdzać REALNĄ subskrypcję wejścia (np. po `aconnect`/stanie portu),
       nie samo istnienie obiektu portu — inaczej raportuje `pacer_input_open=true` przy
-      zerwanym wejściu.
+      zerwanym wejściu. `pacer_input_open` opiera się teraz na `listener.input_subscribed`.
+
+## 6. Stabilność USB rigu live (re-enumeracja zrywa audio/MIDI)
+Kontekst: 2026-06-03 — 15 re-enumeracji USB w ciągu dnia (huby na `power/control=auto`,
+brak błędów -71/-110 → runtime-PM, nie brownout). Każdy flap gubi kartę w WirePlumber
+(RC-600/Notepad znikają z PipeWire). `setka-live` NIE jest sprawcą (ostatni stop/start
+22:14/22:16 = 0 re-enumeracji; preflight tylko czyta). Szczegóły: `deploy/usb/README.md`.
+- [x] Preflight blokuje start GUI, gdy brak karty audio rigu w PipeWire
+      (`preflight_audio_cards_ok`, `REQUIRED_AUDIO_CARDS=RC-600 Notepad`).
+- [ ] **Akcja operatora (sudo):** zainstaluj regułę no-autosuspend albo dodaj
+      `usbcore.autosuspend=-1` do GRUB. `sudo deploy/usb/install.sh`.
+- [ ] **Akcja operatora (bez sudo):** re-instaluj warstwę live, by nowy preflight wszedł:
+      `deploy/live/install.sh`.
+- [ ] Fizyka: RC-600/Notepad/PACER na zasilany hub; skróć łańcuch (Notepad 4 poziomy hubów).
+- [ ] Jeśli flapy zostają mimo no-autosuspend — rozważ nieinwazyjny re-trigger udev
+      brakującej karty (bez restartu wireplumbera, który mruga audio w secie).

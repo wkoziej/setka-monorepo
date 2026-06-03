@@ -38,6 +38,20 @@ HEALTH_OK='{"pacer_input_open":true,"bridge_port_active":true,"obs_connected":tr
 HEALTH_NO_PACER='{"pacer_input_open":false,"bridge_port_active":true,"obs_connected":false,"last_heartbeat_ts":1780470732.5}'
 HEALTH_NO_BRIDGE='{"pacer_input_open":true,"bridge_port_active":false,"obs_connected":false,"last_heartbeat_ts":1780470732.5}'
 
+# Realny kształt `pactl list cards short` — rig kompletny vs po przegapionym hotplugu.
+CARDS_OK="3584	alsa_card.usb-Soundcraft_Notepad-12FX-00	alsa
+3589	alsa_card.usb-BOSS_RC-600_Vendor_USB_Audio-01	alsa
+3054	alsa_card.usb-Sonuus_Limited_i2M_musicport_56FF-00	alsa
+3058	alsa_card.pci-0000_2b_00.1	alsa"
+
+CARDS_NO_RC600="3584	alsa_card.usb-Soundcraft_Notepad-12FX-00	alsa
+3054	alsa_card.usb-Sonuus_Limited_i2M_musicport_56FF-00	alsa
+3058	alsa_card.pci-0000_2b_00.1	alsa"
+
+CARDS_NO_NOTEPAD="3589	alsa_card.usb-BOSS_RC-600_Vendor_USB_Audio-01	alsa
+3054	alsa_card.usb-Sonuus_Limited_i2M_musicport_56FF-00	alsa
+3058	alsa_card.pci-0000_2b_00.1	alsa"
+
 # --- clock.rate: dokładny klucz, odporny na allowed-rates/force-rate ---
 DESC="rate: 44100 → OK"; assert_ok preflight_rate_ok "$PW_OK"
 DESC="rate: 48000 → fail"; assert_fail preflight_rate_ok "$PW_BAD"
@@ -61,6 +75,17 @@ DESC="health: pusta odpowiedź (timeout) → fail, nie wybucha"; assert_fail pre
 HEALTH_OBS_DOWN='{"pacer_input_open":true,"bridge_port_active":true,"obs_connected":false,"last_heartbeat_ts":1.0}'
 DESC="health: obs_connected=false nie blokuje (OBS startuje po preflighcie)"
 assert_ok preflight_health_ok "$HEALTH_OBS_DOWN"
+
+# --- karty audio rigu obecne w PipeWire (po flapie WirePlumber gubi kartę) ---
+DESC="cards: RC-600 + Notepad obecne → OK"; assert_ok preflight_audio_cards_ok "$CARDS_OK"
+DESC="cards: brak RC-600 → fail"; assert_fail preflight_audio_cards_ok "$CARDS_NO_RC600"
+DESC="cards: brak Notepad → fail"; assert_fail preflight_audio_cards_ok "$CARDS_NO_NOTEPAD"
+DESC="cards: pusty input → fail, nie wybucha"; assert_fail preflight_audio_cards_ok ""
+# Lista wymaganych kart jest konfigurowalna (REQUIRED_AUDIO_CARDS):
+DESC="cards: REQUIRED_AUDIO_CARDS=i2M dopasowuje musicport → OK"
+REQUIRED_AUDIO_CARDS="i2M" assert_ok preflight_audio_cards_ok "$CARDS_OK"
+DESC="cards: REQUIRED_AUDIO_CARDS=Brak nieobecnej karty → fail"
+REQUIRED_AUDIO_CARDS="Zoom" assert_fail preflight_audio_cards_ok "$CARDS_OK"
 
 # --- poll_ok: retry/grace nie wisi w nieskończoność ---
 DESC="poll_ok: predykat-prawda zwraca 0 od razu"

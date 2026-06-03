@@ -1,0 +1,19 @@
+# ABOUTME: Wyłącza USB autosuspend dla sprzętu rigu live (huby + interfejsy audio/MIDI).
+# ABOUTME: Runtime-PM hubów cyklował drzewo USB → re-enumeracja zrywała audio (WirePlumber) i MIDI (PACER).
+#
+# Powód: na maszynie rigu huby stały na power/control=auto (globalny autosuspend=2s). Czysty
+# disconnect/reconnect bez błędów -71/-110 wskazywał na runtime-PM, nie brownout. Trzymamy
+# urządzenia i ich huby wybudzone, by drzewo nie znikało spod PipeWire/ALSA w trakcie sesji.
+#
+# Dopasowanie po idVendor (z lsusb/dmesg na tej maszynie):
+#   0582 Roland/BOSS (RC-600 + RC-600 Vendor USB Audio)
+#   2467 Nektar (PACER)
+#   05fc Soundcraft (Notepad-12FX)
+#   231c Sonuus (i2M musicport)
+#   0424:2422 hub Microchip/SMSC, za którym wisi RC-600 (to ON re-enumerował się o 21:56)
+
+ACTION=="add", SUBSYSTEM=="usb", ATTR{idVendor}=="0582", TEST=="power/control", ATTR{power/control}="on"
+ACTION=="add", SUBSYSTEM=="usb", ATTR{idVendor}=="2467", TEST=="power/control", ATTR{power/control}="on"
+ACTION=="add", SUBSYSTEM=="usb", ATTR{idVendor}=="05fc", TEST=="power/control", ATTR{power/control}="on"
+ACTION=="add", SUBSYSTEM=="usb", ATTR{idVendor}=="231c", TEST=="power/control", ATTR{power/control}="on"
+ACTION=="add", SUBSYSTEM=="usb", ATTR{idVendor}=="0424", ATTR{idProduct}=="2422", TEST=="power/control", ATTR{power/control}="on"
