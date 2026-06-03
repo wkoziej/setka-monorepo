@@ -99,17 +99,21 @@ polecenia". (see origin: docs/brainstorms/2026-06-03-setka-live-window-layout-re
 - Jak liczyć geometrię → z `xrandr --listmonitors`, sortując sloty po offsecie X.
 - Czym targetować kiosk → własny `--class=setka-kiosk`.
 
-### Deferred to Implementation
+### Deferred to Implementation — rozstrzygnięte na żywo (2026-06-03)
 
-- **Dokładne WM_CLASS dla OBS i Bitwiga-flatpak** — ustalić `wmctrl -lx` przy żywych oknach;
-  wpisać jako konfigurowalne stałe na górze `live-layout.sh`. (OBS prawdopodobnie `obs.obs`,
-  Bitwig-flatpak prawdopodobnie `com.bitwig.BitwigStudio` lub `Bitwig Studio` — zweryfikować.)
-- **Kompensacja `_NET_FRAME_EXTENTS`** — czy `wmctrl -e 0,x,y,w,h` na Mutterze trafia 1:1, czy
-  ramki okien wymagają korekty offsetu/rozmiaru. Sprawdzić empirycznie i ewentualnie odjąć ramkę.
-- **Zdjęcie maksymalizacji przed geometrią** — okno zmaksymalizowane ignoruje `-e`; prawdopodobnie
-  potrzebne `wmctrl -r <cls> -b remove,maximized_vert,maximized_horz` przed ustawieniem. Potwierdzić.
-- **Dobór wartości grace-timeoutu** dla pollingu pojawienia się okien (rząd wielkości: Bitwig-flatpak
-  startuje najwolniej) — dostroić przy realnym `start`.
+- **Dokładne WM_CLASS dla OBS i Bitwiga-flatpak** — ✅ POTWIERDZONE `wmctrl -lx` przy żywych
+  oknach: OBS = `obs.obs`, Bitwig-flatpak = `com.bitwig.BitwigStudio` (dokładnie domyślne stałe).
+  Konfigurowalne env-override na górze `live-layout.sh`.
+- **Zdjęcie maksymalizacji przed geometrią** — ✅ zaimplementowane (`-b remove,maximized_*` przed
+  `-e`); działa.
+- **Kompensacja `_NET_FRAME_EXTENTS`** — ⚠️ zbadane: Bitwig (CSD, brak ramek) trafia 1:1; OBS ma
+  `gravity: Static`, ramkę top 37 px i WYMUSZONY min-rozmiar przez zadokowane panele → ląduje w
+  prawym górnym obszarze z offsetem (~+118 px y), którego sama korekta ramki nie zlikwiduje.
+  Decyzja (potwierdzona z operatorem): zostawiamy — to ograniczenie OBS/Muttera, nie błąd; okno
+  jest wyciągnięte i widoczne. Udokumentowane w README jako znana pułapka.
+- **Dobór wartości grace-timeoutu** — domyślne 10 s, env-override; przy `show` z żywymi oknami
+  predykat-prawda zwraca natychmiast (zweryfikowane). Finalny dobór przy `start` z zimnego startu
+  pozostaje do obserwacji operacyjnej.
 
 ## High-Level Technical Design
 

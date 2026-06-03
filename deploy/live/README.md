@@ -53,13 +53,21 @@ Pułapki:
 - **Tylko X11.** Układanie idzie przez `wmctrl` (EWMH na GNOME/Xorg). Na Wayland komenda jawnie
   odmawia zamiast cicho zawieść.
 - **WM_CLASS OBS/Bitwiga** są konfigurowalne na górze `live-layout.sh` (`OBS_CLASS`,
-  `BITWIG_CLASS`); kiosk ma własny `--class=setka-kiosk`. Zweryfikuj realne wartości `wmctrl -lx`
-  przy żywych oknach i ewentualnie nadpisz przez env. Brak dopasowanego okna → pominięte +
+  `BITWIG_CLASS`); kiosk ma własny `--class=setka-kiosk`. Potwierdzone realnie na tej maszynie:
+  OBS = `obs.obs`, Bitwig (flatpak) = `com.bitwig.BitwigStudio`. Gdyby się zmieniły, sprawdź
+  `wmctrl -lx` przy żywych oknach i nadpisz przez env. Brak dopasowanego okna → pominięte +
   raport (nie błąd).
+- **Kiosk musi wstać przez `paternologia-kiosk.sh`** (np. `setka-live start`/`restart`), żeby miał
+  klasę `setka-kiosk`. Zwykła Brave to `brave.Brave` — kiosk uruchomiony „ręcznie" nie zostanie
+  rozpoznany (i celowo nie zderza się z prywatną Brave operatora).
 - **Geometria** liczona na żywo z `xrandr --listmonitors` (offsety, nie zaszyte nazwy), więc
   przeżywa zamianę kabli/nazw monitorów.
-- **Ramki okien**: jeśli okna lądują przesunięte o kilka px, to kwestia `_NET_FRAME_EXTENTS` na
-  Mutterze — do skorygowania w `layout_place`.
+- **OBS nie trafia pixel-perfect w połowę monitora.** Zweryfikowane na żywo: Bitwig ląduje 1:1,
+  ale OBS ma `gravity: Static`, ramkę ~37 px i wymuszony minimalny rozmiar przez zadokowane
+  panele (bez ich schowania nie zmniejszysz okna nawet myszą) — więc ląduje w prawym górnym
+  obszarze z offsetem, nie idealnie w połowie. To ograniczenie OBS/Muttera, nie błąd układania;
+  okno i tak jest wyciągnięte na wierzch i widoczne. Ewentualna korekta `_NET_FRAME_EXTENTS`
+  w `layout_place` sama tego nie zlikwiduje (offset jest większy niż ramka).
 
 ## Mapa unitów
 
