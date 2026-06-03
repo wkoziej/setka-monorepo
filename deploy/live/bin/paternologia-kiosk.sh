@@ -12,6 +12,9 @@ done
 
 # Osobny profil wymusza niezależną instancję kiosku, nawet gdy brave już działa
 # (bez tego URL trafia do istniejącego okna i --kiosk jest ignorowany).
+# --class=setka-kiosk nadaje oknu stały, unikalny WM_CLASS — pewny uchwyt dla układania
+# okien (setka-live show), nie kolidujący ze zwykłym Brave operatora.
 exec brave --kiosk --noerrdialogs \
   --disable-session-crashed-bubble --disable-infobars \
+  --class=setka-kiosk \
   --user-data-dir="$HOME/.local/share/paternologia-kiosk" "$URL"
