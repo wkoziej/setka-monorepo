@@ -121,5 +121,116 @@ grep -qi 'install wmctrl\|brak wmctrl' "$T8/src/out.log" \
 
 rm -rf "$T1" "$T4" "$T5" "$T6" "$T7" "$T8"
 
+# =============================================================================
+# Testy Unitu 3: setka-tray, autostart .desktop, skróty GNOME (install.sh extensions)
+# =============================================================================
+
+# Rozszerzona make_src z atrapami Unit 3: setka-tray, live-keybindings.sh, autostart/.desktop
+make_src3() {
+  local src="$1"
+  make_src "$src"
+  # Atrapa setka-tray (plik wykonywalny Python)
+  printf '#!/usr/bin/env python3\n# atrapa setka-tray\nprint("tray")\n' >"$src/bin/setka-tray"
+  # Atrapa live-keybindings.sh (recorder-mock lub no-op w zależności od testu)
+  printf '#!/usr/bin/env bash\necho "keybindings: $*" >> "${KB_LOG:-/dev/null}"\nexit 0\n' >"$src/bin/live-keybindings.sh"
+  # Plik .desktop z placeholderem
+  mkdir -p "$src/autostart"
+  printf '[Desktop Entry]\nType=Application\nName=Setka Live Tray\nExec=__SETKA_TRAY_EXEC__\nX-GNOME-Autostart-enabled=true\n' \
+    >"$src/autostart/setka-tray.desktop"
+  # Mock gdbus udający aktywny StatusNotifierWatcher (NameHasOwner → '(true,)').
+  printf '#!/usr/bin/env bash\nprintf "(true,)\\n"\n' >"$src/gdbus-ok"
+  chmod +x "$src/gdbus-ok"
+}
+
+# run_install3: uruchamia install.sh z env dla Unit 3.
+# SKIP_KEYBINDINGS=1 → nie woła żywego gsettings.
+# Opcjonalnie GDBUS_BIN → mock gdbus (domyślnie noop/ok).
+run_install3() {
+  local src="$1" sysd="$2" bind="$3" auto="$4"
+  local path="${5:-$PATH}"
+  SYSTEMD_USER_DIR="$sysd" BIN_DIR="$bind" AUTOSTART_DIR="$auto" \
+    SKIP_KEYBINDINGS=1 \
+    GDBUS_BIN="${GDBUS_BIN:-$src/gdbus-ok}" \
+    PATH="$path" bash "$src/install.sh" >"$src/out.log" 2>&1
+}
+
+# --- Test U3-1: Happy path — setka-tray skopiowany, .desktop z podstawioną Exec ---
+TU1="$(mktemp -d)"
+make_src3 "$TU1/src"
+run_install3 "$TU1/src" "$TU1/systemd" "$TU1/bin" "$TU1/autostart"
+rc=$?
+assert_exit "$rc" 0 "U3 happy: install.sh kończy się sukcesem"
+assert_file "$TU1/bin/setka-tray" "U3 happy: setka-tray skopiowany do BIN_DIR"
+[ -x "$TU1/bin/setka-tray" ] && pass "U3 happy: setka-tray jest wykonywalny" \
+  || fail "U3 happy: setka-tray nie jest +x"
+assert_file "$TU1/autostart/setka-tray.desktop" "U3 happy: setka-tray.desktop w AUTOSTART_DIR"
+
+# Placeholder __SETKA_TRAY_EXEC__ musi być zastąpiony absolutną ścieżką
+grep -q '__SETKA_TRAY_EXEC__' "$TU1/autostart/setka-tray.desktop" \
+  && fail "U3 happy: placeholder __SETKA_TRAY_EXEC__ NIE zastąpiony" \
+  || pass "U3 happy: placeholder zastąpiony"
+
+grep -q "$TU1/bin/setka-tray" "$TU1/autostart/setka-tray.desktop" \
+  && pass "U3 happy: Exec wskazuje na $TU1/bin/setka-tray" \
+  || fail "U3 happy: brak absolutnej ścieżki w Exec; .desktop: $(cat "$TU1/autostart/setka-tray.desktop" 2>/dev/null)"
+
+# Watcher aktywny (mock gdbus-ok → '(true,)') → BRAK fałszywego ostrzeżenia o StatusNotifierWatcher
+grep -qi 'StatusNotifierWatcher niedostępny' "$TU1/out.log" \
+  && fail "U3 happy: fałszywe ostrzeżenie o StatusNotifierWatcher mimo aktywnego watchera" \
+  || pass "U3 happy: brak fałszywego ostrzeżenia gdy watcher aktywny"
+
+# --- Test U3-2: Idempotencja .desktop — ponowny install identycznych plików → brak backupu ---
+run_install3 "$TU1/src" "$TU1/systemd" "$TU1/bin" "$TU1/autostart"
+rc=$?
+assert_exit "$rc" 0 "U3 idempotent: ponowny run = sukces"
+bak_count=$(find "$TU1/autostart" -name 'setka-tray.desktop.bak-*' 2>/dev/null | wc -l)
+[ "$bak_count" -eq 0 ] && pass "U3 idempotent: brak zbędnych backupów .desktop" \
+  || fail "U3 idempotent: powstały backupy .desktop mimo identycznej treści ($bak_count)"
+
+# --- Test U3-3: Brak StatusNotifierWatcher (gdbus-mock zwraca błąd) → ostrzeżenie, exit 0 ---
+TU3="$(mktemp -d)"
+make_src3 "$TU3/src"
+# Atrapa gdbus zwracająca błąd (StatusNotifierWatcher niedostępny)
+GDBUS_MOCK="$TU3/gdbus-fail"
+printf '#!/usr/bin/env bash\nexit 1\n' >"$GDBUS_MOCK"
+chmod +x "$GDBUS_MOCK"
+
+GDBUS_BIN="$GDBUS_MOCK" \
+  SYSTEMD_USER_DIR="$TU3/systemd" BIN_DIR="$TU3/bin" AUTOSTART_DIR="$TU3/autostart" \
+  SKIP_KEYBINDINGS=1 \
+  bash "$TU3/src/install.sh" >"$TU3/src/out.log" 2>&1
+rc=$?
+assert_exit "$rc" 0 "U3 gdbus-fail: brak StatusNotifierWatcher → exit 0 (nieblokujące)"
+grep -qi 'StatusNotifierWatcher\|appindicator\|tray\|rozszerzenie' "$TU3/src/out.log" \
+  && pass "U3 gdbus-fail: instalator ostrzega o braku StatusNotifierWatcher" \
+  || fail "U3 gdbus-fail: brak ostrzeżenia o StatusNotifierWatcher; log: $(cat "$TU3/src/out.log" 2>/dev/null)"
+
+# --- Test U3-4: live-keybindings.sh NIE wywoływany gdy SKIP_KEYBINDINGS=1 ---
+TU4="$(mktemp -d)"
+make_src3 "$TU4/src"
+KB_LOG="$TU4/kb.log"
+KB_LOG="$KB_LOG" SKIP_KEYBINDINGS=1 GDBUS_BIN=true \
+  SYSTEMD_USER_DIR="$TU4/systemd" BIN_DIR="$TU4/bin" AUTOSTART_DIR="$TU4/autostart" \
+  bash "$TU4/src/install.sh" >"$TU4/src/out.log" 2>&1
+[ -s "$TU4/kb.log" ] \
+  && fail "U3 skip-keybindings: keybindings wywołane mimo SKIP_KEYBINDINGS=1" \
+  || pass "U3 skip-keybindings: keybindings pominięte gdy SKIP_KEYBINDINGS=1"
+
+# --- Test U3-5: live-keybindings.sh kopiowany do BIN_DIR ---
+assert_file "$TU1/bin/live-keybindings.sh" "U3 happy: live-keybindings.sh skopiowany do BIN_DIR"
+
+# --- Test U3-6: nie-plik w bin/ (np. __pycache__/) pomijany — install nie wywala się ---
+TU6="$(mktemp -d)"
+make_src3 "$TU6/src"
+mkdir -p "$TU6/src/bin/__pycache__"
+printf 'dummy bytecode\n' >"$TU6/src/bin/__pycache__/setka-tray.cpython-312.pyc"
+run_install3 "$TU6/src" "$TU6/systemd" "$TU6/bin" "$TU6/autostart"
+rc=$?
+assert_exit "$rc" 0 "U3 pycache: katalog w bin/ pomijany, install kończy się sukcesem"
+assert_no_file "$TU6/bin/__pycache__" "U3 pycache: __pycache__ NIE skopiowany do BIN_DIR"
+assert_file "$TU6/bin/setka-tray" "U3 pycache: setka-tray nadal skopiowany mimo katalogu obok"
+
+rm -rf "$TU1" "$TU3" "$TU4" "$TU6"
+
 printf '\n=== %d passed, %d failed ===\n' "$PASS" "$FAIL"
 [ "$FAIL" -eq 0 ]

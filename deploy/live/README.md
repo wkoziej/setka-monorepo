@@ -29,12 +29,39 @@ go brak (nie blokuje instalacji): `sudo apt install wmctrl`.
 ## Komendy operatorskie
 
 ```bash
-setka-live start     # postaw komplet (OBS + Bitwig + kiosk) po preflighcie; na końcu układa okna
-setka-live stop      # zatrzymaj całą warstwę GUI
-setka-live restart   # całościowy restart GUI (stop+start; re-weryfikuje preflight)
-setka-live status    # stan członków + paternologia /health + środowisko graficzne
-setka-live show      # wyciągnij na wierzch i ułóż okna na dwóch monitorach (patrz niżej)
+setka-live start        # postaw komplet (OBS + Bitwig + kiosk) po preflighcie; na końcu układa okna
+setka-live stop         # zatrzymaj całą warstwę GUI
+setka-live restart      # całościowy restart GUI (stop+start; re-weryfikuje preflight)
+setka-live status       # stan członków + paternologia /health + środowisko graficzne
+setka-live show         # wyciągnij na wierzch i ułóż okna na dwóch monitorach (patrz niżej)
+setka-live delete-last  # przenieś ostatnie nagranie do kosza z potwierdzeniem (patrz niżej)
 ```
+
+### `setka-live delete-last` — przeniesienie ostatniego nagrania do kosza
+
+Przenosi **cały katalog** najnowszego nagrania do kosza GNOME (`gio trash`) — operacja **odwracalna**
+(przywrócisz z Kosza w Menedżerze Plików / Nautilusa).
+
+Przepływ:
+
+1. Ustala root nagrań z `SETKA_RECORDINGS_ROOT` (lub fallback `~/Wideo/obs` → `~/Videos/obs`).
+2. Znajduje najnowszy (wg mtime) podkatalog roota zawierający `metadata.json` + plik wideo.
+3. Pyta przez `zenity` o potwierdzenie — pokazuje nazwę, wiek i rozmiar katalogu.
+4. Po potwierdzeniu przenosi do kosza przez `gio trash`; informuje przez `notify-send`.
+5. Anulowanie lub zamknięcie okna → brak akcji (fail-safe).
+
+Zmienne środowiskowe:
+
+| Zmienna | Domyślna wartość | Opis |
+|---------|-----------------|------|
+| `SETKA_RECORDINGS_ROOT` | `~/Wideo/obs` (fallback `~/Videos/obs`) | Root katalogu nagrań |
+| `REC_VIDEO_GLOBS` | `*.mp4 *.mkv *.mov *.flv` | Rozszerzenia plików wideo |
+
+Walidacja roota: musi być niepustą, **absolutną** ścieżką do istniejącego katalogu, różną od
+`$HOME` i `/`. Zmienna ustawiona na pusty string lub ścieżkę względną → odmowa z komunikatem błędu.
+
+Wymagane narzędzia: `zenity` (potwierdzenie — bez niego operacja jest blokowana), `gio` (kosz),
+`notify-send` (powiadomienia, best-effort).
 
 ### `setka-live show` — układanie okien
 
@@ -116,10 +143,50 @@ Rzadki restart samego mostu MIDI (poza zakresem `setka-live`):
 systemctl --user restart paternologia.service
 ```
 
+## Ikona tray i autostart
+
+`setka-tray` (zainstalowany przez `install.sh`) to lekka apka systemu tray — ikona z menu
+szybkich akcji operatorskich. Startuje automatycznie przy logowaniu do sesji GNOME (przez
+`~/.config/autostart/setka-tray.desktop`).
+
+Menu traya:
+- **Pokaż okna** → wywołuje `setka-live show`
+- **Usuń ostatnie nagranie** → wywołuje `setka-live delete-last`
+- **Zakończ** → zamyka samą apkę tray
+
+Wymagania traya (instalator ostrzega, gdy brakuje):
+- Rozszerzenie GNOME: `gnome-shell-extension-appindicator` (StatusNotifierWatcher) — na Ubuntu
+  24.04 zazwyczaj preinstalowane.
+- Pakiety apt: `python3-gi`, `gir1.2-gtk-3.0`, `gir1.2-ayatanaappindicator3-0.1`.
+
+Jeśli ikona nie pojawia się po zalogowaniu: sprawdź rozszerzenie w _GNOME Tweaks → Rozszerzenia_
+lub uruchom `setka-tray` ręcznie z terminala i sprawdź błędy.
+
+## Globalne skróty klawiaturowe GNOME
+
+Instalowane przez `install.sh` (idempotentnie; działają bez restartu sesji):
+
+| Skrót | Akcja |
+|-------|-------|
+| `Super+Shift+S` | `setka-live show` (pokaż/ułóż okna) |
+| `Super+Shift+D` | `setka-live delete-last` (usuń ostatnie nagranie) |
+
+Skróty wpisywane są do `org.gnome.settings-daemon.plugins.media-keys.custom-keybindings`
+i nie nadpisują skrótów użytkownika — nowe ścieżki są tylko dołączane (append-if-absent).
+
+Aby zmienić domyślne klawisze — ustaw env przed `install.sh`:
+
+```bash
+KB_SHOW='<Super><Shift>F1' KB_DELETE='<Super><Shift>F2' deploy/live/install.sh
+```
+
+Zmiana działa bez restartu sesji GNOME — skróty są aktywne od razu po instalacji.
+
 ## Testy
 
 ```bash
 deploy/live/tests/test_install.sh
+deploy/live/tests/test_keybindings.sh
 deploy/live/tests/test_live_preflight.sh
 deploy/live/tests/test_setka_live.sh
 deploy/live/tests/test_live_layout.sh
@@ -127,4 +194,4 @@ deploy/live/tests/test_kiosk_class.sh
 ```
 
 Plain shell (`bats` nie jest wymagany). Logikę warunków/dyspozytora testujemy na realnych
-kształtach danych i przez indirekcję komend — bez mutowania żywego systemd.
+kształtach danych i przez indirekcję komend — bez mutowania żywego systemd ani gsettings.

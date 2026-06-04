@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Name=Setka Live Tray
+Comment=Ikona tray z szybkimi akcjami operatorskimi sesji live (setka-live)
+# Exec uzupełniany przez install.sh do ścieżki absolutnej.
+# Placeholder __SETKA_TRAY_EXEC__ zastępowany przez install.sh wartością ~/.local/bin/setka-tray.
+Exec=__SETKA_TRAY_EXEC__
+StartupNotify=false
+OnlyShowIn=GNOME;Unity;
+X-GNOME-Autostart-enabled=true
+# Drobne opóźnienie na wypadek późnego StatusNotifierWatcher przy starcie sesji.
+X-GNOME-Autostart-Delay=3
