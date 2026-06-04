@@ -85,11 +85,13 @@ main() {
 
   # Defensywny check: rozszerzenie StatusNotifierWatcher (appindicator) dla setka-tray.
   # Brak → ostrzeżenie (nie błąd); tray może nie wyświetlać ikony bez rozszerzenia.
+  # ProtocolVersion to właściwość D-Bus, nie metoda — sprawdzamy obecność właściciela nazwy
+  # org.kde.StatusNotifierWatcher na busie (zwraca '(true,)' gdy rozszerzenie aktywne).
   if ! "$GDBUS_BIN" call --session \
-      --dest org.kde.StatusNotifierWatcher \
-      --object-path /StatusNotifierWatcher \
-      --method org.kde.StatusNotifierWatcher.ProtocolVersion \
-      >/dev/null 2>&1; then
+      --dest org.freedesktop.DBus \
+      --object-path /org/freedesktop/DBus \
+      --method org.freedesktop.DBus.NameHasOwner org.kde.StatusNotifierWatcher \
+      2>/dev/null | grep -q 'true'; then
     printf 'UWAGA: StatusNotifierWatcher niedostępny — zainstaluj rozszerzenie GNOME appindicator.\n'
     printf '       setka-tray może nie wyświetlać ikony do czasu zainstalowania rozszerzenia.\n'
   fi

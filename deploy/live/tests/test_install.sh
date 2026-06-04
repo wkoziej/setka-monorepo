@@ -137,6 +137,9 @@ make_src3() {
   mkdir -p "$src/autostart"
   printf '[Desktop Entry]\nType=Application\nName=Setka Live Tray\nExec=__SETKA_TRAY_EXEC__\nX-GNOME-Autostart-enabled=true\n' \
     >"$src/autostart/setka-tray.desktop"
+  # Mock gdbus udający aktywny StatusNotifierWatcher (NameHasOwner → '(true,)').
+  printf '#!/usr/bin/env bash\nprintf "(true,)\\n"\n' >"$src/gdbus-ok"
+  chmod +x "$src/gdbus-ok"
 }
 
 # run_install3: uruchamia install.sh z env dla Unit 3.
@@ -147,7 +150,7 @@ run_install3() {
   local path="${5:-$PATH}"
   SYSTEMD_USER_DIR="$sysd" BIN_DIR="$bind" AUTOSTART_DIR="$auto" \
     SKIP_KEYBINDINGS=1 \
-    GDBUS_BIN="${GDBUS_BIN:-true}" \
+    GDBUS_BIN="${GDBUS_BIN:-$src/gdbus-ok}" \
     PATH="$path" bash "$src/install.sh" >"$src/out.log" 2>&1
 }
 
@@ -170,6 +173,11 @@ grep -q '__SETKA_TRAY_EXEC__' "$TU1/autostart/setka-tray.desktop" \
 grep -q "$TU1/bin/setka-tray" "$TU1/autostart/setka-tray.desktop" \
   && pass "U3 happy: Exec wskazuje na $TU1/bin/setka-tray" \
   || fail "U3 happy: brak absolutnej ścieżki w Exec; .desktop: $(cat "$TU1/autostart/setka-tray.desktop" 2>/dev/null)"
+
+# Watcher aktywny (mock gdbus-ok → '(true,)') → BRAK fałszywego ostrzeżenia o StatusNotifierWatcher
+grep -qi 'StatusNotifierWatcher niedostępny' "$TU1/out.log" \
+  && fail "U3 happy: fałszywe ostrzeżenie o StatusNotifierWatcher mimo aktywnego watchera" \
+  || pass "U3 happy: brak fałszywego ostrzeżenia gdy watcher aktywny"
 
 # --- Test U3-2: Idempotencja .desktop — ponowny install identycznych plików → brak backupu ---
 run_install3 "$TU1/src" "$TU1/systemd" "$TU1/bin" "$TU1/autostart"
