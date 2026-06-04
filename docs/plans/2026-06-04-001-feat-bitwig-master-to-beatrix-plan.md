@@ -1,7 +1,7 @@
 ---
 title: "feat: Bitwig master/stems → analiza beatrix jednym kliknięciem"
 type: feat
-status: active
+status: completed
 date: 2026-06-04
 origin: docs/brainstorms/2026-06-04-bitwig-master-to-beatrix-requirements.md
 deepened: 2026-06-04
@@ -196,7 +196,7 @@ poszczególnych ścieżek (stemów) pod przyszły per-strip targeting w cinemon.
 
 ## Implementation Units
 
-- [ ] **Unit 1: `bitwig/` w RecordingStructureManager**
+- [x] **Unit 1: `bitwig/` w RecordingStructureManager**
 
 **Goal:** Kanoniczny katalog `bitwig/` jako dom na projekt Bitwig — mirror wzorca `mixed/`.
 
@@ -233,7 +233,7 @@ matryca testów z planu 2026-06-02-001 (Unit 1).
 
 ---
 
-- [ ] **Unit 2: Resolver źródeł `mixed/`→`extracted/` w setka-common**
+- [x] **Unit 2: Resolver źródeł `mixed/`→`extracted/` w setka-common**
 
 **Goal:** Jedno źródło prawdy o tym, które pliki audio analizować dla danego nagrania:
 preferuj `mixed/` (master + `mixed/stems/`), fallback `extracted/`.
@@ -281,7 +281,7 @@ stemy dokłada bez zmian w innym kodzie.
 
 ---
 
-- [ ] **Unit 3: Tryb katalogowy/recording w beatrix CLI (iteracja per plik)**
+- [x] **Unit 3: Tryb katalogowy/recording w beatrix CLI (iteracja per plik)**
 
 **Goal:** beatrix analizuje wszystkie źródła nagrania jednym wywołaniem, pisząc
 `analysis/{stem}_analysis.json` per plik; istniejący per-plikowy `analyze` bez zmian.
@@ -325,7 +325,7 @@ generuje komplet analiz; single-file ścieżka bez regresji.
 
 ---
 
-- [ ] **Unit 4: fermata — jedno wywołanie beatrix na nagraniu + błąd w UI**
+- [x] **Unit 4: fermata — jedno wywołanie beatrix na nagraniu + błąd w UI**
 
 **Goal:** „Analizuj" woła beatrix raz na całym nagraniu (drop hardkodu `extracted/`/`.m4a`/
 `[0]`), a błąd jest widoczny w UI zamiast cicho ginąć.
@@ -379,7 +379,7 @@ na nagraniu bez audio pokazuje czytelny błąd.
 
 ---
 
-- [ ] **Unit 5: SetupRender celuje `--main-audio` w master (spięcie do cinemon)**
+- [x] **Unit 5: SetupRender celuje `--main-audio` w master (spięcie do cinemon)**
 
 **Goal:** Render w fermacie podaje cinemon master z `mixed/`, żeby został wybrany
 `master_analysis.json` bez ręcznego `--main-audio`. Domyka pipeline end-to-end.
