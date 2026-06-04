@@ -3,7 +3,12 @@ ABOUTME: Main package entry point for setka-common - provides shared utilities a
 ABOUTME: Exports key classes for easy importing by other packages in the monorepo.
 """
 
-from .file_structure.specialized import RecordingStructureManager
+from .file_structure.specialized import (
+    RecordingStructureManager,
+    AnalysisIndex,
+    AnalysisIndexEntry,
+    load_analysis_index,
+)
 from .config import (
     BlenderYAMLConfig,
     YAMLConfigLoader,
@@ -22,6 +27,9 @@ from .config import (
 
 __all__ = [
     "RecordingStructureManager",
+    "AnalysisIndex",
+    "AnalysisIndexEntry",
+    "load_analysis_index",
     "BlenderYAMLConfig",
     "YAMLConfigLoader",
     "ConfigValidator",
