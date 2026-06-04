@@ -25,6 +25,7 @@ class RecordingStructure(MediaStructure):
 
     extracted_dir: Path
     mixed_dir: Path
+    bitwig_dir: Path
 
     def exists(self) -> bool:
         """Check if recording structure exists."""
@@ -60,6 +61,7 @@ class RecordingStructureManager(StructureManager):
     BLENDER_DIRNAME = "blender"
     ANALYSIS_DIRNAME = "analysis"
     MIXED_DIRNAME = "mixed"
+    BITWIG_DIRNAME = "bitwig"
 
     @staticmethod
     def get_structure(video_path: Path) -> RecordingStructure:
@@ -88,6 +90,7 @@ class RecordingStructureManager(StructureManager):
         processed_dir = project_dir / RecordingStructureManager.PROCESSED_DIRNAME
         extracted_dir = project_dir / RecordingStructureManager.EXTRACTED_DIRNAME
         mixed_dir = project_dir / RecordingStructureManager.MIXED_DIRNAME
+        bitwig_dir = project_dir / RecordingStructureManager.BITWIG_DIRNAME
 
         return RecordingStructure(
             project_dir=project_dir,
@@ -96,6 +99,7 @@ class RecordingStructureManager(StructureManager):
             processed_dir=processed_dir,
             extracted_dir=extracted_dir,
             mixed_dir=mixed_dir,
+            bitwig_dir=bitwig_dir,
         )
 
     @staticmethod
@@ -118,6 +122,7 @@ class RecordingStructureManager(StructureManager):
             # Create all directories
             structure.extracted_dir.mkdir(parents=True, exist_ok=True)
             structure.mixed_dir.mkdir(parents=True, exist_ok=True)
+            structure.bitwig_dir.mkdir(parents=True, exist_ok=True)
             logger.info(f"Created recording structure: {structure.project_dir}")
         except (OSError, PermissionError) as e:
             raise DirectoryCreationError(
@@ -312,6 +317,100 @@ class RecordingStructureManager(StructureManager):
             raise DirectoryCreationError(
                 f"Failed to create mixed directory at {mixed_dir}: {e}"
             )
+
+    @staticmethod
+    def ensure_bitwig_dir(recording_dir: Path) -> Path:
+        """Ensure bitwig directory exists.
+
+        Holds the Bitwig Studio project file (Save As target).
+        Distinct from mixed/ (audio exports) and extracted/ (raw OBS sources).
+
+        Args:
+            recording_dir: Recording directory path
+
+        Returns:
+            Path to bitwig directory
+
+        Raises:
+            InvalidPathError: When recording_dir is invalid
+            DirectoryCreationError: When directory creation fails
+        """
+        if not recording_dir:
+            raise InvalidPathError("Recording directory cannot be empty")
+
+        recording_dir = Path(recording_dir)
+
+        if not recording_dir.exists():
+            raise InvalidPathError(
+                f"Recording directory does not exist: {recording_dir}"
+            )
+
+        if not recording_dir.is_dir():
+            raise InvalidPathError(
+                f"Recording path is not a directory: {recording_dir}"
+            )
+
+        bitwig_dir = recording_dir / RecordingStructureManager.BITWIG_DIRNAME
+
+        try:
+            bitwig_dir.mkdir(parents=True, exist_ok=True)
+            logger.info(f"Created bitwig directory: {bitwig_dir}")
+            return bitwig_dir
+        except (OSError, PermissionError) as e:
+            raise DirectoryCreationError(
+                f"Failed to create bitwig directory at {bitwig_dir}: {e}"
+            )
+
+    @staticmethod
+    def find_analysis_audio_sources(recording_dir: Path) -> list[Path]:
+        """Resolve audio sources for analysis: prefer mixed/ (master + stems), fallback extracted/.
+
+        Scans mixed/ and mixed/stems/ separately (find_files_by_type is non-recursive),
+        merges results. Falls back to extracted/ when mixed/ has no audio files or does
+        not exist.
+
+        Raises ValueError on stem name collision (two sources would produce the same
+        {stem}_analysis.json output file), enforcing fail-fast policy.
+
+        Args:
+            recording_dir: Recording directory path
+
+        Returns:
+            Sorted (case-insensitive) list of audio file paths to analyze
+
+        Raises:
+            ValueError: When two source files share the same stem (collision)
+        """
+        recording_dir = Path(recording_dir)
+
+        mixed_dir = recording_dir / RecordingStructureManager.MIXED_DIRNAME
+        stems_dir = mixed_dir / "stems"
+
+        mixed_files: list[Path] = []
+        if mixed_dir.exists():
+            mixed_files.extend(find_files_by_type(mixed_dir, MediaType.AUDIO))
+            if stems_dir.exists():
+                mixed_files.extend(find_files_by_type(stems_dir, MediaType.AUDIO))
+
+        if mixed_files:
+            # Detect stem name collisions before returning
+            seen_stems: dict[str, Path] = {}
+            for audio_file in mixed_files:
+                stem_key = audio_file.stem.lower()
+                if stem_key in seen_stems:
+                    raise ValueError(
+                        f"Stem name collision: '{audio_file}' and '{seen_stems[stem_key]}' "
+                        f"would both produce '{audio_file.stem}_analysis.json'. "
+                        "Use unique stem names in mixed/ and mixed/stems/."
+                    )
+                seen_stems[stem_key] = audio_file
+
+            return sorted(mixed_files, key=lambda p: p.name.lower())
+
+        # Fallback: no audio in mixed/ (or mixed/ absent) — use extracted/
+        extracted_dir = recording_dir / RecordingStructureManager.EXTRACTED_DIRNAME
+        extracted_files = find_files_by_type(extracted_dir, MediaType.AUDIO)
+        return sorted(extracted_files, key=lambda p: p.name.lower())
 
     @staticmethod
     def get_analysis_file_path(video_path: Path) -> Path:
