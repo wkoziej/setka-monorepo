@@ -29,12 +29,39 @@ go brak (nie blokuje instalacji): `sudo apt install wmctrl`.
 ## Komendy operatorskie
 
 ```bash
-setka-live start     # postaw komplet (OBS + Bitwig + kiosk) po preflighcie; na końcu układa okna
-setka-live stop      # zatrzymaj całą warstwę GUI
-setka-live restart   # całościowy restart GUI (stop+start; re-weryfikuje preflight)
-setka-live status    # stan członków + paternologia /health + środowisko graficzne
-setka-live show      # wyciągnij na wierzch i ułóż okna na dwóch monitorach (patrz niżej)
+setka-live start        # postaw komplet (OBS + Bitwig + kiosk) po preflighcie; na końcu układa okna
+setka-live stop         # zatrzymaj całą warstwę GUI
+setka-live restart      # całościowy restart GUI (stop+start; re-weryfikuje preflight)
+setka-live status       # stan członków + paternologia /health + środowisko graficzne
+setka-live show         # wyciągnij na wierzch i ułóż okna na dwóch monitorach (patrz niżej)
+setka-live delete-last  # przenieś ostatnie nagranie do kosza z potwierdzeniem (patrz niżej)
 ```
+
+### `setka-live delete-last` — przeniesienie ostatniego nagrania do kosza
+
+Przenosi **cały katalog** najnowszego nagrania do kosza GNOME (`gio trash`) — operacja **odwracalna**
+(przywrócisz z Kosza w Menedżerze Plików / Nautilusa).
+
+Przepływ:
+
+1. Ustala root nagrań z `SETKA_RECORDINGS_ROOT` (lub fallback `~/Wideo/obs` → `~/Videos/obs`).
+2. Znajduje najnowszy (wg mtime) podkatalog roota zawierający `metadata.json` + plik wideo.
+3. Pyta przez `zenity` o potwierdzenie — pokazuje nazwę, wiek i rozmiar katalogu.
+4. Po potwierdzeniu przenosi do kosza przez `gio trash`; informuje przez `notify-send`.
+5. Anulowanie lub zamknięcie okna → brak akcji (fail-safe).
+
+Zmienne środowiskowe:
+
+| Zmienna | Domyślna wartość | Opis |
+|---------|-----------------|------|
+| `SETKA_RECORDINGS_ROOT` | `~/Wideo/obs` (fallback `~/Videos/obs`) | Root katalogu nagrań |
+| `REC_VIDEO_GLOBS` | `*.mp4 *.mkv *.mov *.flv` | Rozszerzenia plików wideo |
+
+Walidacja roota: musi być niepustą, **absolutną** ścieżką do istniejącego katalogu, różną od
+`$HOME` i `/`. Zmienna ustawiona na pusty string lub ścieżkę względną → odmowa z komunikatem błędu.
+
+Wymagane narzędzia: `zenity` (potwierdzenie — bez niego operacja jest blokowana), `gio` (kosz),
+`notify-send` (powiadomienia, best-effort).
 
 ### `setka-live show` — układanie okien
 
