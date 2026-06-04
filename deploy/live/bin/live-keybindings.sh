@@ -9,6 +9,7 @@ GSETTINGS_BIN="${GSETTINGS_BIN:-gsettings}"
 # Domyślne klawisze — nadpisywalne przez env.
 KB_SHOW="${KB_SHOW:-<Super><Shift>s}"
 KB_DELETE="${KB_DELETE:-<Super><Shift>d}"
+KB_NEW_TAKE="${KB_NEW_TAKE:-<Super><Shift>n}"
 
 # Komenda setka-live — absolutna ścieżka z env (przekazywana przez install.sh).
 # Bez absolutnej ścieżki GNOME może jej nie znaleźć (skróty uruchamiane bez PATH użytkownika).
@@ -93,6 +94,7 @@ kb_add() {
 main() {
     local show_path="${BINDING_PREFIX}/setka-show/"
     local delete_path="${BINDING_PREFIX}/setka-delete-last/"
+    local new_take_path="${BINDING_PREFIX}/setka-new-take/"
 
     kb_add "$show_path" \
         "Setka: Pokaż okna" \
@@ -104,7 +106,12 @@ main() {
         "${SETKA_LIVE_CMD} delete-last" \
         "$KB_DELETE"
 
-    log "skróty zainstalowane: show=$KB_SHOW delete-last=$KB_DELETE"
+    kb_add "$new_take_path" \
+        "Setka: Nowy projekt Bitwig" \
+        "${SETKA_LIVE_CMD} new-take" \
+        "$KB_NEW_TAKE"
+
+    log "skróty zainstalowane: show=$KB_SHOW delete-last=$KB_DELETE new-take=$KB_NEW_TAKE"
 }
 
 # Odpal main lub zadaną funkcję zależnie od argumentów.

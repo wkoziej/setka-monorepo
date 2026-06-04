@@ -12,6 +12,13 @@ LAYOUT_BIN="${LAYOUT_BIN:-$(dirname "$0")/live-layout.sh}"
 GIO_BIN="${GIO_BIN:-gio}"
 ZENITY_BIN="${ZENITY_BIN:-zenity}"
 NOTIFY_BIN="${NOTIFY_BIN:-notify-send}"
+# Narzędzia/parametry podkomendy new-take; env override dla testów.
+FLATPAK_BIN="${FLATPAK_BIN:-flatpak}"
+BITWIG_APP_ID="${BITWIG_APP_ID:-com.bitwig.BitwigStudio}"
+# Szablon projektu Bitwig — ten sam, którym startuje bitwig.service. Env override.
+# .bwtemplate to katalog-pakiet (nie pojedynczy plik).
+BITWIG_TEMPLATE="${BITWIG_TEMPLATE:-$HOME/Bitwig Studio/Library/Templates/template.bwtemplate}"
+
 # Root katalogu nagrań; env override. Default: ~/Wideo/obs, fallback: ~/Videos/obs.
 # Nie ustawiamy tutaj wartości — resolve_recordings_root obsługuje logikę fallbacku.
 
@@ -27,7 +34,7 @@ err() { printf 'setka-live: %s\n' "$*" >&2; }
 
 usage() {
   cat >&2 <<EOF
-Użycie: setka-live <start|stop|restart|status|show|delete-last>
+Użycie: setka-live <start|stop|restart|status|show|delete-last|new-take>
 
   start        postaw komplet live (OBS + Bitwig + kiosk) po preflighcie; na końcu układa okna
   stop         zatrzymaj całą warstwę GUI
@@ -35,6 +42,7 @@ Użycie: setka-live <start|stop|restart|status|show|delete-last>
   status       stan członków + paternologia /health + środowisko graficzne
   show         wyciągnij na wierzch i ułóż okna: Bitwig (lewy) | OBS+Paternologia (prawy)
   delete-last  przenieś ostatnie nagranie do kosza (z potwierdzeniem)
+  new-take     otwórz czysty projekt Bitwig z szablonu (świeży stan do nagrywania)
 
 Most MIDI (paternologia.service) jest poza zakresem — rzadki restart ręcznie:
   systemctl --user restart paternologia.service
@@ -42,6 +50,10 @@ Most MIDI (paternologia.service) jest poza zakresem — rzadki restart ręcznie:
 Zmienne środowiskowe (delete-last):
   SETKA_RECORDINGS_ROOT  root katalogu nagrań (default: ~/Wideo/obs, fallback: ~/Videos/obs)
   REC_VIDEO_GLOBS        glob rozszerzeń wideo (default: *.mp4 *.mkv *.mov *.flv)
+
+Zmienne środowiskowe (new-take):
+  BITWIG_TEMPLATE        szablon projektu Bitwig (default: ~/Bitwig Studio/Library/Templates/template.bwtemplate)
+  BITWIG_APP_ID          id aplikacji flatpak Bitwiga (default: com.bitwig.BitwigStudio)
 EOF
 }
 
@@ -338,6 +350,44 @@ Operacja jest odwracalna — przywrócisz z Kosza w Menedżerze Plików."
   fi
 }
 
+# Podkomenda: otwórz świeży projekt Bitwig z szablonu (czysty stan do nagrywania).
+# Mechanizm: `flatpak run <app-id> <template>` — działający Bitwig otwiera plik
+# ("Bitwig Studio is already running - opening files"), więc dostajemy nienazwany
+# projekt z szablonu BEZ ubijania instancji. Gdy Bitwig nie działa, flatpak go
+# wystartuje z tym szablonem (w warstwie live Bitwig zwykle już działa, więc
+# flatpak run szybko oddaje sterowanie po przekazaniu pliku).
+# UWAGA: to wyłącznie połowa-Bitwig „resetu rigu" — NIE czyści M:S/Freak/Boss.
+# Niezapisane zmiany w bieżącym projekcie wywołują własny prompt zapisu Bitwiga.
+cmd_new_take() {
+  local template="$BITWIG_TEMPLATE"
+
+  # Szablon musi istnieć — bez niego nie ma „czystego" projektu (FAIL FAST).
+  # .bwtemplate to katalog-pakiet, więc -e (nie -f).
+  if [ ! -e "$template" ]; then
+    err "Brak szablonu Bitwig: '$template'. Ustaw BITWIG_TEMPLATE."
+    if command -v "$NOTIFY_BIN" >/dev/null 2>&1; then
+      "$NOTIFY_BIN" --urgency=critical "setka-live" \
+        "Brak szablonu Bitwig — nie otworzę czystego projektu." || true
+    fi
+    return 1
+  fi
+
+  log "Otwieram czysty projekt Bitwig z szablonu: $template"
+  if "$FLATPAK_BIN" run "$BITWIG_APP_ID" "$template"; then
+    if command -v "$NOTIFY_BIN" >/dev/null 2>&1; then
+      "$NOTIFY_BIN" --urgency=normal "setka-live" \
+        "Otwarto czysty projekt Bitwig z szablonu." || true
+    fi
+  else
+    err "Błąd: flatpak run $BITWIG_APP_ID nie powiódł się."
+    if command -v "$NOTIFY_BIN" >/dev/null 2>&1; then
+      "$NOTIFY_BIN" --urgency=critical "setka-live" \
+        "Błąd: nie udało się otworzyć projektu Bitwig." || true
+    fi
+    return 1
+  fi
+}
+
 main() {
   case "${1:-}" in
     start)       cmd_start ;;
@@ -346,6 +396,7 @@ main() {
     status)      cmd_status ;;
     show)        cmd_show ;;
     delete-last) cmd_delete_last ;;
+    new-take)    cmd_new_take ;;
     *)           usage; exit 2 ;;
   esac
 }

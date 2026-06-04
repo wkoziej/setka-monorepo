@@ -35,6 +35,7 @@ setka-live restart      # całościowy restart GUI (stop+start; re-weryfikuje pr
 setka-live status       # stan członków + paternologia /health + środowisko graficzne
 setka-live show         # wyciągnij na wierzch i ułóż okna na dwóch monitorach (patrz niżej)
 setka-live delete-last  # przenieś ostatnie nagranie do kosza z potwierdzeniem (patrz niżej)
+setka-live new-take     # otwórz czysty projekt Bitwig z szablonu (świeży stan do nagrywania)
 ```
 
 ### `setka-live delete-last` — przeniesienie ostatniego nagrania do kosza
@@ -62,6 +63,29 @@ Walidacja roota: musi być niepustą, **absolutną** ścieżką do istniejącego
 
 Wymagane narzędzia: `zenity` (potwierdzenie — bez niego operacja jest blokowana), `gio` (kosz),
 `notify-send` (powiadomienia, best-effort).
+
+### `setka-live new-take` — czysty projekt Bitwig z szablonu
+
+Otwiera w Bitwigu **nienazwany projekt z szablonu** — świeży stan po skasowaniu nieudanego ujęcia.
+
+Mechanizm: `flatpak run <app-id> <szablon>`. Działający Bitwig przejmuje plik
+(*„Bitwig Studio is already running — opening files"*) i tworzy nowy projekt z szablonu **bez
+ubijania instancji**. Gdy Bitwig nie działa, flatpak wystartuje go z tym szablonem.
+
+Zmienne środowiskowe:
+
+| Zmienna | Domyślna wartość | Opis |
+|---------|-----------------|------|
+| `BITWIG_TEMPLATE` | `~/Bitwig Studio/Library/Templates/template.bwtemplate` | Szablon projektu (ten sam, którym startuje `bitwig.service`) |
+| `BITWIG_APP_ID` | `com.bitwig.BitwigStudio` | Id aplikacji flatpak |
+
+Uwagi:
+- Brak szablonu → odmowa z komunikatem błędu (FAIL FAST), bez wołania flatpaka.
+- **Niezapisane zmiany** w bieżącym projekcie wywołują własny prompt zapisu Bitwiga (ochrona przed
+  utratą danych — nie da się go bezpiecznie wyciszyć).
+- To wyłącznie **połowa-Bitwig** „resetu rigu" — **nie** czyści Model:Samples / MicroFreak / RC-600.
+  Pełny reset sprzętu pozostaje osobną, większą fazą (API rozszerzeń Bitwiga nie zarządza projektami,
+  dlatego sięgamy po CLI-open pliku).
 
 ### `setka-live show` — układanie okien
 
@@ -151,6 +175,7 @@ szybkich akcji operatorskich. Startuje automatycznie przy logowaniu do sesji GNO
 
 Menu traya:
 - **Pokaż okna** → wywołuje `setka-live show`
+- **Nowy projekt Bitwig** → wywołuje `setka-live new-take`
 - **Usuń ostatnie nagranie** → wywołuje `setka-live delete-last`
 - **Zakończ** → zamyka samą apkę tray
 
@@ -170,6 +195,7 @@ Instalowane przez `install.sh` (idempotentnie; działają bez restartu sesji):
 |-------|-------|
 | `Super+Shift+S` | `setka-live show` (pokaż/ułóż okna) |
 | `Super+Shift+D` | `setka-live delete-last` (usuń ostatnie nagranie) |
+| `Super+Shift+N` | `setka-live new-take` (czysty projekt Bitwig z szablonu) |
 
 Skróty wpisywane są do `org.gnome.settings-daemon.plugins.media-keys.custom-keybindings`
 i nie nadpisują skrótów użytkownika — nowe ścieżki są tylko dołączane (append-if-absent).
@@ -177,7 +203,7 @@ i nie nadpisują skrótów użytkownika — nowe ścieżki są tylko dołączane
 Aby zmienić domyślne klawisze — ustaw env przed `install.sh`:
 
 ```bash
-KB_SHOW='<Super><Shift>F1' KB_DELETE='<Super><Shift>F2' deploy/live/install.sh
+KB_SHOW='<Super><Shift>F1' KB_DELETE='<Super><Shift>F2' KB_NEW_TAKE='<Super><Shift>F3' deploy/live/install.sh
 ```
 
 Zmiana działa bez restartu sesji GNOME — skróty są aktywne od razu po instalacji.
