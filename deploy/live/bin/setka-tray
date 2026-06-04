@@ -20,6 +20,7 @@ def build_menu_items():
     """
     return [
         ("Pokaż okna", ["setka-live", "show"]),
+        ("Nowy projekt Bitwig", ["setka-live", "new-take"]),
         ("Usuń ostatnie nagranie", ["setka-live", "delete-last"]),
         (None, None),  # separator
         ("Zakończ", None),

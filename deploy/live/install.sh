@@ -74,7 +74,7 @@ main() {
   if [ -z "$SKIP_KEYBINDINGS" ] && [ "$BIN_DIR" = "$HOME/.local/bin" ]; then
     if [ -x "$BIN_DIR/live-keybindings.sh" ]; then
       SETKA_LIVE_CMD="$BIN_DIR/setka-live" bash "$BIN_DIR/live-keybindings.sh" \
-        && printf 'Skróty GNOME zainstalowane (Super+Shift+S show, Super+Shift+D delete-last)\n' \
+        && printf 'Skróty GNOME zainstalowane (Super+Shift+S show, Super+Shift+D delete-last, Super+Shift+N new-take)\n' \
         || printf 'UWAGA: instalacja skrótów GNOME nie powiodła się — pomiń i skonfiguruj ręcznie\n'
     else
       printf 'UWAGA: brak %s/live-keybindings.sh — skróty GNOME pominięte\n' "$BIN_DIR"
