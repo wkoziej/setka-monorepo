@@ -13,6 +13,12 @@ AUTOSTART_DIR="${AUTOSTART_DIR:-$HOME/.config/autostart}"
 # Default dla porównania, czy warto robić daemon-reload (sensowny tylko dla prawdziwego katalogu).
 DEFAULT_SYSTEMD_USER_DIR="$HOME/.config/systemd/user"
 
+# Indirekcja gdbus przez env — dla testów zamienialna na mock.
+GDBUS_BIN="${GDBUS_BIN:-gdbus}"
+
+# Gate dla efektów ubocznych gsettings: pomijaj keybindings w testach lub przy env SKIP_KEYBINDINGS.
+SKIP_KEYBINDINGS="${SKIP_KEYBINDINGS:-}"
+
 STAMP="$(date +%Y%m%d-%H%M%S)"
 
 # Kopiuje plik z backupem tylko gdy treść się różni (idempotencja: identyczna treść = no-op).
@@ -45,6 +51,58 @@ main() {
     install_file "$script" "$BIN_DIR/$(basename "$script")" 0755
   done
   shopt -u nullglob
+
+  # Instalacja autostart .desktop dla setka-tray z podstawieniem absolutnej ścieżki Exec.
+  # Placeholder __SETKA_TRAY_EXEC__ zastępowany przez bezwzględną ścieżkę setka-tray w BIN_DIR.
+  local desktop_src="$SCRIPT_DIR/autostart/setka-tray.desktop"
+  if [ -f "$desktop_src" ]; then
+    mkdir -p "$AUTOSTART_DIR"
+    local desktop_tmp
+    desktop_tmp="$(mktemp)"
+    sed "s|__SETKA_TRAY_EXEC__|${BIN_DIR}/setka-tray|g" "$desktop_src" >"$desktop_tmp"
+    install_file "$desktop_tmp" "$AUTOSTART_DIR/setka-tray.desktop" 0644
+    rm -f "$desktop_tmp"
+    printf 'Zainstalowano autostart traya → %s/setka-tray.desktop\n' "$AUTOSTART_DIR"
+  else
+    printf 'UWAGA: brak %s — autostart setka-tray pominięty\n' "$desktop_src"
+  fi
+
+  # Instalacja skrótów GNOME przez live-keybindings.sh.
+  # Efekt uboczny na żywym gsettings — pomijany gdy SKIP_KEYBINDINGS lub niestandardowy BIN_DIR.
+  if [ -z "$SKIP_KEYBINDINGS" ] && [ "$BIN_DIR" = "$HOME/.local/bin" ]; then
+    if [ -x "$BIN_DIR/live-keybindings.sh" ]; then
+      SETKA_LIVE_CMD="$BIN_DIR/setka-live" bash "$BIN_DIR/live-keybindings.sh" \
+        && printf 'Skróty GNOME zainstalowane (Super+Shift+S show, Super+Shift+D delete-last)\n' \
+        || printf 'UWAGA: instalacja skrótów GNOME nie powiodła się — pomiń i skonfiguruj ręcznie\n'
+    else
+      printf 'UWAGA: brak %s/live-keybindings.sh — skróty GNOME pominięte\n' "$BIN_DIR"
+    fi
+  else
+    printf 'Pomijam instalację skrótów GNOME (SKIP_KEYBINDINGS lub niestandardowy BIN_DIR)\n'
+  fi
+
+  # Defensywny check: rozszerzenie StatusNotifierWatcher (appindicator) dla setka-tray.
+  # Brak → ostrzeżenie (nie błąd); tray może nie wyświetlać ikony bez rozszerzenia.
+  if ! "$GDBUS_BIN" call --session \
+      --dest org.kde.StatusNotifierWatcher \
+      --object-path /StatusNotifierWatcher \
+      --method org.kde.StatusNotifierWatcher.ProtocolVersion \
+      >/dev/null 2>&1; then
+    printf 'UWAGA: StatusNotifierWatcher niedostępny — zainstaluj rozszerzenie GNOME appindicator.\n'
+    printf '       setka-tray może nie wyświetlać ikony do czasu zainstalowania rozszerzenia.\n'
+  fi
+
+  # Defensywne checki zależności GUI (niefatalne; ostrzeżenia operatorskie).
+  for tool in zenity notify-send gio; do
+    if ! command -v "$tool" >/dev/null 2>&1; then
+      printf 'UWAGA: brak %s — "setka-live delete-last" może działać nieprawidłowo. Zainstaluj: sudo apt install %s\n' "$tool" "$tool"
+    fi
+  done
+  for pkg in gir1.2-gtk-3.0 gir1.2-ayatanaappindicator3-0.1; do
+    if ! dpkg -l "$pkg" >/dev/null 2>&1; then
+      printf 'UWAGA: pakiet %s niezainstalowany — setka-tray wymaga go do wyświetlenia ikony.\n' "$pkg"
+    fi
+  done
 
   # Wycofanie starego kiosk-autostartu: kiosk przechodzi pod systemd (tryb na żądanie, R5).
   # Zmiana nazwy poza rozszerzenie .desktop wyłącza autostart GNOME, zachowując odwracalność.

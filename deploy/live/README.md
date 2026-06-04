@@ -143,10 +143,50 @@ Rzadki restart samego mostu MIDI (poza zakresem `setka-live`):
 systemctl --user restart paternologia.service
 ```
 
+## Ikona tray i autostart
+
+`setka-tray` (zainstalowany przez `install.sh`) to lekka apka systemu tray — ikona z menu
+szybkich akcji operatorskich. Startuje automatycznie przy logowaniu do sesji GNOME (przez
+`~/.config/autostart/setka-tray.desktop`).
+
+Menu traya:
+- **Pokaż okna** → wywołuje `setka-live show`
+- **Usuń ostatnie nagranie** → wywołuje `setka-live delete-last`
+- **Zakończ** → zamyka samą apkę tray
+
+Wymagania traya (instalator ostrzega, gdy brakuje):
+- Rozszerzenie GNOME: `gnome-shell-extension-appindicator` (StatusNotifierWatcher) — na Ubuntu
+  24.04 zazwyczaj preinstalowane.
+- Pakiety apt: `python3-gi`, `gir1.2-gtk-3.0`, `gir1.2-ayatanaappindicator3-0.1`.
+
+Jeśli ikona nie pojawia się po zalogowaniu: sprawdź rozszerzenie w _GNOME Tweaks → Rozszerzenia_
+lub uruchom `setka-tray` ręcznie z terminala i sprawdź błędy.
+
+## Globalne skróty klawiaturowe GNOME
+
+Instalowane przez `install.sh` (idempotentnie; działają bez restartu sesji):
+
+| Skrót | Akcja |
+|-------|-------|
+| `Super+Shift+S` | `setka-live show` (pokaż/ułóż okna) |
+| `Super+Shift+D` | `setka-live delete-last` (usuń ostatnie nagranie) |
+
+Skróty wpisywane są do `org.gnome.settings-daemon.plugins.media-keys.custom-keybindings`
+i nie nadpisują skrótów użytkownika — nowe ścieżki są tylko dołączane (append-if-absent).
+
+Aby zmienić domyślne klawisze — ustaw env przed `install.sh`:
+
+```bash
+KB_SHOW='<Super><Shift>F1' KB_DELETE='<Super><Shift>F2' deploy/live/install.sh
+```
+
+Zmiana działa bez restartu sesji GNOME — skróty są aktywne od razu po instalacji.
+
 ## Testy
 
 ```bash
 deploy/live/tests/test_install.sh
+deploy/live/tests/test_keybindings.sh
 deploy/live/tests/test_live_preflight.sh
 deploy/live/tests/test_setka_live.sh
 deploy/live/tests/test_live_layout.sh
@@ -154,4 +194,4 @@ deploy/live/tests/test_kiosk_class.sh
 ```
 
 Plain shell (`bats` nie jest wymagany). Logikę warunków/dyspozytora testujemy na realnych
-kształtach danych i przez indirekcję komend — bez mutowania żywego systemd.
+kształtach danych i przez indirekcję komend — bez mutowania żywego systemd ani gsettings.
