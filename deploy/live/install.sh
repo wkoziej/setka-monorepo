@@ -48,6 +48,8 @@ main() {
 
   printf 'Instaluję skrypty → %s\n' "$BIN_DIR"
   for script in "$SCRIPT_DIR"/bin/*; do
+    # Pomijaj nie-pliki (np. __pycache__/ powstały po imporcie setka-tray w testach).
+    [ -f "$script" ] || continue
     install_file "$script" "$BIN_DIR/$(basename "$script")" 0755
   done
   shopt -u nullglob

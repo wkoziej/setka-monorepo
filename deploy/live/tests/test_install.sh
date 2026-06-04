@@ -211,7 +211,18 @@ KB_LOG="$KB_LOG" SKIP_KEYBINDINGS=1 GDBUS_BIN=true \
 # --- Test U3-5: live-keybindings.sh kopiowany do BIN_DIR ---
 assert_file "$TU1/bin/live-keybindings.sh" "U3 happy: live-keybindings.sh skopiowany do BIN_DIR"
 
-rm -rf "$TU1" "$TU3" "$TU4"
+# --- Test U3-6: nie-plik w bin/ (np. __pycache__/) pomijany — install nie wywala się ---
+TU6="$(mktemp -d)"
+make_src3 "$TU6/src"
+mkdir -p "$TU6/src/bin/__pycache__"
+printf 'dummy bytecode\n' >"$TU6/src/bin/__pycache__/setka-tray.cpython-312.pyc"
+run_install3 "$TU6/src" "$TU6/systemd" "$TU6/bin" "$TU6/autostart"
+rc=$?
+assert_exit "$rc" 0 "U3 pycache: katalog w bin/ pomijany, install kończy się sukcesem"
+assert_no_file "$TU6/bin/__pycache__" "U3 pycache: __pycache__ NIE skopiowany do BIN_DIR"
+assert_file "$TU6/bin/setka-tray" "U3 pycache: setka-tray nadal skopiowany mimo katalogu obok"
+
+rm -rf "$TU1" "$TU3" "$TU4" "$TU6"
 
 printf '\n=== %d passed, %d failed ===\n' "$PASS" "$FAIL"
 [ "$FAIL" -eq 0 ]
