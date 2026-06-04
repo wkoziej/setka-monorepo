@@ -15,6 +15,7 @@ import click
 
 from ..core.audio_analyzer import AudioAnalyzer
 from .. import __version__
+from setka_common.file_structure.specialized.recording import RecordingStructureManager
 
 
 @click.group(
@@ -41,6 +42,41 @@ def cli(ctx, verbose):
     # Show help if no command provided
     if ctx.invoked_subcommand is None:
         click.echo(ctx.get_help())
+
+
+def _analyze_single_file(
+    audio_file: Path,
+    output_dir: Path,
+    beat_division: int,
+    min_onset_interval: float,
+) -> Path:
+    """Analyze a single audio file and save results to output_dir.
+
+    Returns the path to the written analysis file.
+    Raises click.ClickException on any failure.
+    """
+    logger = logging.getLogger(__name__)
+
+    output_filename = f"{audio_file.stem}_analysis.json"
+    output_path = output_dir / output_filename
+
+    logger.info(f"Analyzing audio file: {audio_file}")
+    logger.info(f"Output will be saved to: {output_path}")
+    logger.debug(
+        f"Parameters: beat_division={beat_division}, min_onset_interval={min_onset_interval}"
+    )
+
+    analyzer = AudioAnalyzer()
+    analysis_result = analyzer.analyze_for_animation(
+        audio_file,
+        beat_division=beat_division,
+        min_onset_interval=min_onset_interval,
+    )
+    analyzer.save_analysis(analysis_result, output_path)
+
+    click.echo(f"Analysis complete: {output_path}")
+    logger.info(f"Analysis completed successfully: {output_path}")
+    return output_path
 
 
 @cli.command()
@@ -74,30 +110,7 @@ def analyze(audio_file, output_dir, beat_division, min_onset_interval):
         # Ensure output directory exists
         output_dir.mkdir(parents=True, exist_ok=True)
 
-        # Generate output filename
-        base_name = audio_file.stem
-        output_filename = f"{base_name}_analysis.json"
-        output_path = output_dir / output_filename
-
-        logger.info(f"Analyzing audio file: {audio_file}")
-        logger.info(f"Output will be saved to: {output_path}")
-        logger.debug(
-            f"Parameters: beat_division={beat_division}, min_onset_interval={min_onset_interval}"
-        )
-
-        # Create analyzer and analyze
-        analyzer = AudioAnalyzer()
-        analysis_result = analyzer.analyze_for_animation(
-            audio_file,
-            beat_division=beat_division,
-            min_onset_interval=min_onset_interval,
-        )
-
-        # Save results
-        analyzer.save_analysis(analysis_result, output_path)
-
-        click.echo(f"Analysis complete: {output_path}")
-        logger.info(f"Analysis completed successfully: {output_path}")
+        _analyze_single_file(audio_file, output_dir, beat_division, min_onset_interval)
 
     except FileNotFoundError as e:
         click.echo(f"Error: Audio file not found: {audio_file}", err=True)
@@ -106,6 +119,56 @@ def analyze(audio_file, output_dir, beat_division, min_onset_interval):
         logger.error(f"Analysis failed: {e}")
         click.echo(f"Error: Audio analysis failed: {e}", err=True)
         raise click.ClickException(f"Audio analysis failed: {e}")
+
+
+@cli.command("analyze-recording")
+@click.argument("recording_dir", type=click.Path(exists=True, path_type=Path))
+@click.option(
+    "--beat-division",
+    type=click.IntRange(min=1),
+    default=8,
+    help="Beat division for animation events (default: 8)",
+)
+@click.option(
+    "--min-onset-interval",
+    type=click.FloatRange(min=0.1),
+    default=2.0,
+    help="Minimum interval between onset events in seconds (default: 2.0)",
+)
+def analyze_recording(recording_dir, beat_division, min_onset_interval):
+    """
+    Analyze all audio sources in a recording directory.
+
+    RECORDING_DIR: Path to the recording directory
+
+    Prefers mixed/ (master + stems) over extracted/ as audio source.
+    Writes one {stem}_analysis.json per audio file into analysis/.
+    """
+    logger = logging.getLogger(__name__)
+
+    try:
+        audio_sources = RecordingStructureManager.find_analysis_audio_sources(
+            recording_dir
+        )
+    except ValueError as e:
+        raise click.ClickException(f"Stem name collision: {e}")
+
+    if not audio_sources:
+        raise click.ClickException(
+            f"No audio files found in '{recording_dir}'. "
+            "Add audio to mixed/ or extracted/ before analyzing."
+        )
+
+    analysis_dir = RecordingStructureManager.ensure_analysis_dir(recording_dir)
+
+    for audio_file in audio_sources:
+        try:
+            _analyze_single_file(
+                audio_file, analysis_dir, beat_division, min_onset_interval
+            )
+        except Exception as e:
+            logger.error(f"Analysis failed for {audio_file}: {e}")
+            raise click.ClickException(f"Audio analysis failed for '{audio_file}': {e}")
 
 
 def main():
