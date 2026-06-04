@@ -79,7 +79,10 @@ async def _watch_tick(app: FastAPI) -> None:
     try:
         listener = app.state.midi_listener
         if listener is not None:
-            listener.poll_reconnect()
+            # Off the event loop: poll_reconnect shells out to `aconnect`/rtmidi
+            # enumeration (blocking), and a wedged call during a re-enumeration storm
+            # must never delay the WATCHDOG=1 ping above and let systemd kill us.
+            await asyncio.to_thread(listener.poll_reconnect)
     except Exception as e:
         logger.warning("PACER replug poll error: %s", e)
     try:

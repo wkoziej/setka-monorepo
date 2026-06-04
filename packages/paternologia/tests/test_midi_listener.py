@@ -84,7 +84,8 @@ class TestReplugReconnect:
 
         This is the re-enumeration trap: rtmidi keeps the MidiIn handle "open"
         (is_active stays True) after PACER re-enumerates, so the old code never
-        re-subscribed. The honest signal is pacer_input_subscribed.
+        re-subscribed. The honest signal is pacer_input_subscribed. Reopen only
+        after the miss persists past the debounce threshold.
         """
         listener = self._listener()
         listener._device_name = "PACER"
@@ -96,8 +97,50 @@ class TestReplugReconnect:
         monkeypatch.setattr(
             listener, "start", lambda name: events.append("start") or True
         )
-        listener.poll_reconnect()
+        for _ in range(listener_mod._RESUBSCRIBE_STRIKES):
+            listener.poll_reconnect()
         assert events == ["stop", "start"]
+
+    def test_single_missed_read_defers_reopen(self, monkeypatch):
+        """One negative subscription read must NOT tear down a working input.
+
+        A lone aconnect miss is likely a transient/partial snapshot; debounce
+        defers stop+start until the miss persists.
+        """
+        listener = self._listener()
+        listener._device_name = "PACER"
+        listener._midi_ins = [object()]
+        monkeypatch.setattr(listener_mod, "find_rtmidi_ports", lambda name: [0, 1])
+        monkeypatch.setattr(listener_mod, "pacer_input_subscribed", lambda name: False)
+        events = []
+        monkeypatch.setattr(listener, "stop", lambda: events.append("stop"))
+        monkeypatch.setattr(
+            listener, "start", lambda name: events.append("start") or True
+        )
+        listener.poll_reconnect()  # single miss
+        assert events == []
+
+    def test_strike_counter_resets_on_subscribed(self, monkeypatch):
+        """A subscribed reading clears accrued strikes, so misses must be consecutive."""
+        listener = self._listener()
+        listener._device_name = "PACER"
+        listener._midi_ins = [object()]
+        monkeypatch.setattr(listener_mod, "find_rtmidi_ports", lambda name: [0, 1])
+        events = []
+        monkeypatch.setattr(listener, "stop", lambda: events.append("stop"))
+        monkeypatch.setattr(
+            listener, "start", lambda name: events.append("start") or True
+        )
+        subscribed = {"v": False}
+        monkeypatch.setattr(
+            listener_mod, "pacer_input_subscribed", lambda name: subscribed["v"]
+        )
+        listener.poll_reconnect()  # miss 1
+        subscribed["v"] = True
+        listener.poll_reconnect()  # subscribed -> reset
+        subscribed["v"] = False
+        listener.poll_reconnect()  # miss 1 again (not 2)
+        assert events == []
 
     def test_noop_when_subscription_alive(self, monkeypatch):
         """Active and still subscribed -> leave the open handles untouched."""

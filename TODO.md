@@ -37,3 +37,19 @@ brak błędów -71/-110 → runtime-PM, nie brownout). Każdy flap gubi kartę w
 - [ ] Fizyka: RC-600/Notepad/PACER na zasilany hub; skróć łańcuch (Notepad 4 poziomy hubów).
 - [ ] Jeśli flapy zostają mimo no-autosuspend — rozważ nieinwazyjny re-trigger udev
       brakującej karty (bez restartu wireplumbera, który mruga audio w secie).
+
+## 7. Residua z code review PR #34 (świadomie odroczone)
+- [ ] `pacer_input_subscribed`: pełna weryfikacja CELU subskrypcji (że `Connecting To:`
+      wskazuje NASZ `RtMidiIn` po `pid=os.getpid()`), nie tylko obecność subskrypcji.
+      Chroni przed rzadkim przypadkiem dwóch klientów „PACER" w trakcie re-enumeracji /
+      pasożytniczego konsumenta. (P1 brzegowe — dominujący scenariusz już działa po
+      dopasowaniu nazwy z cudzysłowów.)
+- [ ] Reguła udev: dodać `ACTION=="change"` (obok `add`), by no-autosuspend przeżył
+      suspend/resume — albo polegać na wariancie GRUB `usbcore.autosuspend=-1`.
+- [ ] `99-...rules`: weryfikacja po instalacji ma sprawdzać WSZYSTKIE dopasowane węzły
+      (cały łańcuch hubów), nie tylko `3-4`; `TEST=="power/control"` po cichu pomija
+      węzły bez atrybutu.
+- [ ] Rozważ rename `pacer_input_subscribed` → `device_output_subscribed` (funkcja jest
+      generyczna; nazwa PACER-owa tylko w nazwie, nie w logice).
+- [ ] `poll_reconnect` enumeruje `find_rtmidi_ports` dwukrotnie na cykl (raz wprost, raz
+      w `start()`) — kosmetyka, do uproszczenia przy okazji.

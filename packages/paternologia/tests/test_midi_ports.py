@@ -83,6 +83,33 @@ class TestPacerInputSubscribed:
         monkeypatch.setattr(subprocess, "run", _fake_run(other))
         assert pacer_input_subscribed("PACER") is False
 
+    def test_false_when_only_substring_named_client_subscribed(self, monkeypatch):
+        """A different client whose NAME merely contains the device name must not count.
+
+        Re-enumeration trap: a stale/monitor client 'PACER-monitor' carries a live
+        subscription while the real 'PACER' block has none. Substring matching would
+        report subscribed=True (masking a dead input); exact client-name match must
+        return False.
+        """
+        collision = (
+            "client 44: 'PACER' [type=kernel,card=7]\n"
+            "    0 'PACER MIDI1     '\n"
+            "client 60: 'PACER-monitor' [type=user,pid=999]\n"
+            "    0 'monitor in      '\n"
+            "\tConnecting To: 200:0\n"
+        )
+        monkeypatch.setattr(subprocess, "run", _fake_run(collision))
+        assert pacer_input_subscribed("PACER") is False
+
+    def test_true_on_timeout(self, monkeypatch):
+        """aconnect timing out -> assume subscribed (degrade, do not churn)."""
+
+        def raise_timeout(*a, **kw):
+            raise subprocess.TimeoutExpired(cmd=["aconnect", "-l"], timeout=2)
+
+        monkeypatch.setattr(subprocess, "run", raise_timeout)
+        assert pacer_input_subscribed("PACER") is True
+
     def test_forces_c_locale(self, monkeypatch):
         """aconnect is invoked with LC_ALL=C so labels are stable English."""
         captured = {}

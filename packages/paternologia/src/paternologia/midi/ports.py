@@ -86,7 +86,10 @@ def pacer_input_subscribed(device_name: str) -> bool:
             ["aconnect", "-l"],
             capture_output=True,
             text=True,
-            timeout=5,
+            # Kept below the replug watcher interval so a wedged aconnect (likely
+            # exactly during a re-enumeration storm) can't pile up; on timeout we
+            # degrade to True (assume-subscribed) rather than churn reconnects.
+            timeout=2,
             check=False,
             env={**os.environ, "LC_ALL": "C"},
         )
@@ -98,8 +101,13 @@ def pacer_input_subscribed(device_name: str) -> bool:
     in_device_block = False
     for line in result.stdout.splitlines():
         if line.startswith("client "):
-            # A new client header ends the previous block; match by device name.
-            in_device_block = device_name.upper() in line.upper()
+            # A new client header ends the previous block. Match the QUOTED client
+            # name only — `client 44: 'PACER' [type=kernel,card=7]` -> 'PACER' —
+            # not a substring of the whole line, so neither the metadata
+            # (type/card/id) nor a different client whose name merely contains the
+            # device name (e.g. 'PACER-monitor') is mistaken for the device.
+            name = line.split("'")[1] if "'" in line else ""
+            in_device_block = name.upper() == device_name.upper()
             continue
         if in_device_block and line.strip().startswith("Connecting To:"):
             return True

@@ -86,6 +86,14 @@ DESC="cards: REQUIRED_AUDIO_CARDS=i2M dopasowuje musicport → OK"
 REQUIRED_AUDIO_CARDS="i2M" assert_ok preflight_audio_cards_ok "$CARDS_OK"
 DESC="cards: REQUIRED_AUDIO_CARDS=Brak nieobecnej karty → fail"
 REQUIRED_AUDIO_CARDS="Zoom" assert_fail preflight_audio_cards_ok "$CARDS_OK"
+# Pusta/biała lista wymaganych kart = brama wyłączona → MUSI failować (nie przechodzić pusto):
+DESC="cards: pusty REQUIRED_AUDIO_CARDS → fail (brama nie może się wyłączyć po cichu)"
+REQUIRED_AUDIO_CARDS="" assert_fail preflight_audio_cards_ok "$CARDS_OK"
+DESC="cards: białe znaki REQUIRED_AUDIO_CARDS → fail"
+REQUIRED_AUDIO_CARDS="   " assert_fail preflight_audio_cards_ok "$CARDS_OK"
+# grep -F: metaznak '.' jest literałem, więc 'RC.600' NIE pasuje do 'RC-600' (brak fałszywego trafienia):
+DESC="cards: metaznak 'RC.600' nie pasuje literalnie do RC-600 → fail"
+REQUIRED_AUDIO_CARDS="RC.600" assert_fail preflight_audio_cards_ok "$CARDS_OK"
 
 # --- poll_ok: retry/grace nie wisi w nieskończoność ---
 DESC="poll_ok: predykat-prawda zwraca 0 od razu"

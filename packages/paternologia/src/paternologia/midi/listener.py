@@ -16,6 +16,11 @@ logger = logging.getLogger(__name__)
 # System Real-Time messages (clock, start/stop, active sensing, reset) start here.
 _SYSTEM_REALTIME_MIN = 0xF8
 
+# Consecutive "subscription not seen" polls required before tearing down a live
+# input. A single aconnect read can be a transient/partial snapshot mid
+# re-enumeration; acting on it would drop footswitch presses on a working input.
+_RESUBSCRIBE_STRIKES = 2
+
 
 class MidiListener:
     """Listens for MIDI Program Change and publishes matching song events."""
@@ -36,6 +41,7 @@ class MidiListener:
         self._start_note: int | None = None
         self._stop_note: int | None = None
         self._trigger_port: str | None = None
+        self._unsubscribed_strikes = 0
 
     def configure_record_trigger(
         self,
@@ -81,6 +87,11 @@ class MidiListener:
         Honest signal for /health: ``is_active`` alone stays True after the PACER
         re-enumerates, even though the subscription is gone (see
         ``pacer_input_subscribed``).
+
+        Fail-open: when the ALSA check itself can't run (aconnect missing/erroring/
+        timing out) this reports True, so /health over-reports rather than churning
+        reconnects — i.e. a green ``pacer_input_open`` is not a hard guarantee on a
+        host where aconnect is broken.
         """
         if not self.is_active or self._device_name is None:
             return False
@@ -156,6 +167,7 @@ class MidiListener:
             return
         ports_present = bool(find_rtmidi_ports(self._device_name))
         if not ports_present:
+            self._unsubscribed_strikes = 0
             if self.is_active:
                 logger.warning(
                     "PACER '%s' disappeared; releasing inputs", self._device_name
@@ -163,16 +175,33 @@ class MidiListener:
                 self.stop()
             return
         if not self.is_active:
+            self._unsubscribed_strikes = 0
             logger.info("PACER '%s' reappeared; reopening inputs", self._device_name)
             self.start(self._device_name)
             return
-        if not pacer_input_subscribed(self._device_name):
-            logger.warning(
-                "PACER '%s' input subscription lost (re-enumeration); reopening",
+        if pacer_input_subscribed(self._device_name):
+            self._unsubscribed_strikes = 0
+            return
+        # Subscription not seen. Defer the teardown until it persists across
+        # consecutive polls (hysteresis) — a lone negative read is likely a
+        # transient/partial aconnect snapshot, and stop+start on a working input
+        # drops footswitch presses mid-set.
+        self._unsubscribed_strikes += 1
+        if self._unsubscribed_strikes < _RESUBSCRIBE_STRIKES:
+            logger.debug(
+                "PACER '%s' subscription not seen (%d/%d); deferring reopen",
                 self._device_name,
+                self._unsubscribed_strikes,
+                _RESUBSCRIBE_STRIKES,
             )
-            self.stop()
-            self.start(self._device_name)
+            return
+        logger.warning(
+            "PACER '%s' input subscription lost (re-enumeration); reopening",
+            self._device_name,
+        )
+        self._unsubscribed_strikes = 0
+        self.stop()
+        self.start(self._device_name)
 
     def _trigger_port_matches(self, data) -> bool:
         """True if the record trigger is allowed on the port that delivered it."""

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# ABOUTME: Twarda brama gotowości warstwy live: virmidi + PipeWire 44100 + paternologia /health.
+# ABOUTME: Twarda brama gotowości warstwy live: virmidi + PipeWire 44100 + karty audio rigu + paternologia /health.
 # ABOUTME: Tylko weryfikuje (nic nie ładuje/nie restartuje); niezerowy exit blokuje start GUI.
 set -uo pipefail
 
@@ -36,10 +36,15 @@ preflight_virmidi_ok() {
 
 # Każda karta z REQUIRED_AUDIO_CARDS musi wystąpić w `pactl list cards short`. Brak choć
 # jednej = WirePlumber nie ma interfejsu (najczęściej przegapiony hotplug po re-enumeracji).
+# Pusta lista = brama wyłączona po cichu → twardy FAIL (nie pozwól wejść na set bez kontroli).
+# read -a rozbija po IFS bez globbingu; grep -F traktuje nazwy jako literały, nie wzorce.
 preflight_audio_cards_ok() {
   local cards="$1" name
-  for name in $REQUIRED_AUDIO_CARDS; do
-    printf '%s\n' "$cards" | grep -qi -- "$name" || return 1
+  local -a required
+  read -r -a required <<<"${REQUIRED_AUDIO_CARDS:-}"
+  [ "${#required[@]}" -gt 0 ] || return 1
+  for name in "${required[@]}"; do
+    printf '%s\n' "$cards" | grep -qiF -- "$name" || return 1
   done
   return 0
 }
