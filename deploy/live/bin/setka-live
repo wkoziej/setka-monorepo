@@ -180,11 +180,19 @@ is_recording_dir() {
 
   [ -f "$dir/metadata.json" ] || return 1
 
-  # Sprawdź każdy glob osobno (nullglob nie jest domyślny; używamy find/ls przez pętlę).
+  # Dopasowanie globów przez TABLICĘ w podpowłoce z nullglob. Tablica zachowuje całe
+  # nazwy plików jako pojedyncze elementy — odporne na spacje w nazwie (realne nagrania
+  # OBS to np. "2026-06-04 17-30-58.mp4" czy "Projekt bez nazwy.mp4"). Wcześniejsze
+  # `ls "$dir"/$glob | grep` rozbijało nazwy ze spacjami na osobne argumenty i zawodziło.
+  # nullglob ograniczony do podpowłoki, by nie zmieniać zachowania globów w reszcie skryptu.
   local glob
   for glob in $REC_VIDEO_GLOBS; do
-    # shellcheck disable=SC2086  # glob celowo niecytowany.
-    if ls "$dir"/$glob 2>/dev/null | grep -q .; then
+    if (
+      shopt -s nullglob
+      # shellcheck disable=SC2206  # glob celowo niecytowany — to wzorzec dopasowania.
+      matches=( "$dir"/$glob )
+      [ ${#matches[@]} -gt 0 ]
+    ); then
       return 0
     fi
   done

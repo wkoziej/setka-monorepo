@@ -422,6 +422,24 @@ rc_bez_wideo="$(call_fn_rc "is_recording_dir '$IS_REC_DIR/bez_wideo'")"
 [ "$rc_bez_wideo" != "0" ] && pass "is_recording_dir: bez wideo → niezerowy" \
   || fail "is_recording_dir: bez wideo → 0 (błędnie)"
 
+# --- TEST (regresja): plik wideo ze SPACJAMI w nazwie (realny format OBS) ---
+# Realne nagrania OBS to np. "2026-06-04 17-30-58.mp4" lub "Projekt bez nazwy.mp4".
+# Wcześniejsze `ls "$dir"/$glob | grep` rozbijało nazwę na osobne argumenty i zawodziło.
+mkdir -p "$IS_REC_DIR/ze spacją"
+touch "$IS_REC_DIR/ze spacją/metadata.json" "$IS_REC_DIR/ze spacją/Projekt bez nazwy.mp4"
+rc_spacje="$(call_fn_rc "is_recording_dir '$IS_REC_DIR/ze spacją'")"
+[ "$rc_spacje" = "0" ] && pass "is_recording_dir: plik wideo ze spacjami w nazwie → 0" \
+  || fail "is_recording_dir: plik wideo ze spacjami → $rc_spacje (oczekiwano 0)"
+
+# find_latest_recording też musi znaleźć katalog z wideo ze spacjami w nazwie.
+FLR_SP="$WORK/flr_spacje"
+mkdir -p "$FLR_SP/2026-06-04 17-30-58"
+touch "$FLR_SP/2026-06-04 17-30-58/metadata.json" "$FLR_SP/2026-06-04 17-30-58/2026-06-04 17-30-58.mp4"
+latest_sp="$(call_fn "find_latest_recording '$FLR_SP'")"
+printf '%s' "$latest_sp" | grep -q "17-30-58" \
+  && pass "find_latest_recording: znajduje katalog z wideo ze spacjami w nazwie" \
+  || fail "find_latest_recording: zwrócił '$latest_sp' (oczekiwano 17-30-58)"
+
 # --- TEST: find_latest_recording zwraca najnowszy z kilku ---
 FLR_ROOT="$WORK/flr_recs"
 mkdir -p "$FLR_ROOT"
