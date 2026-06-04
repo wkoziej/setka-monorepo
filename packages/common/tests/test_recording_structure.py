@@ -26,6 +26,7 @@ class TestRecordingStructure:
             processed_dir=processed_dir,
             extracted_dir=extracted_dir,
             mixed_dir=project_dir / "mixed",
+            bitwig_dir=project_dir / "bitwig",
         )
 
         assert structure.project_dir == project_dir
@@ -59,6 +60,7 @@ class TestRecordingStructure:
             processed_dir=processed_dir,
             extracted_dir=extracted_dir,
             mixed_dir=project_dir / "mixed",
+            bitwig_dir=project_dir / "bitwig",
         )
 
         assert structure.exists() is True
@@ -87,6 +89,7 @@ class TestRecordingStructure:
             processed_dir=processed_dir,
             extracted_dir=extracted_dir,
             mixed_dir=project_dir / "mixed",
+            bitwig_dir=project_dir / "bitwig",
         )
 
         assert structure.exists() is False
@@ -115,6 +118,7 @@ class TestRecordingStructure:
             processed_dir=processed_dir,
             extracted_dir=extracted_dir,
             mixed_dir=project_dir / "mixed",
+            bitwig_dir=project_dir / "bitwig",
         )
 
         assert structure.is_valid() is True
@@ -143,6 +147,7 @@ class TestRecordingStructure:
             processed_dir=processed_dir,
             extracted_dir=extracted_dir,
             mixed_dir=project_dir / "mixed",
+            bitwig_dir=project_dir / "bitwig",
         )
 
         assert structure.is_valid() is False
@@ -171,6 +176,7 @@ class TestRecordingStructure:
             processed_dir=processed_dir,
             extracted_dir=extracted_dir,
             mixed_dir=project_dir / "mixed",
+            bitwig_dir=project_dir / "bitwig",
         )
 
         assert structure.is_valid() is True  # metadata jest opcjonalna
@@ -446,3 +452,234 @@ class TestRecordingStructureManager:
         assert RecordingStructureManager.MIXED_DIRNAME == "mixed"
         assert RecordingStructureManager.METADATA_FILENAME == "metadata.json"
         assert RecordingStructureManager.PROCESSED_DIRNAME == "processed"
+
+
+class TestBitwigDir:
+    """Testy dla obsługi katalogu bitwig/ (Unit 1)."""
+
+    def test_bitwig_dirname_constant(self):
+        """Test wartości stałej BITWIG_DIRNAME."""
+        assert RecordingStructureManager.BITWIG_DIRNAME == "bitwig"
+
+    def test_get_structure_returns_bitwig_dir_path(self, tmp_path):
+        """Test get_structure() zwraca bitwig_dir jako ścieżkę bez tworzenia katalogu."""
+        project_dir = tmp_path / "test_recording"
+        video_file = project_dir / "recording.mkv"
+
+        structure = RecordingStructureManager.get_structure(video_file)
+
+        assert structure.bitwig_dir == project_dir / "bitwig"
+        assert not structure.bitwig_dir.exists()
+
+    def test_create_structure_creates_bitwig_dir(self, tmp_path):
+        """Test create_structure() materializuje bitwig/ obok extracted/ i mixed/."""
+        project_dir = tmp_path / "test_recording"
+        project_dir.mkdir()
+        video_file = project_dir / "recording.mkv"
+
+        structure = RecordingStructureManager.create_structure(video_file)
+
+        assert structure.bitwig_dir.exists()
+        assert structure.bitwig_dir.is_dir()
+        assert structure.bitwig_dir == project_dir / "bitwig"
+
+    def test_ensure_bitwig_dir_creates_and_returns_path(self, tmp_path):
+        """Test ensure_bitwig_dir() tworzy katalog bitwig/ i zwraca Path."""
+        recording_dir = tmp_path / "test_recording"
+        recording_dir.mkdir()
+
+        bitwig_dir = RecordingStructureManager.ensure_bitwig_dir(recording_dir)
+
+        assert bitwig_dir == recording_dir / "bitwig"
+        assert bitwig_dir.exists()
+        assert bitwig_dir.is_dir()
+
+    def test_ensure_bitwig_dir_is_idempotent(self, tmp_path):
+        """Test ensure_bitwig_dir() jest idempotentne — drugie wywołanie działa poprawnie."""
+        recording_dir = tmp_path / "test_recording"
+        recording_dir.mkdir()
+
+        bitwig_dir_first = RecordingStructureManager.ensure_bitwig_dir(recording_dir)
+        bitwig_dir_second = RecordingStructureManager.ensure_bitwig_dir(recording_dir)
+
+        assert bitwig_dir_first == bitwig_dir_second
+        assert bitwig_dir_second.exists()
+
+    def test_ensure_bitwig_dir_empty_path_raises(self, tmp_path):
+        """Test ensure_bitwig_dir() dla pustej ścieżki → InvalidPathError."""
+        from setka_common.exceptions import InvalidPathError
+
+        import pytest
+
+        with pytest.raises(InvalidPathError):
+            RecordingStructureManager.ensure_bitwig_dir("")
+
+    def test_ensure_bitwig_dir_nonexistent_raises(self, tmp_path):
+        """Test ensure_bitwig_dir() dla nieistniejącego katalogu → InvalidPathError."""
+        from setka_common.exceptions import InvalidPathError
+
+        import pytest
+
+        nonexistent = tmp_path / "nonexistent"
+
+        with pytest.raises(InvalidPathError):
+            RecordingStructureManager.ensure_bitwig_dir(nonexistent)
+
+    def test_ensure_bitwig_dir_not_a_dir_raises(self, tmp_path):
+        """Test ensure_bitwig_dir() gdy ścieżka wskazuje plik → InvalidPathError."""
+        from setka_common.exceptions import InvalidPathError
+
+        import pytest
+
+        file_path = tmp_path / "not_a_dir.mkv"
+        file_path.touch()
+
+        with pytest.raises(InvalidPathError):
+            RecordingStructureManager.ensure_bitwig_dir(file_path)
+
+
+class TestFindAnalysisAudioSources:
+    """Testy dla resolvera źródeł audio do analizy (Unit 2)."""
+
+    def test_only_mixed_master(self, tmp_path):
+        """Tylko mixed/master.wav → zwraca [master.wav]."""
+        recording_dir = tmp_path / "recording"
+        recording_dir.mkdir()
+        mixed_dir = recording_dir / "mixed"
+        mixed_dir.mkdir()
+        master = mixed_dir / "master.wav"
+        master.touch()
+
+        result = RecordingStructureManager.find_analysis_audio_sources(recording_dir)
+
+        assert result == [master]
+
+    def test_mixed_master_plus_stems(self, tmp_path):
+        """mixed/master.wav + mixed/stems/{a,b}.wav → zwraca wszystkie trzy."""
+        recording_dir = tmp_path / "recording"
+        recording_dir.mkdir()
+        mixed_dir = recording_dir / "mixed"
+        mixed_dir.mkdir()
+        stems_dir = mixed_dir / "stems"
+        stems_dir.mkdir()
+
+        master = mixed_dir / "master.wav"
+        master.touch()
+        stem_a = stems_dir / "bass.wav"
+        stem_a.touch()
+        stem_b = stems_dir / "guitar.wav"
+        stem_b.touch()
+
+        result = RecordingStructureManager.find_analysis_audio_sources(recording_dir)
+
+        assert master in result
+        assert stem_a in result
+        assert stem_b in result
+        assert len(result) == 3
+
+    def test_mixed_no_audio_falls_back_to_extracted(self, tmp_path):
+        """mixed/ istnieje ale bez plików audio → fallback do extracted/."""
+        recording_dir = tmp_path / "recording"
+        recording_dir.mkdir()
+        mixed_dir = recording_dir / "mixed"
+        mixed_dir.mkdir()
+        # Tworzymy tylko podkatalog stems/ bez plików audio
+        stems_dir = mixed_dir / "stems"
+        stems_dir.mkdir()
+
+        extracted_dir = recording_dir / "extracted"
+        extracted_dir.mkdir()
+        ext_audio = extracted_dir / "source.m4a"
+        ext_audio.touch()
+
+        result = RecordingStructureManager.find_analysis_audio_sources(recording_dir)
+
+        assert result == [ext_audio]
+
+    def test_no_mixed_falls_back_to_extracted(self, tmp_path):
+        """mixed/ nieobecne, extracted/ ma pliki → fallback do extracted/."""
+        recording_dir = tmp_path / "recording"
+        recording_dir.mkdir()
+        extracted_dir = recording_dir / "extracted"
+        extracted_dir.mkdir()
+        ext_audio = extracted_dir / "source.m4a"
+        ext_audio.touch()
+
+        result = RecordingStructureManager.find_analysis_audio_sources(recording_dir)
+
+        assert result == [ext_audio]
+
+    def test_both_empty_returns_empty_list(self, tmp_path):
+        """Oba katalogi puste/nieobecne → zwraca [] bez wyjątku."""
+        recording_dir = tmp_path / "recording"
+        recording_dir.mkdir()
+
+        result = RecordingStructureManager.find_analysis_audio_sources(recording_dir)
+
+        assert result == []
+
+    def test_mixed_extensions_all_audio_caught(self, tmp_path):
+        """Mieszane rozszerzenia — wszystkie audio złapane, nie-audio pominięte."""
+        recording_dir = tmp_path / "recording"
+        recording_dir.mkdir()
+        mixed_dir = recording_dir / "mixed"
+        mixed_dir.mkdir()
+        stems_dir = mixed_dir / "stems"
+        stems_dir.mkdir()
+
+        wav_file = mixed_dir / "master.wav"
+        wav_file.touch()
+        flac_file = mixed_dir / "master2.flac"
+        flac_file.touch()
+        m4a_file = stems_dir / "stem.m4a"
+        m4a_file.touch()
+        txt_file = mixed_dir / "readme.txt"
+        txt_file.touch()
+
+        result = RecordingStructureManager.find_analysis_audio_sources(recording_dir)
+
+        assert wav_file in result
+        assert flac_file in result
+        assert m4a_file in result
+        assert txt_file not in result
+
+    def test_collision_raises_error(self, tmp_path):
+        """Kolizja nazwy (mixed/master.wav + mixed/stems/master.wav) → wyjątek z opisem."""
+        import pytest
+
+        recording_dir = tmp_path / "recording"
+        recording_dir.mkdir()
+        mixed_dir = recording_dir / "mixed"
+        mixed_dir.mkdir()
+        stems_dir = mixed_dir / "stems"
+        stems_dir.mkdir()
+
+        master_mixed = mixed_dir / "master.wav"
+        master_mixed.touch()
+        master_stem = stems_dir / "master.wav"
+        master_stem.touch()
+
+        with pytest.raises(ValueError, match="master"):
+            RecordingStructureManager.find_analysis_audio_sources(recording_dir)
+
+    def test_deterministic_ordering(self, tmp_path):
+        """Kolejność wyników jest deterministyczna (sort case-insensitive)."""
+        recording_dir = tmp_path / "recording"
+        recording_dir.mkdir()
+        mixed_dir = recording_dir / "mixed"
+        mixed_dir.mkdir()
+        stems_dir = mixed_dir / "stems"
+        stems_dir.mkdir()
+
+        # Nazwy ze zróżnicowaną wielkością liter
+        file_z = mixed_dir / "Zebra.wav"
+        file_z.touch()
+        file_a = stems_dir / "apple.wav"
+        file_a.touch()
+        file_m = mixed_dir / "Master.wav"
+        file_m.touch()
+
+        result = RecordingStructureManager.find_analysis_audio_sources(recording_dir)
+        result_names = [f.name.lower() for f in result]
+
+        assert result_names == sorted(result_names)

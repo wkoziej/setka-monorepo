@@ -3,10 +3,28 @@
 
 """Tests for modernized CLI using click."""
 
+import struct
+import wave
 from unittest.mock import Mock, patch
+
+import numpy as np
+import pytest
 from click.testing import CliRunner
 
 from beatrix.cli.click_cli import cli
+
+
+def _write_wav(path, duration_s=1.0, sample_rate=22050):
+    """Write a minimal valid WAV file with a sine wave to *path*."""
+    n_samples = int(sample_rate * duration_s)
+    t = np.linspace(0, duration_s, n_samples, endpoint=False)
+    audio = np.int16(np.sin(2 * np.pi * 440 * t) * 16000)
+    with wave.open(str(path), "wb") as wf:
+        wf.setnchannels(1)
+        wf.setsampwidth(2)
+        wf.setframerate(sample_rate)
+        wf.writeframes(struct.pack(f"{n_samples}h", *audio))
+    return path
 
 
 class TestClickCLI:
@@ -199,3 +217,140 @@ class TestClickCLI:
             assert result.exit_code == 0
             # Should show completion message
             assert "Analysis complete" in result.output
+
+
+@pytest.mark.audio
+@pytest.mark.integration
+class TestAnalyzeRecordingCommand:
+    """Tests for the analyze-recording subcommand (directory mode)."""
+
+    def test_master_only_produces_one_analysis_file(self, tmp_path):
+        """Happy path: mixed/master.wav → analysis/master_analysis.json."""
+        runner = CliRunner()
+        mixed_dir = tmp_path / "mixed"
+        mixed_dir.mkdir()
+        _write_wav(mixed_dir / "master.wav")
+
+        result = runner.invoke(cli, ["analyze-recording", str(tmp_path)])
+
+        assert result.exit_code == 0, result.output
+        analysis_file = tmp_path / "analysis" / "master_analysis.json"
+        assert analysis_file.exists(), (
+            f"Expected {analysis_file}, output: {result.output}"
+        )
+
+    def test_master_and_stems_produce_three_analysis_files(self, tmp_path):
+        """Happy path: master + 2 stems → 3 *_analysis.json files."""
+        runner = CliRunner()
+        mixed_dir = tmp_path / "mixed"
+        mixed_dir.mkdir()
+        stems_dir = mixed_dir / "stems"
+        stems_dir.mkdir()
+        _write_wav(mixed_dir / "master.wav")
+        _write_wav(stems_dir / "drums.wav")
+        _write_wav(stems_dir / "bass.wav")
+
+        result = runner.invoke(cli, ["analyze-recording", str(tmp_path)])
+
+        assert result.exit_code == 0, result.output
+        analysis_dir = tmp_path / "analysis"
+        for stem in ("master", "drums", "bass"):
+            assert (analysis_dir / f"{stem}_analysis.json").exists(), (
+                f"Missing {stem}_analysis.json; output: {result.output}"
+            )
+
+    def test_empty_mixed_falls_back_to_extracted(self, tmp_path):
+        """Edge case: mixed/ exists but empty, extracted/ has 1 file → fallback."""
+        runner = CliRunner()
+        (tmp_path / "mixed").mkdir()
+        extracted_dir = tmp_path / "extracted"
+        extracted_dir.mkdir()
+        _write_wav(extracted_dir / "source.wav")
+
+        result = runner.invoke(cli, ["analyze-recording", str(tmp_path)])
+
+        assert result.exit_code == 0, result.output
+        assert (tmp_path / "analysis" / "source_analysis.json").exists()
+
+    def test_no_audio_exits_nonzero_with_message(self, tmp_path):
+        """Error path: no audio anywhere → nonzero exit + message on stderr."""
+        runner = CliRunner()
+
+        result = runner.invoke(cli, ["analyze-recording", str(tmp_path)])
+
+        assert result.exit_code != 0
+        # CliRunner by default mixes stderr into output
+        assert "no audio" in result.output.lower() or "audio" in result.output.lower()
+
+    def test_stem_collision_exits_nonzero_no_file_written(self, tmp_path):
+        """Error path: collision in stem names → nonzero exit, no file written."""
+        runner = CliRunner()
+        mixed_dir = tmp_path / "mixed"
+        mixed_dir.mkdir()
+        stems_dir = mixed_dir / "stems"
+        stems_dir.mkdir()
+        _write_wav(mixed_dir / "master.wav")
+        _write_wav(stems_dir / "master.wav")  # collision: both → master_analysis.json
+
+        result = runner.invoke(cli, ["analyze-recording", str(tmp_path)])
+
+        assert result.exit_code != 0
+        assert "collision" in result.output.lower() or "master" in result.output.lower()
+        analysis_dir = tmp_path / "analysis"
+        # No file should have been written during failed run
+        if analysis_dir.exists():
+            assert not any(analysis_dir.iterdir()), (
+                "No analysis files should be written on collision"
+            )
+
+    def test_beat_division_and_onset_interval_propagate(self, tmp_path):
+        """Edge case: custom options are forwarded to every analysis call."""
+        runner = CliRunner()
+        mixed_dir = tmp_path / "mixed"
+        mixed_dir.mkdir()
+        _write_wav(mixed_dir / "master.wav")
+
+        with patch("beatrix.cli.click_cli.AudioAnalyzer") as mock_analyzer_class:
+            mock_analyzer = Mock()
+            mock_analyzer_class.return_value = mock_analyzer
+            mock_analyzer.analyze_for_animation.return_value = {
+                "duration": 1.0,
+                "tempo": {"bpm": 120.0},
+                "animation_events": {"beats": []},
+            }
+
+            result = runner.invoke(
+                cli,
+                [
+                    "analyze-recording",
+                    str(tmp_path),
+                    "--beat-division",
+                    "4",
+                    "--min-onset-interval",
+                    "1.5",
+                ],
+            )
+
+            assert result.exit_code == 0, result.output
+            mock_analyzer.analyze_for_animation.assert_called_once_with(
+                mixed_dir / "master.wav",
+                beat_division=4,
+                min_onset_interval=1.5,
+            )
+
+    def test_existing_analyze_command_still_works(self, tmp_path):
+        """Regression: single-file analyze command is unaffected."""
+        runner = CliRunner()
+        audio_file = tmp_path / "test.wav"
+        audio_file.touch()
+        output_dir = tmp_path / "output"
+
+        with patch("beatrix.cli.click_cli.AudioAnalyzer") as mock_analyzer_class:
+            mock_analyzer = Mock()
+            mock_analyzer_class.return_value = mock_analyzer
+            mock_analyzer.analyze_for_animation.return_value = {}
+
+            result = runner.invoke(cli, ["analyze", str(audio_file), str(output_dir)])
+
+            assert result.exit_code == 0
+            mock_analyzer.analyze_for_animation.assert_called_once()

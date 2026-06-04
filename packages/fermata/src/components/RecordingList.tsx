@@ -158,7 +158,7 @@ interface RecordingListProps {
 
 export function RecordingList({ onSelectRecording }: RecordingListProps) {
   const { recordings, loading, error, refreshRecordings, showDeletionDialog, deletionState, deleteRecording, hideDeletionDialog } = useRecordings();
-  const { runNextStep, runSpecificStep, running, output } = useRecordingOperations();
+  const { runNextStep, runSpecificStep, running, output, error: operationError } = useRecordingOperations();
   const {
     processedRecordings,
     filterConfig,
@@ -272,6 +272,12 @@ export function RecordingList({ onSelectRecording }: RecordingListProps) {
           <div className="operation-status">
             <div className="title">Operation in progress...</div>
             {output && <div className="output">{output}</div>}
+          </div>
+        )}
+
+        {operationError && (
+          <div className="operation-error" role="alert">
+            <strong>Error:</strong> {operationError}
           </div>
         )}
 

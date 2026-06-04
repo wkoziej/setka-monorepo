@@ -171,7 +171,9 @@ recording_name/
 ├── recording_name.mkv       # OBS recording
 ├── metadata.json           # Scene metadata
 ├── extracted/              # Individual sources
-├── analysis/               # Audio analysis JSON
+├── mixed/                  # Bitwig master (master.wav) + optional stems/ for analysis
+├── bitwig/                 # Bitwig project home (Save As here)
+├── analysis/               # Audio analysis JSON ({stem}_analysis.json per source)
 └── blender/               # VSE projects
     └── render/            # Final outputs
 ```

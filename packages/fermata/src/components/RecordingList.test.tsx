@@ -34,7 +34,8 @@ const mockUseRecordingOperations = {
   runNextStep: vi.fn(),
   runSpecificStep: vi.fn(),
   running: {},
-  output: ''
+  output: '',
+  error: null as string | null
 };
 
 vi.mock('../hooks/useRecordings', () => ({
@@ -45,6 +46,7 @@ vi.mock('../hooks/useRecordings', () => ({
 describe('RecordingList Delete Button', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockUseRecordingOperations.error = null;
   });
 
   it('should render delete button for each recording', () => {
@@ -79,5 +81,42 @@ describe('RecordingList Delete Button', () => {
 
     const deleteButton = screen.getByRole('button', { name: /usuń/i });
     expect(deleteButton).not.toBeDisabled();
+  });
+});
+
+describe('RecordingList operation error display', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockUseRecordingOperations.running = {};
+    mockUseRecordingOperations.output = '';
+    mockUseRecordingOperations.error = null;
+  });
+
+  it('should not render operation error when error is null', () => {
+    mockUseRecordingOperations.error = null;
+
+    render(<RecordingList />);
+
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
+  it('should render operation error message when operationError is set', () => {
+    mockUseRecordingOperations.error = 'No audio files found in recording directory';
+
+    render(<RecordingList />);
+
+    const alert = screen.getByRole('alert');
+    expect(alert).toBeInTheDocument();
+    expect(alert).toHaveTextContent('No audio files found in recording directory');
+  });
+
+  it('should render Error: prefix in operation error', () => {
+    mockUseRecordingOperations.error = 'beatrix: analysis failed';
+
+    render(<RecordingList />);
+
+    const alert = screen.getByRole('alert');
+    expect(alert).toHaveTextContent('Error:');
+    expect(alert).toHaveTextContent('beatrix: analysis failed');
   });
 });

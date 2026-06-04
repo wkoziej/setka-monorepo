@@ -23,17 +23,15 @@ impl ProcessRunner {
         }
     }
 
-    /// Run beatrix analyze command
-    pub async fn run_beatrix_analyze(&self, recording_path: &Path, audio_file: &str) -> anyhow::Result<ProcessResult> {
-        let audio_path = recording_path.join("extracted").join(audio_file);
-        let analysis_dir = recording_path.join("analysis");
-
-        log::info!("🎵 Running beatrix analyze: audio={}, output={}", audio_path.display(), analysis_dir.display());
+    /// Run beatrix analyze on a whole recording.
+    /// beatrix analyze-recording selects audio sources itself (mixed/ master + stems,
+    /// extracted/ fallback) and writes one {stem}_analysis.json per file.
+    pub async fn run_beatrix_analyze(&self, recording_path: &Path) -> anyhow::Result<ProcessResult> {
+        log::info!("🎵 Running beatrix analyze-recording: {}", recording_path.display());
 
         let mut cmd = AsyncCommand::new(&self.uv_path);
-        cmd.args(&["run", "--package", "beatrix", "beatrix", "analyze"])
-            .arg(&audio_path)
-            .arg(&analysis_dir)
+        cmd.args(&["run", "--package", "beatrix", "beatrix", "analyze-recording"])
+            .arg(recording_path)
             .current_dir(&self.workspace_root);
 
         self.execute_command(cmd).await
@@ -234,17 +232,18 @@ mod tests {
 
         // Create test directory structure
         let recording_path = temp_dir.path().join("test_recording");
-        let extracted_dir = recording_path.join("extracted");
-        fs::create_dir_all(&extracted_dir).unwrap();
+        fs::create_dir_all(&recording_path).unwrap();
 
-        let audio_file = "audio.m4a";
-        fs::write(extracted_dir.join(audio_file), "test audio").unwrap();
-
-        // This will fail because we're using echo instead of uv, but we can test the structure
-        let result = runner.run_beatrix_analyze(&recording_path, audio_file).await;
+        // echo stands in for uv, so stdout echoes the constructed command line.
+        let result = runner.run_beatrix_analyze(&recording_path).await;
 
         // Should not panic and should return some result
         assert!(result.is_ok());
+        let process_result = result.unwrap();
+        // Uses the directory-mode subcommand on the recording, not the old
+        // per-file analyze against extracted/<file>.
+        assert!(process_result.stdout.contains("analyze-recording"));
+        assert!(!process_result.stdout.contains("extracted"));
     }
 
     #[tokio::test]

@@ -19,6 +19,20 @@ impl Default for RenderOptions {
     }
 }
 
+/// Resolve the cinemon `--main-audio` target for a recording.
+/// Prefers the polished Bitwig master at `mixed/master.wav` (returned as an absolute
+/// path, since the cinemon master-aware selection expects one), so the render picks
+/// `master_analysis.json`. Returns None when the master is absent, letting callers
+/// keep their existing audio resolution.
+fn resolve_master_main_audio(recording_path: &std::path::Path) -> Option<String> {
+    let master = recording_path.join("mixed").join("master.wav");
+    if master.exists() {
+        Some(master.to_string_lossy().to_string())
+    } else {
+        None
+    }
+}
+
 /// Run the next step in the pipeline for a specific recording
 #[tauri::command]
 pub async fn run_next_step(recording_name: String, config: State<'_, AppConfig>) -> Result<String, String> {
@@ -136,53 +150,23 @@ async fn execute_step(
             return Err("Extract step not implemented in fermata - use obsession package".to_string());
         }
         NextStep::Analyze => {
-            // Look for audio file in extracted directory
-            let extracted_dir = recording.path.join("extracted");
-            if !extracted_dir.exists() {
-                return Err("Extracted directory not found - run extract step first".to_string());
-            }
-
-            log::info!("🔍 Searching for audio files in: {}", extracted_dir.display());
-
-            // Find audio file (typically .m4a)
-            let audio_files: Vec<_> = std::fs::read_dir(&extracted_dir)
-                .map_err(|e| format!("Failed to read extracted directory: {}", e))?
-                .filter_map(|entry| {
-                    let entry = entry.ok()?;
-                    let path = entry.path();
-                    log::info!("📁 Found file: {:?}", path);
-                    if path.extension()?.to_str()? == "m4a" {
-                        path.file_name()?.to_str().map(|s| s.to_string())
-                    } else {
-                        None
-                    }
-                })
-                .collect();
-
-            log::info!("🎵 Found {} audio files: {:?}", audio_files.len(), audio_files);
-
-            if audio_files.is_empty() {
-                // List all files in directory for debugging
-                if let Ok(entries) = std::fs::read_dir(&extracted_dir) {
-                    let all_files: Vec<_> = entries
-                        .filter_map(|e| e.ok())
-                        .map(|e| e.file_name().to_string_lossy().to_string())
-                        .collect();
-                    log::warn!("❌ No .m4a files found. All files in directory: {:?}", all_files);
-                    return Err(format!("No audio file (.m4a) found in extracted directory. Found files: {:?}", all_files));
-                } else {
-                    return Err("No audio file (.m4a) found in extracted directory".to_string());
-                }
-            }
-
-            let audio_file = &audio_files[0]; // Take first audio file
-            log::info!("🎯 Using audio file: {}", audio_file);
-            runner.run_beatrix_analyze(&recording.path, audio_file).await
+            // beatrix analyze-recording resolves audio sources itself (mixed/ master +
+            // stems, extracted/ fallback) and reports missing audio or stem-name
+            // collisions via a non-zero exit + stderr, which the caller surfaces as Err.
+            log::info!("🎵 Running analyze for recording: {}", recording.path.display());
+            runner.run_beatrix_analyze(&recording.path).await
         }
         NextStep::SetupRender => {
             // Check if analysis exists
             if !recording.path.join("analysis").exists() {
                 return Err("Analysis directory not found - run analyze step first".to_string());
+            }
+
+            // Prefer the polished Bitwig master so cinemon selects master_analysis.json.
+            if let Some(master_audio) = resolve_master_main_audio(&recording.path) {
+                log::info!("🎯 Using mixed master as main audio: {}", master_audio);
+                return runner.run_cinemon_render(&recording.path, "beat-switch", Some(&master_audio)).await
+                    .map_err(|e| format!("Command execution failed: {}", e));
             }
 
             // Check if we have multiple audio files and use configured main audio
@@ -372,8 +356,14 @@ async fn execute_step_with_preset(
                 return Err("Analysis directory not found - run analyze step first".to_string());
             }
 
-            log::info!("🎬 Setting up render with preset: {}, main_audio: {:?}", preset, main_audio);
-            runner.run_cinemon_render(&recording.path, preset, main_audio).await
+            // Prefer an explicit main_audio; otherwise fall back to the polished master
+            // so cinemon selects master_analysis.json without a manual override.
+            let resolved_audio = main_audio
+                .map(|a| a.to_string())
+                .or_else(|| resolve_master_main_audio(&recording.path));
+
+            log::info!("🎬 Setting up render with preset: {}, main_audio: {:?}", preset, resolved_audio);
+            runner.run_cinemon_render(&recording.path, preset, resolved_audio.as_deref()).await
                 .map_err(|e| format!("Command execution failed: {}", e))
         }
         _ => {
@@ -481,15 +471,99 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_missing_dependencies() {
+    async fn test_setup_render_requires_analysis_dir() {
         let temp_dir = TempDir::new().unwrap();
         let config = create_test_config(&temp_dir);
 
-        // Try to analyze without extracted directory
+        // SetupRender still guards on the analysis directory existing first.
+        let recording = create_test_recording(&temp_dir, "test_recording", RecordingStatus::Recorded);
+
+        let result = execute_step(&recording, &NextStep::SetupRender, &config).await;
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("Analysis directory not found"));
+    }
+
+    #[tokio::test]
+    async fn test_analyze_step_invokes_analyze_recording_subcommand() {
+        let temp_dir = TempDir::new().unwrap();
+        let config = create_test_config(&temp_dir);
+
+        // No extracted/ directory: source selection now lives in beatrix, so the Rust
+        // side no longer pre-checks extracted/ nor filters .m4a.
         let recording = create_test_recording(&temp_dir, "test_recording", RecordingStatus::Recorded);
 
         let result = execute_step(&recording, &NextStep::Analyze, &config).await;
-        assert!(result.is_err());
-        assert!(result.unwrap_err().contains("Extracted directory not found"));
+        assert!(result.is_ok());
+        let process_result = result.unwrap();
+        assert!(process_result.success);
+        // echo stub: stdout echoes the constructed command line.
+        assert!(process_result.stdout.contains("analyze-recording"));
+        assert!(!process_result.stdout.contains("extracted"));
+    }
+
+    #[tokio::test]
+    async fn test_analyze_step_surfaces_beatrix_failure() {
+        let temp_dir = TempDir::new().unwrap();
+        // `false` stands in for a beatrix run that exits non-zero (e.g. no audio).
+        let config = AppConfig {
+            recordings_path: temp_dir.path().to_path_buf(),
+            cli_paths: crate::commands::recordings::CliPaths {
+                uv_path: "false".to_string(),
+                workspace_root: temp_dir.path().to_path_buf(),
+            },
+            main_audio_file: "".to_string(),
+        };
+
+        let recording = create_test_recording(&temp_dir, "test_recording", RecordingStatus::Extracted);
+
+        let result = execute_step(&recording, &NextStep::Analyze, &config).await;
+        // execute_step returns Ok with the failed ProcessResult; run_specific_step turns
+        // !success into Err(stderr) for the UI.
+        assert!(result.is_ok());
+        assert!(!result.unwrap().success);
+    }
+
+    #[test]
+    fn test_resolve_master_main_audio_prefers_mixed_master() {
+        let temp_dir = TempDir::new().unwrap();
+        let recording_path = temp_dir.path().join("rec");
+        let mixed_dir = recording_path.join("mixed");
+        fs::create_dir_all(&mixed_dir).unwrap();
+        fs::write(mixed_dir.join("master.wav"), "wav").unwrap();
+
+        let resolved = resolve_master_main_audio(&recording_path);
+        assert_eq!(resolved, Some(mixed_dir.join("master.wav").to_string_lossy().to_string()));
+    }
+
+    #[test]
+    fn test_resolve_master_main_audio_none_when_absent() {
+        let temp_dir = TempDir::new().unwrap();
+        let recording_path = temp_dir.path().join("rec");
+        fs::create_dir_all(&recording_path).unwrap();
+
+        assert_eq!(resolve_master_main_audio(&recording_path), None);
+    }
+
+    #[tokio::test]
+    async fn test_setup_render_uses_mixed_master_when_present() {
+        let temp_dir = TempDir::new().unwrap();
+        let config = create_test_config(&temp_dir);
+
+        // Analyzed recording plus a polished master in mixed/.
+        let recording = create_test_recording(&temp_dir, "test_recording", RecordingStatus::Analyzed);
+        let mixed_dir = recording.path.join("mixed");
+        fs::create_dir_all(&mixed_dir).unwrap();
+        fs::write(mixed_dir.join("master.wav"), "wav").unwrap();
+
+        // No explicit main_audio: should resolve to the master and not error out.
+        let result = execute_step_with_preset(
+            &recording,
+            &NextStep::SetupRender,
+            &config,
+            "vintage",
+            None,
+        ).await;
+
+        assert!(result.is_ok());
     }
 }
