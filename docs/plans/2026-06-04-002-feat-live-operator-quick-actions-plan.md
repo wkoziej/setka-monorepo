@@ -1,7 +1,7 @@
 ---
 title: "feat: Szybkie akcje operatorskie sesji live (launcher + przenieś ostatnie nagranie do kosza)"
 type: feat
-status: active
+status: completed
 date: 2026-06-04
 deepened: 2026-06-04
 reworked: 2026-06-04
@@ -239,7 +239,7 @@ kończy się brakiem akcji i powiadomieniem; nawet udane przeniesienie da się c
 
 ## Implementation Units
 
-- [ ] **Unit 1: `setka-live delete-last` — przeniesienie ostatniego nagrania do kosza (bash, self-contained)**
+- [x] **Unit 1: `setka-live delete-last` — przeniesienie ostatniego nagrania do kosza (bash, self-contained)**
 
 **Goal:** Podkomenda `setka-live delete-last`: ustal root nagrań, znajdź najnowszy prawidłowy
 katalog nagrania, potwierdź (zenity z nazwą/wiekiem/rozmiarem), przenieś do kosza (`gio trash`),
@@ -305,7 +305,7 @@ nieprawidłowy root nigdy nie prowadzi do globowania $HOME/CWD.
 
 ---
 
-- [ ] **Unit 2: `setka-tray` — ikona tray z menu akcji (PyGObject)**
+- [x] **Unit 2: `setka-tray` — ikona tray z menu akcji (PyGObject)**
 
 **Goal:** Lekka apka tray (GTK3 + AyatanaAppIndicator3) z menu wyzwalającym podkomendy `setka-live`.
 
@@ -347,7 +347,7 @@ okna, „Usuń ostatnie nagranie" uruchamia przepływ z Unitu 1.
 
 ---
 
-- [ ] **Unit 3: instalacja skrótów GNOME + traya (install.sh + helper)**
+- [x] **Unit 3: instalacja skrótów GNOME + traya (install.sh + helper)**
 
 **Goal:** Idempotentnie zainstalować `setka-tray`, autostart `.desktop` oraz globalne skróty
 GNOME (`Super+Shift+S` show, `Super+Shift+D` delete-last) wskazujące na podkomendy `setka-live`;
