@@ -466,6 +466,93 @@ grep -qi 'delete-last' "$WORK/out.log" \
   && pass "usage: wymienia delete-last" \
   || fail "usage: nie wymienia delete-last"
 
+# =============================================================================
+# Testy new-take (otwarcie czystego projektu Bitwig z szablonu)
+# =============================================================================
+# Mechanizm: `flatpak run <app-id> <template>` — działający Bitwig otwiera plik
+# i daje nienazwany projekt z szablonu. Rejestrator FLATPAK_BIN — wzorzec jak GIO_BIN.
+
+FLATPAK_LOG="$WORK/flatpak.log"
+FLATPAK_REC="$WORK/flatpak-rec"
+cat >"$FLATPAK_REC" <<'EOF'
+#!/usr/bin/env bash
+printf '%s\n' "$*" >> "$FLATPAK_LOG"
+exit "${FLATPAK_RC:-0}"
+EOF
+chmod +x "$FLATPAK_REC"
+
+# Szablon-atrapa: .bwtemplate to katalog-pakiet, więc tworzymy katalog (test -e, nie -f).
+NT_TEMPLATE="$WORK/template.bwtemplate"
+mkdir -p "$NT_TEMPLATE"
+
+# Wywołuje setka-live new-take z wstrzykniętym flatpakiem; czyści logi przed każdym wywołaniem.
+run_new_take() {
+  : >"$FLATPAK_LOG" >"$NOTIFY_LOG" >"$REC_LOG"
+  FLATPAK_LOG="$FLATPAK_LOG" NOTIFY_LOG="$NOTIFY_LOG" \
+    FLATPAK_BIN="$FLATPAK_REC" NOTIFY_BIN="$NOTIFY_REC" \
+    FLATPAK_RC="${FLATPAK_RC:-0}" \
+    SYSTEMCTL_BIN="$REC" SETKA_REC_LOG="$REC_LOG" \
+    LAYOUT_BIN="$LAYOUT_REC" \
+    HEALTH_URL="http://127.0.0.1:59999/health" \
+    "$@" \
+    bash "$SETKA" new-take >"$WORK/out.log" 2>&1
+  echo $?
+}
+
+# --- TEST NT1: Happy path — szablon istnieje → flatpak run z app-id + szablonem ---
+rc="$(BITWIG_TEMPLATE="$NT_TEMPLATE" run_new_take)"
+[ "$rc" = "0" ] && pass "new-take happy: exit 0" || fail "new-take happy: exit $rc"
+grep -q -- 'run' "$FLATPAK_LOG" \
+  && pass "new-take happy: flatpak run wywołany" || fail "new-take happy: brak flatpak run"
+grep -q 'com.bitwig.BitwigStudio' "$FLATPAK_LOG" \
+  && pass "new-take happy: woła app-id Bitwiga" \
+  || fail "new-take happy: brak app-id; log: $(cat "$FLATPAK_LOG" 2>/dev/null)"
+grep -q 'template.bwtemplate' "$FLATPAK_LOG" \
+  && pass "new-take happy: przekazuje szablon" \
+  || fail "new-take happy: brak szablonu w argumentach; log: $(cat "$FLATPAK_LOG" 2>/dev/null)"
+grep -qi 'bitwig\|projekt\|szablon' "$NOTIFY_LOG" \
+  && pass "new-take happy: notify-send potwierdza otwarcie" \
+  || fail "new-take happy: brak notify; log: $(cat "$NOTIFY_LOG" 2>/dev/null)"
+
+# --- TEST NT2: Brak szablonu → niezerowy exit, flatpak NIE wołany ---
+rc="$(BITWIG_TEMPLATE="$WORK/nieistnieje.bwtemplate" run_new_take)"
+[ "$rc" != "0" ] && pass "new-take brak-szablonu: niezerowy exit" \
+  || fail "new-take brak-szablonu: exit 0 (powinno != 0)"
+[ -s "$FLATPAK_LOG" ] \
+  && fail "new-take brak-szablonu: flatpak NIE powinien być wołany; log: $(cat "$FLATPAK_LOG")" \
+  || pass "new-take brak-szablonu: brak flatpak run (FAIL FAST)"
+
+# --- TEST NT3: Dispatch — new-take trafia w cmd_new_take (exit 0, nie 2) ---
+rc="$(BITWIG_TEMPLATE="$NT_TEMPLATE" run_new_take)"
+[ "$rc" = "0" ] && pass "dispatch: new-take → cmd_new_take" \
+  || fail "dispatch: new-take nie trafia w cmd_new_take; exit $rc"
+
+# --- TEST NT4: new-take nie dotyka paternologia.service (most MIDI nietknięty) ---
+BITWIG_TEMPLATE="$NT_TEMPLATE" run_new_take >/dev/null
+grep -q 'paternologia' "$REC_LOG" \
+  && fail "new-take: NIE powinien tykać paternologia.service" \
+  || pass "new-take: nie dotyka paternologia.service"
+
+# --- TEST NT5: Błąd flatpak (rc != 0) → notify o błędzie, niezerowy exit ---
+rc="$(BITWIG_TEMPLATE="$NT_TEMPLATE" FLATPAK_RC=1 run_new_take)"
+[ "$rc" != "0" ] && pass "new-take flatpak-error: niezerowy exit" \
+  || fail "new-take flatpak-error: exit 0 (powinno != 0)"
+grep -qi 'błąd\|error\|nie udało\|fail' "$NOTIFY_LOG" \
+  && pass "new-take flatpak-error: notify-send informuje o błędzie" \
+  || fail "new-take flatpak-error: brak notify o błędzie; log: $(cat "$NOTIFY_LOG" 2>/dev/null)"
+
+# --- TEST NT6: new-take czysto Bitwig — nie rusza systemd (start/stop) ---
+BITWIG_TEMPLATE="$NT_TEMPLATE" run_new_take >/dev/null
+grep -qE -- '--user (start|stop)' "$REC_LOG" \
+  && fail "new-take: niepotrzebnie ruszył systemd" \
+  || pass "new-take: nie dotyka systemd (czysto Bitwig)"
+
+# --- TEST NT7: usage wymienia new-take ---
+rc="$(run_setka frobnicate)"
+grep -qi 'new-take' "$WORK/out.log" \
+  && pass "usage: wymienia new-take" \
+  || fail "usage: nie wymienia new-take"
+
 rm -rf "$WORK"
 printf '\n=== %d passed, %d failed ===\n' "$PASS" "$FAIL"
 [ "$FAIL" -eq 0 ]
