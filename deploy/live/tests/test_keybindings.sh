@@ -162,6 +162,7 @@ MOCK_LIST="@as []" \
 rc="$(SETKA_LIVE_CMD="$WORK/fake-setka-live" \
     KB_SHOW='<Super><Shift>s' \
     KB_DELETE='<Super><Shift>d' \
+    KB_NEW_TAKE='<Super><Shift>n' \
     run_install_keybindings)"
 [ "$rc" = "0" ] \
     && pass "install_keybindings: exit 0" \
@@ -174,6 +175,10 @@ grep -q "setka-show" "$GSETTINGS_LOG" \
 grep -q "setka-delete-last" "$GSETTINGS_LOG" \
     && pass "install_keybindings: rejestruje setka-delete-last" \
     || fail "install_keybindings: brak setka-delete-last; log: $(cat "$GSETTINGS_LOG" 2>/dev/null)"
+
+grep -q "setka-new-take" "$GSETTINGS_LOG" \
+    && pass "install_keybindings: rejestruje setka-new-take" \
+    || fail "install_keybindings: brak setka-new-take; log: $(cat "$GSETTINGS_LOG" 2>/dev/null)"
 
 # ---------------------------------------------------------------------------
 # TEST 5: install_keybindings — SETKA_LIVE_CMD używany w command (absolutna ścieżka)

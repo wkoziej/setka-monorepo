@@ -43,6 +43,15 @@ class TestMenuStructure:
         )
         assert labels["Usuń ostatnie nagranie"] == ["setka-live", "delete-last"]
 
+    def test_nowy_projekt_bitwig_mapuje_na_new_take(self, tray):
+        """Pozycja 'Nowy projekt Bitwig' musi mapować na ['setka-live', 'new-take']."""
+        items = tray.build_menu_items()
+        labels = {label: argv for label, argv in items if label is not None}
+        assert "Nowy projekt Bitwig" in labels, (
+            "Brak pozycji 'Nowy projekt Bitwig' w menu"
+        )
+        assert labels["Nowy projekt Bitwig"] == ["setka-live", "new-take"]
+
     def test_zakoncz_mapuje_na_brak_komendy(self, tray):
         """Pozycja 'Zakończ' musi mieć argv=None (czyste wyjście, brak komendy zewnętrznej)."""
         items = tray.build_menu_items()
