@@ -253,7 +253,7 @@ mod tests {
         let recording_path = temp_dir.path().join("test_recording");
         fs::create_dir_all(&recording_path).unwrap();
 
-        let result = runner.run_cinemon_render(&recording_path, "beat-switch", None).await;
+        let result = runner.run_cinemon_render(&recording_path, "minimal", None).await;
 
         // Should not panic and should return some result
         assert!(result.is_ok());

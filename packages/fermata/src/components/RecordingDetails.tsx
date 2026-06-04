@@ -17,7 +17,7 @@ export function RecordingDetails({ recordingName, onBack, onRecordingRenamed }: 
   const [recording, setRecording] = useState<Recording | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [selectedPreset, setSelectedPreset] = useState("beat-switch");
+  const [selectedPreset, setSelectedPreset] = useState("minimal");
   const [showPresetConfig, setShowPresetConfig] = useState(false);
   const [showVideoPlayer, setShowVideoPlayer] = useState(false);
   const [videoPath, setVideoPath] = useState<string | null>(null);
