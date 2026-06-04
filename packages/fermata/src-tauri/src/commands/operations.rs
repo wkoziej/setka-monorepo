@@ -13,7 +13,7 @@ pub struct RenderOptions {
 impl Default for RenderOptions {
     fn default() -> Self {
         Self {
-            preset: "beat-switch".to_string(),  // Zachowanie kompatybilności
+            preset: "minimal".to_string(),  // Zachowanie kompatybilności
             main_audio: None,
         }
     }
@@ -165,7 +165,7 @@ async fn execute_step(
             // Prefer the polished Bitwig master so cinemon selects master_analysis.json.
             if let Some(master_audio) = resolve_master_main_audio(&recording.path) {
                 log::info!("🎯 Using mixed master as main audio: {}", master_audio);
-                return runner.run_cinemon_render(&recording.path, "beat-switch", Some(&master_audio)).await
+                return runner.run_cinemon_render(&recording.path, "minimal", Some(&master_audio)).await
                     .map_err(|e| format!("Command execution failed: {}", e));
             }
 
@@ -191,18 +191,18 @@ async fn execute_step(
                     // Use configured main audio file if available
                     if !config.main_audio_file.is_empty() && audio_files.contains(&config.main_audio_file) {
                         log::info!("🎯 Using configured main audio: {}", config.main_audio_file);
-                        runner.run_cinemon_render(&recording.path, "beat-switch", Some(&config.main_audio_file)).await
+                        runner.run_cinemon_render(&recording.path, "minimal", Some(&config.main_audio_file)).await
                     } else {
                         log::warn!("⚠️ Multiple audio files found but main audio '{}' not available in: {:?}", config.main_audio_file, audio_files);
                         return Err(format!("Multiple audio files found: {:?}. Configure FERMATA_MAIN_AUDIO environment variable to specify which one to use.", audio_files));
                     }
                 } else {
                     // Single audio file, use without --main-audio parameter
-                    runner.run_cinemon_render(&recording.path, "beat-switch", None).await
+                    runner.run_cinemon_render(&recording.path, "minimal", None).await
                 }
             } else {
                 // No extracted directory, use basic render
-                runner.run_cinemon_render(&recording.path, "beat-switch", None).await
+                runner.run_cinemon_render(&recording.path, "minimal", None).await
             }
         }
         NextStep::Render => {
@@ -560,10 +560,19 @@ mod tests {
             &recording,
             &NextStep::SetupRender,
             &config,
-            "vintage",
+            "minimal",
             None,
         ).await;
 
         assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_render_options_default_uses_supported_preset() {
+        // The default preset must be one cinemon actually ships (see
+        // `cinemon-generate-config --list-presets`); a stale default makes the
+        // quick "Setup" button fail with "Preset '<name>' not found".
+        let supported = ["minimal", "multi_pip"];
+        assert!(supported.contains(&RenderOptions::default().preset.as_str()));
     }
 }

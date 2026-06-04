@@ -99,20 +99,12 @@ export interface PresetOption {
 
 export const AVAILABLE_PRESETS: PresetOption[] = [
   {
-    name: 'beat-switch',
-    description: 'Dynamic camera switching synchronized with beat detection'
-  },
-  {
     name: 'minimal',
     description: 'Clean, simple layout with minimal animations'
   },
   {
-    name: 'music-video',
-    description: 'High-energy effects perfect for music content'
-  },
-  {
-    name: 'vintage',
-    description: 'Retro-style effects with film grain and color grading'
+    name: 'multi_pip',
+    description: 'Multiple picture-in-picture layout with per-strip animations'
   }
 ];
 
