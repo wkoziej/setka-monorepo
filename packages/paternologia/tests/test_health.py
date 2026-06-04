@@ -20,7 +20,7 @@ def _client(**state) -> TestClient:
 def test_health_reports_all_fields():
     """/health returns the full state object when everything is wired."""
     client = _client(
-        midi_listener=SimpleNamespace(is_active=True),
+        midi_listener=SimpleNamespace(input_subscribed=True),
         midi_bridge=SimpleNamespace(is_active=True),
         obs_connected=True,
         last_heartbeat_ts=123.0,
@@ -35,10 +35,24 @@ def test_health_reports_all_fields():
     }
 
 
+def test_health_pacer_input_open_reflects_subscription():
+    """pacer_input_open follows the real ALSA subscription, not just an open handle.
+
+    After PACER re-enumeration a stale handle keeps is_active True while the
+    subscription is gone; /health must report the honest input_subscribed value.
+    """
+    client = _client(
+        midi_listener=SimpleNamespace(input_subscribed=False),
+        midi_bridge=SimpleNamespace(is_active=True),
+    )
+    body = client.get("/health").json()
+    assert body["pacer_input_open"] is False
+
+
 def test_health_obs_connected_false_when_absent():
     """obs_connected defaults to False and heartbeat to None when unset."""
     client = _client(
-        midi_listener=SimpleNamespace(is_active=True),
+        midi_listener=SimpleNamespace(input_subscribed=True),
         midi_bridge=SimpleNamespace(is_active=True),
     )
     body = client.get("/health").json()
@@ -49,7 +63,7 @@ def test_health_obs_connected_false_when_absent():
 def test_health_pacer_unplugged_keeps_bridge_active():
     """An unplugged PACER shows pacer_input_open=false but bridge stays active."""
     client = _client(
-        midi_listener=SimpleNamespace(is_active=False),
+        midi_listener=SimpleNamespace(input_subscribed=False),
         midi_bridge=SimpleNamespace(is_active=True),
     )
     body = client.get("/health").json()

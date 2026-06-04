@@ -2,6 +2,7 @@
 # ABOUTME: Shared by pacer router (amidi) and MIDI listener (rtmidi).
 
 import logging
+import os
 import subprocess
 
 logger = logging.getLogger(__name__)
@@ -64,6 +65,53 @@ def find_rtmidi_ports(device_name: str) -> list[int]:
     else:
         logger.warning("No rtmidi port matching '%s' in: %s", device_name, ports)
     return matches
+
+
+def pacer_input_subscribed(device_name: str) -> bool:
+    """True if device_name's MIDI OUTPUT still has a live ALSA subscription.
+
+    rtmidi keeps a MidiIn handle "open" after the device re-enumerates (replug,
+    suspend/resume, card-number change), but ALSA silently drops the
+    subscription — so the open-handle count is NOT an honest signal that input
+    actually flows. The reliable signal is whether the device's output port is
+    still subscribed by a consumer, which we read from `aconnect -l`.
+
+    Assumes the live rig is the single consumer of the device's output (true for
+    PACER -> bridge). aconnect runs under LC_ALL=C for stable English labels
+    ("Connecting To:"). On any failure (aconnect missing/erroring) returns True,
+    degrading to the handle-based behaviour instead of churning reconnects.
+    """
+    try:
+        result = subprocess.run(
+            ["aconnect", "-l"],
+            capture_output=True,
+            text=True,
+            # Kept below the replug watcher interval so a wedged aconnect (likely
+            # exactly during a re-enumeration storm) can't pile up; on timeout we
+            # degrade to True (assume-subscribed) rather than churn reconnects.
+            timeout=2,
+            check=False,
+            env={**os.environ, "LC_ALL": "C"},
+        )
+    except (FileNotFoundError, subprocess.TimeoutExpired):
+        return True
+    if result.returncode != 0:
+        return True
+
+    in_device_block = False
+    for line in result.stdout.splitlines():
+        if line.startswith("client "):
+            # A new client header ends the previous block. Match the QUOTED client
+            # name only — `client 44: 'PACER' [type=kernel,card=7]` -> 'PACER' —
+            # not a substring of the whole line, so neither the metadata
+            # (type/card/id) nor a different client whose name merely contains the
+            # device name (e.g. 'PACER-monitor') is mistaken for the device.
+            name = line.split("'")[1] if "'" in line else ""
+            in_device_block = name.upper() == device_name.upper()
+            continue
+        if in_device_block and line.strip().startswith("Connecting To:"):
+            return True
+    return False
 
 
 def find_rtmidi_output_port(name_substring: str) -> int | None:

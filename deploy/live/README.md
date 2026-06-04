@@ -77,7 +77,7 @@ Pułapki:
 | Unit | Rola |
 |------|------|
 | `live-recording.target` | spina członków (tryb na żądanie, bez `WantedBy=default.target`) |
-| `live-preflight.service` | oneshot gate: virmidi + PipeWire 44100 + paternologia `/health` |
+| `live-preflight.service` | oneshot gate: virmidi + PipeWire 44100 + karty audio rigu w PipeWire (`REQUIRED_AUDIO_CARDS`) + paternologia `/health` |
 | `obs.service` | OBS Studio (`/usr/bin/obs`), `Restart=no` |
 | `bitwig.service` | Bitwig (flatpak), `ExecStop=flatpak kill`, `Restart=no` |
 | `kiosk.service` | `/live` w `google-chrome --kiosk` (nie-snap, osobny `--user-data-dir`), `Restart=no` |
