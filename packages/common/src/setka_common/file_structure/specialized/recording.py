@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Optional
 import json
 import logging
+import re
 
 from ..base import MediaStructure, StructureManager
 from ...utils.files import find_files_by_type, MediaType
@@ -17,6 +18,70 @@ from ...exceptions import (
 )
 
 logger = logging.getLogger(__name__)
+
+# Bitwig appends a numeric suffix like "-24" or "-100" to recorded track filenames.
+_BITWIG_SUFFIX_RE = re.compile(r"-\d+$")
+
+# Characters that act as separators and should become underscores.
+_SEPARATOR_CHARS_RE = re.compile(r"[ +/\\]+")
+
+# Collapse multiple underscores into one.
+_MULTI_UNDERSCORE_RE = re.compile(r"_+")
+
+
+def sanitize_stem_name(name: str) -> str:
+    """Convert a raw Bitwig filename or stem into a stable, filesystem-safe label.
+
+    Steps applied in order:
+    1. Strip file extension (handles both bare stems and full filenames like ``foo.wav``).
+    2. Remove the Bitwig numeric recording suffix ``-<digits>`` at the end
+       (e.g. ``track 4+git-24`` → ``track 4+git``).
+    3. Replace separator characters (space, ``+``, ``/``, ``\\``) with ``_``.
+    4. Collapse consecutive underscores into one and strip leading/trailing ``_``.
+
+    Case is preserved — no lower-casing.  The function is idempotent:
+    ``sanitize_stem_name(sanitize_stem_name(x)) == sanitize_stem_name(x)``.
+
+    Args:
+        name: Raw stem name or full filename from a Bitwig ``samples/`` directory
+              or any other audio source.
+
+    Returns:
+        Normalised label suitable for use in ``<label>_analysis.json`` and the
+        ``analysis/index.json`` manifest.
+
+    Raises:
+        ValueError: When the resulting label is empty (e.g. input was only
+                    separator characters), with a message referencing
+                    ``sanitize_stem_name`` for easy grep.
+    """
+    # Step 1: replace path separators (/ \) with underscores BEFORE Path.stem so
+    # that "my track/stem" is not interpreted as a filesystem path component.
+    # Spaces and + are not path separators on Linux but are still replaced here
+    # pre-emptively; they will also be caught in step 3.
+    pre = name.replace("/", "_").replace("\\", "_")
+
+    # Step 1b: strip file extension using Path.stem (handles e.g. "track-24.wav").
+    stem = Path(pre).stem
+
+    # Step 2: remove Bitwig numeric suffix "-<digits>" at the end.
+    stem = _BITWIG_SUFFIX_RE.sub("", stem)
+
+    # Step 3: replace remaining separator characters (space, +) with underscore.
+    stem = _SEPARATOR_CHARS_RE.sub("_", stem)
+
+    # Step 4: collapse and strip underscores.
+    stem = _MULTI_UNDERSCORE_RE.sub("_", stem)
+    stem = stem.strip("_")
+
+    if not stem:
+        raise ValueError(
+            f"sanitize_stem_name: input {name!r} reduces to an empty label after "
+            "removing extension, Bitwig suffix, and separator characters. "
+            "Provide a name with at least one alphanumeric character."
+        )
+
+    return stem
 
 
 @dataclass
@@ -362,15 +427,68 @@ class RecordingStructureManager(StructureManager):
             )
 
     @staticmethod
+    def find_bitwig_sample_sources(recording_dir: Path) -> list[Path]:
+        """Locate audio files in the Bitwig samples directory.
+
+        Looks for a ``samples/`` subdirectory inside ``bitwig/``:
+        - First checks ``bitwig/samples/`` (flat layout).
+        - If not found, scans one level deep: ``bitwig/*/samples/`` (project-in-subfolder
+          layout produced by Bitwig's Save As).
+        No deeper recursion is performed to avoid pulling in unrelated audio.
+
+        Args:
+            recording_dir: Recording directory path
+
+        Returns:
+            Sorted (case-insensitive) list of audio file paths found in samples/,
+            or an empty list when ``bitwig/`` or any ``samples/`` directory is absent.
+        """
+        recording_dir = Path(recording_dir)
+        bitwig_dir = recording_dir / RecordingStructureManager.BITWIG_DIRNAME
+
+        if not bitwig_dir.exists():
+            return []
+
+        # Prefer flat bitwig/samples/ layout first
+        flat_samples = bitwig_dir / "samples"
+        if flat_samples.exists() and flat_samples.is_dir():
+            return sorted(
+                find_files_by_type(flat_samples, MediaType.AUDIO),
+                key=lambda p: p.name.lower(),
+            )
+
+        # Fallback: scan one level of subdirectories for a samples/ folder
+        for child in bitwig_dir.iterdir():
+            if not child.is_dir():
+                continue
+            nested_samples = child / "samples"
+            if nested_samples.exists() and nested_samples.is_dir():
+                return sorted(
+                    find_files_by_type(nested_samples, MediaType.AUDIO),
+                    key=lambda p: p.name.lower(),
+                )
+
+        return []
+
+    @staticmethod
     def find_analysis_audio_sources(recording_dir: Path) -> list[Path]:
-        """Resolve audio sources for analysis: prefer mixed/ (master + stems), fallback extracted/.
+        """Resolve audio sources for analysis using a hybrid two-tier approach.
 
-        Scans mixed/ and mixed/stems/ separately (find_files_by_type is non-recursive),
-        merges results. Falls back to extracted/ when mixed/ has no audio files or does
-        not exist.
+        **Tier resolution:**
 
-        Raises ValueError on stem name collision (two sources would produce the same
-        {stem}_analysis.json output file), enforcing fail-fast policy.
+        1. *master-tier* — audio files directly in ``mixed/`` (non-recursive).
+           Typically a single ``master.wav`` from a Bitwig Export Audio.
+        2. *stems-tier* — audio files in ``mixed/stems/`` if that directory is
+           non-empty; otherwise falls back to ``find_bitwig_sample_sources``
+           (``bitwig/…/samples/`` raw capture files).
+
+        The two tiers are merged and a collision check is performed using
+        ``sanitize_stem_name`` on each file's stem — two files producing the same
+        sanitised label would map to the same ``<label>_analysis.json`` output,
+        which is rejected with ``ValueError``.
+
+        If both tiers are empty (no ``mixed/`` audio and no bitwig samples), the
+        function falls back to ``extracted/`` for backward compatibility.
 
         Args:
             recording_dir: Recording directory path
@@ -379,35 +497,47 @@ class RecordingStructureManager(StructureManager):
             Sorted (case-insensitive) list of audio file paths to analyze
 
         Raises:
-            ValueError: When two source files share the same stem (collision)
+            ValueError: When two source files sanitise to the same label (collision)
         """
         recording_dir = Path(recording_dir)
 
         mixed_dir = recording_dir / RecordingStructureManager.MIXED_DIRNAME
         stems_dir = mixed_dir / "stems"
 
-        mixed_files: list[Path] = []
+        # --- master-tier: audio directly in mixed/ root ---
+        master_tier: list[Path] = []
         if mixed_dir.exists():
-            mixed_files.extend(find_files_by_type(mixed_dir, MediaType.AUDIO))
-            if stems_dir.exists():
-                mixed_files.extend(find_files_by_type(stems_dir, MediaType.AUDIO))
+            master_tier.extend(find_files_by_type(mixed_dir, MediaType.AUDIO))
 
-        if mixed_files:
-            # Detect stem name collisions before returning
-            seen_stems: dict[str, Path] = {}
-            for audio_file in mixed_files:
-                stem_key = audio_file.stem.lower()
-                if stem_key in seen_stems:
+        # --- stems-tier: mixed/stems/ preferred; bitwig/samples/ as fallback ---
+        stems_tier: list[Path] = []
+        if stems_dir.exists():
+            stems_tier.extend(find_files_by_type(stems_dir, MediaType.AUDIO))
+        if not stems_tier:
+            # mixed/stems/ absent or empty — try bitwig samples
+            stems_tier.extend(
+                RecordingStructureManager.find_bitwig_sample_sources(recording_dir)
+            )
+
+        sources = master_tier + stems_tier
+
+        if sources:
+            # Detect sanitised label collisions before returning
+            seen_labels: dict[str, Path] = {}
+            for audio_file in sources:
+                label = sanitize_stem_name(audio_file.stem)
+                if label in seen_labels:
                     raise ValueError(
-                        f"Stem name collision: '{audio_file}' and '{seen_stems[stem_key]}' "
-                        f"would both produce '{audio_file.stem}_analysis.json'. "
-                        "Use unique stem names in mixed/ and mixed/stems/."
+                        f"Stem name collision after sanitisation: "
+                        f"'{audio_file}' and '{seen_labels[label]}' "
+                        f"would both produce '{label}_analysis.json'. "
+                        "Use unique stem names across mixed/ and stems sources."
                     )
-                seen_stems[stem_key] = audio_file
+                seen_labels[label] = audio_file
 
-            return sorted(mixed_files, key=lambda p: p.name.lower())
+            return sorted(sources, key=lambda p: p.name.lower())
 
-        # Fallback: no audio in mixed/ (or mixed/ absent) — use extracted/
+        # Fallback: no audio in mixed/ or bitwig — use extracted/ (backward compat)
         extracted_dir = recording_dir / RecordingStructureManager.EXTRACTED_DIRNAME
         extracted_files = find_files_by_type(extracted_dir, MediaType.AUDIO)
         return sorted(extracted_files, key=lambda p: p.name.lower())

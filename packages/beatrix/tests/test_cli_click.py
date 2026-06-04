@@ -354,3 +354,232 @@ class TestAnalyzeRecordingCommand:
 
             assert result.exit_code == 0
             mock_analyzer.analyze_for_animation.assert_called_once()
+
+    def test_master_only_produces_index_json(self, tmp_path):
+        """Regression n=1: master.wav → master_analysis.json + index.json with one entry."""
+        runner = CliRunner()
+        mixed_dir = tmp_path / "mixed"
+        mixed_dir.mkdir()
+        _write_wav(mixed_dir / "master.wav")
+
+        result = runner.invoke(cli, ["analyze-recording", str(tmp_path)])
+
+        assert result.exit_code == 0, result.output
+        index_file = tmp_path / "analysis" / "index.json"
+        assert index_file.exists(), f"index.json missing; output: {result.output}"
+
+        import json
+
+        index = json.loads(index_file.read_text())
+        assert index["version"] == 1
+        assert len(index["sources"]) == 1
+        entry = index["sources"][0]
+        assert entry["role"] == "master"
+        assert entry["origin"] == "mixed"
+        assert entry["label"] == "master"
+        assert entry["source"] == "mixed/master.wav"
+        assert entry["analysis"] == "analysis/master_analysis.json"
+        assert "duration" in entry
+        assert "sample_rate" in entry
+
+    def test_bitwig_samples_produce_index_json(self, tmp_path):
+        """Happy path: mixed/master.wav + bitwig/samples/{m_s-24,track 4+git-24}.wav
+        → index.json with 3 entries, correct roles/origins/labels/paths."""
+        runner = CliRunner()
+        mixed_dir = tmp_path / "mixed"
+        mixed_dir.mkdir()
+        bitwig_samples_dir = tmp_path / "bitwig" / "samples"
+        bitwig_samples_dir.mkdir(parents=True)
+
+        with patch("beatrix.cli.click_cli.AudioAnalyzer") as mock_analyzer_class:
+            mock_analyzer = Mock()
+            mock_analyzer_class.return_value = mock_analyzer
+            mock_analyzer.analyze_for_animation.return_value = {
+                "duration": 10.0,
+                "sample_rate": 44100,
+                "tempo": {"bpm": 120.0},
+                "animation_events": {"beats": []},
+            }
+
+            _write_wav(mixed_dir / "master.wav")
+            _write_wav(bitwig_samples_dir / "m_s-24.wav")
+            _write_wav(bitwig_samples_dir / "track 4+git-24.wav")
+
+            result = runner.invoke(cli, ["analyze-recording", str(tmp_path)])
+
+            assert result.exit_code == 0, result.output
+
+        # Verify index.json — the manifest written by analyze-recording
+        import json
+
+        analysis_dir = tmp_path / "analysis"
+        index_file = analysis_dir / "index.json"
+        assert index_file.exists(), "index.json missing"
+        index = json.loads(index_file.read_text())
+        assert index["version"] == 1
+        assert len(index["sources"]) == 3
+
+        by_label = {e["label"]: e for e in index["sources"]}
+
+        master_entry = by_label["master"]
+        assert master_entry["role"] == "master"
+        assert master_entry["origin"] == "mixed"
+        assert master_entry["source"] == "mixed/master.wav"
+        assert master_entry["analysis"] == "analysis/master_analysis.json"
+        assert master_entry["duration"] == 10.0
+        assert master_entry["sample_rate"] == 44100
+
+        ms_entry = by_label["m_s"]
+        assert ms_entry["role"] == "stem"
+        assert ms_entry["origin"] == "bitwig"
+        assert ms_entry["source"] == "bitwig/samples/m_s-24.wav"
+        assert ms_entry["analysis"] == "analysis/m_s_analysis.json"
+
+        track_entry = by_label["track_4_git"]
+        assert track_entry["role"] == "stem"
+        assert track_entry["origin"] == "bitwig"
+        assert track_entry["source"] == "bitwig/samples/track 4+git-24.wav"
+        assert track_entry["analysis"] == "analysis/track_4_git_analysis.json"
+
+    def test_mixed_stems_produce_index_json_with_mixed_origin(self, tmp_path):
+        """Happy path: mixed/stems/ non-empty → entries use origin=mixed, bitwig ignored."""
+        runner = CliRunner()
+        mixed_dir = tmp_path / "mixed"
+        mixed_dir.mkdir()
+        stems_dir = mixed_dir / "stems"
+        stems_dir.mkdir()
+        bitwig_samples_dir = tmp_path / "bitwig" / "samples"
+        bitwig_samples_dir.mkdir(parents=True)
+
+        with patch("beatrix.cli.click_cli.AudioAnalyzer") as mock_analyzer_class:
+            mock_analyzer = Mock()
+            mock_analyzer_class.return_value = mock_analyzer
+            mock_analyzer.analyze_for_animation.return_value = {
+                "duration": 5.0,
+                "sample_rate": 48000,
+                "tempo": {"bpm": 90.0},
+                "animation_events": {"beats": []},
+            }
+
+            _write_wav(mixed_dir / "master.wav")
+            _write_wav(stems_dir / "drums.wav")
+            _write_wav(stems_dir / "bass.wav")
+            _write_wav(bitwig_samples_dir / "ignored.wav")
+
+            result = runner.invoke(cli, ["analyze-recording", str(tmp_path)])
+
+            assert result.exit_code == 0, result.output
+
+        import json
+
+        index_file = tmp_path / "analysis" / "index.json"
+        assert index_file.exists()
+        index = json.loads(index_file.read_text())
+        assert len(index["sources"]) == 3
+
+        by_label = {e["label"]: e for e in index["sources"]}
+        assert by_label["master"]["origin"] == "mixed"
+        assert by_label["drums"]["role"] == "stem"
+        assert by_label["drums"]["origin"] == "mixed"
+        assert by_label["drums"]["source"] == "mixed/stems/drums.wav"
+        assert by_label["bass"]["origin"] == "mixed"
+        # bitwig/ignored.wav must NOT appear
+        assert "ignored" not in by_label
+
+    def test_extracted_fallback_produces_index_json_with_main_role(self, tmp_path):
+        """Edge case: extracted/ fallback → role=main, origin=extracted in index.json."""
+        runner = CliRunner()
+        extracted_dir = tmp_path / "extracted"
+        extracted_dir.mkdir()
+
+        with patch("beatrix.cli.click_cli.AudioAnalyzer") as mock_analyzer_class:
+            mock_analyzer = Mock()
+            mock_analyzer_class.return_value = mock_analyzer
+            mock_analyzer.analyze_for_animation.return_value = {
+                "duration": 3.0,
+                "sample_rate": 44100,
+                "tempo": {"bpm": 100.0},
+                "animation_events": {"beats": []},
+            }
+
+            _write_wav(extracted_dir / "source.wav")
+
+            result = runner.invoke(cli, ["analyze-recording", str(tmp_path)])
+
+            assert result.exit_code == 0, result.output
+
+        import json
+
+        index_file = tmp_path / "analysis" / "index.json"
+        assert index_file.exists()
+        index = json.loads(index_file.read_text())
+        assert len(index["sources"]) == 1
+        entry = index["sources"][0]
+        assert entry["role"] == "main"
+        assert entry["origin"] == "extracted"
+        assert entry["label"] == "source"
+        assert entry["source"] == "extracted/source.wav"
+        assert entry["analysis"] == "analysis/source_analysis.json"
+
+    def test_no_audio_does_not_write_index_json(self, tmp_path):
+        """Error path: no audio → nonzero exit, index.json NOT written."""
+        runner = CliRunner()
+
+        result = runner.invoke(cli, ["analyze-recording", str(tmp_path)])
+
+        assert result.exit_code != 0
+        assert not (tmp_path / "analysis" / "index.json").exists()
+
+    def test_collision_does_not_write_index_json(self, tmp_path):
+        """Error path: sanitised name collision → nonzero exit, index.json NOT written."""
+        runner = CliRunner()
+        mixed_dir = tmp_path / "mixed"
+        mixed_dir.mkdir()
+        stems_dir = mixed_dir / "stems"
+        stems_dir.mkdir()
+        _write_wav(mixed_dir / "master.wav")
+        _write_wav(stems_dir / "master.wav")  # collision
+
+        result = runner.invoke(cli, ["analyze-recording", str(tmp_path)])
+
+        assert result.exit_code != 0
+        assert not (tmp_path / "analysis" / "index.json").exists()
+
+    def test_options_propagate_to_all_sources(self, tmp_path):
+        """Edge case: --beat-division/--min-onset-interval forwarded to every source."""
+        runner = CliRunner()
+        mixed_dir = tmp_path / "mixed"
+        mixed_dir.mkdir()
+        bitwig_samples_dir = tmp_path / "bitwig" / "samples"
+        bitwig_samples_dir.mkdir(parents=True)
+
+        with patch("beatrix.cli.click_cli.AudioAnalyzer") as mock_analyzer_class:
+            mock_analyzer = Mock()
+            mock_analyzer_class.return_value = mock_analyzer
+            mock_analyzer.analyze_for_animation.return_value = {
+                "duration": 1.0,
+                "sample_rate": 44100,
+                "tempo": {"bpm": 120.0},
+                "animation_events": {"beats": []},
+            }
+
+            _write_wav(mixed_dir / "master.wav")
+            _write_wav(bitwig_samples_dir / "track-24.wav")
+
+            result = runner.invoke(
+                cli,
+                [
+                    "analyze-recording",
+                    str(tmp_path),
+                    "--beat-division",
+                    "4",
+                    "--min-onset-interval",
+                    "1.5",
+                ],
+            )
+
+            assert result.exit_code == 0, result.output
+            assert mock_analyzer.analyze_for_animation.call_count == 2
+            for call in mock_analyzer.analyze_for_animation.call_args_list:
+                assert call.kwargs["beat_division"] == 4
+                assert call.kwargs["min_onset_interval"] == 1.5

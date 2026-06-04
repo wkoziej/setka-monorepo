@@ -2,9 +2,12 @@
 Testy dla modułu recording structure.
 """
 
+import pytest
+
 from setka_common.file_structure.specialized.recording import (
     RecordingStructure,
     RecordingStructureManager,
+    sanitize_stem_name,
 )
 
 
@@ -683,3 +686,418 @@ class TestFindAnalysisAudioSources:
         result_names = [f.name.lower() for f in result]
 
         assert result_names == sorted(result_names)
+
+
+class TestFindBitwigSampleSources:
+    """Testy dla find_bitwig_sample_sources (Unit 2)."""
+
+    def test_bitwig_samples_flat(self, tmp_path):
+        """bitwig/samples/ z wav → zwraca te pliki."""
+        recording_dir = tmp_path / "recording"
+        recording_dir.mkdir()
+        samples_dir = recording_dir / "bitwig" / "samples"
+        samples_dir.mkdir(parents=True)
+        a = samples_dir / "m_s-24.wav"
+        a.touch()
+        b = samples_dir / "track 4+git-24.wav"
+        b.touch()
+
+        result = RecordingStructureManager.find_bitwig_sample_sources(recording_dir)
+
+        assert a in result
+        assert b in result
+        assert len(result) == 2
+
+    def test_bitwig_samples_nested_one_level(self, tmp_path):
+        """bitwig/<proj>/samples/ (jeden poziom zagnieżdżenia) jest wykrywane."""
+        recording_dir = tmp_path / "recording"
+        recording_dir.mkdir()
+        samples_dir = recording_dir / "bitwig" / "MyProject" / "samples"
+        samples_dir.mkdir(parents=True)
+        wav = samples_dir / "m_s-24.wav"
+        wav.touch()
+
+        result = RecordingStructureManager.find_bitwig_sample_sources(recording_dir)
+
+        assert wav in result
+
+    def test_bitwig_flat_takes_priority_over_nested(self, tmp_path):
+        """bitwig/samples/ (flat) wykryte zamiast bitwig/*/samples/ gdy oba istnieją."""
+        recording_dir = tmp_path / "recording"
+        recording_dir.mkdir()
+        # flat samples dir
+        flat_samples = recording_dir / "bitwig" / "samples"
+        flat_samples.mkdir(parents=True)
+        flat_wav = flat_samples / "flat.wav"
+        flat_wav.touch()
+        # nested samples dir
+        nested_samples = recording_dir / "bitwig" / "proj" / "samples"
+        nested_samples.mkdir(parents=True)
+        nested_wav = nested_samples / "nested.wav"
+        nested_wav.touch()
+
+        result = RecordingStructureManager.find_bitwig_sample_sources(recording_dir)
+
+        # flat bierze priorytet
+        assert flat_wav in result
+        assert nested_wav not in result
+
+    def test_no_bitwig_dir_returns_empty(self, tmp_path):
+        """Brak bitwig/ → zwraca []."""
+        recording_dir = tmp_path / "recording"
+        recording_dir.mkdir()
+
+        result = RecordingStructureManager.find_bitwig_sample_sources(recording_dir)
+
+        assert result == []
+
+    def test_bitwig_exists_no_samples_dir_returns_empty(self, tmp_path):
+        """bitwig/ istnieje ale bez samples/ → zwraca []."""
+        recording_dir = tmp_path / "recording"
+        recording_dir.mkdir()
+        bitwig_dir = recording_dir / "bitwig"
+        bitwig_dir.mkdir()
+
+        result = RecordingStructureManager.find_bitwig_sample_sources(recording_dir)
+
+        assert result == []
+
+    def test_bitwig_samples_empty_dir_returns_empty(self, tmp_path):
+        """bitwig/samples/ istnieje ale puste → zwraca []."""
+        recording_dir = tmp_path / "recording"
+        recording_dir.mkdir()
+        samples_dir = recording_dir / "bitwig" / "samples"
+        samples_dir.mkdir(parents=True)
+
+        result = RecordingStructureManager.find_bitwig_sample_sources(recording_dir)
+
+        assert result == []
+
+    def test_non_audio_files_ignored(self, tmp_path):
+        """Pliki nie-audio w bitwig/samples/ są pomijane."""
+        recording_dir = tmp_path / "recording"
+        recording_dir.mkdir()
+        samples_dir = recording_dir / "bitwig" / "samples"
+        samples_dir.mkdir(parents=True)
+        wav = samples_dir / "track.wav"
+        wav.touch()
+        bwproject = samples_dir / "project.bwproject"
+        bwproject.touch()
+
+        result = RecordingStructureManager.find_bitwig_sample_sources(recording_dir)
+
+        assert wav in result
+        assert bwproject not in result
+        assert len(result) == 1
+
+
+class TestFindAnalysisAudioSourcesHybrid:
+    """Testy hybrydowego resolvera (Unit 2) — tiery master + stems|bitwig."""
+
+    def test_master_plus_mixed_stems(self, tmp_path):
+        """mixed/master.wav + mixed/stems/{a,b}.wav → master + 2 stemy (bitwig ignorowany)."""
+        recording_dir = tmp_path / "recording"
+        recording_dir.mkdir()
+        mixed_dir = recording_dir / "mixed"
+        mixed_dir.mkdir()
+        stems_dir = mixed_dir / "stems"
+        stems_dir.mkdir()
+        master = mixed_dir / "master.wav"
+        master.touch()
+        stem_a = stems_dir / "bass.wav"
+        stem_a.touch()
+        stem_b = stems_dir / "guitar.wav"
+        stem_b.touch()
+        # bitwig/samples/ — powinien być ignorowany gdy mixed/stems/ niepuste
+        bitwig_samples = recording_dir / "bitwig" / "samples"
+        bitwig_samples.mkdir(parents=True)
+        (bitwig_samples / "ignored.wav").touch()
+
+        result = RecordingStructureManager.find_analysis_audio_sources(recording_dir)
+
+        assert master in result
+        assert stem_a in result
+        assert stem_b in result
+        assert len(result) == 3
+
+    def test_master_plus_bitwig_stems_when_no_mixed_stems(self, tmp_path):
+        """mixed/master.wav + brak/puste mixed/stems/ + bitwig/samples/ z 3 wav → master + 3 stemy."""
+        recording_dir = tmp_path / "recording"
+        recording_dir.mkdir()
+        mixed_dir = recording_dir / "mixed"
+        mixed_dir.mkdir()
+        # stems/ puste (nie istnieje)
+        master = mixed_dir / "master.wav"
+        master.touch()
+        bitwig_samples = recording_dir / "bitwig" / "samples"
+        bitwig_samples.mkdir(parents=True)
+        b1 = bitwig_samples / "m_s-24.wav"
+        b1.touch()
+        b2 = bitwig_samples / "track 4+git-24.wav"
+        b2.touch()
+        b3 = bitwig_samples / "track 5_6+mic+freak-24.wav"
+        b3.touch()
+
+        result = RecordingStructureManager.find_analysis_audio_sources(recording_dir)
+
+        assert master in result
+        assert b1 in result
+        assert b2 in result
+        assert b3 in result
+        assert len(result) == 4
+
+    def test_only_bitwig_no_mixed(self, tmp_path):
+        """Brak mixed/, bitwig/samples/ z N wav → N źródeł (master-tier pusty)."""
+        recording_dir = tmp_path / "recording"
+        recording_dir.mkdir()
+        bitwig_samples = recording_dir / "bitwig" / "samples"
+        bitwig_samples.mkdir(parents=True)
+        b1 = bitwig_samples / "m_s-24.wav"
+        b1.touch()
+        b2 = bitwig_samples / "track 1-25.wav"
+        b2.touch()
+
+        result = RecordingStructureManager.find_analysis_audio_sources(recording_dir)
+
+        assert b1 in result
+        assert b2 in result
+        assert len(result) == 2
+
+    def test_bitwig_nested_project_detected(self, tmp_path):
+        """bitwig/<proj>/samples/ (jeden poziom zagnieżdżenia) wykryte jako fallback stemów."""
+        recording_dir = tmp_path / "recording"
+        recording_dir.mkdir()
+        mixed_dir = recording_dir / "mixed"
+        mixed_dir.mkdir()
+        master = mixed_dir / "master.wav"
+        master.touch()
+        # nested bitwig project
+        nested_samples = recording_dir / "bitwig" / "LiveSession" / "samples"
+        nested_samples.mkdir(parents=True)
+        stem = nested_samples / "m_s-24.wav"
+        stem.touch()
+
+        result = RecordingStructureManager.find_analysis_audio_sources(recording_dir)
+
+        assert master in result
+        assert stem in result
+        assert len(result) == 2
+
+    def test_mixed_stems_wins_over_bitwig(self, tmp_path):
+        """mixed/stems/ niepuste → bitwig/samples/ nie jest odpytywany (fallback nie odpala)."""
+        recording_dir = tmp_path / "recording"
+        recording_dir.mkdir()
+        mixed_dir = recording_dir / "mixed"
+        mixed_dir.mkdir()
+        stems_dir = mixed_dir / "stems"
+        stems_dir.mkdir()
+        master = mixed_dir / "master.wav"
+        master.touch()
+        mixed_stem = stems_dir / "polished.wav"
+        mixed_stem.touch()
+        # bitwig istnieje i ma pliki — ale stems/ wygrywa
+        bitwig_samples = recording_dir / "bitwig" / "samples"
+        bitwig_samples.mkdir(parents=True)
+        bitwig_wav = bitwig_samples / "raw.wav"
+        bitwig_wav.touch()
+
+        result = RecordingStructureManager.find_analysis_audio_sources(recording_dir)
+
+        assert master in result
+        assert mixed_stem in result
+        assert bitwig_wav not in result
+        assert len(result) == 2
+
+    def test_fallback_extracted_when_no_mixed_no_bitwig(self, tmp_path):
+        """Brak mixed/ i bitwig/, extracted/ ma pliki → fallback extracted/ (zgodność wstecz)."""
+        recording_dir = tmp_path / "recording"
+        recording_dir.mkdir()
+        extracted_dir = recording_dir / "extracted"
+        extracted_dir.mkdir()
+        ext_audio = extracted_dir / "source.m4a"
+        ext_audio.touch()
+
+        result = RecordingStructureManager.find_analysis_audio_sources(recording_dir)
+
+        assert result == [ext_audio]
+
+    def test_all_empty_returns_empty_list(self, tmp_path):
+        """Wszystko puste/nieobecne → [] bez wyjątku."""
+        recording_dir = tmp_path / "recording"
+        recording_dir.mkdir()
+
+        result = RecordingStructureManager.find_analysis_audio_sources(recording_dir)
+
+        assert result == []
+
+    def test_collision_via_sanitize_raises_value_error(self, tmp_path):
+        """Dwa źródła o kolidujących sanityzowanych nazwach → ValueError z oboma plikami."""
+        recording_dir = tmp_path / "recording"
+        recording_dir.mkdir()
+        bitwig_samples = recording_dir / "bitwig" / "samples"
+        bitwig_samples.mkdir(parents=True)
+        # Oba sanityzują się do "track_1"
+        f1 = bitwig_samples / "track 1-24.wav"
+        f1.touch()
+        f2 = bitwig_samples / "track_1.wav"
+        f2.touch()
+
+        with pytest.raises(ValueError):
+            RecordingStructureManager.find_analysis_audio_sources(recording_dir)
+
+    def test_collision_error_mentions_both_files(self, tmp_path):
+        """ValueError z collision-check wymienia oba kolidujące pliki."""
+        recording_dir = tmp_path / "recording"
+        recording_dir.mkdir()
+        bitwig_samples = recording_dir / "bitwig" / "samples"
+        bitwig_samples.mkdir(parents=True)
+        f1 = bitwig_samples / "track 1-24.wav"
+        f1.touch()
+        f2 = bitwig_samples / "track_1.wav"
+        f2.touch()
+
+        with pytest.raises(ValueError) as exc_info:
+            RecordingStructureManager.find_analysis_audio_sources(recording_dir)
+
+        error_msg = str(exc_info.value)
+        # Błąd musi wymienić sanityzowaną etykietę kolizji
+        assert "track_1" in error_msg
+
+    def test_deterministic_order_with_bitwig(self, tmp_path):
+        """Kolejność wyników deterministyczna (sort case-insensitive) przy źródłach bitwig."""
+        recording_dir = tmp_path / "recording"
+        recording_dir.mkdir()
+        bitwig_samples = recording_dir / "bitwig" / "samples"
+        bitwig_samples.mkdir(parents=True)
+        # Nazwy ze zróżnicowaną wielkością liter
+        (bitwig_samples / "Zebra-24.wav").touch()
+        (bitwig_samples / "apple-24.wav").touch()
+        (bitwig_samples / "Master-24.wav").touch()
+
+        result = RecordingStructureManager.find_analysis_audio_sources(recording_dir)
+        result_names = [f.name.lower() for f in result]
+
+        assert result_names == sorted(result_names)
+
+    def test_empty_mixed_stems_uses_bitwig(self, tmp_path):
+        """mixed/stems/ ISTNIEJE ale pusta → używa bitwig/samples/ (fallback odpala)."""
+        recording_dir = tmp_path / "recording"
+        recording_dir.mkdir()
+        mixed_dir = recording_dir / "mixed"
+        mixed_dir.mkdir()
+        stems_dir = mixed_dir / "stems"
+        stems_dir.mkdir()
+        # stems/ istnieje ale puste — fallback do bitwig
+        master = mixed_dir / "master.wav"
+        master.touch()
+        bitwig_samples = recording_dir / "bitwig" / "samples"
+        bitwig_samples.mkdir(parents=True)
+        bitwig_wav = bitwig_samples / "raw.wav"
+        bitwig_wav.touch()
+
+        result = RecordingStructureManager.find_analysis_audio_sources(recording_dir)
+
+        assert master in result
+        assert bitwig_wav in result
+        assert len(result) == 2
+
+
+class TestSanitizeStemName:
+    """Testy dla funkcji sanitize_stem_name (Unit 1).
+
+    Mapowania realnych nazw z nagrania (bitwig/samples/):
+    - "m_s-24"               → "m_s"
+    - "track 1-25"           → "track_1"
+    - "track 2-26"           → "track_2"
+    - "track 3-25"           → "track_3"
+    - "track 4+git-24"       → "track_4_git"
+    - "track 5_6+mic+freak-24" → "track_5_6_mic_freak"
+    - "master"               → "master"
+    """
+
+    @pytest.mark.parametrize(
+        "input_name, expected",
+        [
+            # Realne nazwy z nagrania (surowy stem Bitwiga)
+            ("m_s-24", "m_s"),
+            ("track 1-25", "track_1"),
+            ("track 2-26", "track_2"),
+            ("track 3-25", "track_3"),
+            ("track 4+git-24", "track_4_git"),
+            ("track 5_6+mic+freak-24", "track_5_6_mic_freak"),
+            # Master — brak sufiksu liczbowego, bez zmian
+            ("master", "master"),
+            # Brak sufiksu -NN — tylko normalizacja separatorów
+            ("bass+guitar", "bass_guitar"),
+            ("my track/stem", "my_track_stem"),
+            (r"path\to\stem", "path_to_stem"),
+            # Zachowanie wielkości liter (NIE lower-case)
+            ("MyTrack-24", "MyTrack"),
+            ("DRUMS-10", "DRUMS"),
+            # Rozszerzenie .wav w wejściu — zdejmij
+            ("master.wav", "master"),
+            ("track 4+git-24.wav", "track_4_git"),
+            ("m_s-24.wav", "m_s"),
+            # Wielokrotne podkreślniki → scalone
+            ("track__double-24", "track_double"),
+            # Brzegowe podkreślniki → przycięte
+            (" leading space-24", "leading_space"),
+            # Sufiks -NN z wielocyfrową liczbą
+            ("stem-100", "stem"),
+            ("stem-9", "stem"),
+        ],
+    )
+    def test_real_name_mappings(self, input_name, expected):
+        """Test tabelaryczny: realne nazwy z nagrania mapują się na oczekiwane etykiety."""
+        assert sanitize_stem_name(input_name) == expected
+
+    def test_idempotent_on_real_names(self):
+        """sanitize(sanitize(x)) == sanitize(x) dla realnych nazw."""
+        raw_names = [
+            "m_s-24",
+            "track 4+git-24",
+            "track 5_6+mic+freak-24",
+            "master",
+            "DRUMS-10",
+        ]
+        for name in raw_names:
+            once = sanitize_stem_name(name)
+            twice = sanitize_stem_name(once)
+            assert once == twice, f"Nie idempotentne dla '{name}': {once!r} → {twice!r}"
+
+    def test_idempotent_on_already_clean_names(self):
+        """sanitize(x) == x gdy wejście jest już czyste."""
+        clean_names = ["master", "m_s", "track_1", "track_4_git", "DRUMS"]
+        for name in clean_names:
+            assert sanitize_stem_name(name) == name, (
+                f"Czysta nazwa '{name}' zmodyfikowana przez sanitize"
+            )
+
+    def test_error_on_pure_separator_input(self):
+        """Wejście złożone z samych znaków specjalnych → ValueError."""
+        with pytest.raises(ValueError, match="sanitize_stem_name"):
+            sanitize_stem_name("+/\\")
+
+    def test_error_on_empty_string(self):
+        """Pusty string → ValueError z czytelnym komunikatem."""
+        with pytest.raises(ValueError, match="sanitize_stem_name"):
+            sanitize_stem_name("")
+
+    def test_error_on_only_spaces(self):
+        """Sama spacja/whitespace po normalizacji → ValueError."""
+        with pytest.raises(ValueError, match="sanitize_stem_name"):
+            sanitize_stem_name("   ")
+
+    def test_preserves_case(self):
+        """Zachowuje wielkość liter — NIE robi lower-case."""
+        assert sanitize_stem_name("MyTrack-24") == "MyTrack"
+        assert sanitize_stem_name("DRUMS") == "DRUMS"
+
+    def test_dot_in_middle_of_name_treated_as_extension(self):
+        """Nazwa pliku z kropką — Path.stem zdejmuje sufiks, nie środkową kropkę.
+
+        Np. 'track.stem-24.wav' → Path.stem daje 'track.stem-24' → sanitize daje 'track.stem'.
+        To zachowanie jest akceptowalne (nazwy z kropką w środku są rzadkie w Bitwigu).
+        """
+        # 'track-24.wav' — typowe: zdejmuje .wav, potem usuwa -24
+        assert sanitize_stem_name("track-24.wav") == "track"

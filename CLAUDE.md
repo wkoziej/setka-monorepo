@@ -173,7 +173,11 @@ recording_name/
 ├── extracted/              # Individual sources
 ├── mixed/                  # Bitwig master (master.wav) + optional stems/ for analysis
 ├── bitwig/                 # Bitwig project home (Save As here)
+│   └── samples/            # Raw per-track capture (non-destructive; effects live in .bwproject)
+│                           # Used as stem fallback for analysis when mixed/stems/ is absent
 ├── analysis/               # Audio analysis JSON ({stem}_analysis.json per source)
+│   └── index.json          # Discovery manifest: [{role, origin, label, source, analysis, …}]
+│                           # role∈{master,stem,main}; consumers read via load_analysis_index()
 └── blender/               # VSE projects
     └── render/            # Final outputs
 ```
@@ -276,10 +280,17 @@ obs-extract /path/to/recording.mkv
 #    drives analysis AND becomes the final clip soundtrack; extracted/ stays as
 #    the video source. The mixed/ directory is managed by RecordingStructureManager.
 
-# 3. Analyze audio for animation timing (analyze the Bitwig master)
-uv run --package beatrix python -m beatrix.cli.analyze_audio \
-  "/path/to/recording/mixed/master.wav" \
-  "/path/to/recording/analysis"
+# 3. Analyze audio for animation timing (one click in Fermata / CLI below)
+#    beatrix analyze-recording analyzes ALL tracks in one shot:
+#      - master from mixed/master.wav
+#      - stems from mixed/stems/ (or bitwig/samples/ as fallback, or extracted/ as last resort)
+#    Writes per-track *_analysis.json + discovery manifest analysis/index.json.
+#    Consumers read the manifest via: from setka_common import load_analysis_index
+beatrix analyze-recording "/path/to/recording"
+# (legacy single-file form still works for one-off analysis:)
+# uv run --package beatrix python -m beatrix.cli.analyze_audio \
+#   "/path/to/recording/mixed/master.wav" \
+#   "/path/to/recording/analysis"
 
 # 4. Create Blender VSE project with preset-based animations
 #    Point --main-audio at the master using an ABSOLUTE path. Cinemon is
@@ -293,8 +304,8 @@ python -m medusa.cli upload /path/to/recording/blender/render/output.mp4
 ```
 
 > Audio/video drift is compensated manually in Blender (the pipeline does not
-> auto-sync). Per-instrument stems (`mixed/stems/`) and per-track animation
-> targeting are a future phase.
+> auto-sync). Per-instrument stems (`mixed/stems/`) are analyzed automatically
+> by `beatrix analyze-recording`; per-strip animation targeting is a future phase.
 
 ### Beatrix Audio Analysis Examples
 
