@@ -159,7 +159,17 @@ impl ProcessRunner {
         }
 
         // Check if workspace packages are available
-        let packages = ["beatrix", "cinemon", "medusa"];
+        // beatrix: Python module
+        let mut cmd = AsyncCommand::new(&self.uv_path);
+        cmd.args(&["run", "--package", "beatrix", "python", "-m", "beatrix", "--help"])
+            .current_dir(&self.workspace_root);
+        let output = cmd.output().await?;
+        if !output.status.success() {
+            return Err(anyhow::anyhow!("Package 'beatrix' not available in workspace"));
+        }
+
+        // cinemon and medusa: CLI entry points
+        let packages = ["cinemon", "medusa"];
         for package in packages {
             let mut cmd = AsyncCommand::new(&self.uv_path);
             cmd.args(&["run", "--package", package, "--help"])

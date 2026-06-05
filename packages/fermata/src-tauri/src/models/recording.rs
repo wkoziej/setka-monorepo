@@ -62,7 +62,7 @@ impl Recording {
     pub fn can_run_step(&self, step: &str) -> bool {
         match step.to_lowercase().as_str() {
             "extract" => matches!(self.status, RecordingStatus::Recorded | RecordingStatus::Failed(_)),
-            "analyze" => matches!(self.status, RecordingStatus::Extracted | RecordingStatus::Failed(_)),
+            "analyze" => !matches!(self.status, RecordingStatus::Recorded),
             "setup_render" | "setup-render" => matches!(self.status, RecordingStatus::Analyzed | RecordingStatus::Failed(_)),
             "render" => matches!(self.status, RecordingStatus::SetupRendered | RecordingStatus::Failed(_)),
             "upload" => matches!(self.status, RecordingStatus::Rendered | RecordingStatus::Failed(_)),
@@ -85,6 +85,9 @@ impl Recording {
                 steps.push("extract".to_string()); // Re-extract if needed
             }
             RecordingStatus::Analyzed => {
+                steps.extend(["extract".to_string(), "analyze".to_string()]);
+            }
+            RecordingStatus::SetupRendered => {
                 steps.extend(["extract".to_string(), "analyze".to_string()]);
             }
             RecordingStatus::Rendered => {
@@ -218,6 +221,30 @@ mod tests {
     }
 
     #[test]
+    fn test_can_reanalyze_from_post_analysis_statuses() {
+        // Re-analyze must be possible when mixed/ files change after postproduction.
+        let make_recording = |status| Recording {
+            name: "test".to_string(),
+            path: PathBuf::from("/test"),
+            status,
+            last_updated: SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap().as_secs(),
+            file_sizes: HashMap::new(),
+        };
+
+        // analyze allowed for Extracted (baseline — no regression)
+        assert!(make_recording(RecordingStatus::Extracted).can_run_step("analyze"));
+
+        // analyze allowed for all statuses after Extracted
+        assert!(make_recording(RecordingStatus::Analyzed).can_run_step("analyze"));
+        assert!(make_recording(RecordingStatus::SetupRendered).can_run_step("analyze"));
+        assert!(make_recording(RecordingStatus::Rendered).can_run_step("analyze"));
+        assert!(make_recording(RecordingStatus::Uploaded).can_run_step("analyze"));
+
+        // analyze NOT allowed for Recorded (no extracted/ yet)
+        assert!(!make_recording(RecordingStatus::Recorded).can_run_step("analyze"));
+    }
+
+    #[test]
     fn test_get_available_steps() {
         let mut recording = Recording {
             name: "test".to_string(),
@@ -228,9 +255,24 @@ mod tests {
         };
 
         let steps = recording.get_available_steps();
-        assert!(steps.contains(&"render".to_string())); // Next step
+        assert!(steps.contains(&"Setup Render".to_string())); // Next step for Analyzed (inherent to_string)
         assert!(steps.contains(&"extract".to_string())); // Manual re-run
         assert!(steps.contains(&"analyze".to_string())); // Manual re-run
+    }
+
+    #[test]
+    fn test_get_available_steps_setup_rendered_includes_analyze() {
+        let recording = Recording {
+            name: "test".to_string(),
+            path: PathBuf::from("/test"),
+            status: RecordingStatus::SetupRendered,
+            last_updated: SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap().as_secs(),
+            file_sizes: HashMap::new(),
+        };
+
+        let steps = recording.get_available_steps();
+        assert!(steps.contains(&"analyze".to_string()), "SetupRendered should allow re-analyze");
+        assert!(steps.contains(&"extract".to_string()), "SetupRendered should allow re-extract");
     }
 
     #[test]
