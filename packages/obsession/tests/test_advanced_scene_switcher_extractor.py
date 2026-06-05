@@ -171,8 +171,8 @@ class TestAdvancedSceneSwitcherExtractor:
                 json.dump(metadata_content, f)
             (recording_dir / "extracted").mkdir()
 
-            # Make it old (more than 30 seconds)
-            old_time = time.time() - 60
+            # Make it old (more than STARTUP_DELAY_SECONDS + 60 = 65 seconds)
+            old_time = time.time() - 120
             os.utime(recording_file, (old_time, old_time))
 
             with patch("pathlib.Path.home") as mock_home:

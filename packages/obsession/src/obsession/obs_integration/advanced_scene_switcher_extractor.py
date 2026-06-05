@@ -11,52 +11,81 @@ import subprocess
 import time
 from pathlib import Path
 
-# Add project directories to path for imports
-project_root = Path(__file__).parent.parent.parent.parent  # Go up to monorepo root
-sys.path.insert(0, str(project_root / "common" / "src"))  # Add common/src
-sys.path.insert(0, str(Path(__file__).parent.parent))  # Add obsession/src
+# Log file for debugging (written when running in GUI/OBS context without terminal)
+LOG_FILE = Path.home() / "Wideo" / "obs" / "extractor_auto.log"
+
+STARTUP_DELAY_SECONDS = 5  # wait for OBS Python script to finish reorganizing files
+
+_VIDEO_EXTENSIONS = {".mkv", ".mp4", ".mov", ".avi", ".webm"}
+
+# Add project directories to path for imports.
+# Script lives at packages/obsession/src/obsession/obs_integration/<script>.py
+# 5 parents up = packages/ directory.
+_packages_dir = Path(__file__).parent.parent.parent.parent.parent
+sys.path.insert(0, str(_packages_dir / "common" / "src"))  # setka_common
+sys.path.insert(0, str(_packages_dir / "obsession" / "src"))  # obsession
 
 try:
     from setka_common.file_structure.specialized import RecordingStructureManager
-    from setka_common.file_structure.types import FileExtensions
 except ImportError as e:
     print(
-        f"[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Import error: {e}"
-    )
-    print(
-        f"[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] sys.path: {sys.path[:3]}..."
+        f"[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] "
+        f"setka_common import error: {e}, using fallback"
     )
 
-    # Fallback implementation
     class RecordingStructureManager:
         @staticmethod
         def find_recording_structure(base_path):
-            """Fallback implementation."""
+            """Fallback: find recording by looking for metadata.json + video file."""
             base_path = Path(base_path)
             metadata_file = base_path / "metadata.json"
-            if metadata_file.exists():
-                # Find video file in the same directory
-                for file_path in base_path.iterdir():
-                    if (
-                        file_path.is_file()
-                        and file_path.suffix.lower() in FileExtensions.VIDEO
-                    ):
-                        return type(
-                            "Structure",
-                            (),
-                            {
-                                "media_file": file_path,
-                                "metadata_file": metadata_file,
-                                "project_dir": base_path,
-                            },
-                        )()
+            if not metadata_file.exists():
+                return None
+            for file_path in base_path.iterdir():
+                if (
+                    file_path.is_file()
+                    and file_path.suffix.lower() in _VIDEO_EXTENSIONS
+                ):
+                    return type(
+                        "Structure",
+                        (),
+                        {
+                            "media_file": file_path,
+                            "metadata_file": metadata_file,
+                            "project_dir": base_path,
+                        },
+                    )()
             return None
 
 
 def log_message(message):
-    """Log message with timestamp"""
+    """Log message with timestamp to stdout and to a log file."""
     timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    print(f"[{timestamp}] {message}")
+    line = f"[{timestamp}] {message}"
+    print(line)
+    try:
+        LOG_FILE.parent.mkdir(parents=True, exist_ok=True)
+        with open(LOG_FILE, "a") as f:
+            f.write(line + "\n")
+    except Exception:
+        pass
+
+
+def find_uv() -> str:
+    """Return the absolute path to the uv binary.
+
+    OBS launched from GNOME has a minimal PATH that may not include ~/.local/bin.
+    """
+    candidates = [
+        Path.home() / ".local" / "bin" / "uv",
+        Path("/usr/local/bin/uv"),
+        Path("/usr/bin/uv"),
+    ]
+    for candidate in candidates:
+        if candidate.exists():
+            return str(candidate)
+    # Fallback: rely on PATH (works when launched from terminal)
+    return "uv"
 
 
 def find_latest_recording():
@@ -114,8 +143,11 @@ def find_latest_recording():
     log_message(f"Latest recording: {latest_structure.media_file}")
     log_message(f"File age: {file_age:.1f} seconds")
 
-    if file_age > 30:
-        log_message("File too old, probably not the recording we want")
+    max_age = STARTUP_DELAY_SECONDS + 60  # startup delay + 60s buffer
+    if file_age > max_age:
+        log_message(
+            f"File too old ({file_age:.0f}s > {max_age}s), probably not the recording we want"
+        )
         return None
 
     return str(latest_structure.media_file)
@@ -136,9 +168,11 @@ def run_extraction(recording_file):
         log_message(f"ERROR: CLI not found at {cli_path}")
         return False
 
-    # Build command with uv run
+    uv_bin = find_uv()
+    log_message(f"Using uv: {uv_bin}")
+
     cmd = [
-        "uv",
+        uv_bin,
         "run",
         "python",
         str(cli_path),
@@ -188,6 +222,13 @@ def main():
     log_message("=== OBSession Auto-Extraction Started ===")
     log_message(f"Arguments: {sys.argv}")
     log_message(f"Working directory: {os.getcwd()}")
+    log_message(f"PATH: {os.environ.get('PATH', 'NOT SET')}")
+
+    # Wait for the OBS Python script to finish reorganizing files into subdirectory
+    log_message(
+        f"Waiting {STARTUP_DELAY_SECONDS}s for OBS script to finish file reorganization..."
+    )
+    time.sleep(STARTUP_DELAY_SECONDS)
 
     # Find latest recording
     recording_file = find_latest_recording()
