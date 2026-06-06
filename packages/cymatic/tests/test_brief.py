@@ -18,6 +18,7 @@ import pytest
 
 from cymatic import brief as brief_mod
 from cymatic.brief import (
+    SEGMENTATION_SOURCE,
     EnergyLevel,
     StemActivity,
     StructureBrief,
@@ -26,6 +27,7 @@ from cymatic.brief import (
     enter_exit_events,
     generate_brief,
     master_profile,
+    render_markdown,
 )
 
 
@@ -300,3 +302,68 @@ class TestGenerateBrief:
         )
         b = generate_brief(rec)
         assert {s.label for s in b.stems} == {"a", "b"}
+
+
+# --------------------------------------------------------------------------- #
+# Serialization — JSON canon + markdown render
+# --------------------------------------------------------------------------- #
+class TestSerialization:
+    def _brief(self) -> StructureBrief:
+        return StructureBrief(
+            recording="rec",
+            duration=60.0,
+            bpm=120.0,
+            stems=[
+                StemActivity("gtr", [(5.0, 30.0)], False),
+                StemActivity("dead", [], True),
+            ],
+            events=[
+                StructureEvent(5.0, "enter", "gtr"),
+                StructureEvent(30.0, "exit", "gtr"),
+            ],
+            master_levels=[
+                EnergyLevel(0.0, 20.0, "low"),
+                EnergyLevel(20.0, 60.0, "high"),
+            ],
+            drops=[20.0],
+        )
+
+    def test_to_dict_is_json_serializable(self):
+        d = self._brief().to_dict()
+        json.dumps(d)  # must not raise (no np.float64 leaking through)
+        assert d["segmentation"] == SEGMENTATION_SOURCE
+        assert d["stems"][0]["label"] == "gtr"
+        assert d["stems"][0]["active"] == [[5.0, 30.0]]
+        assert d["stems"][1]["silent"] is True
+        assert d["master_energy"]["drops"] == [20.0]
+        assert d["master_energy"]["levels"][0]["level"] == "low"
+
+    def test_to_json_roundtrips(self):
+        d = json.loads(self._brief().to_json())
+        assert d["bpm"] == 120.0
+        assert d["duration"] == 60.0
+        assert len(d["stems"]) == 2
+
+    def test_markdown_lists_stems_and_marks_silent(self):
+        md = render_markdown(self._brief())
+        assert "gtr" in md
+        assert "dead" in md
+        assert "NOT beatrix.sections" in md
+        assert "skip" in md.lower()  # silent stem flagged to skip mapping
+
+    def test_markdown_no_stems_does_not_crash(self):
+        b = StructureBrief(
+            recording="solo",
+            duration=60.0,
+            bpm=90.0,
+            stems=[],
+            events=[],
+            master_levels=[EnergyLevel(0.0, 60.0, "mid")],
+            drops=[],
+        )
+        md = render_markdown(b)
+        assert "solo" in md
+
+    def test_markdown_stays_compact(self):
+        md = render_markdown(self._brief())
+        assert len(md.encode("utf-8")) < 6000

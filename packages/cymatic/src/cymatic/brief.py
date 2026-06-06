@@ -88,6 +88,90 @@ class StructureBrief:
     master_levels: List[EnergyLevel] = field(default_factory=list)
     drops: List[float] = field(default_factory=list)
 
+    def to_dict(self) -> dict:
+        """Serialize to the canonical, JSON-safe brief dict (R5).
+
+        All numeric fields are coerced to plain ``float`` so no ``np.float64``
+        leaks into the JSON. The ``segmentation`` field records the source of the
+        timeline split (R8).
+        """
+        return {
+            "recording": self.recording,
+            "duration": round(float(self.duration), 1),
+            "bpm": round(float(self.bpm), 1),
+            "segmentation": SEGMENTATION_SOURCE,
+            "stems": [
+                {
+                    "label": s.label,
+                    "active": [[float(a), float(b)] for a, b in s.active],
+                    "silent": bool(s.silent),
+                }
+                for s in self.stems
+            ],
+            "events": [
+                {"t": float(e.t), "kind": e.kind, "stem": e.stem} for e in self.events
+            ],
+            "master_energy": {
+                "levels": [
+                    {
+                        "start": float(lvl.start),
+                        "end": float(lvl.end),
+                        "level": lvl.level,
+                    }
+                    for lvl in self.master_levels
+                ],
+                "drops": [float(d) for d in self.drops],
+            },
+        }
+
+    def to_json(self) -> str:
+        return json.dumps(self.to_dict(), indent=2)
+
+
+def _fmt_intervals(intervals: List[Interval]) -> str:
+    """Render activity intervals as a compact ``[a–b, c–d]`` string."""
+    if not intervals:
+        return "[]"
+    return "[" + ", ".join(f"{a:.1f}–{b:.1f}" for a, b in intervals) + "]"
+
+
+def render_markdown(brief: StructureBrief) -> str:
+    """Render a compact, LLM-facing markdown view of the brief (R5).
+
+    Designed for a clip-authoring agent to read once: exact timestamps, semantic
+    grouping, small footprint. Silent stems are flagged "skip mapping".
+    """
+    lines = [
+        f"# Structure brief — {brief.recording}",
+        (
+            f"{brief.duration:.1f}s · ~{brief.bpm:.0f} BPM · "
+            f"{len(brief.stems)} stems · {SEGMENTATION_SOURCE}"
+        ),
+        "",
+        "## Per-stem activity (who plays when)",
+    ]
+    if brief.stems:
+        for s in brief.stems:
+            tag = "  (≈silent — skip mapping)" if s.silent else ""
+            lines.append(f"- {s.label}: {_fmt_intervals(s.active)}{tag}")
+    else:
+        lines.append("- (no stems — master-only brief)")
+
+    lines += ["", "## Events"]
+    if brief.events:
+        for e in brief.events:
+            lines.append(f"- {e.t:.1f}s  {e.kind.upper()}  {e.stem}")
+    else:
+        lines.append("- (none)")
+
+    lines += ["", "## Master energy"]
+    for lvl in brief.master_levels:
+        lines.append(f"- {lvl.start:.1f}–{lvl.end:.1f}s  {lvl.level}")
+    drops = ", ".join(f"{d:.1f}s" for d in brief.drops) if brief.drops else "none"
+    lines.append(f"drops: {drops}")
+
+    return "\n".join(lines) + "\n"
+
 
 # --------------------------------------------------------------------------- #
 # Pure detection helpers
