@@ -318,6 +318,95 @@ def _load_broadband(analysis_path: Path) -> Tuple[np.ndarray, np.ndarray]:
     return times, normalize_band(raw)
 
 
+def render_heatmap(recording_dir: Path, output_png: Path) -> None:
+    """Render the arrangement-map PNG (stem × time × energy) + master panel (R6).
+
+    matplotlib is imported lazily with the headless ``Agg`` backend so importing
+    ``cymatic.brief`` (and ``generate_brief``) stays light and works without a
+    display. Degrades to a master-only figure when no stems are present.
+
+    Raises:
+        FileNotFoundError: when ``analysis/index.json`` is absent.
+    """
+    import matplotlib
+
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+    from setka_common import load_analysis_index
+
+    recording_dir = Path(recording_dir)
+    index = load_analysis_index(recording_dir)
+    if index is None:
+        raise FileNotFoundError(f"analysis/index.json not found under {recording_dir}.")
+
+    stems = index.stems()
+    master_entry = index.master()
+
+    # Common time grid spanning the longest known duration.
+    durations = [e.duration for e in index.sources if e.duration]
+    duration = max(durations) if durations else 60.0
+    grid = np.linspace(0.0, duration, 1200)
+
+    matrix: List[np.ndarray] = []
+    labels: List[str] = []
+    for entry in stems:
+        times, energy = _load_broadband(entry.resolved_analysis_path(recording_dir))
+        matrix.append(np.interp(grid, times, energy, left=0.0, right=0.0))
+        labels.append(entry.label)
+
+    # Master energy + drops for the bottom panel.
+    master_curve = None
+    drops: List[float] = []
+    if master_entry is not None:
+        mtimes, menergy = _load_broadband(
+            master_entry.resolved_analysis_path(recording_dir)
+        )
+        master_curve = np.interp(grid, mtimes, menergy, left=0.0, right=0.0)
+        _, drops = master_profile(mtimes, menergy)
+
+    n_panels = (1 if matrix else 0) + (1 if master_curve is not None else 0)
+    n_panels = max(n_panels, 1)
+    fig, axes = plt.subplots(n_panels, 1, figsize=(16, 2 + 2 * n_panels), squeeze=False)
+    col = axes[:, 0]
+    ax_i = 0
+
+    if matrix:
+        ax = col[ax_i]
+        ax.imshow(
+            np.array(matrix),
+            aspect="auto",
+            origin="upper",
+            extent=[0.0, duration, len(matrix) - 0.5, -0.5],
+            cmap="magma",
+            vmin=0.0,
+            vmax=1.0,
+            interpolation="nearest",
+        )
+        ax.set_yticks(range(len(labels)))
+        ax.set_yticklabels(labels, fontsize=9)
+        ax.set_title("Who plays when (broadband energy per stem)", fontsize=10)
+        ax_i += 1
+
+    if master_curve is not None:
+        ax = col[ax_i]
+        ax.plot(grid, master_curve, color="#d1495b", lw=0.7)
+        ax.fill_between(grid, master_curve, color="#d1495b", alpha=0.15)
+        for d in drops:
+            ax.axvline(d, color="black", lw=0.8, alpha=0.5)
+        ax.set_ylim(0.0, 1.05)
+        ax.set_xlim(0.0, duration)
+        ax.set_ylabel("master energy")
+        ax.set_xlabel("time [s]")
+        ax.set_title("Master energy + drops", fontsize=10)
+
+    fig.suptitle(f"Structure map — {recording_dir.name}", fontsize=12)
+    fig.tight_layout(rect=(0, 0, 1, 0.97))
+    output_png = Path(output_png)
+    output_png.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(output_png, dpi=110)
+    plt.close(fig)
+
+
 def generate_brief(recording_dir: Path) -> StructureBrief:
     """Build a :class:`StructureBrief` from a recording's beatrix analyses.
 

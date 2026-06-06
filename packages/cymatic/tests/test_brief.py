@@ -27,6 +27,7 @@ from cymatic.brief import (
     enter_exit_events,
     generate_brief,
     master_profile,
+    render_heatmap,
     render_markdown,
 )
 
@@ -367,3 +368,49 @@ class TestSerialization:
     def test_markdown_stays_compact(self):
         md = render_markdown(self._brief())
         assert len(md.encode("utf-8")) < 6000
+
+
+# --------------------------------------------------------------------------- #
+# Heatmap PNG (arrangement map)
+# --------------------------------------------------------------------------- #
+class TestHeatmap:
+    def test_creates_nonempty_png(self, tmp_path):
+        t = _grid(60.0)
+        rec = _build_recording(
+            tmp_path,
+            stems={
+                "gtr": (t, _block(t, 5.0, 30.0)),
+                "drums": (t, _block(t, 30.0, 58.0)),
+            },
+        )
+        out = tmp_path / "structure_map.png"
+        render_heatmap(rec, out)
+        assert out.exists()
+        assert out.stat().st_size > 0
+
+    def test_no_stems_does_not_crash(self, tmp_path):
+        t = _grid(60.0)
+        analysis_dir = tmp_path / "analysis"
+        analysis_dir.mkdir()
+        _write_analysis(analysis_dir / "master_analysis.json", t, _block(t, 10.0, 50.0))
+        (analysis_dir / "index.json").write_text(
+            json.dumps(
+                {
+                    "version": 1,
+                    "sources": [
+                        {
+                            "role": "master",
+                            "origin": "mixed",
+                            "label": "master",
+                            "source": "mixed/master.wav",
+                            "analysis": "analysis/master_analysis.json",
+                            "duration": float(t[-1]),
+                            "sample_rate": 44100,
+                        }
+                    ],
+                }
+            )
+        )
+        out = tmp_path / "structure_map.png"
+        render_heatmap(tmp_path, out)
+        assert out.exists()
