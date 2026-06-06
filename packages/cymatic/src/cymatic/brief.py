@@ -24,6 +24,7 @@ never imports ``bpy``.
 from __future__ import annotations
 
 import json
+import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import List, Tuple
@@ -465,3 +466,92 @@ def generate_brief(recording_dir: Path) -> StructureBrief:
         master_levels=master_levels,
         drops=drops,
     )
+
+
+# Default artifact filenames written under the recording's analysis/ dir.
+BRIEF_JSON_NAME = "structure_brief.json"
+BRIEF_MD_NAME = "structure_brief.md"
+HEATMAP_NAME = "structure_map.png"
+
+
+def main(argv=None) -> int:
+    """Entry point for the ``cymatic-structure-brief`` script.
+
+    Reads a recording's beatrix analyses and writes three artifacts to
+    ``analysis/``: the canonical JSON brief, the markdown render, and the
+    heatmap PNG (R5, R6, R7). Returns 0 on success, non-zero on error.
+    """
+    import argparse
+
+    from setka_common import RecordingStructureManager
+
+    if argv is None:
+        argv = sys.argv[1:]
+
+    parser = argparse.ArgumentParser(
+        prog="cymatic-structure-brief",
+        description=(
+            "Build an audio structure brief (per-stem activity + master energy) "
+            "from a recording's beatrix analyses, for cymatic clip authoring."
+        ),
+    )
+    parser.add_argument("recording_dir", help="Path to the recording directory")
+    parser.add_argument(
+        "--output-brief", default=None, help="JSON brief path (default: analysis/)"
+    )
+    parser.add_argument(
+        "--output-markdown",
+        default=None,
+        help="Markdown brief path (default: analysis/)",
+    )
+    parser.add_argument(
+        "--output-heatmap",
+        default=None,
+        help="Heatmap PNG path (default: analysis/)",
+    )
+    args = parser.parse_args(argv)
+
+    recording_dir = Path(args.recording_dir)
+    if not recording_dir.is_dir():
+        print(
+            f"cymatic-structure-brief: recording directory not found: {recording_dir}",
+            file=sys.stderr,
+        )
+        return 1
+
+    try:
+        brief = generate_brief(recording_dir)
+    except (FileNotFoundError, ValueError) as exc:
+        print(f"cymatic-structure-brief: {exc}", file=sys.stderr)
+        return 1
+
+    analysis_dir = RecordingStructureManager.ensure_analysis_dir(recording_dir)
+    brief_path = (
+        Path(args.output_brief) if args.output_brief else analysis_dir / BRIEF_JSON_NAME
+    )
+    md_path = (
+        Path(args.output_markdown)
+        if args.output_markdown
+        else analysis_dir / BRIEF_MD_NAME
+    )
+    heatmap_path = (
+        Path(args.output_heatmap)
+        if args.output_heatmap
+        else analysis_dir / HEATMAP_NAME
+    )
+
+    for path in (brief_path, md_path, heatmap_path):
+        path.parent.mkdir(parents=True, exist_ok=True)
+
+    brief_path.write_text(brief.to_json())
+    md_path.write_text(render_markdown(brief))
+    render_heatmap(recording_dir, heatmap_path)
+
+    print(f"brief:   {brief_path}")
+    print(f"md:      {md_path}")
+    print(f"heatmap: {heatmap_path}")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

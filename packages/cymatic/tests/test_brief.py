@@ -26,6 +26,7 @@ from cymatic.brief import (
     activity_intervals,
     enter_exit_events,
     generate_brief,
+    main,
     master_profile,
     render_heatmap,
     render_markdown,
@@ -414,3 +415,83 @@ class TestHeatmap:
         out = tmp_path / "structure_map.png"
         render_heatmap(tmp_path, out)
         assert out.exists()
+
+
+# --------------------------------------------------------------------------- #
+# CLI — main() writes the three artifacts to analysis/
+# --------------------------------------------------------------------------- #
+class TestCLI:
+    def test_happy_writes_three_artifacts(self, tmp_path):
+        t = _grid(60.0)
+        rec = _build_recording(
+            tmp_path,
+            stems={
+                "gtr": (t, _block(t, 5.0, 30.0)),
+                "drums": (t, _block(t, 30.0, 58.0)),
+            },
+        )
+        rc = main([str(rec)])
+        assert rc == 0
+        analysis = rec / "analysis"
+        assert (analysis / "structure_brief.json").exists()
+        assert (analysis / "structure_brief.md").exists()
+        assert (analysis / "structure_map.png").exists()
+        # JSON is valid and carries the segmentation marker
+        data = json.loads((analysis / "structure_brief.json").read_text())
+        assert data["segmentation"] == SEGMENTATION_SOURCE
+
+    def test_no_index_returns_nonzero(self, tmp_path):
+        (tmp_path / "analysis").mkdir()
+        rc = main([str(tmp_path)])
+        assert rc != 0
+
+    def test_missing_dir_returns_nonzero(self, tmp_path):
+        rc = main([str(tmp_path / "does_not_exist")])
+        assert rc != 0
+
+    def test_no_stems_degrades(self, tmp_path):
+        t = _grid(60.0)
+        analysis_dir = tmp_path / "analysis"
+        analysis_dir.mkdir()
+        _write_analysis(analysis_dir / "master_analysis.json", t, _block(t, 10.0, 50.0))
+        (analysis_dir / "index.json").write_text(
+            json.dumps(
+                {
+                    "version": 1,
+                    "sources": [
+                        {
+                            "role": "master",
+                            "origin": "mixed",
+                            "label": "master",
+                            "source": "mixed/master.wav",
+                            "analysis": "analysis/master_analysis.json",
+                            "duration": float(t[-1]),
+                            "sample_rate": 44100,
+                        }
+                    ],
+                }
+            )
+        )
+        rc = main([str(tmp_path)])
+        assert rc == 0
+        assert (analysis_dir / "structure_brief.json").exists()
+
+    def test_output_overrides(self, tmp_path):
+        t = _grid(60.0)
+        rec = _build_recording(tmp_path, stems={"gtr": (t, _block(t, 5.0, 30.0))})
+        bj = tmp_path / "custom_brief.json"
+        md = tmp_path / "custom.md"
+        png = tmp_path / "custom.png"
+        rc = main(
+            [
+                str(rec),
+                "--output-brief",
+                str(bj),
+                "--output-markdown",
+                str(md),
+                "--output-heatmap",
+                str(png),
+            ]
+        )
+        assert rc == 0
+        assert bj.exists() and md.exists() and png.exists()

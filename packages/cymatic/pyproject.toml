@@ -36,6 +36,7 @@ dev = [
 
 [project.scripts]
 cymatic-render = "cymatic.cli:main"
+cymatic-structure-brief = "cymatic.brief:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/cymatic"]

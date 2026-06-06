@@ -24,6 +24,10 @@ __all__ = [
     "render",
     "SyncReport",
     "verify_sync",
+    "StructureBrief",
+    "generate_brief",
+    "render_markdown",
+    "render_heatmap",
 ]
 
 __version__ = "0.1.0"
@@ -38,6 +42,10 @@ _LAZY = {
     "render": "cymatic.runner",
     "SyncReport": "cymatic.sync_verification",
     "verify_sync": "cymatic.sync_verification",
+    "StructureBrief": "cymatic.brief",
+    "generate_brief": "cymatic.brief",
+    "render_markdown": "cymatic.brief",
+    "render_heatmap": "cymatic.brief",
 }
 
 
