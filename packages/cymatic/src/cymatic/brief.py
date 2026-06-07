@@ -174,6 +174,88 @@ def render_markdown(brief: StructureBrief) -> str:
     return "\n".join(lines) + "\n"
 
 
+# ASS overlay rendering — colours are BGR (&HAABBGGRR).
+_ASS_LEVEL_COLOR = {
+    "low": r"&H00AAAAAA",  # grey
+    "mid": r"&H00FFFFFF",  # white
+    "high": r"&H000066FF",  # orange-red
+}
+_ASS_EVENT_FLASH = 1.6  # seconds an ENTER/EXIT/DROP marker stays on screen
+
+_ASS_HEADER = (
+    "[Script Info]\n"
+    "ScriptType: v4.00+\n"
+    "PlayResX: 1280\n"
+    "PlayResY: 720\n"
+    "ScaledBorderAndShadow: yes\n"
+    "\n"
+    "[V4+ Styles]\n"
+    "Format: Name, Fontname, Fontsize, PrimaryColour, OutlineColour, BackColour, "
+    "Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, "
+    "BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding\n"
+    "Style: Default,DejaVu Sans,30,&H00FFFFFF,&H00000000,&H64000000,"
+    "0,0,0,0,100,100,0,0,1,2,1,2,10,10,20,1\n"
+    "\n"
+    "[Events]\n"
+    "Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\n"
+)
+
+
+def _ass_time(x: float) -> str:
+    """Format seconds as ASS ``H:MM:SS.cc`` (centiseconds)."""
+    x = max(0.0, x)
+    h = int(x // 3600)
+    m = int((x % 3600) // 60)
+    s = x % 60
+    return f"{h}:{m:02d}:{s:05.2f}"
+
+
+def render_ass(brief: StructureBrief) -> str:
+    """Render the brief as an ASS subtitle overlay for the source video.
+
+    Three layers for live brief-vs-reality checking on the original footage:
+    top bar = current master energy level, left column = stems playing now
+    (silent stems skipped), bottom flashes = ENTER/EXIT/DROP markers. Play with
+    ``mpv <video> --sub-file=structure_brief.ass`` (or VLC ``--sub-file=``).
+    """
+    rows: List[str] = []
+
+    def dia(start: float, end: float, text: str, layer: int = 0) -> None:
+        rows.append(
+            f"Dialogue: {layer},{_ass_time(start)},{_ass_time(end)},Default,,0,0,0,,{text}"
+        )
+
+    # Top bar: current master energy level.
+    for lvl in brief.master_levels:
+        col = _ASS_LEVEL_COLOR.get(lvl.level, r"&H00FFFFFF")
+        dia(lvl.start, lvl.end, rf"{{\an8\c{col}}}energy: {lvl.level}")
+
+    # Left column: stems playing now (skip silent).
+    for i, s in enumerate(s for s in brief.stems if not s.silent):
+        y = 80 + i * 40
+        for a, b in s.active:
+            dia(a, b, rf"{{\an7\pos(30,{y})\c&H0000FF00}}● {s.label}")
+
+    # Bottom flashes: ENTER / EXIT events.
+    for e in brief.events:
+        if e.kind == "enter":
+            sym, col = "►", r"&H0000FF00"
+        else:
+            sym, col = "■", r"&H000000FF"
+        dia(
+            e.t,
+            e.t + _ASS_EVENT_FLASH,
+            rf"{{\an2\c{col}\fs40}}{sym} {e.kind.upper()} {e.stem}",
+            layer=1,
+        )
+
+    # Bottom flashes: drops.
+    for d in brief.drops:
+        dia(d, d + _ASS_EVENT_FLASH, r"{\an2\c&H0000FFFF\fs56}!! DROP !!", layer=2)
+
+    return _ASS_HEADER + "\n".join(rows) + "\n"
+
+
 # --------------------------------------------------------------------------- #
 # Pure detection helpers
 # --------------------------------------------------------------------------- #
@@ -472,14 +554,16 @@ def generate_brief(recording_dir: Path) -> StructureBrief:
 BRIEF_JSON_NAME = "structure_brief.json"
 BRIEF_MD_NAME = "structure_brief.md"
 HEATMAP_NAME = "structure_map.png"
+ASS_NAME = "structure_brief.ass"
 
 
 def main(argv=None) -> int:
     """Entry point for the ``cymatic-structure-brief`` script.
 
-    Reads a recording's beatrix analyses and writes three artifacts to
-    ``analysis/``: the canonical JSON brief, the markdown render, and the
-    heatmap PNG (R5, R6, R7). Returns 0 on success, non-zero on error.
+    Reads a recording's beatrix analyses and writes four artifacts to
+    ``analysis/``: the canonical JSON brief, the markdown render, the heatmap
+    PNG, and an ASS subtitle overlay for the source video (R5, R6, R7). Returns
+    0 on success, non-zero on error.
     """
     import argparse
 
@@ -508,6 +592,11 @@ def main(argv=None) -> int:
         "--output-heatmap",
         default=None,
         help="Heatmap PNG path (default: analysis/)",
+    )
+    parser.add_argument(
+        "--output-ass",
+        default=None,
+        help="ASS subtitle overlay path (default: analysis/)",
     )
     args = parser.parse_args(argv)
 
@@ -539,17 +628,20 @@ def main(argv=None) -> int:
         if args.output_heatmap
         else analysis_dir / HEATMAP_NAME
     )
+    ass_path = Path(args.output_ass) if args.output_ass else analysis_dir / ASS_NAME
 
-    for path in (brief_path, md_path, heatmap_path):
+    for path in (brief_path, md_path, heatmap_path, ass_path):
         path.parent.mkdir(parents=True, exist_ok=True)
 
     brief_path.write_text(brief.to_json())
     md_path.write_text(render_markdown(brief))
     render_heatmap(recording_dir, heatmap_path)
+    ass_path.write_text(render_ass(brief), encoding="utf-8")
 
     print(f"brief:   {brief_path}")
     print(f"md:      {md_path}")
     print(f"heatmap: {heatmap_path}")
+    print(f"ass:     {ass_path}")
     return 0
 
 

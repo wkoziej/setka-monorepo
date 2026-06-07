@@ -28,6 +28,7 @@ from cymatic.brief import (
     generate_brief,
     main,
     master_profile,
+    render_ass,
     render_heatmap,
     render_markdown,
 )
@@ -436,6 +437,7 @@ class TestCLI:
         assert (analysis / "structure_brief.json").exists()
         assert (analysis / "structure_brief.md").exists()
         assert (analysis / "structure_map.png").exists()
+        assert (analysis / "structure_brief.ass").exists()
         # JSON is valid and carries the segmentation marker
         data = json.loads((analysis / "structure_brief.json").read_text())
         assert data["segmentation"] == SEGMENTATION_SOURCE
@@ -482,6 +484,7 @@ class TestCLI:
         bj = tmp_path / "custom_brief.json"
         md = tmp_path / "custom.md"
         png = tmp_path / "custom.png"
+        ass = tmp_path / "custom.ass"
         rc = main(
             [
                 str(rec),
@@ -491,7 +494,70 @@ class TestCLI:
                 str(md),
                 "--output-heatmap",
                 str(png),
+                "--output-ass",
+                str(ass),
             ]
         )
         assert rc == 0
-        assert bj.exists() and md.exists() and png.exists()
+        assert bj.exists() and md.exists() and png.exists() and ass.exists()
+
+
+# --------------------------------------------------------------------------- #
+# ASS subtitle overlay (brief on the source video)
+# --------------------------------------------------------------------------- #
+class TestAssOverlay:
+    def _brief(self) -> StructureBrief:
+        return StructureBrief(
+            recording="rec",
+            duration=60.0,
+            bpm=120.0,
+            stems=[
+                StemActivity("gtr", [(5.0, 30.0)], False),
+                StemActivity("dead", [], True),
+            ],
+            events=[
+                StructureEvent(5.0, "enter", "gtr"),
+                StructureEvent(30.0, "exit", "gtr"),
+            ],
+            master_levels=[
+                EnergyLevel(0.0, 20.0, "low"),
+                EnergyLevel(20.0, 60.0, "high"),
+            ],
+            drops=[20.0],
+        )
+
+    def test_ass_has_header_and_markers(self):
+        ass = render_ass(self._brief())
+        assert "[Script Info]" in ass
+        assert "[Events]" in ass
+        assert "Dialogue:" in ass
+        assert "energy: low" in ass
+        assert "energy: high" in ass
+        assert "ENTER gtr" in ass
+        assert "EXIT gtr" in ass
+        assert "DROP" in ass
+
+    def test_ass_skips_silent_stem_in_column(self):
+        ass = render_ass(self._brief())
+        # active stem appears as a column label; silent stem must not
+        assert "● gtr" in ass
+        assert "● dead" not in ass
+
+    def test_ass_timestamps_are_well_formed(self):
+        ass = render_ass(self._brief())
+        # drop at 20.0s -> 0:00:20.00 start
+        assert "0:00:20.00" in ass
+
+    def test_ass_no_stems_does_not_crash(self):
+        b = StructureBrief(
+            recording="solo",
+            duration=60.0,
+            bpm=90.0,
+            stems=[],
+            events=[],
+            master_levels=[EnergyLevel(0.0, 60.0, "mid")],
+            drops=[],
+        )
+        ass = render_ass(b)
+        assert "[Events]" in ass
+        assert "energy: mid" in ass
