@@ -37,6 +37,26 @@ impl ProcessRunner {
         self.execute_command(cmd).await
     }
 
+    /// Run cymatic structure-brief on a recording (best-effort companion to analyze).
+    /// Writes analysis/structure_brief.{json,md,ass} + structure_map.png from the
+    /// beatrix analyses, used by the fermata "Structure map" preview and Play + Brief.
+    pub async fn run_cymatic_structure_brief(
+        &self,
+        recording_path: &Path,
+    ) -> anyhow::Result<ProcessResult> {
+        log::info!(
+            "📊 Running cymatic-structure-brief: {}",
+            recording_path.display()
+        );
+
+        let mut cmd = AsyncCommand::new(&self.uv_path);
+        cmd.args(&["run", "--package", "cymatic", "cymatic-structure-brief"])
+            .arg(recording_path)
+            .current_dir(&self.workspace_root);
+
+        self.execute_command(cmd).await
+    }
+
     /// Generate YAML config and setup Blender project (2-step process)
     pub async fn run_cinemon_render(&self, recording_path: &Path, preset: &str, main_audio: Option<&str>) -> anyhow::Result<ProcessResult> {
         // Step 1: Generate YAML configuration

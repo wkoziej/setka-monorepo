@@ -8,7 +8,7 @@ use commands::recordings::{
 };
 use commands::operations::{run_next_step, run_specific_step, run_specific_step_with_options, list_animation_presets};
 use commands::rename::rename_recording;
-use commands::video::{get_playable_video_path, open_video_external};
+use commands::video::{get_playable_video_path, get_structure_heatmap, open_video_external, play_video_with_subtitles};
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -28,7 +28,9 @@ pub fn run() {
       list_animation_presets,
       rename_recording,
       get_playable_video_path,
-      open_video_external
+      open_video_external,
+      play_video_with_subtitles,
+      get_structure_heatmap
     ])
     .setup(|app| {
       if cfg!(debug_assertions) {
