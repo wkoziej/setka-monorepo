@@ -19,6 +19,11 @@ def build_menu_items():
     Pozycja "Zakończ" ma argv=None — wyzwala Gtk.main_quit(), nie zewnętrzną komendę.
     """
     return [
+        # Cykl życia warstwy live (postaw/zburz całe środowisko nagrań).
+        ("Uruchom warstwę live", ["setka-live", "start"]),
+        ("Zatrzymaj warstwę live", ["setka-live", "stop"]),
+        (None, None),  # separator
+        # Akcje wewnątrz-sesyjne (między ujęciami).
         ("Pokaż okna", ["setka-live", "show"]),
         ("Nowy projekt Bitwig", ["setka-live", "new-take"]),
         ("Usuń ostatnie nagranie", ["setka-live", "delete-last"]),
