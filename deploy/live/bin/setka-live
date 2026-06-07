@@ -37,7 +37,7 @@ usage() {
 Użycie: setka-live <start|stop|restart|status|show|delete-last|new-take>
 
   start        postaw komplet live (OBS + Bitwig + kiosk) po preflighcie; na końcu układa okna
-  stop         zatrzymaj całą warstwę GUI
+  stop [--yes] zatrzymaj całą warstwę GUI (pyta o potwierdzenie; --yes/-y pomija dialog)
   restart      całościowy restart warstwy GUI (stop+start; re-weryfikuje preflight)
   status       stan członków + paternologia /health + środowisko graficzne
   show         wyciągnij na wierzch i ułóż okna: Bitwig (lewy) | OBS+Paternologia (prawy)
@@ -70,7 +70,47 @@ cmd_show() {
   "$LAYOUT_BIN"
 }
 
+# Zatrzymanie całej warstwy live. Bramka potwierdzenia chroni przed przypadkowym
+# ubiciem trwającego nagrania OBS (stop ubija live-recording.target, w tym obs.service).
+# Furtka --yes/-y pomija dialog (skrypty/headless — gdy display zepsuty, a chcesz ubić warstwę).
+# Tray woła `stop` BEZ --yes → klik zawsze pyta. restart NIE przechodzi przez tę bramkę
+# (cmd_restart woła `sctl stop` bezpośrednio — świadoma akcja ratunkowa).
 cmd_stop() {
+  local assume_yes=0
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      -y|--yes) assume_yes=1; shift ;;
+      *) err "stop: nieznany argument '$1' (dozwolone: --yes/-y)"; return 2 ;;
+    esac
+  done
+
+  if [ "$assume_yes" -eq 0 ]; then
+    # Bez zenity i bez --yes nie wolno zatrzymać po cichu — furtką jest --yes.
+    if ! command -v "$ZENITY_BIN" >/dev/null 2>&1; then
+      err "Brak zenity — nie mogę potwierdzić zatrzymania warstwy. Użyj: setka-live stop --yes"
+      return 1
+    fi
+
+    local msg
+    msg="Zatrzymać całą warstwę live?
+
+To ubije OBS, Bitwig i kiosk (live-recording.target).
+Jeśli trwa nagranie OBS — zostanie przerwane.
+
+Ponowny start: setka-live start (lub ikona w trayu)."
+
+    # rc != 0 → anulowanie lub zamknięcie okna → fail-safe, brak akcji.
+    if ! "$ZENITY_BIN" \
+        --question \
+        --default-cancel \
+        --icon=dialog-warning \
+        --title="Zatrzymaj warstwę live" \
+        --text="$msg" 2>/dev/null; then
+      log "Anulowano zatrzymanie warstwy live."
+      return 0
+    fi
+  fi
+
   sctl stop "$TARGET"
 }
 
@@ -391,7 +431,7 @@ cmd_new_take() {
 main() {
   case "${1:-}" in
     start)       cmd_start ;;
-    stop)        cmd_stop ;;
+    stop)        shift; cmd_stop "$@" ;;
     restart)     cmd_restart ;;
     status)      cmd_status ;;
     show)        cmd_show ;;
