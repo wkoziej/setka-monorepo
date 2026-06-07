@@ -154,7 +154,30 @@ async fn execute_step(
             // stems, extracted/ fallback) and reports missing audio or stem-name
             // collisions via a non-zero exit + stderr, which the caller surfaces as Err.
             log::info!("🎵 Running analyze for recording: {}", recording.path.display());
-            runner.run_beatrix_analyze(&recording.path).await
+            let analyze_result = runner.run_beatrix_analyze(&recording.path).await;
+
+            // Best-effort: generate the structure brief once analysis succeeded so the
+            // recording gets its brief/heatmap/ASS automatically. A brief failure must
+            // NOT fail the analyze step — beatrix's analyses are the primary result.
+            if let Ok(ref r) = analyze_result {
+                if r.success {
+                    match runner.run_cymatic_structure_brief(&recording.path).await {
+                        Ok(b) if b.success => {
+                            log::info!("📊 Structure brief generated")
+                        }
+                        Ok(b) => log::warn!(
+                            "Structure brief skipped (best-effort): exit {:?}: {}",
+                            b.exit_code,
+                            b.stderr
+                        ),
+                        Err(e) => {
+                            log::warn!("Structure brief skipped (best-effort): {}", e)
+                        }
+                    }
+                }
+            }
+
+            analyze_result
         }
         NextStep::SetupRender => {
             // Check if analysis exists
