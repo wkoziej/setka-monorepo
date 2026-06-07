@@ -32,10 +32,48 @@ exit "${LAYOUT_RC:-0}"
 EOF
 chmod +x "$LAYOUT_REC"
 
+# Rejestratory GIO_BIN / ZENITY_BIN / NOTIFY_BIN — wzorzec analogiczny do SYSTEMCTL_BIN.
+# Zdefiniowane TU (przed run_setka), bo bramka potwierdzenia w `stop` wymaga zenity także
+# w zwykłych wywołaniach run_setka, nie tylko w testach delete-last.
+GIO_LOG="$WORK/gio.log"
+ZENITY_LOG="$WORK/zenity.log"
+NOTIFY_LOG="$WORK/notify.log"
+
+# Rejestrator GIO_BIN: loguje argumenty; domyślnie exit 0; GIO_RC override.
+GIO_REC="$WORK/gio-rec"
+cat >"$GIO_REC" <<'EOF'
+#!/usr/bin/env bash
+printf '%s\n' "$*" >> "$GIO_LOG"
+exit "${GIO_RC:-0}"
+EOF
+chmod +x "$GIO_REC"
+
+# Rejestrator ZENITY_BIN: loguje argumenty; domyślnie exit 0; ZENITY_RC override.
+ZENITY_REC="$WORK/zenity-rec"
+cat >"$ZENITY_REC" <<'EOF'
+#!/usr/bin/env bash
+printf '%s\n' "$*" >> "$ZENITY_LOG"
+exit "${ZENITY_RC:-0}"
+EOF
+chmod +x "$ZENITY_REC"
+
+# Rejestrator NOTIFY_BIN: zawsze exit 0; loguje argumenty.
+NOTIFY_REC="$WORK/notify-rec"
+cat >"$NOTIFY_REC" <<'EOF'
+#!/usr/bin/env bash
+printf '%s\n' "$*" >> "$NOTIFY_LOG"
+exit 0
+EOF
+chmod +x "$NOTIFY_REC"
+
 run_setka() {
-  : >"$REC_LOG"
+  : >"$REC_LOG" >"$ZENITY_LOG"
+  # ZENITY_BIN wstrzyknięty domyślnie (RC=0 = potwierdzone), by bramka `stop` przeszła w
+  # zwykłych testach. Testy bramki nadpisują ZENITY_RC (anulowanie) lub ZENITY_BIN (brak zenity).
   SYSTEMCTL_BIN="$REC" SETKA_REC_LOG="$REC_LOG" \
     LAYOUT_BIN="$LAYOUT_REC" LAYOUT_RC="${LAYOUT_RC:-0}" \
+    ZENITY_BIN="${ZENITY_BIN:-$ZENITY_REC}" ZENITY_RC="${ZENITY_RC:-0}" ZENITY_LOG="$ZENITY_LOG" \
+    NOTIFY_BIN="$NOTIFY_REC" NOTIFY_LOG="$NOTIFY_LOG" \
     HEALTH_URL="http://127.0.0.1:59999/health" \
     bash "$SETKA" "$@" >"$WORK/out.log" 2>&1
   echo $?
@@ -47,11 +85,37 @@ rc="$(run_setka start)"
 grep -q -- '--user start live-recording.target' "$REC_LOG" \
   && pass "start: woła 'start live-recording.target'" || fail "start: brak start targetu"
 
-# --- stop ---
+# --- stop: potwierdzone (zenity RC=0, wstrzyknięte w run_setka) → zatrzymuje target ---
 rc="$(run_setka stop)"
-[ "$rc" = "0" ] && pass "stop: exit 0" || fail "stop: exit $rc"
+[ "$rc" = "0" ] && pass "stop: exit 0 (potwierdzone)" || fail "stop: exit $rc"
 grep -q -- '--user stop live-recording.target' "$REC_LOG" \
-  && pass "stop: woła 'stop live-recording.target'" || fail "stop: brak stop targetu"
+  && pass "stop: po potwierdzeniu woła 'stop live-recording.target'" || fail "stop: brak stop targetu"
+
+# --- stop: anulowane (zenity RC=1) → fail-safe, NIE zatrzymuje, exit 0 ---
+rc="$(ZENITY_RC=1 run_setka stop)"
+[ "$rc" = "0" ] && pass "stop anulowane: exit 0 (fail-safe)" || fail "stop anulowane: exit $rc"
+grep -q -- '--user stop live-recording.target' "$REC_LOG" \
+  && fail "stop anulowane: NIE powinno wołać stop targetu" \
+  || pass "stop anulowane: nie tknęło targetu (bezpieczne)"
+
+# --- stop --yes: pomija potwierdzenie → zatrzymuje BEZ wywołania zenity ---
+rc="$(run_setka stop --yes)"
+[ "$rc" = "0" ] && pass "stop --yes: exit 0" || fail "stop --yes: exit $rc"
+grep -q -- '--user stop live-recording.target' "$REC_LOG" \
+  && pass "stop --yes: woła stop targetu" || fail "stop --yes: brak stop targetu"
+[ -s "$ZENITY_LOG" ] \
+  && fail "stop --yes: zenity NIE powinien być wołany" \
+  || pass "stop --yes: pominął zenity (brak dialogu)"
+
+# --- stop bez zenity i bez --yes → odmowa (exit !=0), NIE zatrzymuje ---
+: >"$REC_LOG"
+rc="$(ZENITY_BIN="$WORK/nie-ma-zenity" run_setka stop)"
+[ "$rc" != "0" ] && pass "stop bez-zenity: niezerowy exit (odmowa)" || fail "stop bez-zenity: exit 0 (powinno != 0)"
+grep -q -- '--user stop live-recording.target' "$REC_LOG" \
+  && fail "stop bez-zenity: NIE powinno wołać stop targetu" \
+  || pass "stop bez-zenity: nie tknęło targetu"
+grep -qi -- '--yes' "$WORK/out.log" \
+  && pass "stop bez-zenity: komunikat wskazuje furtkę --yes" || fail "stop bez-zenity: brak wskazówki --yes"
 
 # --- restart: kluczowe inwarianty ---
 rc="$(run_setka restart)"
@@ -124,38 +188,7 @@ grep -qi 'show' "$WORK/out.log" && pass "unknown: usage wymienia komendę show" 
 #   (b) każdy test miał izolowany stan.
 # Funkcje testowane czysto przez sourcing ze SETKA_LIVE_SOURCED=1 (guard).
 #
-# Rejestratory GIO_BIN / ZENITY_BIN / NOTIFY_BIN — wzorzec analogiczny do SYSTEMCTL_BIN.
-
-GIO_LOG="$WORK/gio.log"
-ZENITY_LOG="$WORK/zenity.log"
-NOTIFY_LOG="$WORK/notify.log"
-
-# Rejestrator GIO_BIN: loguje argumenty; domyślnie exit 0; GIO_RC override.
-GIO_REC="$WORK/gio-rec"
-cat >"$GIO_REC" <<'EOF'
-#!/usr/bin/env bash
-printf '%s\n' "$*" >> "$GIO_LOG"
-exit "${GIO_RC:-0}"
-EOF
-chmod +x "$GIO_REC"
-
-# Rejestrator ZENITY_BIN: loguje argumenty; domyślnie exit 0; ZENITY_RC override.
-ZENITY_REC="$WORK/zenity-rec"
-cat >"$ZENITY_REC" <<'EOF'
-#!/usr/bin/env bash
-printf '%s\n' "$*" >> "$ZENITY_LOG"
-exit "${ZENITY_RC:-0}"
-EOF
-chmod +x "$ZENITY_REC"
-
-# Rejestrator NOTIFY_BIN: zawsze exit 0; loguje argumenty.
-NOTIFY_REC="$WORK/notify-rec"
-cat >"$NOTIFY_REC" <<'EOF'
-#!/usr/bin/env bash
-printf '%s\n' "$*" >> "$NOTIFY_LOG"
-exit 0
-EOF
-chmod +x "$NOTIFY_REC"
+# Rejestratory GIO_BIN / ZENITY_BIN / NOTIFY_BIN zdefiniowane wyżej (przed run_setka).
 
 # Pomocnicza funkcja wywołująca setka-live delete-last z wstrzykniętymi rejestratorami.
 # Czyści logi przed każdym wywołaniem; dodatkowe zmienne env przez $@.
@@ -552,6 +585,12 @@ rc="$(run_setka frobnicate)"
 grep -qi 'new-take' "$WORK/out.log" \
   && pass "usage: wymienia new-take" \
   || fail "usage: nie wymienia new-take"
+
+# --- usage dokumentuje furtkę stop --yes ---
+rc="$(run_setka frobnicate)"
+grep -qi -- 'stop \[--yes\]' "$WORK/out.log" \
+  && pass "usage: dokumentuje 'stop [--yes]'" \
+  || fail "usage: brak 'stop [--yes]'"
 
 rm -rf "$WORK"
 printf '\n=== %d passed, %d failed ===\n' "$PASS" "$FAIL"

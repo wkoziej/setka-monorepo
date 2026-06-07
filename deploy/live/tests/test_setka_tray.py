@@ -27,6 +27,24 @@ def tray():
 class TestMenuStructure:
     """Testy czystej tabeli menu (bez GTK)."""
 
+    def test_uruchom_warstwe_live_mapuje_na_start(self, tray):
+        """Pozycja 'Uruchom warstwę live' musi mapować na ['setka-live', 'start']."""
+        items = tray.build_menu_items()
+        labels = {label: argv for label, argv in items if label is not None}
+        assert "Uruchom warstwę live" in labels, (
+            "Brak pozycji 'Uruchom warstwę live' w menu"
+        )
+        assert labels["Uruchom warstwę live"] == ["setka-live", "start"]
+
+    def test_zatrzymaj_warstwe_live_mapuje_na_stop(self, tray):
+        """Pozycja 'Zatrzymaj warstwę live' musi mapować na ['setka-live', 'stop']."""
+        items = tray.build_menu_items()
+        labels = {label: argv for label, argv in items if label is not None}
+        assert "Zatrzymaj warstwę live" in labels, (
+            "Brak pozycji 'Zatrzymaj warstwę live' w menu"
+        )
+        assert labels["Zatrzymaj warstwę live"] == ["setka-live", "stop"]
+
     def test_pokaz_okna_mapuje_na_setka_live_show(self, tray):
         """Pozycja 'Pokaż okna' musi mapować na ['setka-live', 'show']."""
         items = tray.build_menu_items()
