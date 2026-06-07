@@ -1,5 +1,12 @@
 # Specyfikacja Przepływu Danych - Setka Monorepo
 
+> ⚠️ **STALE (częściowo nieaktualny) — NIE archiwizować, dokument wciąż reużywany.**
+> Schemat JSON analizy jest nieaktualny (pokazuje zagnieżdżone `spectral_analysis.frequency_bands.*`,
+> a kod `beatrix` emituje płaskie `frequency_bands.*`). Aktualnym źródłem prawdy dla formatu
+> analizy jest kod `audio_analyzer.py`. Wciąż-żywa i poprawna jest natomiast **konwencja
+> katalogów `blender/render/`**, reużywana przez aktywny plan
+> `plans/2026-05-30-001-feat-gn-audio-visualizer-plan.md` (ma otwarty TODO aktualizacji tego pliku).
+
 ## 1. Przegląd Przepływu Danych
 
 ```

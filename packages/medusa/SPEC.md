@@ -1,5 +1,9 @@
 # Medusa - Media Upload & Social Automation Library
 
+> Kanoniczny spec biblioteki Medusa (scalony z wcześniejszych `spec.md` EN + `medusa_specification.md` PL;
+> oryginał PL zarchiwizowany w `docs/archive/medusa/`). Spec interfejsu CLI (upload z poziomu fermata)
+> żyje osobno w [`MEDUSA_CLI_SPECIFICATION.md`](MEDUSA_CLI_SPECIFICATION.md).
+
 ## Overview
 
 Medusa is a Python library designed for personal automation of media uploads to hosting platforms (YouTube, Vimeo) and subsequent social media publishing (Facebook, Twitter, LinkedIn). The library provides asynchronous task processing with status tracking for reliable automation workflows.
@@ -155,8 +159,10 @@ status = medusa.get_task_status(task_id)
 - Twitter/X integration
 - LinkedIn publishing
 - Instagram support
-- Google Drive storage
-- Batch processing capabilities
+- Google Drive storage (`GoogleDriveUploader`, optionally via `PyDrive2`)
+- Batch processing capabilities (concurrent multi-file upload)
+- Multi media-type support beyond video: images, PDF documents, audio
+- Persistent task queue (e.g. Celery + RabbitMQ) replacing in-memory storage
 
 ## Security Considerations
 
@@ -165,6 +171,7 @@ status = medusa.get_task_status(task_id)
 - Credentials stored outside of project directory
 - No credential logging or console output
 - Secure token refresh handling
+- For hardened deployments, consider a secrets manager (e.g. HashiCorp Vault) over plain JSON files
 
 ### API Compliance
 - Respect platform rate limits
