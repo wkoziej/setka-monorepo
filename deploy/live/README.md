@@ -30,7 +30,7 @@ go brak (nie blokuje instalacji): `sudo apt install wmctrl`.
 
 ```bash
 setka-live start        # postaw komplet (OBS + Bitwig + kiosk) po preflighcie; na końcu układa okna
-setka-live stop         # zatrzymaj całą warstwę GUI
+setka-live stop [--yes] # zatrzymaj całą warstwę GUI (pyta o potwierdzenie; --yes/-y pomija dialog)
 setka-live restart      # całościowy restart GUI (stop+start; re-weryfikuje preflight)
 setka-live status       # stan członków + paternologia /health + środowisko graficzne
 setka-live show         # wyciągnij na wierzch i ułóż okna na dwóch monitorach (patrz niżej)
@@ -174,6 +174,8 @@ szybkich akcji operatorskich. Startuje automatycznie przy logowaniu do sesji GNO
 `~/.config/autostart/setka-tray.desktop`).
 
 Menu traya:
+- **Uruchom warstwę live** → wywołuje `setka-live start`
+- **Zatrzymaj warstwę live** → wywołuje `setka-live stop` (pyta o potwierdzenie)
 - **Pokaż okna** → wywołuje `setka-live show`
 - **Nowy projekt Bitwig** → wywołuje `setka-live new-take`
 - **Usuń ostatnie nagranie** → wywołuje `setka-live delete-last`

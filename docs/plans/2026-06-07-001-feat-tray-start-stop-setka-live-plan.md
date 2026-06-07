@@ -1,7 +1,7 @@
 ---
 title: "feat: Start/stop warstwy live w menu traya setka-tray"
 type: feat
-status: active
+status: completed
 date: 2026-06-07
 origin: docs/brainstorms/2026-06-04-live-operator-quick-actions-requirements.md
 ---
@@ -144,7 +144,7 @@ Decyzja operatora w tej iteracji: **tylko `start` + `stop`** (bez `restart`/`sta
 
 ## Implementation Units
 
-- [ ] **Unit 1: Pozycje start/stop w tabeli menu setka-tray**
+- [x] **Unit 1: Pozycje start/stop w tabeli menu setka-tray**
 
 **Goal:** Menu traya zawiera „Uruchom warstwę live" → `["setka-live","start"]`
 i „Zatrzymaj warstwę live" → `["setka-live","stop"]`, zgrupowane separatorem.
@@ -180,7 +180,7 @@ i „Zatrzymaj warstwę live" → `["setka-live","stop"]`, zgrupowane separatore
 - `pytest deploy/live/tests/test_setka_tray.py` zielony; nowe pozycje obecne,
   stare nienaruszone.
 
-- [ ] **Unit 2: Bramka potwierdzenia w setka-live `cmd_stop` + furtka `--yes`**
+- [x] **Unit 2: Bramka potwierdzenia w setka-live `cmd_stop` + furtka `--yes`**
 
 **Goal:** `setka-live stop` pyta o potwierdzenie (zenity) zanim zatrzyma target;
 `--yes`/`-y` pomija dialog; bez zenity i bez `--yes` → odmowa z komunikatem.
@@ -242,7 +242,7 @@ musi nie zepsuć invariantów restartu.
 - `deploy/live/tests/test_setka_live.sh` zielony (wszystkie przypadki, w tym
   niezmienione start/restart/delete-last).
 
-- [ ] **Unit 3: Dokumentacja (README warstwy live)**
+- [x] **Unit 3: Dokumentacja (README warstwy live)**
 
 **Goal:** README opisuje nowe pozycje menu traya i nową semantykę `stop`
 (potwierdzenie + `--yes`).
