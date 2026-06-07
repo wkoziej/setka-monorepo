@@ -122,6 +122,15 @@ export function RecordingDetails({ recordingName, onBack, onRecordingRenamed }: 
     }
   };
 
+  const handlePlayWithBrief = async () => {
+    try {
+      await invoke('play_video_with_subtitles', { recordingName });
+    } catch (error) {
+      console.error('🚨 Play-with-brief error:', error);
+      alert(error instanceof Error ? error.message : 'Failed to play video with brief overlay');
+    }
+  };
+
   const getStatusIcon = (status: RecordingStatus) => {
     if (typeof status === 'object' && 'Failed' in status) {
       return '❌';
@@ -382,6 +391,17 @@ export function RecordingDetails({ recordingName, onBack, onRecordingRenamed }: 
             >
               <Film size={16} />
               Play Video
+            </button>
+
+            {/* Play with structure-brief overlay (VLC + ASS subtitles) */}
+            <button
+              className="btn btn-secondary"
+              onClick={handlePlayWithBrief}
+              disabled={!!running[recording.name]}
+              title="Odtwórz wideo w VLC z nałożonym structure brief (wymaga wygenerowanego briefu)"
+            >
+              <Film size={16} />
+              Play + Brief
             </button>
 
             {availableActions.map((action) => (
