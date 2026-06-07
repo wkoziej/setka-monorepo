@@ -112,9 +112,10 @@ beatrix ←─┘
   - `beatrix` → analyze audio for animation timing
   - `cinemon-blend-setup` → create Blender projects with animations
   - `cymatic-render` → render a 3D Geometry Nodes audio visualizer from a beatrix analysis
+  - `cymatic-structure-brief` → build an audio structure brief (per-stem activity + master energy) for clip authoring; writes `analysis/structure_brief.{json,md,ass}` + `structure_map.png`
   - `medusa` → upload and publish media
 - **GUI Integration**:
-  - `fermata` → Tauri desktop app for batch operations and recording management
+  - `fermata` → Tauri desktop app for batch operations and recording management; the recording view's **Play + Brief** action plays the source video in VLC with `analysis/structure_brief.ass` overlaid
 
 ## Critical Architecture Patterns
 
@@ -143,7 +144,7 @@ Key files:
 
 The cymatic package drives a Blender Geometry Nodes 3D audio visualizer from beatrix analysis. The package is **split in two** because the in-Blender code runs under Blender's bundled Python (numpy yes, no PyYAML):
 
-- **Host-side** `packages/cymatic/src/cymatic/` (pure numpy, no `bpy`): `config.py` (`VisualizerConfig`, `PresetParams`), `analysis_loader.py` (`load_analysis`), `normalization.py` (p99 band normalization, envelope precompute), `runner.py` (`CymaticRunner`), `cli.py` (`cymatic-render`), `sync_verification.py`.
+- **Host-side** `packages/cymatic/src/cymatic/` (pure numpy, no `bpy`): `config.py` (`VisualizerConfig`, `PresetParams`), `analysis_loader.py` (`load_analysis`), `normalization.py` (p99 band normalization, envelope precompute), `runner.py` (`CymaticRunner`), `cli.py` (`cymatic-render`), `sync_verification.py`, `brief.py` (`cymatic-structure-brief`: per-stem activity + master energy → JSON/markdown/ASS brief + heatmap PNG for clip authoring; matplotlib imported lazily).
 - **In-Blender** `packages/cymatic/blender_script/` (`import bpy`, NOT shipped in the wheel): `build_scene.py` (entry executed by Blender), `data_object.py`, `gn_sampler.py`, `presets/` (`hybrid_v1.py`).
 
 Key patterns:
