@@ -1,4 +1,5 @@
 use crate::commands::recordings::AppConfig;
+use base64::Engine;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use tauri::State;
@@ -78,6 +79,24 @@ fn resolve_subtitle_path(recording_path: &Path) -> Result<PathBuf, String> {
         ));
     }
     Ok(ass)
+}
+
+/// Read the structure-map heatmap PNG and encode it as a `data:` URL.
+///
+/// The heatmap is produced by `cymatic-structure-brief` at
+/// `<recording>/analysis/structure_map.png`. Returned as a base64 data URL so
+/// the webview can render it without an asset-protocol scope.
+fn heatmap_data_url(recording_path: &Path) -> Result<String, String> {
+    let png = recording_path.join("analysis").join("structure_map.png");
+    if !png.exists() {
+        return Err(format!(
+            "Structure map not found: {}. Run the structure brief (cymatic-structure-brief) first.",
+            png.display()
+        ));
+    }
+    let bytes = std::fs::read(&png).map_err(|e| format!("Failed to read structure map: {}", e))?;
+    let b64 = base64::engine::general_purpose::STANDARD.encode(&bytes);
+    Ok(format!("data:image/png;base64,{}", b64))
 }
 
 /// Get the path to the main video file to play for a recording
@@ -200,6 +219,21 @@ pub fn play_video_with_subtitles(
     }
 }
 
+/// Get the recording's structure-map heatmap as a base64 PNG data URL.
+#[tauri::command]
+pub fn get_structure_heatmap(
+    recording_name: String,
+    config: State<AppConfig>,
+) -> Result<String, String> {
+    let recording_path = config.recordings_path.join(&recording_name);
+
+    if !recording_path.exists() {
+        return Err(format!("Recording '{}' not found", recording_name));
+    }
+
+    heatmap_data_url(&recording_path)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -260,6 +294,26 @@ mod tests {
 
         let got = resolve_subtitle_path(&dir).unwrap();
         assert!(got.ends_with("structure_brief.ass"));
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn heatmap_data_url_errors_when_missing() {
+        let dir = make_recording_dir("no_heatmap");
+        assert!(heatmap_data_url(&dir).is_err());
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn heatmap_data_url_encodes_png() {
+        let dir = make_recording_dir("with_heatmap");
+        let analysis = dir.join("analysis");
+        fs::create_dir_all(&analysis).unwrap();
+        // minimal PNG signature bytes are enough for encoding
+        fs::write(analysis.join("structure_map.png"), b"\x89PNG\r\n\x1a\n").unwrap();
+
+        let url = heatmap_data_url(&dir).unwrap();
+        assert!(url.starts_with("data:image/png;base64,"));
         let _ = fs::remove_dir_all(&dir);
     }
 }

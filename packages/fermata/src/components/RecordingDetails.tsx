@@ -21,11 +21,27 @@ export function RecordingDetails({ recordingName, onBack, onRecordingRenamed }: 
   const [showPresetConfig, setShowPresetConfig] = useState(false);
   const [showVideoPlayer, setShowVideoPlayer] = useState(false);
   const [videoPath, setVideoPath] = useState<string | null>(null);
+  const [heatmapUrl, setHeatmapUrl] = useState<string | null>(null);
   const { runNextStep, runSpecificStep, runSetupRenderWithPreset, running, output, error: operationError } = useRecordingOperations();
   const { renameState, showRenameDialog, hideRenameDialog, renameRecording } = useRenameRecording();
 
   useEffect(() => {
     loadRecordingDetails();
+  }, [recordingName]);
+
+  // Load the structure-map heatmap thumbnail (absent until the brief is run).
+  useEffect(() => {
+    let cancelled = false;
+    invoke('get_structure_heatmap', { recordingName })
+      .then((url) => {
+        if (!cancelled) setHeatmapUrl(url as string);
+      })
+      .catch(() => {
+        if (!cancelled) setHeatmapUrl(null);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [recordingName]);
 
   const loadRecordingDetails = async () => {
@@ -127,7 +143,8 @@ export function RecordingDetails({ recordingName, onBack, onRecordingRenamed }: 
       await invoke('play_video_with_subtitles', { recordingName });
     } catch (error) {
       console.error('🚨 Play-with-brief error:', error);
-      alert(error instanceof Error ? error.message : 'Failed to play video with brief overlay');
+      // invoke rejects with the backend's String, not an Error — surface it verbatim.
+      alert(`Play + Brief failed: ${error}`);
     }
   };
 
@@ -450,6 +467,18 @@ export function RecordingDetails({ recordingName, onBack, onRecordingRenamed }: 
             ))}
           </div>
         </div>
+
+        {/* Structure map (track activity visualization) */}
+        {heatmapUrl && (
+          <div className="recording-card">
+            <h2 style={{ margin: '0 0 16px 0', fontSize: '1.125rem', fontWeight: '600' }}>Structure map</h2>
+            <img
+              src={heatmapUrl}
+              alt="Per-stem activity + master energy"
+              style={{ width: '100%', borderRadius: '6px', display: 'block' }}
+            />
+          </div>
+        )}
 
         {/* File Information */}
         <div className="recording-card">
