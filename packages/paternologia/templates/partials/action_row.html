@@ -42,6 +42,7 @@
     <div class="action-fields flex gap-2">
         {% if action %}
             {% set action_type = action.type.value %}
+            {% set device = (devices | selectattr('id', 'equalto', action.device) | first) %}
             {% include "partials/action_fields.html" with context %}
         {% endif %}
     </div>

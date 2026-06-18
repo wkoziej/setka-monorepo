@@ -16,6 +16,7 @@
 <form method="post"
       action="{% if is_new %}/songs{% else %}/songs/{{ song.song.id }}{% endif %}"
       {% if not is_new %}hx-put="/songs/{{ song.song.id }}"{% endif %}
+      data-song-id="{{ song.song.id if song else '' }}"
       class="space-y-8">
 
     <!-- Song Metadata -->

@@ -849,3 +849,141 @@ class TestPresetUsagePartial:
             },
         )
         assert "Rock" in second.text
+
+
+class TestPresetEditorWiring:
+    """Tests for the editor: transparent display number + usage-hint wiring."""
+
+    @staticmethod
+    def _devices_with_offset(test_storage):
+        devices = [
+            Device(
+                id="boss",
+                name="Boss RC-600",
+                midi_channel=13,
+                preset_display_offset=1,
+                action_types=[ActionType.PRESET, ActionType.CC],
+            ),
+            Device(
+                id="ms",
+                name="Elektron M:S",
+                midi_channel=14,
+                action_types=[ActionType.PATTERN],
+            ),
+        ]
+        test_storage.save_devices(devices)
+        return devices
+
+    def test_edit_renders_display_number_and_hint(self, client, test_storage):
+        """Boss preset stored raw 4 renders as 5 (offset 1) with usage wiring."""
+        from paternologia.models import (
+            Action,
+            ActionType as AT,
+            PacerButton,
+            Song,
+            SongMetadata,
+        )
+
+        self._devices_with_offset(test_storage)
+        test_storage.save_song(
+            Song(
+                song=SongMetadata(id="zen", name="Zen"),
+                pacer=[
+                    PacerButton(
+                        name="SW1",
+                        actions=[Action(device="boss", type=AT.PRESET, value=4)],
+                    )
+                ],
+            )
+        )
+
+        response = client.get("/songs/zen/edit")
+        assert response.status_code == 200
+        assert "/partials/preset-usage" in response.text
+        assert "preset-usage" in response.text
+        assert 'value="5"' in response.text  # raw 4 + offset 1
+
+    def test_save_converts_display_to_stored(self, client, test_storage):
+        """UI number 5 is persisted as raw 4 (offset removed on save)."""
+        self._devices_with_offset(test_storage)
+        response = client.post(
+            "/songs",
+            data={
+                "song_id": "round-trip",
+                "song_name": "Round Trip",
+                "button_0_name": "SW1",
+                "button_0_action_0_device": "boss",
+                "button_0_action_0_type": "preset",
+                "button_0_action_0_value": "5",
+            },
+            follow_redirects=False,
+        )
+        assert response.status_code == 303
+
+        song = test_storage.get_song("round-trip")
+        assert song.pacer[0].actions[0].value == 4
+
+    def test_cc_value_not_offset_on_save(self, client, test_storage):
+        """CC value carries no display offset; stored exactly as entered."""
+        self._devices_with_offset(test_storage)
+        client.post(
+            "/songs",
+            data={
+                "song_id": "cc-song",
+                "song_name": "CC Song",
+                "button_0_name": "SW1",
+                "button_0_action_0_device": "boss",
+                "button_0_action_0_type": "cc",
+                "button_0_action_0_cc": "10",
+                "button_0_action_0_value": "5",
+            },
+            follow_redirects=False,
+        )
+        song = test_storage.get_song("cc-song")
+        assert song.pacer[0].actions[0].value == 5
+
+    def test_new_song_form_has_empty_song_id(self, client, test_storage):
+        """New song form carries data-song-id="" so nothing is excluded."""
+        self._devices_with_offset(test_storage)
+        response = client.get("/songs/new")
+        assert response.status_code == 200
+        assert 'data-song-id=""' in response.text
+
+    def test_pattern_rendered_without_offset(self, client, test_storage):
+        """M:S pattern is consistent already → rendered verbatim, no offset."""
+        from paternologia.models import (
+            Action,
+            ActionType as AT,
+            PacerButton,
+            Song,
+            SongMetadata,
+        )
+
+        self._devices_with_offset(test_storage)
+        test_storage.save_song(
+            Song(
+                song=SongMetadata(id="patt", name="Patt"),
+                pacer=[
+                    PacerButton(
+                        name="SW1",
+                        actions=[Action(device="ms", type=AT.PATTERN, value="F03")],
+                    )
+                ],
+            )
+        )
+
+        response = client.get("/songs/patt/edit")
+        assert response.status_code == 200
+        assert 'value="F03"' in response.text
+
+    def test_cc_fields_have_no_usage_hint(self, client, sample_devices):
+        """cc action fields do not wire the preset-usage hint; preset fields do."""
+        cc = client.get(
+            "/partials/action-fields?action_type=cc&button_idx=0&action_idx=0"
+        )
+        assert "/partials/preset-usage" not in cc.text
+
+        preset = client.get(
+            "/partials/action-fields?action_type=preset&button_idx=0&action_idx=0"
+        )
+        assert "/partials/preset-usage" in preset.text

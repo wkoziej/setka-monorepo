@@ -9,6 +9,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from pydantic import ValidationError
 
 from paternologia.dependencies import get_storage, get_templates
+from paternologia.display import to_stored
 from paternologia.models import (
     Action,
     ActionType,
@@ -210,6 +211,8 @@ def _build_song_from_form(
     target_preset = form_data.get("pacer_export_target_preset", "A1").strip()
     pacer_export = PacerExportSettings(target_preset=target_preset or "A1")
 
+    device_map = {d.id: d for d in storage.get_devices()}
+
     pacer_buttons = []
     button_idx = 0
 
@@ -255,6 +258,12 @@ def _build_song_from_form(
                     if action_value:
                         if action_type == ActionType.PATTERN:
                             value = action_value
+                        elif action_type == ActionType.PRESET:
+                            # UI shows the device-screen number; strip the hidden
+                            # display offset back to the raw MIDI value to store.
+                            device = device_map.get(action_device)
+                            raw = int(action_value)
+                            value = to_stored(raw, device) if device else raw
                         else:
                             value = int(action_value)
 
