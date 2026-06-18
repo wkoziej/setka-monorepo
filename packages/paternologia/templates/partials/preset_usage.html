@@ -1,0 +1,11 @@
+{# ABOUTME: HTMX partial: occupancy hint for a preset/pattern slot. #}
+{# ABOUTME: Lists other songs using the slot, or marks it free. Blank when no query. #}
+{%- if show -%}
+{%- if entries -%}
+<span class="text-amber-600">⚠ używany też w:
+    {%- for entry in entries %} «{{ entry.song_name }}»{% if not loop.last %},{% endif %}{% endfor -%}
+</span>
+{%- else -%}
+<span class="text-green-600">✓ wolny (nieużywany w innych utworach)</span>
+{%- endif -%}
+{%- endif -%}

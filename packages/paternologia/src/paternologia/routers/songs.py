@@ -361,6 +361,56 @@ async def get_action_types(
     )
 
 
+@router.get("/partials/preset-usage", response_class=HTMLResponse)
+async def get_preset_usage(
+    request: Request,
+    device_id: str,
+    action_type: str,
+    value: str = "",
+    song_id: str = "",
+):
+    """Return an occupancy hint for a preset/pattern slot (HTMX, best-effort).
+
+    The incoming ``value`` is the device-screen number shown in the editor; for
+    presets it is converted back to the raw stored value before lookup so it
+    matches what songs persist. Missing/incomplete params yield a blank fragment
+    rather than an error, so the hint never blocks editing.
+    """
+    from paternologia.display import to_stored
+    from paternologia.usage import PresetUsageIndex
+
+    storage = get_storage()
+    templates = get_templates()
+
+    entries = []
+    valid = action_type in (ActionType.PRESET.value, ActionType.PATTERN.value)
+    if valid and value.strip():
+        device = next((d for d in storage.get_devices() if d.id == device_id), None)
+        if device is not None:
+            if action_type == ActionType.PRESET.value:
+                try:
+                    lookup_value = to_stored(int(value), device)
+                except (TypeError, ValueError):
+                    lookup_value = None
+            else:
+                lookup_value = value
+
+            if lookup_value is not None:
+                index = PresetUsageIndex.build(storage.get_songs())
+                entries = index.lookup(
+                    device_id,
+                    action_type,
+                    lookup_value,
+                    exclude_song_id=song_id or None,
+                )
+
+    return templates.TemplateResponse(
+        request=request,
+        name="partials/preset_usage.html",
+        context={"entries": entries, "show": valid and bool(value.strip())},
+    )
+
+
 @router.get("/partials/action-fields", response_class=HTMLResponse)
 async def get_action_fields(
     request: Request, action_type: str, button_idx: int, action_idx: int
