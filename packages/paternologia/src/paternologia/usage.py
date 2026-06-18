@@ -5,6 +5,7 @@ import logging
 from typing import NamedTuple
 
 from paternologia.models import ActionType, Song
+from paternologia.pacer.mappings import pattern_to_program
 
 logger = logging.getLogger(__name__)
 
@@ -32,8 +33,13 @@ def _normalize_value(action_type: ActionType, value: int | str | None):
         except (TypeError, ValueError):
             return None
     if action_type == ActionType.PATTERN:
-        normalized = str(value).strip().upper()
-        return normalized or None
+        text = str(value).strip()
+        if not text:
+            return None
+        # Identify a pattern by its physical slot (program number), so equivalent
+        # spellings collapse to one slot: "A9" == "A09", "a01" == "A01". This is
+        # the same slot identity the hardware/export uses (pattern_to_program).
+        return pattern_to_program(text)
     return None
 
 

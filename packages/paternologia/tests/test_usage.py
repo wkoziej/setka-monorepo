@@ -54,6 +54,27 @@ class TestPresetUsageIndex:
         result = index.lookup("ms", ActionType.PATTERN, "f03")
         assert {e.song_id for e in result} == {"a", "b"}
 
+    def test_pattern_slot_matches_across_spellings(self):
+        """M:S pattern identity is the physical slot: 'A9' and 'A09' are one slot."""
+        songs = [
+            _song(
+                "a", [_btn(Action(device="ms", type=ActionType.PATTERN, value="A09"))]
+            ),
+            _song(
+                "b", [_btn(Action(device="ms", type=ActionType.PATTERN, value="a9"))]
+            ),
+        ]
+        index = PresetUsageIndex.build(songs)
+        # Querying with either spelling finds both songs.
+        assert {e.song_id for e in index.lookup("ms", ActionType.PATTERN, "A09")} == {
+            "a",
+            "b",
+        }
+        assert {e.song_id for e in index.lookup("ms", ActionType.PATTERN, "A9")} == {
+            "a",
+            "b",
+        }
+
     def test_exclude_song_id_removes_current_song(self):
         """A slot used only by the excluded song yields an empty list."""
         songs = [
