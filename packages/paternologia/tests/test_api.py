@@ -902,6 +902,10 @@ class TestPresetEditorWiring:
         assert "/partials/preset-usage" in response.text
         assert "preset-usage" in response.text
         assert 'value="5"' in response.text  # raw 4 + offset 1
+        # Hint must fire on initial load, and survive htmx's load-trigger quirk
+        # where the handler receives the element itself (no event.target).
+        assert "load, change" in response.text
+        assert "(event.target || event)" in response.text
 
     def test_save_converts_display_to_stored(self, client, test_storage):
         """UI number 5 is persisted as raw 4 (offset removed on save)."""

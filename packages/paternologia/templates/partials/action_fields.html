@@ -7,7 +7,7 @@
        hx-get="/partials/preset-usage"
        hx-target="next .preset-usage"
        hx-trigger="load, change, keyup changed delay:400ms"
-       hx-vals="js:{device_id: event.target.closest('.action-row').querySelector('select[name$=_device]').value, action_type: 'preset', value: event.target.value, song_id: (event.target.closest('form').dataset.songId || '')}">
+       hx-vals="js:{device_id: (event.target || event).closest('.action-row').querySelector('select[name$=_device]').value, action_type: 'preset', value: (event.target || event).value, song_id: ((event.target || event).closest('form').dataset.songId || '')}">
 <input type="text" name="button_{{ button_idx }}_action_{{ action_idx }}_label"
        value="{{ action.label if action else '' }}" placeholder="Label"
        class="border border-gray-300 rounded px-2 py-1 text-sm w-24">
@@ -19,7 +19,7 @@
        hx-get="/partials/preset-usage"
        hx-target="next .preset-usage"
        hx-trigger="load, change, keyup changed delay:400ms"
-       hx-vals="js:{device_id: event.target.closest('.action-row').querySelector('select[name$=_device]').value, action_type: 'pattern', value: event.target.value, song_id: (event.target.closest('form').dataset.songId || '')}">
+       hx-vals="js:{device_id: (event.target || event).closest('.action-row').querySelector('select[name$=_device]').value, action_type: 'pattern', value: (event.target || event).value, song_id: ((event.target || event).closest('form').dataset.songId || '')}">
 <input type="text" name="button_{{ button_idx }}_action_{{ action_idx }}_label"
        value="{{ action.label if action else '' }}" placeholder="Label"
        class="border border-gray-300 rounded px-2 py-1 text-sm w-24">
