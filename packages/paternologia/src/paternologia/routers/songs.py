@@ -9,6 +9,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from pydantic import ValidationError
 
 from paternologia.dependencies import get_storage, get_templates
+from paternologia.display import to_stored
 from paternologia.models import (
     Action,
     ActionType,
@@ -100,11 +101,19 @@ async def edit_song(request: Request, song_id: str):
         raise HTTPException(status_code=404, detail="Song not found")
 
     devices = storage.get_devices()
+    from paternologia.usage import PresetUsageIndex
+
+    usage_index = PresetUsageIndex.build(storage.get_songs())
 
     return templates.TemplateResponse(
         request=request,
         name="song_edit.html",
-        context={"song": song, "devices": devices, "is_new": False},
+        context={
+            "song": song,
+            "devices": devices,
+            "is_new": False,
+            "usage_index": usage_index,
+        },
     )
 
 
@@ -210,6 +219,8 @@ def _build_song_from_form(
     target_preset = form_data.get("pacer_export_target_preset", "A1").strip()
     pacer_export = PacerExportSettings(target_preset=target_preset or "A1")
 
+    device_map = {d.id: d for d in storage.get_devices()}
+
     pacer_buttons = []
     button_idx = 0
 
@@ -255,6 +266,12 @@ def _build_song_from_form(
                     if action_value:
                         if action_type == ActionType.PATTERN:
                             value = action_value
+                        elif action_type == ActionType.PRESET:
+                            # UI shows the device-screen number; strip the hidden
+                            # display offset back to the raw MIDI value to store.
+                            device = device_map.get(action_device)
+                            raw = int(action_value)
+                            value = to_stored(raw, device) if device else raw
                         else:
                             value = int(action_value)
 
@@ -358,6 +375,56 @@ async def get_action_types(
             "action_idx": action_idx,
             "action_types": action_types,
         },
+    )
+
+
+@router.get("/partials/preset-usage", response_class=HTMLResponse)
+async def get_preset_usage(
+    request: Request,
+    device_id: str,
+    action_type: str,
+    value: str = "",
+    song_id: str = "",
+):
+    """Return an occupancy hint for a preset/pattern slot (HTMX, best-effort).
+
+    The incoming ``value`` is the device-screen number shown in the editor; for
+    presets it is converted back to the raw stored value before lookup so it
+    matches what songs persist. Missing/incomplete params yield a blank fragment
+    rather than an error, so the hint never blocks editing.
+    """
+    from paternologia.display import to_stored
+    from paternologia.usage import PresetUsageIndex
+
+    storage = get_storage()
+    templates = get_templates()
+
+    entries = []
+    valid = action_type in (ActionType.PRESET.value, ActionType.PATTERN.value)
+    if valid and value.strip():
+        device = next((d for d in storage.get_devices() if d.id == device_id), None)
+        if device is not None:
+            if action_type == ActionType.PRESET.value:
+                try:
+                    lookup_value = to_stored(int(value), device)
+                except (TypeError, ValueError):
+                    lookup_value = None
+            else:
+                lookup_value = value
+
+            if lookup_value is not None:
+                index = PresetUsageIndex.build(storage.get_songs())
+                entries = index.lookup(
+                    device_id,
+                    action_type,
+                    lookup_value,
+                    exclude_song_id=song_id or None,
+                )
+
+    return templates.TemplateResponse(
+        request=request,
+        name="partials/preset_usage.html",
+        context={"entries": entries, "show": valid and bool(value.strip())},
     )
 
 

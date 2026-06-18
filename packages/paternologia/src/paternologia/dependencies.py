@@ -47,5 +47,9 @@ def get_templates() -> Jinja2Templates:
     """Get or create templates instance."""
     global _templates
     if _templates is None:
+        from paternologia.display import to_display
+
         _templates = Jinja2Templates(directory=TEMPLATES_DIR)
+        # Editor renders device-screen numbers; the hidden offset is applied here.
+        _templates.env.globals["to_display"] = to_display
     return _templates

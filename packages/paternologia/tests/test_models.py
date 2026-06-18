@@ -52,6 +52,16 @@ class TestDevice:
         with pytest.raises(ValidationError):
             Device(id="test")
 
+    def test_preset_display_offset_defaults_to_zero(self):
+        """Devices without the field behave like today (no display shift)."""
+        device = Device(id="ms", name="Elektron M:S")
+        assert device.preset_display_offset == 0
+
+    def test_preset_display_offset_can_be_set(self):
+        """Hidden config offset is read from the model (e.g. boss/freak = 1)."""
+        device = Device(id="boss", name="Boss RC-600", preset_display_offset=1)
+        assert device.preset_display_offset == 1
+
 
 class TestDevicesConfig:
     """Tests for DevicesConfig model."""
