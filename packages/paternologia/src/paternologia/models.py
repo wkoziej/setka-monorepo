@@ -30,6 +30,14 @@ class Device(BaseModel):
     midi_channel: int = Field(
         default=0, ge=0, le=15, description="MIDI channel (0-15) for this device"
     )
+    preset_display_offset: int = Field(
+        default=0,
+        description=(
+            "Hidden display offset for preset numbers (device-screen number "
+            "minus raw MIDI value). Config only, never surfaced in the UI; "
+            "applied transparently in the editor. 0 = no shift."
+        ),
+    )
 
 
 class DevicesConfig(BaseModel):
