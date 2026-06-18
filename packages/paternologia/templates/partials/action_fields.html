@@ -6,24 +6,32 @@
        class="border border-gray-300 rounded px-2 py-1 text-sm w-20"
        hx-get="/partials/preset-usage"
        hx-target="next .preset-usage"
-       hx-trigger="load, change, keyup changed delay:400ms"
+       hx-trigger="change, keyup changed delay:400ms"
        hx-vals="js:{device_id: (event.target || event).closest('.action-row').querySelector('select[name$=_device]').value, action_type: 'preset', value: (event.target || event).value, song_id: ((event.target || event).closest('form').dataset.songId || '')}">
 <input type="text" name="button_{{ button_idx }}_action_{{ action_idx }}_label"
        value="{{ action.label if action else '' }}" placeholder="Label"
        class="border border-gray-300 rounded px-2 py-1 text-sm w-24">
-<div class="preset-usage basis-full text-xs mt-1"></div>
+<div class="preset-usage basis-full text-xs mt-1">
+{%- if action and action.value not in (None, '') and usage_index is defined and usage_index -%}
+{% with entries = usage_index.lookup(action.device, 'preset', action.value, exclude_song_id=(song.song.id if song else None)), show = true %}{% include "partials/preset_usage.html" %}{% endwith %}
+{%- endif -%}
+</div>
 {% elif action_type == 'pattern' %}
 <input type="text" name="button_{{ button_idx }}_action_{{ action_idx }}_value"
        value="{{ action.value if action else '' }}" placeholder="Pattern" required
        class="border border-gray-300 rounded px-2 py-1 text-sm w-20"
        hx-get="/partials/preset-usage"
        hx-target="next .preset-usage"
-       hx-trigger="load, change, keyup changed delay:400ms"
+       hx-trigger="change, keyup changed delay:400ms"
        hx-vals="js:{device_id: (event.target || event).closest('.action-row').querySelector('select[name$=_device]').value, action_type: 'pattern', value: (event.target || event).value, song_id: ((event.target || event).closest('form').dataset.songId || '')}">
 <input type="text" name="button_{{ button_idx }}_action_{{ action_idx }}_label"
        value="{{ action.label if action else '' }}" placeholder="Label"
        class="border border-gray-300 rounded px-2 py-1 text-sm w-24">
-<div class="preset-usage basis-full text-xs mt-1"></div>
+<div class="preset-usage basis-full text-xs mt-1">
+{%- if action and action.value not in (None, '') and usage_index is defined and usage_index -%}
+{% with entries = usage_index.lookup(action.device, 'pattern', action.value, exclude_song_id=(song.song.id if song else None)), show = true %}{% include "partials/preset_usage.html" %}{% endwith %}
+{%- endif -%}
+</div>
 {% elif action_type == 'cc' %}
 <input type="number" name="button_{{ button_idx }}_action_{{ action_idx }}_cc"
        value="{{ action.cc if action else '' }}" placeholder="CC #" required

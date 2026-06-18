@@ -101,11 +101,19 @@ async def edit_song(request: Request, song_id: str):
         raise HTTPException(status_code=404, detail="Song not found")
 
     devices = storage.get_devices()
+    from paternologia.usage import PresetUsageIndex
+
+    usage_index = PresetUsageIndex.build(storage.get_songs())
 
     return templates.TemplateResponse(
         request=request,
         name="song_edit.html",
-        context={"song": song, "devices": devices, "is_new": False},
+        context={
+            "song": song,
+            "devices": devices,
+            "is_new": False,
+            "usage_index": usage_index,
+        },
     )
 
 

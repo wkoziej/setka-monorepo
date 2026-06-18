@@ -902,10 +902,38 @@ class TestPresetEditorWiring:
         assert "/partials/preset-usage" in response.text
         assert "preset-usage" in response.text
         assert 'value="5"' in response.text  # raw 4 + offset 1
-        # Hint must fire on initial load, and survive htmx's load-trigger quirk
-        # where the handler receives the element itself (no event.target).
-        assert "load, change" in response.text
-        assert "(event.target || event)" in response.text
+        # The hint is rendered server-side on page load (no reliance on the
+        # flaky htmx "load" trigger). Only zen uses this slot → free.
+        assert "wolny" in response.text.lower()
+
+    def test_edit_shows_other_song_using_slot(self, client, test_storage):
+        """Editing a song shows which OTHER songs share a preset slot, on load."""
+        from paternologia.models import (
+            Action,
+            ActionType as AT,
+            PacerButton,
+            Song,
+            SongMetadata,
+        )
+
+        self._devices_with_offset(test_storage)
+        for sid, sname in (("zen", "Zen"), ("rock", "Rock Song")):
+            test_storage.save_song(
+                Song(
+                    song=SongMetadata(id=sid, name=sname),
+                    pacer=[
+                        PacerButton(
+                            name="SW1",
+                            actions=[Action(device="boss", type=AT.PRESET, value=4)],
+                        )
+                    ],
+                )
+            )
+
+        response = client.get("/songs/zen/edit")
+        assert response.status_code == 200
+        assert "Rock Song" in response.text  # the other occupant, server-rendered
+        assert "używany też w" in response.text
 
     def test_save_converts_display_to_stored(self, client, test_storage):
         """UI number 5 is persisted as raw 4 (offset removed on save)."""
