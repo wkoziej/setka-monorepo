@@ -156,6 +156,19 @@ def test_data_object_built_from_five_channels(mock_bpy, spies):
         assert name in channels
 
 
+def test_preset_receives_frame_start(mock_bpy, spies):
+    """build_preset_scene gets frame_start so the frame range is its concern.
+
+    Removes the hidden ordering dependency where build_scene.main set the
+    frame range AFTER build_preset_scene already set it differently.
+    """
+    build_scene.main(["--config", str(spies["cfg_path"])])
+    preset_kwargs = spies["preset"].call_args.kwargs
+    preset_args = spies["preset"].call_args.args
+    # frame_start (default 1 from the config) is threaded into the preset.
+    assert preset_kwargs.get("frame_start") == 1 or 1 in preset_args
+
+
 def test_missing_config_returns_nonzero(mock_bpy):
     rc = build_scene.main([])
     assert rc != 0

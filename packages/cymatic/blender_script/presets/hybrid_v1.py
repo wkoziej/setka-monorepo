@@ -363,7 +363,7 @@ def _setup_camera_and_sun(collection, scene):
 
 
 def build_preset_scene(analysis, data_obj, sampler_group, preset_params,
-                       fps=30, resolution=None):
+                       fps=30, resolution=None, frame_start=1, frame_end=None):
     """Assemble the hybrid_v1 scene: rings + core + camera + sun + world + render.
 
     Args:
@@ -378,6 +378,10 @@ def build_preset_scene(analysis, data_obj, sampler_group, preset_params,
             decay/tau). ``accent_intensity`` scales the beat punch + core pulse.
         fps: render fps (from ``VisualizerConfig``, NOT the analysis).
         resolution: ``(w, h)`` or ``None`` -> 1280x720.
+        frame_start: first frame (from ``VisualizerConfig``; default 1).
+        frame_end: last frame, or ``None`` to derive ``duration * fps`` from the
+            analysis. The preset owns the frame range so the orchestrator has no
+            hidden ordering dependency on setting it afterward.
 
     Returns:
         The Blender scene object that was configured.
@@ -412,6 +416,8 @@ def build_preset_scene(analysis, data_obj, sampler_group, preset_params,
     _setup_camera_and_sun(collection, scene)
     _setup_world_and_render(scene, fps, resolution)
 
-    scene.frame_start = 1
-    scene.frame_end = max(1, int(float(analysis.duration) * fps))
+    scene.frame_start = frame_start
+    if frame_end is None:
+        frame_end = int(float(analysis.duration) * fps)
+    scene.frame_end = max(frame_start, frame_end)
     return scene
