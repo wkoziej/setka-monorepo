@@ -3,12 +3,17 @@ Extractor functionality for OBS Canvas Recording.
 This module handles video source extraction from canvas recordings.
 """
 
-import re
 import subprocess
 from typing import List, Optional, Dict, Any
 from pathlib import Path
 
+from setka_common import sanitize_filename
 from setka_common.file_structure.specialized import RecordingStructureManager
+
+# Hard ceiling for any single ffmpeg invocation. Mirrors the 30-minute bound
+# used by ``advanced_scene_switcher_extractor.py`` so a wedged/stalled ffmpeg
+# surfaces as a failed ``ExtractionResult`` instead of hanging the extraction.
+FFMPEG_TIMEOUT_SECONDS = 1800
 
 
 class ExtractionResult:
@@ -46,33 +51,6 @@ class ExtractionResult:
             f"extracted_files={len(self.extracted_files)}, "
             f"error_message={self.error_message})"
         )
-
-
-def sanitize_filename(filename: str) -> str:
-    """
-    Sanitize filename by removing or replacing problematic characters.
-
-    Args:
-        filename: Original filename that may contain special characters
-
-    Returns:
-        Sanitized filename safe for filesystem use
-    """
-    # Replace problematic characters with underscores
-    # Characters: / \ : * ? " < > |
-    sanitized = re.sub(r'[/\\:*?"<>|]', "_", filename)
-
-    # Remove multiple consecutive underscores
-    sanitized = re.sub(r"_+", "_", sanitized)
-
-    # Remove leading/trailing underscores
-    sanitized = sanitized.strip("_")
-
-    # Ensure filename is not empty after sanitization
-    if not sanitized:
-        sanitized = "source"
-
-    return sanitized
 
 
 def calculate_crop_params(
@@ -198,23 +176,37 @@ def _extract_video_source(
         str(output_file),
     ]
 
-    subprocess.run(cmd, check=True, capture_output=True, text=True)
+    subprocess.run(
+        cmd, check=True, capture_output=True, text=True, timeout=FFMPEG_TIMEOUT_SECONDS
+    )
 
 
-def _extract_audio_source(input_file: str, output_file: Path) -> None:
+def _extract_audio_source(
+    input_file: str, output_file: Path, audio_stream_index: int = 0
+) -> None:
     """
-    Extract audio from source using FFmpeg.
+    Extract a single audio source's own stream using FFmpeg.
+
+    Each ``has_audio`` source in an OBS multi-track recording owns a distinct
+    audio stream. We select it with ``-map 0:a:<index>`` so every ``<source>.m4a``
+    carries its own track — instead of every source receiving an identical copy
+    of the full canvas mix.
 
     Args:
         input_file: Path to input video file
         output_file: Path to output audio file
+        audio_stream_index: 0-based index of this source's audio stream within
+            the recording (``-map 0:a:<index>``)
 
     Raises:
         subprocess.CalledProcessError: If FFmpeg command fails
+        subprocess.TimeoutExpired: If FFmpeg exceeds ``FFMPEG_TIMEOUT_SECONDS``
         FileNotFoundError: If FFmpeg is not found
     """
-    # Build FFmpeg command for audio extraction
+    # Build FFmpeg command for per-source audio extraction.
     cmd = _get_ffmpeg_base_cmd(input_file) + [
+        "-map",
+        f"0:a:{audio_stream_index}",
         "-c:a",
         "aac",
         "-b:a",
@@ -224,7 +216,9 @@ def _extract_audio_source(input_file: str, output_file: Path) -> None:
         str(output_file),
     ]
 
-    subprocess.run(cmd, check=True, capture_output=True, text=True)
+    subprocess.run(
+        cmd, check=True, capture_output=True, text=True, timeout=FFMPEG_TIMEOUT_SECONDS
+    )
 
 
 def extract_sources(
@@ -289,6 +283,14 @@ def extract_sources(
     canvas_size = metadata.get("canvas_size", [1920, 1080])
     extracted_files = []
 
+    # 0-based index into the recording's audio streams. Each source with
+    # ``has_audio=True`` consumes the next stream (``-map 0:a:<index>``), in the
+    # source iteration order (which mirrors the obs_script scene-item order).
+    # ⚠️ The exact source→stream correspondence is assumed to match OBS
+    # multi-track output ordering; it must be validated against a real
+    # recording's metadata.json + .mkv (see Unit 5.1 FLAG).
+    audio_stream_index = 0
+
     # Process each source based on its capabilities
     for source_name, source_info in sources.items():
         has_audio = source_info.get("has_audio", False)
@@ -320,10 +322,14 @@ def extract_sources(
                     video_file, video_output_file, source_info, canvas_size
                 )
                 extracted_files.append(str(video_output_file))
-            except ValueError as e:
-                # Skip sources with invalid dimensions (e.g., 0x0)
-                print(f"Warning: Skipping video extraction for {source_name}: {e}")
-                continue
+            except subprocess.TimeoutExpired:
+                return ExtractionResult(
+                    success=False,
+                    error_message=(
+                        f"FFmpeg timeout ({FFMPEG_TIMEOUT_SECONDS}s) extracting "
+                        f"video from {source_name}"
+                    ),
+                )
             except subprocess.CalledProcessError as e:
                 return ExtractionResult(
                     success=False,
@@ -340,8 +346,18 @@ def extract_sources(
             audio_output_file = output_dir_path / f"{safe_source_name}.m4a"
 
             try:
-                _extract_audio_source(video_file, audio_output_file)
+                _extract_audio_source(
+                    video_file, audio_output_file, audio_stream_index
+                )
                 extracted_files.append(str(audio_output_file))
+            except subprocess.TimeoutExpired:
+                return ExtractionResult(
+                    success=False,
+                    error_message=(
+                        f"FFmpeg timeout ({FFMPEG_TIMEOUT_SECONDS}s) extracting "
+                        f"audio from {source_name}"
+                    ),
+                )
             except subprocess.CalledProcessError as e:
                 return ExtractionResult(
                     success=False,
@@ -352,6 +368,9 @@ def extract_sources(
                     success=False,
                     error_message="FFmpeg not found. Please install FFmpeg and ensure it's in your PATH.",
                 )
+
+            # This source consumed an audio stream; advance to the next one.
+            audio_stream_index += 1
 
     return ExtractionResult(success=True, extracted_files=extracted_files)
 
