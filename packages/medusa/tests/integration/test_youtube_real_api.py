@@ -6,20 +6,104 @@ These tests are skipped if credentials are not available.
 import os
 import pytest
 from datetime import datetime, timezone
+from unittest.mock import patch, MagicMock
 
 from medusa.uploaders.youtube import YouTubeUploader
 from medusa.models import MediaMetadata, PlatformConfig
 
 
-# Skip all tests if credentials not available
+# Skip the REAL-API classes if credentials not available. The mocked OAuth-flow
+# class below always runs (it never touches the network), so the skip is applied
+# per-class rather than at module scope.
 CREDENTIALS_PATH = "client_secrets.json"
 SKIP_REAL_API = not os.path.exists(CREDENTIALS_PATH)
 
-pytestmark = pytest.mark.skipif(
+requires_real_credentials = pytest.mark.skipif(
     SKIP_REAL_API, reason="YouTube credentials not available - skipping real API tests"
 )
 
 
+class TestYouTubeAuthenticationFlowMocked:
+    """OAuth authentication flow, mocked end-to-end (no browser, always runs).
+
+    Replaces the previous skipif(True) placeholder that never executed: it
+    exercises the real YouTubeUploader.authenticate -> YouTubeAuth.authenticate
+    wiring, mocking only the OAuth boundary (the browser flow + Google API
+    build).
+    """
+
+    @pytest.mark.asyncio
+    async def test_oauth_flow_authenticates_without_browser(self):
+        """A fresh OAuth flow (no stored creds) authenticates successfully."""
+        config = PlatformConfig(
+            platform_name="youtube",
+            credentials={
+                "client_secrets_file": "client_secrets.json",
+                "credentials_file": "credentials.json",
+            },
+        )
+        uploader = YouTubeUploader(config=config)
+
+        fake_credentials = MagicMock()
+
+        with (
+            # No existing creds on disk -> forces the OAuth flow branch.
+            patch.object(
+                uploader.auth_manager, "load_existing_credentials", return_value=False
+            ),
+            patch(
+                "medusa.uploaders.youtube_auth.InstalledAppFlow"
+            ) as mock_flow_cls,
+            patch.object(
+                uploader.auth_manager, "validate_credentials", return_value=True
+            ),
+            patch.object(uploader.auth_manager, "save_credentials"),
+            patch("medusa.uploaders.youtube.build", return_value=MagicMock()),
+        ):
+            mock_flow = MagicMock()
+            mock_flow.run_local_server.return_value = fake_credentials
+            mock_flow_cls.from_client_secrets_file.return_value = mock_flow
+
+            result = await uploader.authenticate()
+
+            assert result is True
+            assert uploader.is_authenticated is True
+            # The flow was built from the configured client secrets and saved.
+            mock_flow_cls.from_client_secrets_file.assert_called_once()
+            uploader.auth_manager.save_credentials.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_oauth_flow_uses_existing_valid_credentials(self):
+        """When valid credentials already exist, no OAuth flow is started."""
+        config = PlatformConfig(
+            platform_name="youtube",
+            credentials={
+                "client_secrets_file": "client_secrets.json",
+                "credentials_file": "credentials.json",
+            },
+        )
+        uploader = YouTubeUploader(config=config)
+
+        with (
+            patch.object(
+                uploader.auth_manager, "load_existing_credentials", return_value=True
+            ),
+            patch.object(
+                uploader.auth_manager, "validate_credentials", return_value=True
+            ),
+            patch.object(
+                uploader.auth_manager, "start_oauth_flow"
+            ) as mock_oauth,
+            patch("medusa.uploaders.youtube.build", return_value=MagicMock()),
+        ):
+            uploader.auth_manager.credentials = MagicMock()
+            result = await uploader.authenticate()
+
+            assert result is True
+            mock_oauth.assert_not_called()
+
+
+@requires_real_credentials
 class TestYouTubeRealAPI:
     """Integration tests with real YouTube API."""
 
@@ -31,24 +115,6 @@ class TestYouTubeRealAPI:
             credentials={"client_secrets_file": CREDENTIALS_PATH},
         )
         return YouTubeUploader(config=config)
-
-    @pytest.mark.manual
-    @pytest.mark.skipif(True, reason="Manual test - requires OAuth browser interaction")
-    @pytest.mark.asyncio
-    async def test_authentication_flow(self, uploader):
-        """Test real OAuth authentication flow."""
-        print("\n" + "=" * 50)
-        print("MANUAL TEST: YouTube Authentication")
-        print("=" * 50)
-        print("This test will open a browser for OAuth authentication.")
-        print("Please complete the authentication flow.")
-
-        # Test authentication
-        auth_result = await uploader.authenticate()
-        assert auth_result is True
-        assert uploader.is_authenticated is True
-
-        print("✅ Authentication successful!")
 
     @pytest.mark.asyncio
     async def test_metadata_validation_real(self, uploader):

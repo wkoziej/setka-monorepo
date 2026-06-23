@@ -1,7 +1,6 @@
 # ABOUTME: Data models and enums for task status, metadata, and platform configurations
 # ABOUTME: Defines structured data types used throughout the Medusa library
 
-import os
 import re
 from enum import Enum
 from typing import Dict, Any, Optional, List
@@ -405,93 +404,3 @@ class PlatformConfig:
             timeout=data.get("timeout"),
         )
 
-
-@dataclass
-class PublishRequest:
-    """Request for publishing media to multiple platforms."""
-
-    media_file_path: str
-    platforms: List[str]
-    metadata: Dict[str, Dict[str, Any]] = field(default_factory=dict)
-    priority: int = 1
-    schedule_time: Optional[datetime] = None
-    created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
-
-    def validate(self) -> None:
-        """
-        Validate the publish request.
-
-        Raises:
-            MedusaError: If validation fails
-        """
-        if not self.platforms:
-            raise MedusaError("At least one platform must be specified")
-
-        if self.priority < 1:
-            raise MedusaError("Priority must be >= 1")
-
-        if not os.path.exists(self.media_file_path):
-            raise MedusaError(f"Media file not found: {self.media_file_path}")
-
-        # Validate platform names
-        for platform in self.platforms:
-            if platform not in PlatformConfig.SUPPORTED_PLATFORMS:
-                raise MedusaError(f"Unsupported platform: {platform}")
-
-    def get_platform_metadata(self, platform: str) -> Dict[str, Any]:
-        """
-        Get metadata for a specific platform.
-
-        Args:
-            platform: Platform name
-
-        Returns:
-            Platform-specific metadata or empty dict
-        """
-        return self.metadata.get(platform, {})
-
-    def to_dict(self) -> Dict[str, Any]:
-        """
-        Serialize PublishRequest to dictionary.
-
-        Returns:
-            Dictionary representation of the request
-        """
-        return {
-            "media_file_path": self.media_file_path,
-            "platforms": self.platforms,
-            "metadata": self.metadata,
-            "priority": self.priority,
-            "schedule_time": self.schedule_time.isoformat()
-            if self.schedule_time
-            else None,
-            "created_at": self.created_at.isoformat(),
-        }
-
-    @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "PublishRequest":
-        """
-        Deserialize PublishRequest from dictionary.
-
-        Args:
-            data: Dictionary containing request data
-
-        Returns:
-            PublishRequest instance
-        """
-        # Parse datetime fields
-        created_at = datetime.fromisoformat(data["created_at"].replace("Z", "+00:00"))
-        schedule_time = None
-        if data.get("schedule_time"):
-            schedule_time = datetime.fromisoformat(
-                data["schedule_time"].replace("Z", "+00:00")
-            )
-
-        return cls(
-            media_file_path=data["media_file_path"],
-            platforms=data["platforms"],
-            metadata=data.get("metadata", {}),
-            priority=data.get("priority", 1),
-            schedule_time=schedule_time,
-            created_at=created_at,
-        )
