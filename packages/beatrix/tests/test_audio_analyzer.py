@@ -112,8 +112,9 @@ class TestAudioAnalyzerCore:
         )
         analyzer._librosa.segment.agglomerative.return_value = np.array([0, 50])
 
-        # Mock frames_to_time to return appropriate values based on input length
-        def mock_frames_to_time(frames, sr=None):
+        # Mock frames_to_time to return appropriate values based on input length.
+        # Accepts **kwargs because the analyzer now passes hop_length explicitly.
+        def mock_frames_to_time(frames, sr=None, **kwargs):
             if isinstance(frames, (list, np.ndarray)):
                 # Return time values based on frame count
                 return np.linspace(0, 1.0, len(frames))

@@ -118,3 +118,125 @@ class TestFindBassPeaksGuards:
     def test_empty_times_returns_empty(self):
         analyzer = AudioAnalyzer()
         assert analyzer._find_bass_peaks([], []) == []
+
+
+# ---------------------------------------------------------------------------
+# Unit 2.2 — versioned, complete, finite JSON contract
+# ---------------------------------------------------------------------------
+
+# JSON-Schema-style description of the EMITTED analysis dict (not the old
+# DATA_FLOW_SPECIFICATION body). Validated structurally below.
+EMITTED_CONTRACT = {
+    "schema_version": str,
+    "hop_length": int,
+    "n_fft": int,
+    "duration": (int, float),
+    "sample_rate": int,
+    "tempo": {
+        "bpm": (int, float),
+        "beat_times": list,
+        "beat_count": int,
+    },
+    "animation_events": {
+        "beats": list,
+        "sections": list,
+        "onsets": list,
+        "energy_peaks": list,
+    },
+    "frequency_bands": {
+        "times": list,
+        "bass_energy": list,
+        "mid_energy": list,
+        "high_energy": list,
+    },
+}
+
+
+def _validate_against(contract, value, path=""):
+    """Recursively assert *value* matches the *contract* shape spec."""
+    if isinstance(contract, dict):
+        assert isinstance(value, dict), f"{path}: expected dict, got {type(value)}"
+        for key, sub in contract.items():
+            assert key in value, f"{path}: missing key '{key}'"
+            _validate_against(sub, value[key], f"{path}.{key}")
+    else:
+        assert isinstance(value, contract), (
+            f"{path}: expected {contract}, got {type(value)}"
+        )
+
+
+class TestContractFields:
+    """Unit 2.2: producer contract is explicit, versioned, and correct."""
+
+    @pytest.fixture
+    def silence_result(self, tmp_path):
+        audio = _write_silence(tmp_path / "contract.wav", 22050)
+        return AudioAnalyzer().analyze_for_animation(audio)
+
+    @pytest.fixture
+    def tone_result(self, tmp_path):
+        """A percussive click track at 120 BPM so beat events are non-empty.
+
+        A pure tone yields no detectable beats, which would make the native-
+        float assertion vacuous; clicks guarantee a populated beats array.
+        """
+        sr = 22050
+        n = int(4.0 * sr)
+        y = np.zeros(n, dtype=np.float32)
+        for i in range(8):  # clicks every 0.5s == 120 BPM
+            start = int(i * 0.5 * sr)
+            y[start : start + 200] = 0.9
+        pcm = np.int16(y * 32000)
+        path = tmp_path / "clicks.wav"
+        with wave.open(str(path), "wb") as wf:
+            wf.setnchannels(1)
+            wf.setsampwidth(2)
+            wf.setframerate(sr)
+            wf.writeframes(pcm.tobytes())
+        return AudioAnalyzer().analyze_for_animation(path)
+
+    def test_schema_version_emitted(self, silence_result):
+        assert silence_result["schema_version"] == "1.0"
+
+    def test_hop_length_and_n_fft_emitted(self, silence_result):
+        assert silence_result["hop_length"] == 512
+        assert silence_result["n_fft"] == 2048
+
+    def test_beat_events_are_native_float(self, tone_result):
+        beats = tone_result["animation_events"]["beats"]
+        assert len(beats) > 0, "click track should produce at least one beat event"
+        assert all(type(b) is float for b in beats), (
+            f"beat_events must be native float, got {[type(b) for b in beats]}"
+        )
+
+    def test_output_matches_emitted_contract(self, silence_result):
+        _validate_against(EMITTED_CONTRACT, silence_result)
+
+    def test_output_is_json_serializable(self, tone_result):
+        import json
+
+        # Must serialize with the default encoder — no numpy scalars leaking.
+        json.dumps(tone_result)
+
+    def test_no_nan_or_inf_anywhere(self, silence_result, tone_result):
+        for result in (silence_result, tone_result):
+            for n in _all_numeric_values(result):
+                assert math.isfinite(n), f"non-finite value leaked: {n}"
+
+
+class TestSanitizeNonFinite:
+    """Unit 2.2: NaN/inf in band/peak arrays are scrubbed before serialize."""
+
+    def test_find_bass_peaks_drops_nan_times(self):
+        analyzer = AudioAnalyzer()
+        times = [0.0, 1.0, float("nan"), 2.0, 3.0]
+        bass = [0.0, 5.0, 5.0, 5.0, 0.0]
+        peaks = analyzer._find_bass_peaks(times, bass)
+        assert all(math.isfinite(p) for p in peaks)
+
+    def test_band_energy_sanitized_in_output(self, tmp_path):
+        audio = _write_silence(tmp_path / "s.wav", 22050)
+        result = AudioAnalyzer().analyze_for_animation(audio)
+        for band in ("bass_energy", "mid_energy", "high_energy"):
+            for v in result["frequency_bands"][band]:
+                assert math.isfinite(v)

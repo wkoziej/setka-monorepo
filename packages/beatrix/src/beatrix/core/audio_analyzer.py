@@ -12,6 +12,28 @@ import numpy as np
 
 logger = logging.getLogger(__name__)
 
+# Analysis JSON contract. SCHEMA_VERSION is the authoritative version field
+# (consumers validate the major). N_FFT is the real librosa.stft default; the
+# STFT hop is n_fft // 4, which is what frames_to_time assumes, so HOP_LENGTH
+# governs the dt between every frequency_bands sample.
+SCHEMA_VERSION = "1.0"
+N_FFT = 2048
+HOP_LENGTH = N_FFT // 4  # 512
+
+
+def _finite_floats(values: List[float]) -> List[float]:
+    """Coerce to native float and drop any NaN/inf entries.
+
+    Keeps the emitted contract free of non-finite numbers and numpy scalars so
+    a plain json.dumps round-trips without surprises for downstream consumers.
+    """
+    out = []
+    for v in values:
+        f = float(v)
+        if np.isfinite(f):
+            out.append(f)
+    return out
+
 
 class AudioAnalyzer:
     """Analyzes audio files to extract rhythm and energy data for animations."""
@@ -71,8 +93,11 @@ class AudioAnalyzer:
         y, sr = self.librosa.load(str(audio_path), sr=None, mono=True)
         duration = len(y) / sr if sr else 0.0
 
-        # Basic info
+        # Basic info + explicit, versioned contract metadata.
         result = {
+            "schema_version": SCHEMA_VERSION,
+            "hop_length": HOP_LENGTH,
+            "n_fft": N_FFT,
             "duration": float(duration),
             "sample_rate": int(sr),
             "animation_events": {},
@@ -106,10 +131,12 @@ class AudioAnalyzer:
             "beat_count": len(beats),
         }
 
-        # Generate beat-based events
-        beat_events = [
-            beats[i] for i in range(0, len(beats), beat_division) if i < len(beats)
-        ]
+        # Generate beat-based events. range(0, len(beats), ...) keeps every
+        # index in-bounds, but beats[i] yields np.float64 — coerce to native
+        # float (and drop any non-finite) for a clean JSON contract.
+        beat_events = _finite_floats(
+            [beats[i] for i in range(0, len(beats), beat_division)]
+        )
         result["animation_events"]["beats"] = beat_events
 
         # Structure boundaries
@@ -122,7 +149,7 @@ class AudioAnalyzer:
         logger.info("Detecting onsets...")
         onsets = self.librosa.onset.onset_detect(y=y, sr=sr, units="time")
         filtered_onsets = self._filter_onsets(onsets, min_onset_interval)
-        result["animation_events"]["onsets"] = filtered_onsets
+        result["animation_events"]["onsets"] = _finite_floats(filtered_onsets)
 
         # Frequency band energy
         logger.info("Analyzing frequency bands...")
@@ -175,9 +202,10 @@ class AudioAnalyzer:
         self, y: np.ndarray, sr: int
     ) -> Dict[str, List[float]]:
         """Analyze energy in frequency bands over time."""
-        # Compute spectrogram
-        S = np.abs(self.librosa.stft(y))
-        freqs = self.librosa.fft_frequencies(sr=sr)
+        # Compute spectrogram with the contract's STFT parameters so the
+        # emitted hop_length/n_fft actually govern the dt between frames.
+        S = np.abs(self.librosa.stft(y, n_fft=N_FFT, hop_length=HOP_LENGTH))
+        freqs = self.librosa.fft_frequencies(sr=sr, n_fft=N_FFT)
 
         # Define frequency bands
         bass_idx = (freqs >= 20) & (freqs <= 250)
@@ -189,14 +217,25 @@ class AudioAnalyzer:
         mid_energy = np.mean(S[mid_idx, :], axis=0)
         high_energy = np.mean(S[high_idx, :], axis=0)
 
-        # Get time axis
-        times = self.librosa.frames_to_time(np.arange(len(bass_energy)), sr=sr)
+        # Get time axis (hop_length must match the STFT hop used above)
+        times = self.librosa.frames_to_time(
+            np.arange(len(bass_energy)), sr=sr, hop_length=HOP_LENGTH
+        )
+
+        # A non-empty signal must produce at least one analysis frame. Zero
+        # frames here means the band computation is broken, not a short clip
+        # (those still yield >=1 frame); fail loudly rather than emit garbage.
+        if len(times) == 0:
+            raise ValueError(
+                "Frequency-band analysis produced no frames for non-empty audio; "
+                f"got {len(y)} samples at {sr} Hz."
+            )
 
         return {
-            "times": times.tolist(),
-            "bass_energy": bass_energy.tolist(),
-            "mid_energy": mid_energy.tolist(),
-            "high_energy": high_energy.tolist(),
+            "times": _finite_floats(times.tolist()),
+            "bass_energy": _finite_floats(bass_energy.tolist()),
+            "mid_energy": _finite_floats(mid_energy.tolist()),
+            "high_energy": _finite_floats(high_energy.tolist()),
         }
 
     def _find_bass_peaks(
@@ -228,7 +267,7 @@ class AudioAnalyzer:
             distance=distance,
         )
 
-        return [times[peak] for peak in peaks]
+        return _finite_floats([times[peak] for peak in peaks])
 
     def _convert_boundaries_to_sections(self, boundaries: List[float]) -> List[Dict]:
         """
