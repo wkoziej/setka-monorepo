@@ -11,7 +11,11 @@ import logging
 
 from setka_common.file_structure.types import FileExtensions, MediaType
 from setka_common.utils.files import find_files_by_type
-from ..exceptions import NoAudioFileError, MultipleAudioFilesError
+from ..exceptions import (
+    AudioValidationError,
+    NoAudioFileError,
+    MultipleAudioFilesError,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -26,7 +30,47 @@ class AudioValidator:
 
     def __init__(self):
         """Initialize AudioValidator."""
-        pass
+        self._librosa = None
+
+    @property
+    def librosa(self):
+        """Lazy-load librosa for the decode probe."""
+        if self._librosa is None:
+            try:
+                import librosa
+
+                self._librosa = librosa
+            except ImportError:
+                raise ImportError(
+                    "librosa jest wymagana do walidacji audio. "
+                    "Zainstaluj: pip install librosa"
+                )
+        return self._librosa
+
+    def validate_audio_file(self, audio_path: Path) -> Path:
+        """
+        Fail fast: confirm an audio file is actually decodable.
+
+        Existence and extension checks pass for a file that is corrupt or
+        truncated; this probe decodes just enough (``librosa.get_duration``)
+        to reject such a file before any expensive analysis begins.
+
+        Args:
+            audio_path: Path to the audio file to probe
+
+        Returns:
+            Path: The validated path (unchanged)
+
+        Raises:
+            AudioValidationError: When the file cannot be decoded
+        """
+        try:
+            self.librosa.get_duration(path=str(audio_path))
+        except Exception as exc:
+            raise AudioValidationError(
+                f"Nie można zdekodować pliku audio: {audio_path.name} ({exc})"
+            ) from exc
+        return audio_path
 
     def detect_main_audio(
         self, extracted_dir: Path, specified_audio: Optional[str] = None
@@ -44,6 +88,7 @@ class AudioValidator:
         Raises:
             NoAudioFileError: When no audio files are found
             MultipleAudioFilesError: When multiple audio files found without specification
+            AudioValidationError: When the selected file cannot be decoded
             ValueError: When specified audio file is not found or invalid
         """
         audio_files = self.find_audio_files(extracted_dir)
@@ -61,7 +106,7 @@ class AudioValidator:
             )
 
         logger.info(f"Detected main audio file: {audio_files[0].name}")
-        return audio_files[0]
+        return self.validate_audio_file(audio_files[0])
 
     def find_audio_files(self, extracted_dir: Path) -> List[Path]:
         """
@@ -96,20 +141,23 @@ class AudioValidator:
 
         Raises:
             ValueError: When specified audio file is not found or invalid
+            AudioValidationError: When the file cannot be decoded
         """
         audio_path = extracted_dir / specified_audio
 
         if not audio_path.exists():
-            raise ValueError(f"Specified audio file not found: {specified_audio}")
+            raise ValueError(f"Nie znaleziono wskazanego pliku audio: {specified_audio}")
 
         if not audio_path.is_file():
-            raise ValueError(f"Specified audio path is not a file: {specified_audio}")
+            raise ValueError(
+                f"Wskazana ścieżka audio nie jest plikiem: {specified_audio}"
+            )
 
         if audio_path.suffix.lower() not in FileExtensions.AUDIO:
             raise ValueError(
-                f"Specified file is not a valid audio file: {specified_audio}. "
-                f"Supported formats: {', '.join(FileExtensions.AUDIO)}"
+                f"Wskazany plik jest nieprawidłowym plikiem audio: {specified_audio}. "
+                f"Obsługiwane formaty: {', '.join(FileExtensions.AUDIO)}"
             )
 
         logger.info(f"Validated specified audio file: {specified_audio}")
-        return audio_path
+        return self.validate_audio_file(audio_path)
