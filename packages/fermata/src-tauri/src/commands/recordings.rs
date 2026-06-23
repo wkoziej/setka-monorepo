@@ -46,9 +46,25 @@ impl Default for AppConfig {
         log::info!("Final config - workspace_root: {}", workspace_root_str);
         log::info!("Final config - main_audio_file: {}", main_audio_file);
 
+        // Canonicalize the recordings root once at startup. The IPC path-traversal
+        // guard asserts resolved paths start_with this root; an un-canonicalized
+        // (relative or symlinked) root would let an attacker-controlled name slip
+        // the containment check. Fall back to the raw path if it does not yet exist.
+        let recordings_path = PathBuf::from(&recordings_path_str);
+        let recordings_path = recordings_path
+            .canonicalize()
+            .unwrap_or_else(|e| {
+                log::warn!(
+                    "Could not canonicalize recordings_path '{}': {} — using raw path",
+                    recordings_path_str,
+                    e
+                );
+                recordings_path
+            });
+
         // Default configuration - can be overridden by user settings
         AppConfig {
-            recordings_path: PathBuf::from(recordings_path_str),
+            recordings_path,
             cli_paths: CliPaths {
                 uv_path: "uv".to_string(),
                 workspace_root: PathBuf::from(workspace_root_str),

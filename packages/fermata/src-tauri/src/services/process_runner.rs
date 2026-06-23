@@ -1,6 +1,16 @@
 use std::path::{Path, PathBuf};
+use std::time::Duration;
 use tokio::process::Command as AsyncCommand;
 use serde::{Serialize, Deserialize};
+
+/// Timeout for pipeline subprocesses that should finish promptly
+/// (beatrix analyze, structure brief, medusa upload, tool probes).
+const DEFAULT_TIMEOUT: Duration = Duration::from_secs(30 * 60);
+/// Longer ceiling for the cymatic/Blender render, which is compute-heavy.
+const RENDER_TIMEOUT: Duration = Duration::from_secs(2 * 60 * 60);
+/// Short ceiling for the `--help`/`--version` reachability probes in startup
+/// validation, so a missing/hung tool fails fast instead of blocking launch.
+const PROBE_TIMEOUT: Duration = Duration::from_secs(60);
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ProcessResult {
@@ -84,7 +94,8 @@ impl ProcessRunner {
         }
 
         cmd.current_dir(&self.workspace_root);
-        self.execute_command(cmd).await
+        // Rendering drives Blender and can run for a long time.
+        self.execute_command_with_timeout(cmd, RENDER_TIMEOUT).await
     }
 
     /// Run medusa upload command
@@ -98,16 +109,63 @@ impl ProcessRunner {
         self.execute_command(cmd).await
     }
 
-    /// Execute a command and capture output
-    async fn execute_command(&self, mut cmd: AsyncCommand) -> anyhow::Result<ProcessResult> {
-        log::info!("Executing command: {:?}", cmd);
+    /// Execute a command and capture output, bounded by DEFAULT_TIMEOUT.
+    async fn execute_command(&self, cmd: AsyncCommand) -> anyhow::Result<ProcessResult> {
+        self.execute_command_with_timeout(cmd, DEFAULT_TIMEOUT).await
+    }
 
-        let output = cmd.output().await?;
+    /// Execute a command with an explicit timeout. On timeout the child is killed
+    /// and an error is returned, so a hung subprocess never blocks the UI forever.
+    ///
+    /// stdout/stderr are drained on dedicated tasks while we wait, so a chatty
+    /// subprocess (e.g. Blender) can't deadlock by filling a pipe buffer.
+    async fn execute_command_with_timeout(
+        &self,
+        mut cmd: AsyncCommand,
+        timeout: Duration,
+    ) -> anyhow::Result<ProcessResult> {
+        use tokio::io::AsyncReadExt;
 
-        let stdout = String::from_utf8_lossy(&output.stdout).to_string();
-        let stderr = String::from_utf8_lossy(&output.stderr).to_string();
-        let success = output.status.success();
-        let exit_code = output.status.code();
+        log::info!("Executing command (timeout {:?}): {:?}", timeout, cmd);
+
+        // Spawn with piped output so we can both drain and kill the child.
+        cmd.stdout(std::process::Stdio::piped())
+            .stderr(std::process::Stdio::piped());
+        let mut child = cmd.spawn()?;
+
+        // Drain stdout/stderr concurrently to avoid pipe-buffer deadlock.
+        let mut child_stdout = child.stdout.take();
+        let mut child_stderr = child.stderr.take();
+        let stdout_task = tokio::spawn(async move {
+            let mut buf = Vec::new();
+            if let Some(out) = child_stdout.as_mut() {
+                let _ = out.read_to_end(&mut buf).await;
+            }
+            buf
+        });
+        let stderr_task = tokio::spawn(async move {
+            let mut buf = Vec::new();
+            if let Some(err) = child_stderr.as_mut() {
+                let _ = err.read_to_end(&mut buf).await;
+            }
+            buf
+        });
+
+        let status = match tokio::time::timeout(timeout, child.wait()).await {
+            Ok(res) => res?,
+            Err(_elapsed) => {
+                // Kill the overrunning child so it doesn't linger.
+                let _ = child.kill().await;
+                return Err(anyhow::anyhow!("Command timed out after {:?}", timeout));
+            }
+        };
+
+        let stdout_bytes = stdout_task.await.unwrap_or_default();
+        let stderr_bytes = stderr_task.await.unwrap_or_default();
+        let stdout = String::from_utf8_lossy(&stdout_bytes).to_string();
+        let stderr = String::from_utf8_lossy(&stderr_bytes).to_string();
+        let success = status.success();
+        let exit_code = status.code();
 
         log::info!("Command finished - success: {}, exit_code: {:?}", success, exit_code);
         if !stdout.is_empty() {
@@ -125,24 +183,24 @@ impl ProcessRunner {
         })
     }
 
-    /// Check if required CLI tools are available
+    /// Check if required CLI tools are available. Each probe is bounded by
+    /// PROBE_TIMEOUT so a hung tool fails fast at startup instead of blocking.
     pub async fn validate_cli_tools(&self) -> anyhow::Result<()> {
         // Check if uv is available
         let mut cmd = AsyncCommand::new(&self.uv_path);
         cmd.arg("--version");
-
-        let output = cmd.output().await?;
-        if !output.status.success() {
+        let result = self.execute_command_with_timeout(cmd, PROBE_TIMEOUT).await?;
+        if !result.success {
             return Err(anyhow::anyhow!("UV tool not found at: {}", self.uv_path));
         }
 
         // Check if workspace packages are available
         // beatrix: Python module
         let mut cmd = AsyncCommand::new(&self.uv_path);
-        cmd.args(&["run", "--package", "beatrix", "python", "-m", "beatrix", "--help"])
+        cmd.args(["run", "--package", "beatrix", "python", "-m", "beatrix", "--help"])
             .current_dir(&self.workspace_root);
-        let output = cmd.output().await?;
-        if !output.status.success() {
+        let result = self.execute_command_with_timeout(cmd, PROBE_TIMEOUT).await?;
+        if !result.success {
             return Err(anyhow::anyhow!("Package 'beatrix' not available in workspace"));
         }
 
@@ -152,9 +210,8 @@ impl ProcessRunner {
             let mut cmd = AsyncCommand::new(&self.uv_path);
             cmd.args(["run", "--package", package, "--help"])
                 .current_dir(&self.workspace_root);
-
-            let output = cmd.output().await?;
-            if !output.status.success() {
+            let result = self.execute_command_with_timeout(cmd, PROBE_TIMEOUT).await?;
+            if !result.success {
                 return Err(anyhow::anyhow!("Package '{}' not available in workspace", package));
             }
         }
@@ -212,6 +269,22 @@ mod tests {
 
         assert!(!result.success);
         assert_eq!(result.exit_code, Some(1));
+    }
+
+    #[tokio::test]
+    async fn test_execute_command_times_out() {
+        let (runner, _temp_dir) = create_test_runner();
+
+        // `sleep 30` far exceeds the 100ms timeout → must Err, not hang.
+        let mut cmd = AsyncCommand::new("sleep");
+        cmd.arg("30");
+
+        let result = runner
+            .execute_command_with_timeout(cmd, std::time::Duration::from_millis(100))
+            .await;
+
+        assert!(result.is_err(), "overrunning command must time out");
+        assert!(result.unwrap_err().to_string().contains("timed out"));
     }
 
     #[tokio::test]
