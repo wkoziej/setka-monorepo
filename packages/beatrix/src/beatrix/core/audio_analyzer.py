@@ -68,8 +68,8 @@ class AudioAnalyzer:
         logger.info(f"Analyzing audio file: {audio_path}")
 
         # Load audio
-        y, sr = self.librosa.load(str(audio_path), sr=None)
-        duration = len(y) / sr
+        y, sr = self.librosa.load(str(audio_path), sr=None, mono=True)
+        duration = len(y) / sr if sr else 0.0
 
         # Basic info
         result = {
@@ -77,6 +77,24 @@ class AudioAnalyzer:
             "sample_rate": int(sr),
             "animation_events": {},
         }
+
+        # Degenerate empty input: no samples → no rhythm, no energy, no sections.
+        # Returning early avoids librosa/scipy crashes on zero-length buffers.
+        if len(y) == 0:
+            result["tempo"] = {"bpm": 0.0, "beat_times": [], "beat_count": 0}
+            result["animation_events"] = {
+                "beats": [],
+                "sections": [],
+                "onsets": [],
+                "energy_peaks": [],
+            }
+            result["frequency_bands"] = {
+                "times": [],
+                "bass_energy": [],
+                "mid_energy": [],
+                "high_energy": [],
+            }
+            return result
 
         # Beat tracking
         tempo, beats = self.librosa.beat.beat_track(y=y, sr=sr, units="time")
@@ -127,8 +145,16 @@ class AudioAnalyzer:
         # Stack features
         features = np.vstack([chroma, mfcc, contrast])
 
+        # Agglomerative clustering needs at least 2 frames and cannot request
+        # more clusters than frames; short clips would otherwise crash here
+        # before reaching the rest of the pipeline.
+        n_frames = features.shape[1]
+        if n_frames < 2:
+            return []
+        k = min(10, n_frames)
+
         # Detect boundaries (max 10 segments)
-        boundaries_frames = self.librosa.segment.agglomerative(features, k=10)
+        boundaries_frames = self.librosa.segment.agglomerative(features, k=k)
         boundaries_times = self.librosa.frames_to_time(boundaries_frames, sr=sr)
 
         return boundaries_times.tolist()
@@ -177,13 +203,29 @@ class AudioAnalyzer:
         self, times: List[float], bass_energy: List[float]
     ) -> List[float]:
         """Find peaks in bass energy for impact events."""
+        # Short/empty or zero-duration input: the distance computation below
+        # divides by times[-1], so guard against len<2 (no span) and a
+        # non-positive final timestamp (OverflowError on int(2/0)).
+        if len(times) < 2 or times[-1] <= 0:
+            return []
+
         bass_array = np.array(bass_energy)
+
+        # Silent-but-long input: an all-(near-)zero band makes the 75th
+        # percentile 0, so find_peaks(height=0) would flag noise/every flat
+        # sample as an "impact". Treat a near-silent band as no peaks.
+        if bass_array.size == 0 or float(np.max(bass_array)) < 1e-6:
+            return []
+
+        # ~2 second minimum spacing; clamp to >=1 so a coarse time axis
+        # (few frames over a long span) never yields distance=0.
+        distance = max(1, int(2.0 * len(times) / times[-1]))
 
         # Find peaks above 75th percentile
         peaks, _ = self.scipy(
             bass_array,
             height=np.percentile(bass_array, 75),
-            distance=int(2.0 * len(times) / times[-1]),  # ~2 second minimum
+            distance=distance,
         )
 
         return [times[peak] for peak in peaks]
