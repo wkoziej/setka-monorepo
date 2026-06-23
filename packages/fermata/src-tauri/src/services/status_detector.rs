@@ -349,8 +349,10 @@ mod tests {
 
         let file_info = StatusDetector::get_file_info(&recording_path);
 
-        assert!(file_info.contains_key("recording.video"));
-        assert!(file_info["recording.video"] > 0); // Should have size from dummy content
+        // get_file_info keys by the path relative to the recording dir, so the
+        // dummy `test_recording.mp4` shows up under its own filename.
+        assert!(file_info.contains_key("test_recording.mp4"));
+        assert!(file_info["test_recording.mp4"] > 0); // Should have size from dummy content
     }
 
     #[test]

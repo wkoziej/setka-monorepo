@@ -66,6 +66,13 @@ export interface OperationState {
   error: string | null;
 }
 
+// Options for the preset-driven render step.
+// Mirrors the Rust `RenderOptions` struct in commands/operations.rs.
+export interface RenderOptions {
+  preset: string;
+  main_audio?: string;
+}
+
 // Video types
 export interface VideoFile {
   name: string;

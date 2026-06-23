@@ -45,7 +45,9 @@ describe('DeletionConfirmDialog', () => {
       />
     );
 
-    expect(screen.getByText(/usuń nagranie/i)).toBeInTheDocument();
+    // "Usuń nagranie" appears in both the header and the confirm button,
+    // so assert presence (>=1) rather than a single unique match.
+    expect(screen.getAllByText(/usuń nagranie/i).length).toBeGreaterThan(0);
     expect(screen.getByText(/test_recording_123/i)).toBeInTheDocument();
     expect(screen.getByText(/ta akcja jest nieodwracalna/i)).toBeInTheDocument();
   });
@@ -95,8 +97,9 @@ describe('DeletionConfirmDialog', () => {
       />
     );
 
+    // While deleting, the confirm button swaps its label to "Usuwanie...".
     const cancelButton = screen.getByRole('button', { name: /anuluj/i });
-    const confirmButton = screen.getByRole('button', { name: /usuń nagranie/i });
+    const confirmButton = screen.getByRole('button', { name: /usuwanie/i });
 
     expect(cancelButton).toBeDisabled();
     expect(confirmButton).toBeDisabled();

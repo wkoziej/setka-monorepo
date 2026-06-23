@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
-import { Recording, RecordingListState, DeletionConfirmationState, RenameConfirmationState, RenderOptions } from '../types';
+import { Recording, RecordingListState, DeletionState, RenameState, RenderOptions } from '../types';
 import { invoke } from '@tauri-apps/api/core';
 
 // Tauri API wrapper with fallback for development
@@ -98,9 +98,9 @@ export function useRecordings() {
     refreshRecordings();
   }, [refreshRecordings]);
 
-  const [deletionState, setDeletionState] = useState<DeletionConfirmationState>({
+  const [deletionState, setDeletionState] = useState<DeletionState>({
     isOpen: false,
-    recording: undefined,
+    recording: null,
     isDeleting: false
   });
 
@@ -108,7 +108,7 @@ export function useRecordings() {
     setDeletionState(prev => ({ ...prev, isDeleting: true }));
     try {
       await invoke('delete_recording', { recordingName });
-      setDeletionState({ isOpen: false, recording: undefined, isDeleting: false });
+      setDeletionState({ isOpen: false, recording: null, isDeleting: false });
       refreshRecordings(); // Odśwież listę
     } catch (error) {
       setDeletionState(prev => ({ ...prev, isDeleting: false }));
@@ -126,7 +126,7 @@ export function useRecordings() {
       setDeletionState({ isOpen: true, recording, isDeleting: false });
     },
     hideDeletionDialog: () => {
-      setDeletionState({ isOpen: false, recording: undefined, isDeleting: false });
+      setDeletionState({ isOpen: false, recording: null, isDeleting: false });
     }
   };
 }
@@ -246,9 +246,9 @@ export function useRecordingOperations() {
 
 // Hook for rename recording functionality
 export function useRenameRecording() {
-  const [renameState, setRenameState] = useState<RenameConfirmationState>({
+  const [renameState, setRenameState] = useState<RenameState>({
     isOpen: false,
-    recording: undefined,
+    recording: null,
     isRenaming: false,
   });
 
@@ -263,7 +263,7 @@ export function useRenameRecording() {
   const hideRenameDialog = useCallback(() => {
     setRenameState({
       isOpen: false,
-      recording: undefined,
+      recording: null,
       isRenaming: false,
     });
   }, []);

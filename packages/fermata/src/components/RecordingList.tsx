@@ -135,7 +135,7 @@ function RecordingCard({ recording, onAction, isOperationRunning }: {
           onClick={() => onAction(recording.name, 'Delete')}
           disabled={isOperationRunning}
         >
-          🗑️ Delete
+          🗑️ Usuń
         </button>
 
         {nextAction && (
