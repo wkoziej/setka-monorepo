@@ -118,6 +118,32 @@ class TestMedusaError:
 
         assert "original_error" not in details or details["original_error"] is None
 
+    def test_get_error_details_masks_tokens_in_original_error(self):
+        """Security: serialized error details (message + traceback) must not
+        leak tokens/secrets carried in the original error's URL or content.
+
+        Google's HttpError and request exceptions routinely embed the access
+        token / API key in the URL query string; get_error_details() serializes
+        the full traceback, so it must scrub these before they reach logs.
+        """
+        original_error = ValueError(
+            "Request to https://graph.facebook.com/v19.0/me"
+            "?access_token=EAAsupersecrettoken&key=AIzaSyTOPSECRETKEY failed"
+        )
+
+        error = MedusaError(
+            message="API call failed", original_error=original_error
+        )
+
+        details = error.get_error_details()
+        serialized = repr(details)
+
+        assert "EAAsupersecrettoken" not in serialized
+        assert "AIzaSyTOPSECRETKEY" not in serialized
+        # The structure is still present and useful.
+        assert details["original_error"]["type"] == "ValueError"
+        assert "REDACTED" in details["original_error"]["message"]
+
 
 class TestConfigError:
     """Tests for ConfigError exception."""

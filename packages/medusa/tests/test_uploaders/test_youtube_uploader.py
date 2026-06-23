@@ -815,6 +815,51 @@ class TestYouTubeUploaderResumableUpload:
 
         assert result == mock_response
 
+    @pytest.mark.asyncio
+    @pytest.mark.slow
+    async def test_retryable_http_error_does_not_log_raw_content(self, caplog):
+        """Security: a retryable HTTP error must NOT log raw e.content (which
+        can carry tokens / sensitive API payloads). Only the status + a short
+        message may be logged.
+        """
+        import logging
+        from googleapiclient.errors import HttpError
+
+        uploader = YouTubeUploader()
+
+        mock_resp = MagicMock()
+        mock_resp.status = 503
+        secret_content = (
+            b'{"error":{"message":"server","leaked_token":"ya29.SUPERSECRET"}}'
+        )
+        http_error = HttpError(mock_resp, secret_content)
+
+        mock_response = {"id": "test_video_id_123"}
+        call_count = 0
+
+        def mock_next_chunk():
+            nonlocal call_count
+            call_count += 1
+            if call_count == 1:
+                raise http_error
+            status = MagicMock()
+            status.resumable_progress = 1.0
+            return (status, mock_response)
+
+        mock_insert_request = MagicMock()
+        mock_insert_request.next_chunk = mock_next_chunk
+
+        with caplog.at_level(logging.DEBUG, logger="medusa.uploader.youtube"):
+            result = await uploader._perform_resumable_upload(
+                mock_insert_request, None, 1000
+            )
+
+        assert result == mock_response
+        # The raw token from e.content must never reach the logs.
+        assert "ya29.SUPERSECRET" not in caplog.text
+        # But the status code should be reported so the retry is debuggable.
+        assert "503" in caplog.text
+
 
 class TestYouTubeUploaderIntegration:
     """Test integration scenarios."""

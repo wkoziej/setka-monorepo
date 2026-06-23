@@ -558,7 +558,12 @@ class TestPlatformConfig:
         assert config3.is_configured() is False
 
     def test_platform_config_to_dict(self):
-        """Test PlatformConfig serialization to dictionary."""
+        """Test PlatformConfig serialization to dictionary.
+
+        Security: credential VALUES must be masked in to_dict() (used by
+        Registry.export_config), while the key names are preserved so the
+        serialized shape stays useful for debugging.
+        """
         config = PlatformConfig(
             platform_name="youtube",
             enabled=True,
@@ -570,8 +575,39 @@ class TestPlatformConfig:
 
         assert config_dict["platform_name"] == "youtube"
         assert config_dict["enabled"] is True
-        assert config_dict["credentials"] == {"token": "test"}
         assert config_dict["retry_attempts"] == 5
+        # Key preserved, value masked — raw secret never serialized.
+        assert "token" in config_dict["credentials"]
+        assert config_dict["credentials"]["token"] != "test"
+        assert config_dict["credentials"]["token"] == "***REDACTED***"
+
+    def test_platform_config_to_dict_masks_all_secrets(self):
+        """Security: every credential value is masked, regardless of key."""
+        config = PlatformConfig(
+            platform_name="youtube",
+            credentials={
+                "access_token": "ya29.SECRET_TOKEN",
+                "client_secret": "GOCSPX-supersecret",
+                "page_id": "1234567890",
+            },
+        )
+
+        dumped = repr(config.to_dict())
+        assert "ya29.SECRET_TOKEN" not in dumped
+        assert "GOCSPX-supersecret" not in dumped
+        assert "1234567890" not in dumped
+
+    def test_platform_config_repr_hides_credentials(self):
+        """Security: repr() must not expose credential values (field repr=False)."""
+        config = PlatformConfig(
+            platform_name="youtube",
+            credentials={"access_token": "ya29.SECRET_TOKEN"},
+        )
+
+        rendered = repr(config)
+        assert "ya29.SECRET_TOKEN" not in rendered
+        # The object is still identifiable by its non-secret fields.
+        assert "youtube" in rendered
 
     def test_platform_config_from_dict(self):
         """Test PlatformConfig deserialization from dictionary."""

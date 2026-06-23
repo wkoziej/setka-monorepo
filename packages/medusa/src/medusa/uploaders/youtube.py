@@ -365,7 +365,10 @@ class YouTubeUploader(BaseUploader):
             return True
 
         except HttpError as e:
-            self.logger.error(f"Thumbnail upload failed: {e}")
+            # Status only — str(HttpError) leaks the tokenized request URI.
+            self.logger.error(
+                f"Thumbnail upload failed (status {e.resp.status})"
+            )
             self._handle_http_error(e)
 
         except Exception as e:
@@ -593,7 +596,12 @@ class YouTubeUploader(BaseUploader):
             )
 
         except HttpError as e:
-            self.logger.error(f"YouTube API error: {e}")
+            # Log only the status code. str(HttpError) embeds the full request
+            # URI (which carries the API key / access_token) plus raw response
+            # content — neither belongs in logs.
+            self.logger.error(
+                f"YouTube API error (status {e.resp.status})"
+            )
             self._handle_http_error(e)
             # _handle_http_error always raises, this line never executes
             raise
@@ -680,7 +688,9 @@ class YouTubeUploader(BaseUploader):
 
             except HttpError as e:
                 if e.resp.status in self.RETRYABLE_STATUS_CODES:
-                    error = f"Retriable HTTP error {e.resp.status}: {e.content}"
+                    # Log only the status code — never raw e.content, which can
+                    # carry tokens / sensitive payloads into the logs.
+                    error = f"Retriable HTTP error (status {e.resp.status})"
                 else:
                     raise self._handle_http_error(e)
 

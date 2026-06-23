@@ -376,8 +376,13 @@ class TestFacebookAuth:
         with pytest.raises(AuthenticationError):
             facebook_auth.test_connection()
 
-    def test_get_long_lived_token_success(self, facebook_auth, mock_requests_get):
-        """Test successful long-lived token exchange."""
+    def test_get_long_lived_token_success(self, facebook_auth, mock_requests_post):
+        """Test successful long-lived token exchange.
+
+        The exchange now goes via POST so the client_secret rides in the body
+        (not the URL); the body is asserted in test_client_secret_never_in_url_token_exchange
+        and test_token_exchange_secret_in_body.
+        """
         mock_response = Mock()
         mock_response.status_code = 200
         mock_response.json.return_value = {
@@ -385,38 +390,150 @@ class TestFacebookAuth:
             "token_type": "bearer",
             "expires_in": 5183944,  # ~60 days
         }
-        mock_requests_get.return_value = mock_response
+        mock_requests_post.return_value = mock_response
 
         result = facebook_auth.get_long_lived_token()
 
         assert result == "long_lived_token_xyz"
-        mock_requests_get.assert_called_once()
-        call_args = mock_requests_get.call_args
+        mock_requests_post.assert_called_once()
+        call_args = mock_requests_post.call_args
         assert "oauth/access_token" in call_args[0][0]
         assert "grant_type=fb_exchange_token" in call_args[0][0]
 
-    def test_get_long_lived_token_error(self, facebook_auth, mock_requests_get):
+    def test_token_exchange_secret_in_body(self, facebook_auth, mock_requests_post):
+        """Security: client_secret + the exchanged token live in the POST body."""
+        mock_response = Mock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            "access_token": "long_lived_token_xyz",
+            "expires_in": 5183944,
+        }
+        mock_requests_post.return_value = mock_response
+
+        facebook_auth.get_long_lived_token()
+
+        body = mock_requests_post.call_args.kwargs.get("json", {})
+        assert body.get("client_secret") == "secret_456"
+        assert body.get("fb_exchange_token") == "valid_token_12345"
+
+    def test_get_long_lived_token_error(self, facebook_auth, mock_requests_post):
         """Test long-lived token exchange with error."""
         mock_response = Mock()
         mock_response.status_code = 400
         mock_response.json.return_value = {
             "error": {"message": "Invalid client_id", "type": "OAuthException"}
         }
-        mock_requests_get.return_value = mock_response
+        mock_requests_post.return_value = mock_response
 
         with pytest.raises(NetworkError) as exc_info:
             facebook_auth.get_long_lived_token()
         assert "API error during GET /oauth/access_token" in str(exc_info.value)
 
     def test_api_url_construction(self, facebook_auth):
-        """Test API URL construction."""
+        """Test API URL construction.
+
+        Security: the access token must NOT appear in the URL (URLs leak via
+        server logs, proxies, browser history). Non-secret query params (fields)
+        are still placed in the URL.
+        """
         url = facebook_auth._build_api_url("/me")
-        assert (
-            url == "https://graph.facebook.com/v19.0/me?access_token=valid_token_12345"
-        )
+        assert url == "https://graph.facebook.com/v19.0/me"
+        assert "access_token" not in url
+        assert "valid_token_12345" not in url
 
         url = facebook_auth._build_api_url("/me", {"fields": "id,name"})
         assert "fields=id%2Cname" in url
+        assert "valid_token_12345" not in url
+
+    def test_token_never_in_request_url_get(self, facebook_auth, mock_requests_get):
+        """Security: GET requests must carry the token out-of-band (header),
+        not in the request URL.
+        """
+        mock_response = Mock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {"id": "123456789", "name": "Test Page"}
+        mock_requests_get.return_value = mock_response
+
+        facebook_auth.verify_page_access()
+
+        call_args = mock_requests_get.call_args
+        called_url = call_args[0][0]
+        assert "valid_token_12345" not in called_url
+        assert "access_token=" not in called_url
+        # Token delivered via Authorization header instead.
+        headers = call_args.kwargs.get("headers", {})
+        assert headers.get("Authorization") == "Bearer valid_token_12345"
+
+    def test_app_secret_never_in_request_url_debug_token(
+        self, facebook_auth, mock_requests_get
+    ):
+        """Security: the app secret (sent as the request's auth token for
+        /debug_token) must not appear in the URL.
+        """
+        mock_response = Mock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            "data": {"is_valid": True, "expires_at": 0}
+        }
+        mock_requests_get.return_value = mock_response
+
+        facebook_auth.validate_token()
+
+        call_args = mock_requests_get.call_args
+        called_url = call_args[0][0]
+        # app_secret is the sensitive half of app_id|app_secret.
+        assert "secret_456" not in called_url
+        assert "access_token=" not in called_url
+        headers = call_args.kwargs.get("headers", {})
+        # The app-token (app_id|app_secret) authenticates this call via header.
+        assert headers.get("Authorization") == "Bearer app_123|secret_456"
+        # input_token (the token being inspected) stays as a query param per the
+        # Graph API contract.
+        assert "input_token=valid_token_12345" in called_url
+
+    def test_client_secret_never_in_url_token_exchange(
+        self, facebook_auth, mock_requests_post
+    ):
+        """Security: the client_secret used in the long-lived token exchange
+        must not travel in the URL (the exchange is a POST with the secret in
+        the body).
+        """
+        mock_response = Mock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            "access_token": "long_lived_token_xyz",
+            "expires_in": 5183944,
+        }
+        mock_requests_post.return_value = mock_response
+
+        facebook_auth.get_long_lived_token()
+
+        call_args = mock_requests_post.call_args
+        called_url = call_args[0][0]
+        assert "secret_456" not in called_url
+        assert "client_secret=" not in called_url
+
+    def test_post_feed_token_in_header_not_url(
+        self, facebook_auth, mock_requests_post
+    ):
+        """Security: POST /feed must carry the token in the header, not the URL,
+        and the post payload travels in the request body.
+        """
+        mock_response = Mock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {"id": "123456789_987654321"}
+        mock_requests_post.return_value = mock_response
+
+        facebook_auth._make_api_request(
+            "POST", "/123456789/feed", data={"message": "hello"}
+        )
+
+        call_args = mock_requests_post.call_args
+        called_url = call_args[0][0]
+        assert "valid_token_12345" not in called_url
+        assert "access_token=" not in called_url
+        headers = call_args.kwargs.get("headers", {})
+        assert headers.get("Authorization") == "Bearer valid_token_12345"
 
     def test_error_handling_json_decode_error(self, facebook_auth, mock_requests_get):
         """Test error handling when API returns invalid JSON."""

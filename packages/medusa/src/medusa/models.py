@@ -323,7 +323,10 @@ class PlatformConfig:
 
     platform_name: str
     enabled: bool = True
-    credentials: Dict[str, Any] = field(default_factory=dict)
+    # repr=False so credential values never appear in repr()/log lines that
+    # interpolate the object. to_dict() masks them separately (repr alone does
+    # not cover serialization).
+    credentials: Dict[str, Any] = field(default_factory=dict, repr=False)
     metadata: Dict[str, Any] = field(default_factory=dict)
     rate_limit: Optional[int] = None  # Requests per minute
     retry_attempts: int = 3
@@ -331,6 +334,9 @@ class PlatformConfig:
 
     # Supported platforms
     SUPPORTED_PLATFORMS = {"youtube", "facebook", "vimeo", "twitter"}
+
+    # Placeholder substituted for credential values in serialized output.
+    _CREDENTIAL_MASK = "***REDACTED***"
 
     def validate(self) -> None:
         """
@@ -361,13 +367,17 @@ class PlatformConfig:
         """
         Serialize PlatformConfig to dictionary.
 
+        Credential VALUES are masked (key names preserved) so callers such as
+        Registry.export_config can serialize/log the configuration without
+        leaking secrets.
+
         Returns:
             Dictionary representation of the configuration
         """
         return {
             "platform_name": self.platform_name,
             "enabled": self.enabled,
-            "credentials": self.credentials,
+            "credentials": {key: self._CREDENTIAL_MASK for key in self.credentials},
             "metadata": self.metadata,
             "rate_limit": self.rate_limit,
             "retry_attempts": self.retry_attempts,

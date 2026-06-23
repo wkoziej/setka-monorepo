@@ -505,7 +505,9 @@ class TestPerformanceUtilities:
         assert "total" in benchmark
         assert benchmark["iterations"] == 10
 
-        assert benchmark["min"] > 0
+        # A trivial function can complete faster than perf_counter's resolution,
+        # so a measured time of exactly 0.0 is legitimate (flaky as `> 0`).
+        assert benchmark["min"] >= 0
         assert benchmark["max"] >= benchmark["min"]
         assert benchmark["avg"] >= benchmark["min"]
         assert benchmark["total"] >= benchmark["max"]
