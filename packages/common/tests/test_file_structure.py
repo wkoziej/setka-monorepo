@@ -152,6 +152,25 @@ class TestMediaStructure:
         # Bez metadata.json struktura nadal powinna być valid
         assert structure.is_valid() is True
 
+    def test_is_valid_project_dir_exists_media_missing(self, tmp_path):
+        """is_valid() zwraca False gdy project_dir istnieje, ale media_file nie."""
+        project_dir = tmp_path / "test_project"
+        project_dir.mkdir()
+
+        # Katalog istnieje, ale pliku mediów brak — wymusza gałąź media_file.
+        media_file = project_dir / "test.mp4"
+        metadata_file = project_dir / "metadata.json"
+        processed_dir = project_dir / "processed"
+
+        structure = MediaStructure(
+            project_dir=project_dir,
+            media_file=media_file,
+            metadata_file=metadata_file,
+            processed_dir=processed_dir,
+        )
+
+        assert structure.is_valid() is False
+
 
 class TestStructureManager:
     """Testy dla klasy StructureManager."""
