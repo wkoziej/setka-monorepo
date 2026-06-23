@@ -557,6 +557,83 @@ class TestYouTubeUploaderUpload:
             assert result.metadata["video_id"] == "test_video_id_123"
 
     @pytest.mark.asyncio
+    async def test_upload_uses_finite_chunksize(self):
+        """Reliability: the resumable upload must use a finite chunk size in the
+        5-50 MB band (not -1, which buffers the whole file in memory and breaks
+        per-chunk progress/retry).
+        """
+        uploader = YouTubeUploader()
+        uploader.is_authenticated = True
+        uploader.service = MagicMock()
+
+        mock_response = {"id": "test_video_id_123"}
+        mock_insert_request = MagicMock()
+        mock_insert_request.next_chunk.return_value = (None, mock_response)
+        uploader.service.videos().insert.return_value = mock_insert_request
+
+        metadata = MediaMetadata(title="Test Video")
+
+        with (
+            patch.object(uploader, "_validate_file"),
+            patch("medusa.uploaders.youtube.MediaFileUpload") as mock_media_upload,
+            patch("os.path.getsize", return_value=500 * 1024 * 1024),
+        ):
+            mock_media_upload.return_value = MagicMock()
+            await uploader._upload_media("/path/to/video.mp4", metadata)
+
+            chunksize = mock_media_upload.call_args.kwargs["chunksize"]
+            assert chunksize != -1
+            assert 5 * 1024 * 1024 <= chunksize <= 50 * 1024 * 1024
+            # YouTube requires the chunk size to be a multiple of 256 KB.
+            assert chunksize % (256 * 1024) == 0
+
+    @pytest.mark.asyncio
+    async def test_429_honors_retry_after(self):
+        """Reliability: a 429 with Retry-After must wait the advertised interval,
+        not a backoff guess.
+        """
+        from googleapiclient.errors import HttpError
+
+        uploader = YouTubeUploader()
+
+        mock_resp = MagicMock()
+        mock_resp.status = 429
+        # httplib2-style response is dict-like for header access.
+        mock_resp.get = lambda key, default=None: (
+            "7" if key.lower() == "retry-after" else default
+        )
+        http_error = HttpError(mock_resp, b'{"error":{"message":"rate"}}')
+
+        mock_response = {"id": "vid_after_429"}
+        call_count = 0
+
+        def mock_next_chunk():
+            nonlocal call_count
+            call_count += 1
+            if call_count == 1:
+                raise http_error
+            status = MagicMock()
+            status.resumable_progress = 1.0
+            return (status, mock_response)
+
+        mock_insert_request = MagicMock()
+        mock_insert_request.next_chunk = mock_next_chunk
+
+        slept = []
+
+        async def fake_sleep(seconds):
+            slept.append(seconds)
+
+        with patch("medusa.uploaders.youtube.asyncio.sleep", fake_sleep):
+            result = await uploader._perform_resumable_upload(
+                mock_insert_request, None, 1000
+            )
+
+        assert result == mock_response
+        # Waited exactly the advertised Retry-After (7s), not a backoff value.
+        assert slept == [7.0]
+
+    @pytest.mark.asyncio
     async def test_upload_with_progress_callback(self):
         """Test upload with progress reporting."""
         uploader = YouTubeUploader()

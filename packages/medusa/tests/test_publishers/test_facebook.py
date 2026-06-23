@@ -272,6 +272,26 @@ class TestFacebookPublisher:
         assert result.error is None
 
     @pytest.mark.asyncio
+    async def test_publish_post_missing_page_id_raises_config_error(
+        self, valid_config: Dict[str, Any], mock_auth
+    ):
+        """Reliability: a missing page_id must raise a clear ConfigError, not a
+        bare KeyError swallowed into a generic publish failure.
+        """
+        from medusa.exceptions import ConfigError
+
+        creds = dict(valid_config)
+        del creds["page_id"]
+        config = PlatformConfig(platform_name="facebook", credentials=creds)
+        publisher = FacebookPublisher(config=config)
+        await publisher.authenticate()
+
+        with pytest.raises(ConfigError) as exc_info:
+            await publisher._publish_post("hello", {"type": "text"})
+
+        assert "page_id" in str(exc_info.value)
+
+    @pytest.mark.asyncio
     async def test_publish_post_link_success(
         self, publisher: FacebookPublisher, mock_auth
     ):

@@ -18,6 +18,7 @@ from ..exceptions import (
     AuthenticationError,
     ValidationError,
     TemplateError,
+    ConfigError,
 )
 
 logger = logging.getLogger(__name__)
@@ -225,7 +226,7 @@ class FacebookPublisher(BasePublisher):
                 )
 
             # Make API request to publish post
-            page_id = self.config.credentials["page_id"]
+            page_id = self._get_page_id()
             endpoint = f"/{page_id}/feed"
 
             response = self._auth._make_api_request(
@@ -267,8 +268,9 @@ class FacebookPublisher(BasePublisher):
                 metadata=result_metadata,
             )
 
-        except TemplateError:
-            # Re-raise template errors as-is
+        except (TemplateError, ConfigError):
+            # Re-raise template/config errors as-is (a missing page_id is a
+            # configuration problem, not a publish failure).
             raise
         except Exception as e:
             logger.error(f"Failed to publish Facebook post: {e}")
@@ -337,6 +339,24 @@ class FacebookPublisher(BasePublisher):
             "Invalid response format: no post ID found", platform="facebook"
         )
 
+    def _get_page_id(self) -> str:
+        """
+        Read and validate the configured Facebook page_id.
+
+        Returns:
+            The page_id string
+
+        Raises:
+            ConfigError: If page_id is missing or empty in the credentials.
+        """
+        page_id = self.config.credentials.get("page_id")
+        if not page_id:
+            raise ConfigError(
+                "Facebook configuration missing required field: page_id",
+                missing_fields=["page_id"],
+            )
+        return page_id
+
     def _build_post_url(self, post_id: str) -> str:
         """
         Build Facebook post URL.
@@ -347,7 +367,7 @@ class FacebookPublisher(BasePublisher):
         Returns:
             Complete post URL
         """
-        page_id = self.config.credentials["page_id"]
+        page_id = self._get_page_id()
         return f"https://facebook.com/{page_id}/posts/{post_id}"
 
     async def cleanup(self) -> None:
