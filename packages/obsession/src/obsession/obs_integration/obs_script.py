@@ -187,6 +187,18 @@ def prepare_metadata_collection():
     video_info = obs.obs_video_info()
     obs.obs_get_video_info(video_info)
 
+    # Guard against a degenerate canvas (0×0 or negative). Downstream crop math
+    # divides/clamps against these dimensions, so an invalid canvas would yield
+    # garbage extraction parameters — fail fast and skip this recording instead.
+    if video_info.base_width <= 0 or video_info.base_height <= 0:
+        print(
+            "[Canvas Recorder] Invalid canvas size "
+            f"{video_info.base_width}x{video_info.base_height}; "
+            "skipping metadata collection"
+        )
+        obs.obs_source_release(current_scene)
+        return
+
     # Store basic info
     current_scene_data = {
         "canvas_size": [video_info.base_width, video_info.base_height],

@@ -73,9 +73,10 @@ def calculate_crop_params(
     position = source_info.get("position", {"x": 0, "y": 0})
     bounds = source_info.get("bounds", {})
 
-    # Pozycja źródła na canvas
-    canvas_x = int(position["x"])
-    canvas_y = int(position["y"])
+    # Pozycja źródła na canvas. position może być pustym dict-em ({}), więc
+    # czytamy obie osie defensywnie zamiast indeksowaniem (które rzucałoby KeyError).
+    canvas_x = int(position.get("x", 0))
+    canvas_y = int(position.get("y", 0))
 
     # Rozmiar źródła na canvas (po przeskalowaniu)
     if (

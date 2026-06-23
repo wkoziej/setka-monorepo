@@ -37,7 +37,7 @@ def determine_source_capabilities(obs_source) -> Dict[str, bool]:
             "has_audio": bool(flags & OBS_SOURCE_AUDIO),
             "has_video": bool(flags & OBS_SOURCE_VIDEO),
         }
-    except (TypeError, AttributeError) as e:
+    except (TypeError, AttributeError):
         # Only return False/False if obs is actually None (import failure)
         # For real errors (like Mock configuration issues), re-raise
         if obs is None:
@@ -130,6 +130,30 @@ def validate_metadata(metadata: Dict[str, Any]) -> bool:
     # Validate sources format
     if not isinstance(metadata["sources"], dict):
         return False
+
+    # Validate per-source shapes. Each source must itself be a dict; when the
+    # optional position/bounds/dimensions keys are present they must be dicts,
+    # and position axes (when present) must be numeric. Audio-only sources that
+    # carry no geometry are still valid.
+    for source_info in metadata["sources"].values():
+        if not isinstance(source_info, dict):
+            return False
+
+        position = source_info.get("position")
+        if position is not None:
+            if not isinstance(position, dict):
+                return False
+            for axis in ("x", "y"):
+                if axis in position and not isinstance(position[axis], (int, float)):
+                    return False
+
+        bounds = source_info.get("bounds")
+        if bounds is not None and not isinstance(bounds, dict):
+            return False
+
+        dimensions = source_info.get("dimensions")
+        if dimensions is not None and not isinstance(dimensions, dict):
+            return False
 
     # Validate fps
     if not isinstance(metadata["fps"], (int, float)) or metadata["fps"] <= 0:
