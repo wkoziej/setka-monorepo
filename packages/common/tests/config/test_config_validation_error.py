@@ -25,6 +25,15 @@ class TestConfigValidationError:
         assert isinstance(error, Exception)
         assert isinstance(error, ConfigValidationError)
 
+    def test_caught_by_setka_common_error(self):
+        """ConfigValidationError must be catchable as SetkaCommonError."""
+        from setka_common.exceptions import SetkaCommonError
+
+        assert issubclass(ConfigValidationError, SetkaCommonError)
+
+        with pytest.raises(SetkaCommonError):
+            raise ConfigValidationError("validation failed")
+
     def test_exception_raising(self):
         """Test raising and catching ConfigValidationError."""
         with pytest.raises(ConfigValidationError) as exc_info:

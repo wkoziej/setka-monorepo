@@ -22,12 +22,6 @@ class StructureValidationError(SetkaCommonError):
     pass
 
 
-class FileNotFoundError(SetkaCommonError):
-    """Raised when required file is not found."""
-
-    pass
-
-
 class InvalidFileFormatError(SetkaCommonError):
     """Raised when file format is invalid."""
 

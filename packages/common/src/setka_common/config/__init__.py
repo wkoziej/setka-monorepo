@@ -14,7 +14,6 @@ from .yaml_config import (
     ConfigValidationError,
     Resolution,
 )
-from .validation import ConfigValidator
 
 # Expose validation constants from YAMLConfigLoader
 _loader = YAMLConfigLoader()
@@ -28,7 +27,6 @@ __all__ = [
     "AudioAnalysisConfig",
     "LayoutConfig",
     "YAMLConfigLoader",
-    "ConfigValidator",
     "AnimationSpec",
     "StripAnimations",
     "ConfigValidationError",

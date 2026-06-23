@@ -12,7 +12,6 @@ from .file_structure.specialized import (
 from .config import (
     BlenderYAMLConfig,
     YAMLConfigLoader,
-    ConfigValidator,
     AnimationSpec,
     StripAnimations,
     ConfigValidationError,
@@ -24,6 +23,13 @@ from .config import (
     VALID_TRIGGERS,
     VALID_LAYOUT_TYPES,
 )
+from .utils import (
+    find_files_by_type,
+    find_media_files,
+    sanitize_filename,
+    MediaDiscovery,
+    ValidationResult,
+)
 
 __all__ = [
     "RecordingStructureManager",
@@ -32,7 +38,6 @@ __all__ = [
     "load_analysis_index",
     "BlenderYAMLConfig",
     "YAMLConfigLoader",
-    "ConfigValidator",
     "AnimationSpec",
     "StripAnimations",
     "ConfigValidationError",
@@ -43,4 +48,9 @@ __all__ = [
     "VALID_ANIMATION_TYPES",
     "VALID_TRIGGERS",
     "VALID_LAYOUT_TYPES",
+    "find_files_by_type",
+    "find_media_files",
+    "sanitize_filename",
+    "MediaDiscovery",
+    "ValidationResult",
 ]

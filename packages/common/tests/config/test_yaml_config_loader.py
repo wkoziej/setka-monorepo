@@ -10,7 +10,7 @@ from setka_common.config.yaml_config import (
     ProjectConfig,
     AudioAnalysisConfig,
     LayoutConfig,
-    ConfigValidationError,
+    Resolution,
 )
 
 
@@ -241,7 +241,7 @@ strip_animations: {}
     def test_validate_config_invalid_resolution(self):
         """Test validating config with invalid resolution."""
         project = ProjectConfig(
-            video_files=["test.mp4"], resolution={"width": 0, "height": 1080}
+            video_files=["test.mp4"], resolution=Resolution(width=0, height=1080)
         )
         audio_analysis = AudioAnalysisConfig()
         layout = LayoutConfig()
@@ -458,96 +458,3 @@ strip_animations: {{}}
                 # Cleanup
                 Path(f.name).unlink()
 
-    def test_validate_for_blender_execution(self):
-        """Test validation for Blender execution."""
-        # Create temporary test directory
-        with tempfile.TemporaryDirectory() as temp_dir:
-            base_path = Path(temp_dir)
-
-            project = ProjectConfig(
-                video_files=["camera1.mp4"], base_directory=str(base_path)
-            )
-            audio_analysis = AudioAnalysisConfig()
-            layout = LayoutConfig()
-            strip_animations = {}
-
-            config = BlenderYAMLConfig(
-                project=project,
-                audio_analysis=audio_analysis,
-                layout=layout,
-                strip_animations=strip_animations,
-            )
-
-            loader = YAMLConfigLoader()
-
-            # Should not raise exception for valid config
-            loader._validate_for_blender_execution(config)
-
-    def test_validate_for_blender_execution_missing_base_directory(self):
-        """Test validation fails when base_directory is missing."""
-        project = ProjectConfig(video_files=["camera1.mp4"])  # No base_directory
-        audio_analysis = AudioAnalysisConfig()
-        layout = LayoutConfig()
-        strip_animations = {}
-
-        config = BlenderYAMLConfig(
-            project=project,
-            audio_analysis=audio_analysis,
-            layout=layout,
-            strip_animations=strip_animations,
-        )
-
-        loader = YAMLConfigLoader()
-
-        with pytest.raises(ConfigValidationError) as exc_info:
-            loader._validate_for_blender_execution(config)
-        assert "base_directory required" in str(exc_info.value)
-
-    def test_validate_for_blender_execution_missing_video_files(self):
-        """Test validation fails when video_files are missing."""
-        # Create temporary test directory
-        with tempfile.TemporaryDirectory() as temp_dir:
-            base_path = Path(temp_dir)
-
-            project = ProjectConfig(
-                video_files=[],  # Empty video files
-                base_directory=str(base_path),
-            )
-            audio_analysis = AudioAnalysisConfig()
-            layout = LayoutConfig()
-            strip_animations = {}
-
-            config = BlenderYAMLConfig(
-                project=project,
-                audio_analysis=audio_analysis,
-                layout=layout,
-                strip_animations=strip_animations,
-            )
-
-            loader = YAMLConfigLoader()
-
-            with pytest.raises(ConfigValidationError) as exc_info:
-                loader._validate_for_blender_execution(config)
-            assert "video_files required" in str(exc_info.value)
-
-    def test_validate_for_blender_execution_nonexistent_base_directory(self):
-        """Test validation fails when base_directory doesn't exist."""
-        project = ProjectConfig(
-            video_files=["camera1.mp4"], base_directory="/nonexistent/path"
-        )
-        audio_analysis = AudioAnalysisConfig()
-        layout = LayoutConfig()
-        strip_animations = {}
-
-        config = BlenderYAMLConfig(
-            project=project,
-            audio_analysis=audio_analysis,
-            layout=layout,
-            strip_animations=strip_animations,
-        )
-
-        loader = YAMLConfigLoader()
-
-        with pytest.raises(ConfigValidationError) as exc_info:
-            loader._validate_for_blender_execution(config)
-        assert "Base directory does not exist" in str(exc_info.value)

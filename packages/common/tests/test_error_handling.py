@@ -9,7 +9,6 @@ from setka_common.exceptions import (
     InvalidPathError,
     DirectoryCreationError,
     StructureValidationError,
-    FileNotFoundError,
     InvalidFileFormatError,
     MetadataError,
 )
@@ -34,7 +33,6 @@ class TestExceptions:
         assert issubclass(InvalidPathError, SetkaCommonError)
         assert issubclass(DirectoryCreationError, SetkaCommonError)
         assert issubclass(StructureValidationError, SetkaCommonError)
-        assert issubclass(FileNotFoundError, SetkaCommonError)
         assert issubclass(InvalidFileFormatError, SetkaCommonError)
         assert issubclass(MetadataError, SetkaCommonError)
 
