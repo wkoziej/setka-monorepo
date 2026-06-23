@@ -33,10 +33,13 @@ This ensures consistency across all packages that need to validate YAML configur
 
 ### Integration with Other Packages
 
-- **cinemon**: Imports validation constants and ConfigValidationError for blender_addon
-- **obsession**: Uses RecordingStructureManager for organizing extracted files
+- **obsession**: Uses `RecordingStructureManager` for organizing extracted files; adopts the canonical `sanitize_filename`
 - **beatrix**: Uses file structure utilities for analysis output
+- **cymatic**: Uses `load_analysis_index` to discover per-track analyses
 - **medusa**: Uses file structure for locating render outputs
+
+`MediaDiscovery` lives in `setka_common.utils.files` (it reuses the
+`RecordingStructureManager` dir-name constants as the single source of truth).
 
 ## Common Development Commands
 
@@ -59,11 +62,13 @@ The package exports these key components:
 from setka_common import (
     # File structure management
     RecordingStructureManager,
+    AnalysisIndex,
+    AnalysisIndexEntry,
+    load_analysis_index,
 
     # Configuration classes
     BlenderYAMLConfig,
     YAMLConfigLoader,
-    ConfigValidator,
     AnimationSpec,
     StripAnimations,
     ConfigValidationError,
@@ -76,6 +81,13 @@ from setka_common import (
     VALID_ANIMATION_TYPES,
     VALID_TRIGGERS,
     VALID_LAYOUT_TYPES,
+
+    # Utilities
+    find_files_by_type,
+    find_media_files,
+    sanitize_filename,
+    MediaDiscovery,
+    ValidationResult,
 )
 ```
 

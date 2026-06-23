@@ -7,12 +7,11 @@ zwięzłe fakty, których agent potrzebuje, by operować w repo.
 
 ## Project Overview
 
-Setka is a monorepo containing eight interconnected media processing and automation packages:
+Setka is a monorepo containing seven interconnected media processing and automation packages:
 
 - **setka-common**: Shared utilities for file structure management
 - **obsession**: OBS Canvas Recorder with FFmpeg extraction and metadata collection
 - **beatrix**: Dedicated audio analysis for animation timing and beat detection
-- **cinemon**: Blender VSE project creation with audio-driven animations
 - **cymatic**: Blender Geometry Nodes 3D audio visualizer driven by beatrix analysis
 - **medusa**: Media upload automation to YouTube/Vimeo and social media publishing
 - **fermata**: Tauri-based desktop GUI for managing recordings and batch operations
@@ -31,12 +30,12 @@ uv sync
 # Work with specific packages
 uv run --package obsession pytest
 uv run --package beatrix python -m beatrix.cli.analyze_audio --help
-uv run --package cinemon cinemon-blend-setup --help
+uv run --package cymatic cymatic-render --help
 uv run --package medusa python -m medusa.cli --help
 
 # Add dependencies to specific packages
 uv add --package obsession numpy
-uv add --package cinemon librosa
+uv add --package beatrix librosa
 
 # Add workspace-wide dev dependencies
 uv add --dev pytest-xdist
@@ -50,17 +49,19 @@ uv run ruff format .
 ### Testing Commands
 
 ```bash
-# Run all tests across all packages
-uv run pytest
+# Test specific packages — run from the package directory so its own
+# tests/conftest.py and coverage gate apply. NOTE: a workspace-root
+# `uv run pytest` currently fails to COLLECT — obsession and paternologia
+# both ship a top-level tests/conftest.py and collide under pytest's
+# `tests.conftest` module name (ImportPathMismatchError). Test per-package.
+cd packages/obsession && uv run --package obsession pytest
+cd packages/beatrix  && uv run --package beatrix pytest
+cd packages/cymatic  && uv run --package cymatic pytest
+cd packages/medusa   && uv run --package medusa pytest
 
-# Test specific packages
-uv run --package obsession pytest
-uv run --package beatrix pytest
-uv run --package cinemon pytest
-uv run --package medusa pytest
-
-# Test with coverage
-uv run pytest --cov
+# Each package pyproject forces --cov; if pytest-cov is not installed in the
+# environment, add it for the run:
+cd packages/cymatic && uv run --with pytest-cov --package cymatic pytest
 
 # Run single test file
 uv run pytest packages/obsession/tests/test_extractor.py -v
@@ -80,24 +81,26 @@ uv run pytest -m manual -v         # Manual intervention tests
 
 ### Core Data Flow
 
+```
+obsession → beatrix → cymatic → medusa
+```
+
 1. **OBS Recording** → metadata collection via `obsession/obs_script.py`
 2. **File Extraction** → FFmpeg processing via `obsession/extractor.py`
 3. **Audio Analysis** → librosa processing via `beatrix/core/`
-4. **Blender VSE** → parametric project creation via `cinemon/vse_script.py`
+4. **3D Visualization** → Blender Geometry Nodes render via `cymatic` (consumes the beatrix `analysis.json`)
 5. **Media Upload** → YouTube/social automation via `medusa/uploaders/`
 
 ### Package Dependencies
 
 ```
-fermata ←─┐ (Tauri GUI)
+fermata ←─┐ (Tauri GUI — orchestrates the pipeline)
           │
-medusa ←──┼─┐
-          │ │
-cinemon ←─┼─┼─── setka-common (file_structure, utils)
-          │ │       ↘ beatrix (audio analysis)
-cymatic ←─┼─┤
-          │ │
-obsession ←┘ │
+medusa ←──┤
+          │
+cymatic ←─┼─── setka-common (file_structure, utils)
+          │       ↘ beatrix (audio analysis)
+obsession ←┤
           │
 beatrix ←─┘
 ```
@@ -110,7 +113,6 @@ beatrix ←─┘
 - **CLI Integration**:
   - `obs-extract` → extract sources from OBS recordings
   - `beatrix` → analyze audio for animation timing
-  - `cinemon-blend-setup` → create Blender projects with animations
   - `cymatic-render` → render a 3D Geometry Nodes audio visualizer from a beatrix analysis
   - `cymatic-structure-brief` → build an audio structure brief (per-stem activity + master energy) for clip authoring; writes `analysis/structure_brief.{json,md,ass}` + `structure_map.png`
   - `medusa` → upload and publish media
@@ -118,27 +120,6 @@ beatrix ←─┘
   - `fermata` → Tauri desktop app for batch operations and recording management; the recording view's **Play + Brief** action plays the source video in VLC with `analysis/structure_brief.ass` overlaid
 
 ## Critical Architecture Patterns
-
-### Blender Integration (cinemon)
-
-The cinemon package handles Blender VSE automation through:
-
-- **YAML Configuration System**: Replaces environment variables with structured configuration files
-- **Preset Management**: Built-in presets (vintage, music-video, minimal, beat-switch) with customization support
-- **Media Auto-Discovery**: Automatic detection of video/audio files in recording directories
-- **Configuration Generation**: High-level API for generating YAML configurations from presets or custom parameters
-- **Selective Animation Targeting**: Apply different animations to specific video strips
-- **bpy Mock System**: `conftest.py` provides Mock bpy for testing outside Blender
-- **Animation Engine**: Delegation pattern routing to specialized animators
-- **Audio-Driven Timing**: Beat detection drives keyframe generation
-
-Key files:
-- `cinemon/vse_script.py` - Main Blender script (executed by Blender)
-- `cinemon/project_manager.py` - Python API for project creation
-- `cinemon/animation_engine.py` - Delegates to beat-switch/energy-pulse/multi-pip animators
-- `cinemon/config/cinemon_config_generator.py` - High-level YAML configuration generation API
-- `cinemon/config/media_discovery.py` - Auto-discovery of media files in recording directories
-- `cinemon/config/preset_manager.py` - Built-in and custom preset management
 
 ### 3D Visualization (cymatic)
 
@@ -207,8 +188,8 @@ recording_name/
 ├── analysis/               # Audio analysis JSON ({stem}_analysis.json per source)
 │   └── index.json          # Discovery manifest: [{role, origin, label, source, analysis, …}]
 │                           # role∈{master,stem,main}; consumers read via load_analysis_index()
-└── blender/               # VSE projects
-    └── render/            # Final outputs
+└── blender/               # cymatic Geometry Nodes scenes (.blend, authored/bespoke)
+    └── render/            # Final rendered outputs (mp4)
 ```
 
 Managed by `setka-common.file_structure.specialized.RecordingStructureManager`
@@ -217,12 +198,13 @@ Managed by `setka-common.file_structure.specialized.RecordingStructureManager`
 
 ### Package-Specific Test Patterns
 
-- **obsession**: Uses `importlib.reload()` for module isolation (can cause multi-test issues)
-- **cinemon**: Uses global `bpy` mock via `conftest.py` for Blender-free testing
+- **obsession**: Fixture-driven tests over real `metadata.json` shapes (`canvas_size` as a list, `sources` as a dict)
+- **cymatic**: Host-side helpers tested with pure numpy; the in-Blender `blender_script/` runs under Blender and is exercised via render E2E, not unit-mocked `bpy`
 - **medusa**: Separates unit tests from integration tests with YouTube/Facebook APIs
 - **beatrix**: Uses mock AudioAnalyzer for testing audio processing components
 - **setka-common**: Provides file structure utilities and validates directory organization
 - **fermata**: Tauri frontend testing with Vitest, backend Rust testing with cargo test
+- **paternologia**: FastAPI HTTP tests via TestClient; `conftest.py` disables the lifespan MIDI subsystem so tests need no ALSA hardware
 
 ### Test Markers
 
@@ -233,16 +215,20 @@ Available pytest markers defined in workspace `pyproject.toml`:
 - `manual`: Tests requiring manual intervention
 - `asyncio`: Tests using asyncio functionality
 
-### Test Isolation Issues
+### Test Collection at Workspace Root
 
-Some tests in obsession fail when run together due to `importlib.reload()` calls in `setup_method()`. Run individual test files if encountering `ImportError: module core.metadata not in sys.modules`.
+A workspace-root `uv run pytest` currently fails to **collect**: obsession and
+paternologia both ship a top-level `tests/conftest.py`, which pytest cannot
+import under the shared `tests.conftest` module name (`ImportPathMismatchError`).
+Run tests **per-package from the package directory** (see Testing Commands); CI
+does the same.
 
 ## External Dependencies
 
 ### Required External Tools
 
-- **FFmpeg 4.4+**: Must be in PATH for video/audio extraction
-- **Blender 4.3+**: For VSE project execution (can be snap-installed)
+- **FFmpeg 4.4+**: Must be in PATH for video/audio extraction (and for cymatic's frame→mp4 mux)
+- **Blender 5.1.2**: For the cymatic Geometry Nodes render (installed at `/Applications/Blender.app`; on Linux the `blender` snap also works)
 - **OBS Studio**: With Python scripting support for metadata collection
 
 ### API Integrations
@@ -253,13 +239,12 @@ Some tests in obsession fail when run together due to `importlib.reload()` calls
 
 ## Common Development Patterns
 
-### Adding New Animation Modes (cinemon)
+### Adding a New cymatic Preset
 
-1. Create animator class in `cinemon/vse/animators/`
-2. Implement `get_animation_mode()` and `animate()` methods
-3. Register in `animation_engine.py`
-4. Add CLI option in `blend_setup.py`
-5. Update audio analysis data consumption
+1. Add a preset module under `packages/cymatic/blender_script/presets/` exposing `build_preset_scene(analysis, data_obj, sampler_group, preset_params, fps, resolution, ...)` (see `hybrid_v1.py`).
+2. Dispatch it from `blender_script/build_scene.py`.
+3. Surface any new tunables via `PresetParams` in `src/cymatic/config.py` (keep builds deterministic).
+4. Drive every `DIVIDE` node from the analysis `dt` — never hardcode it (or audio desyncs).
 
 ### Adding New Uploader/Publisher (medusa)
 
@@ -281,10 +266,10 @@ Some tests in obsession fail when run together due to `importlib.reload()` calls
 Each package provides specific commands:
 
 - `obs-extract` - Extract sources from OBS recordings (obsession)
+- `obs-cameras` - Camera helper CLI (obsession)
 - `beatrix` - Analyze audio for animation timing (beatrix)
-- `cinemon-blend-setup` - Create animated Blender VSE projects (cinemon)
-- `cinemon-generate-config` - Generate YAML configuration files (cinemon)
 - `cymatic-render` - Render a 3D Geometry Nodes audio visualizer from a beatrix analysis (cymatic)
+- `cymatic-structure-brief` - Build an audio structure brief for clip authoring (cymatic)
 - Direct module execution for medusa: `python -m medusa.cli`
 - `uv run --package paternologia fastapi run src/paternologia/main.py` - Web UI for live-rig MIDI/song management (paternologia). Songs live in `packages/paternologia/data/songs/*.yaml`, ordered by `songs_order.yaml`; devices in `data/devices.yaml`. See `packages/paternologia/SPEC.md` and `README.md` for the data format and Pacer/Bitwig/OBS integration. **Critical Pacer warnings**: always send SysEx with `--sysex-interval=20`; never send `TARGET_GLOBAL (0x05) + elm=0x1E` (bricks the Pacer).
 

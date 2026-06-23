@@ -42,7 +42,7 @@ beatrix --verbose analyze path/to/audio.m4a output_dir/
 from beatrix import AudioAnalyzer
 
 analyzer = AudioAnalyzer()
-result = analyzer.analyze_audio("path/to/audio.m4a")
+result = analyzer.analyze_for_animation("path/to/audio.m4a")
 ```
 
 ## Testing
@@ -57,7 +57,7 @@ uv run --package beatrix --group dev pytest --cov=beatrix
 
 ## Integration with Setka Packages
 
-- **cinemon**: Uses `AudioValidator` for audio file detection and `analyze_audio_command` for automatic analysis
+- **cymatic**: Consumes the emitted `analysis.json` (schema_version 1.0) to drive the Geometry Nodes visualizer
 - **setka-common**: Provides file structure management utilities
 
 ## Dependencies

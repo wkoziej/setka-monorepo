@@ -14,7 +14,6 @@ sprzętem live.
 | [`packages/common/`](packages/common/) | Wspólne narzędzia zarządzania strukturą plików nagrań |
 | [`packages/obsession/`](packages/obsession/) | OBS Canvas Recorder: ekstrakcja źródeł przez FFmpeg + zbieranie metadanych |
 | [`packages/beatrix/`](packages/beatrix/) | Analiza audio (beaty, energia, sekcje) na potrzeby timingu animacji |
-| [`packages/cinemon/`](packages/cinemon/) | Tworzenie projektów Blender VSE z animacjami sterowanymi audio |
 | [`packages/cymatic/`](packages/cymatic/) | Wizualizer 3D (Blender Geometry Nodes) sterowany analizą z beatrix |
 | [`packages/medusa/`](packages/medusa/) | Automatyzacja uploadu mediów (YouTube/Vimeo) i publikacji w social media |
 | [`packages/fermata/`](packages/fermata/) | Desktopowe GUI (Tauri) do zarządzania nagraniami i operacjami wsadowymi |
@@ -69,12 +68,13 @@ beatrix analyze-recording "/path/to/recording"
 #   "/path/to/recording/mixed/master.wav" \
 #   "/path/to/recording/analysis"
 
-# 4. Create Blender VSE project with preset-based animations
-#    Point --main-audio at the master using an ABSOLUTE path. Cinemon is
-#    master-aware: it picks analysis/master_analysis.json matching the master.
-cinemon-blend-setup /path/to/recording \
-  --preset vintage \
-  --main-audio "/path/to/recording/mixed/master.wav"
+# 4. Render the 3D Geometry Nodes visualizer (cymatic) from the analysis.
+#    Resolves analysis/*_analysis.json under the recording dir; --main-audio
+#    selects the master track. Renders PNG frames headless and muxes to mp4
+#    under blender/render/. Needs Blender (5.1.2) on PATH or via
+#    --blender-executable /Applications/Blender.app/Contents/MacOS/Blender.
+cymatic-render /path/to/recording \
+  --main-audio "master.wav"
 
 # 5. Upload and publish to social media
 python -m medusa.cli upload /path/to/recording/blender/render/output.mp4
@@ -82,7 +82,7 @@ python -m medusa.cli upload /path/to/recording/blender/render/output.mp4
 
 > Audio/video drift is compensated manually in Blender (the pipeline does not
 > auto-sync). Per-instrument stems (`mixed/stems/`) are analyzed automatically
-> by `beatrix analyze-recording`; per-strip animation targeting is a future phase.
+> by `beatrix analyze-recording`.
 
 ### Analiza audio (beatrix)
 
@@ -106,44 +106,31 @@ print(f'Detected {len(result[\"animation_events\"][\"beats\"])} beats')
 "
 ```
 
-### Konfiguracja YAML (cinemon)
+### Wizualizer 3D (cymatic)
 
 ```bash
-# Preset-based configuration generation and execution
-cinemon-blend-setup /path/to/recording --preset vintage
+# Render the Geometry Nodes visualizer from a recording's analysis
+cymatic-render /path/to/recording --main-audio "master.wav"
 
-# Multiple preset options available
-cinemon-blend-setup /path/to/recording --preset music-video \
-  --main-audio "Przechwytywanie wejścia dźwięku (PulseAudio).m4a"
+# Pin the Blender executable explicitly (macOS install)
+cymatic-render /path/to/recording \
+  --main-audio "master.wav" \
+  --blender-executable /Applications/Blender.app/Contents/MacOS/Blender
 
-# Using custom YAML configuration files
-cinemon-blend-setup /path/to/recording --config ./custom_animation.yaml
+# Use a specific analysis JSON (skips auto-detection) and a custom fps
+cymatic-render /path/to/recording \
+  --analysis-file /path/to/recording/analysis/master_analysis.json \
+  --fps 60
 
-# Advanced configuration generation with Python API
-uv run python -c "
-from blender.config import CinemonConfigGenerator
-generator = CinemonConfigGenerator()
-
-# Generate preset with custom overrides
-config_path = generator.generate_preset(
-    '/path/to/recording', 'vintage',
-    seed=42, fps=60, main_audio='audio.m4a'
-)
-
-# Generate completely custom configuration
-layout = {'type': 'random', 'config': {'seed': 123, 'margin': 0.15}}
-animations = [
-    {'type': 'scale', 'trigger': 'bass', 'intensity': 0.8, 'target_strips': ['Camera1']},
-    {'type': 'vintage_color', 'trigger': 'one_time', 'sepia_amount': 0.6}
-]
-config_path = generator.generate_config('/path/to/recording', layout, animations)
-print(f'Generated: {config_path}')
-"
-
-# Legacy animation modes (still supported)
-cinemon-blend-setup /path/to/recording --animation-mode beat-switch
-cinemon-blend-setup /path/to/recording --animation-mode energy-pulse
+# Build an audio structure brief (per-stem activity + master energy) for clip
+# authoring → analysis/structure_brief.{json,md,ass} + structure_map.png
+cymatic-structure-brief /path/to/recording
 ```
+
+Bespoke scenes are authored live via the Blender MCP bridge and saved into the
+recording's `blender/*.blend`; production rendering is headless. See
+[`AGENTS.md`](AGENTS.md) for the cymatic architecture (audio data bridge, the
+per-track `dt`, presets).
 
 ## Development
 
