@@ -5,7 +5,6 @@ package = false
 members = [
     "packages/common",
     "packages/obsession",
-    "packages/cinemon",
     "packages/medusa",
     "packages/beatrix",
     "packages/cymatic",
@@ -22,7 +21,6 @@ requires-python = ">=3.12"
 [tool.uv.sources]
 setka-common = { workspace = true }
 obsession = { workspace = true }
-cinemon = { workspace = true }
 medusa = { workspace = true }
 beatrix = { workspace = true }
 cymatic = { workspace = true }
@@ -32,7 +30,6 @@ paternologia = { workspace = true }
 testpaths = [
     "packages/common/tests",
     "packages/obsession/tests",
-    "packages/cinemon/tests",
     "packages/medusa/tests",
     "packages/beatrix/tests",
     "packages/cymatic/tests",
@@ -41,7 +38,6 @@ testpaths = [
 pythonpath = [
     "packages/obsession/src",
     "packages/common/src",
-    "packages/cinemon/src",
     "packages/medusa/src",
     "packages/beatrix/src",
     "packages/cymatic/src",
