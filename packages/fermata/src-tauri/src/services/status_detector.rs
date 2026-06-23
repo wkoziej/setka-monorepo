@@ -37,7 +37,13 @@ impl StatusDetector {
         RecordingStatus::Recorded
     }
 
-    /// Get file size information for a recording
+    /// Key used by the list view to carry a single aggregate size without the
+    /// full per-file breakdown. The frontend sums `Object.values(file_sizes)`,
+    /// so a one-entry map reports the correct total cheaply.
+    pub const TOTAL_SIZE_KEY: &'static str = "__total__";
+
+    /// Get the full per-file size map for a recording (recursive walk).
+    /// Used by the details view, which renders each file individually.
     pub fn get_file_info(recording_path: &Path) -> HashMap<String, u64> {
         let mut file_sizes = HashMap::new();
 
@@ -57,6 +63,25 @@ impl StatusDetector {
         }
 
         file_sizes
+    }
+
+    /// Get just the aggregate size for a recording as a single-entry map.
+    /// Cheaper than [`get_file_info`] (no per-file String keys), and enough for
+    /// the list view's total-size badge. Details fetch the full map on demand.
+    pub fn get_total_size_info(recording_path: &Path) -> HashMap<String, u64> {
+        let mut total = 0u64;
+        if let Ok(entries) = walkdir::WalkDir::new(recording_path).into_iter().collect::<Result<Vec<_>, _>>() {
+            for entry in entries {
+                if entry.file_type().is_file() {
+                    if let Ok(metadata) = entry.metadata() {
+                        total += metadata.len();
+                    }
+                }
+            }
+        }
+        let mut map = HashMap::new();
+        map.insert(Self::TOTAL_SIZE_KEY.to_string(), total);
+        map
     }
 
     /// Validate that a recording has the expected structure
@@ -194,31 +219,21 @@ impl StatusDetector {
         None
     }
 
-    fn get_directory_size(path: &Path) -> Option<u64> {
-        if !path.exists() || !path.is_dir() {
-            return None;
-        }
-
-        let mut total_size = 0u64;
-        if let Ok(entries) = walkdir::WalkDir::new(path).into_iter().collect::<Result<Vec<_>, _>>() {
-            for entry in entries {
-                if entry.file_type().is_file() {
-                    if let Ok(metadata) = entry.metadata() {
-                        total_size += metadata.len();
-                    }
-                }
-            }
-            Some(total_size)
-        } else {
-            None
-        }
-    }
 }
 
-/// Update a recording's status and file sizes
+/// Update a recording's status and the full per-file size map.
+/// Use for the details view (renders each file); does a recursive walk.
 pub fn update_recording_status(recording: &mut Recording) {
     recording.status = StatusDetector::detect_status(&recording.path);
     recording.file_sizes = StatusDetector::get_file_info(&recording.path);
+}
+
+/// Update a recording's status with only an aggregate size (single-entry map).
+/// Use for the list view so a large library doesn't pay the full per-file walk
+/// for every recording up front — the breakdown loads lazily in details.
+pub fn update_recording_status_lite(recording: &mut Recording) {
+    recording.status = StatusDetector::detect_status(&recording.path);
+    recording.file_sizes = StatusDetector::get_total_size_info(&recording.path);
 }
 
 #[cfg(test)]

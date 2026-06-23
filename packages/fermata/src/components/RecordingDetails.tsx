@@ -196,13 +196,18 @@ export function RecordingDetails({ recordingName, onBack, onRecordingRenamed }: 
     let currentIndex = 0;
 
     if (typeof currentStatus === 'object' && 'Failed' in currentStatus) {
-      // For failed status, mark appropriate steps as completed based on what exists
-      const path = recording.path;
-      if (path.includes('extracted')) currentIndex = 1;
-      if (path.includes('analysis')) currentIndex = 2;
-      if (path.includes('blender') && !path.includes('render')) currentIndex = 3;
-      if (path.includes('render')) currentIndex = 4;
-      if (path.includes('uploads')) currentIndex = 5;
+      // Derive how far the pipeline got from the backend-reported file map
+      // (relative paths under the recording), not the recording's own dir path
+      // (which never contains "extracted"/"render" and so always read as 0).
+      const files = Object.keys(recording.file_sizes);
+      const has = (segment: string) =>
+        files.some((f) => f.split(/[\\/]/).includes(segment));
+
+      if (has('extracted')) currentIndex = 1;
+      if (has('analysis')) currentIndex = 2;
+      if (has('blender') && !has('render')) currentIndex = 3;
+      if (has('render')) currentIndex = 4;
+      if (has('uploads')) currentIndex = 5;
 
       steps[currentIndex].status = 'failed';
     } else {
