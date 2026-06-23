@@ -90,11 +90,28 @@ def precompute_envelope(
     dt = float(times[1] - times[0])
     env = np.zeros(n, dtype=np.float32)
 
+    events = np.asarray(list(event_times), dtype=float)
+    if events.size == 0:
+        return env
+
+    # Vectorized form of the scalar fill (kept bit-for-bit identical — see the
+    # equivalence tests). For each event at rounded index ``i = round(t/dt)``,
+    # every ramp step ``k in [0, steps]`` sets index ``i+k`` to the decaying
+    # value ``1 - k*dt/decay``; overlapping events combine via elementwise max.
+    #
+    # Build the full (events x (steps+1)) grid of target indices and ramp
+    # values, keep only the in-grid targets, and scatter-max them onto env with
+    # ``np.maximum.at`` (the accumulating equivalent of ``env[j] = max(...)``).
     steps = int(decay / dt)
-    for t in event_times:
-        i = int(round(t / dt))
-        for k in range(0, steps + 1):
-            j = i + k
-            if 0 <= j < n:
-                env[j] = max(env[j], 1.0 - k * dt / decay)
+    base = np.round(events / dt).astype(np.int64)  # round-to-nearest, like int(round())
+    k = np.arange(steps + 1)
+    ramp = (1.0 - k * dt / decay).astype(np.float32)  # k=0 -> 1.0, decaying
+
+    targets = base[:, None] + k[None, :]  # (events, steps+1)
+    vals = np.broadcast_to(ramp, targets.shape)
+
+    in_grid = (targets >= 0) & (targets < n)
+    flat_idx = targets[in_grid]
+    flat_val = vals[in_grid]
+    np.maximum.at(env, flat_idx, flat_val)
     return env

@@ -236,6 +236,96 @@ class TestNonFiniteEventTimes:
         assert report is not None
 
 
+class TestSchemaVersion:
+    def test_missing_schema_version_assumed_compatible(self, tmp_path):
+        # Pre-existing on-disk analysis files predate the schema_version field
+        # (the research fixtures have none). A missing version must be treated
+        # as "1.0" and load without error (backward compat).
+        d = json.loads(FIX_48K.read_text())
+        assert "schema_version" not in d
+        p = tmp_path / "noversion_analysis.json"
+        p.write_text(json.dumps(d))
+        res = load_analysis(_config(p))  # must not raise
+        assert len(res.bass) > 0
+
+    def test_matching_major_version_loads(self, tmp_path):
+        d = json.loads(FIX_48K.read_text())
+        d["schema_version"] = "1.3"  # same major as supported 1.x
+        p = tmp_path / "v13_analysis.json"
+        p.write_text(json.dumps(d))
+        res = load_analysis(_config(p))
+        assert len(res.bass) > 0
+
+    def test_incompatible_major_version_hard_error(self, tmp_path):
+        d = json.loads(FIX_48K.read_text())
+        d["schema_version"] = "2.0"  # newer major -> not understood
+        p = tmp_path / "v2_analysis.json"
+        p.write_text(json.dumps(d))
+        with pytest.raises(ValueError) as exc:
+            load_analysis(_config(p))
+        msg = str(exc.value).lower()
+        assert "schema" in msg or "version" in msg
+        assert "2" in str(exc.value)
+
+    def test_malformed_schema_version_hard_error(self, tmp_path):
+        d = json.loads(FIX_48K.read_text())
+        d["schema_version"] = "not-a-version"
+        p = tmp_path / "badver_analysis.json"
+        p.write_text(json.dumps(d))
+        with pytest.raises(ValueError):
+            load_analysis(_config(p))
+
+
+class TestHopLengthFromJson:
+    def test_emitted_hop_length_drives_dt_check(self, tmp_path, caplog):
+        # beatrix now emits hop_length; the loader must read it (not hardcode
+        # 512) so the dt sanity check uses the real hop. A consistent file
+        # produces no mismatch warning.
+        d = json.loads(FIX_48K.read_text())
+        d["hop_length"] = 512
+        p = tmp_path / "hop_analysis.json"
+        p.write_text(json.dumps(d))
+        with caplog.at_level("WARNING"):
+            load_analysis(_config(p))
+        assert not any("differs from hop" in r.message for r in caplog.records)
+
+    def test_missing_hop_length_falls_back_to_512(self, tmp_path):
+        # A pre-existing file with no hop_length still loads (fallback 512).
+        d = json.loads(FIX_48K.read_text())
+        d.pop("hop_length", None)
+        p = tmp_path / "nohop_analysis.json"
+        p.write_text(json.dumps(d))
+        res = load_analysis(_config(p))
+        assert res.dt > 0
+
+    def test_nonstandard_hop_length_used_in_check(self, tmp_path, caplog):
+        # An analysis genuinely produced with hop_length=1024 has times[] at
+        # 1024/sr spacing; reading the emitted hop keeps the check quiet, where
+        # a hardcoded 512 would falsely warn.
+        sr = 48000
+        hop = 1024
+        dt = hop / sr
+        n = 200
+        d = {
+            "schema_version": "1.0",
+            "hop_length": hop,
+            "sample_rate": sr,
+            "duration": n * dt,
+            "animation_events": {"beats": [], "energy_peaks": []},
+            "frequency_bands": {
+                "times": [i * dt for i in range(n)],
+                "bass_energy": [0.0] * n,
+                "mid_energy": [0.0] * n,
+                "high_energy": [0.0] * n,
+            },
+        }
+        p = tmp_path / "hop1024_analysis.json"
+        p.write_text(json.dumps(d))
+        with caplog.at_level("WARNING"):
+            load_analysis(_config(p))
+        assert not any("differs from hop" in r.message for r in caplog.records)
+
+
 class TestFullPipeline:
     def test_real_file_equal_length_arrays(self):
         res = load_analysis(_config(FIX_44K))

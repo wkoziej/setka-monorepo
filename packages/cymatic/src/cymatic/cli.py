@@ -19,6 +19,7 @@ The runner resolves the output path under ``blender/render/`` itself, so
 from __future__ import annotations
 
 import argparse
+import logging
 import sys
 from pathlib import Path
 
@@ -27,6 +28,8 @@ from setka_common.file_structure.specialized import RecordingStructureManager
 
 from cymatic.config import DEFAULT_BLENDER_EXECUTABLE, VisualizerConfig
 from cymatic.runner import render
+
+logger = logging.getLogger(__name__)
 
 
 def _detect_audio(recording_dir: Path, main_audio: str | None) -> Path:
@@ -156,6 +159,24 @@ def main(argv=None) -> int:
         audio_file = str(detected_audio)
     else:
         audio_file = None
+
+    # Distinguish the two no-audio cases so neither fails silently:
+    #  - an explicit --analysis-file skips detection entirely, so no audio is a
+    #    deliberate analysis-only run -> INFO "rendering silent";
+    #  - detection ran (no --analysis-file) but found nothing -> WARNING, since
+    #    the user likely expected the detected main audio to be muxed.
+    if audio_file is None:
+        if args.analysis_file:
+            logger.info(
+                "No --audio-file and explicit --analysis-file given; "
+                "rendering silent (no audio track)."
+            )
+        else:
+            logger.warning(
+                "No audio detected in %s and no --audio-file given; the render "
+                "will be silent.",
+                recording_dir / RecordingStructureManager.EXTRACTED_DIRNAME,
+            )
 
     config = VisualizerConfig(
         analysis_file=str(analysis_file),

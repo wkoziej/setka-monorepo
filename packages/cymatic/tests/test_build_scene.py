@@ -179,3 +179,24 @@ def test_missing_config_does_not_call_collaborators(mock_bpy):
         rc = build_scene.main([])
         assert rc != 0
         load.assert_not_called()
+
+
+def test_load_analysis_error_returns_nonzero_with_message(mock_bpy, spies, capsys):
+    """A failed load_analysis yields return 1 + a readable message, not a traceback."""
+    spies["load"].side_effect = ValueError("Analysis schema_version '2.0' incompatible")
+    rc = build_scene.main(["--config", str(spies["cfg_path"])])
+    assert rc == 1
+    out = capsys.readouterr()
+    combined = out.out + out.err
+    assert "schema_version" in combined or "incompatible" in combined
+
+
+def test_malformed_config_json_returns_nonzero(mock_bpy, tmp_path, capsys):
+    """A config file that is not valid VisualizerConfig JSON -> return 1, readable."""
+    bad = tmp_path / "bad_config.json"
+    bad.write_text("{ not valid json")
+    rc = build_scene.main(["--config", str(bad)])
+    assert rc == 1
+    combined = capsys.readouterr().out + capsys.readouterr().err
+    # message names the config, not a bare JSONDecodeError stack
+    assert "config" in combined.lower()

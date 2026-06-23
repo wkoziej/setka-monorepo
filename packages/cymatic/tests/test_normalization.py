@@ -153,6 +153,55 @@ class TestPrecomputeEnvelope:
         assert len(env) == 0
 
 
+class TestPrecomputeEnvelopeVectorizedEquivalence:
+    """The vectorized precompute must match the original scalar semantics
+    bit-for-bit: round-to-nearest event index, ramp max(0, 1 - k*dt/decay),
+    elementwise max over overlapping events."""
+
+    @staticmethod
+    def _scalar_reference(event_times, times, decay):
+        times = np.asarray(times, dtype=float)
+        n = len(times)
+        if n < 2:
+            return np.zeros(n, dtype=np.float32)
+        dt = float(times[1] - times[0])
+        env = np.zeros(n, dtype=np.float32)
+        steps = int(decay / dt)
+        for t in event_times:
+            i = int(round(t / dt))
+            for k in range(0, steps + 1):
+                j = i + k
+                if 0 <= j < n:
+                    env[j] = max(env[j], 1.0 - k * dt / decay)
+        return env
+
+    @pytest.mark.parametrize("decay", [0.03, 0.05, 0.13, 0.25, 0.5])
+    def test_matches_scalar_reference_random_events(self, decay):
+        rng = np.random.default_rng(7)
+        times = np.arange(500) * 0.010667  # 48k-like grid
+        events = sorted(rng.random(40) * (times[-1]))
+        got = precompute_envelope(events, times, decay=decay)
+        want = self._scalar_reference(events, times, decay)
+        assert np.array_equal(got, want)
+
+    def test_matches_scalar_reference_events_past_end(self):
+        # events whose ramp runs off the end of the grid clamp identically
+        times = np.arange(20) * 0.01
+        events = [0.18, 0.19, 0.20]
+        got = precompute_envelope(events, times, decay=0.1)
+        want = self._scalar_reference(events, times, 0.1)
+        assert np.array_equal(got, want)
+
+    def test_matches_scalar_reference_events_before_start(self):
+        # negative event time rounds to a negative/zero index; the ramp tail
+        # that lands in-grid must match the scalar fill
+        times = np.arange(20) * 0.01
+        events = [-0.005, 0.0]
+        got = precompute_envelope(events, times, decay=0.05)
+        want = self._scalar_reference(events, times, 0.05)
+        assert np.array_equal(got, want)
+
+
 class TestNonFiniteBands:
     def test_non_finite_values_coerced_to_zero(self, caplog):
         # NaN/inf must not poison percentile or make the band vanish; they are

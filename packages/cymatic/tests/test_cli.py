@@ -11,6 +11,7 @@ Covers:
 - audio forwarding: auto-detected and explicit --audio-file
 """
 
+import logging
 from pathlib import Path
 
 import pytest
@@ -128,3 +129,42 @@ def test_detected_audio_forwarded_when_no_explicit_flag(
     rc = cli.main([str(recording_dir)])
     assert rc == 0
     assert captured_cfg["c"].audio_file == str(detected)
+
+
+def test_explicit_analysis_without_audio_logs_silent_info(
+    recording_dir, monkeypatch, caplog
+):
+    """--analysis-file (no detection) and no --audio-file -> INFO 'rendering silent'."""
+    analysis = recording_dir / "analysis" / "song_analysis.json"
+    monkeypatch.setattr(cli, "render", lambda config: Path("/x.mp4"))
+
+    with caplog.at_level(logging.INFO, logger="cymatic.cli"):
+        rc = cli.main([str(recording_dir), "--analysis-file", str(analysis)])
+
+    assert rc == 0
+    assert any(
+        "silent" in r.message.lower() and r.levelno == logging.INFO
+        for r in caplog.records
+    ), [r.message for r in caplog.records]
+
+
+def test_no_audio_detected_logs_warning(recording_dir, monkeypatch, caplog):
+    """Detection ran (no --analysis-file) but found no audio -> WARNING, not silent INFO."""
+    monkeypatch.setattr(
+        cli,
+        "_resolve_analysis_file",
+        lambda rd, af, ma: (
+            recording_dir / "analysis" / "song_analysis.json",
+            None,  # detection produced no audio
+        ),
+    )
+    monkeypatch.setattr(cli, "render", lambda config: Path("/x.mp4"))
+
+    with caplog.at_level(logging.WARNING, logger="cymatic.cli"):
+        rc = cli.main([str(recording_dir)])
+
+    assert rc == 0
+    assert any(
+        r.levelno == logging.WARNING and "audio" in r.message.lower()
+        for r in caplog.records
+    ), [r.message for r in caplog.records]
