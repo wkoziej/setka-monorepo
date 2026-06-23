@@ -224,6 +224,24 @@ class TestContractFields:
                 assert math.isfinite(n), f"non-finite value leaked: {n}"
 
 
+class TestFrequencyBandsGuard:
+    """Unit 2.2: zero analysis frames from a non-empty signal raises."""
+
+    def test_zero_frames_raises_explicit_error(self):
+        """A (pathological) empty STFT for a non-empty signal must raise."""
+        from unittest.mock import Mock
+
+        analyzer = AudioAnalyzer()
+        analyzer._librosa = Mock()
+        # STFT yields zero frames despite a non-empty input signal.
+        analyzer._librosa.stft.return_value = np.empty((1025, 0))
+        analyzer._librosa.fft_frequencies.return_value = np.linspace(0, 22050, 1025)
+        analyzer._librosa.frames_to_time.return_value = np.array([])
+
+        with pytest.raises(ValueError, match="no frames"):
+            analyzer._analyze_frequency_bands(np.ones(100), 22050)
+
+
 class TestSanitizeNonFinite:
     """Unit 2.2: NaN/inf in band/peak arrays are scrubbed before serialize."""
 
