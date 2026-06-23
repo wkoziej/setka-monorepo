@@ -54,10 +54,72 @@ class TestServiceContentViaStdin:
         assert "[Unit]" in first_cmd.kwargs["input"]
 
 
-def test_main_deploy_rejects_bad_ip_exits_nonzero():
-    with patch("sys.argv", ["cameras.py", "deploy", "bad-ip"]):
+class TestDeployFailurePaths:
+    def test_deploy_fails_when_unit_write_fails(self):
+        failed = MagicMock(returncode=1, stderr="permission denied")
+        with patch("obsession.cli.cameras.subprocess.run", return_value=failed):
+            assert cameras.deploy_to_camera("192.168.8.50") is False
+
+    def test_deploy_fails_when_daemon_reload_fails(self):
+        ok = MagicMock(returncode=0, stderr="")
+        fail = MagicMock(returncode=1, stderr="boom")
+        # First call (tee) succeeds, second (daemon-reload) fails.
+        with patch(
+            "obsession.cli.cameras.subprocess.run", side_effect=[ok, fail]
+        ):
+            assert cameras.deploy_to_camera("192.168.8.50") is False
+
+
+class TestCheckCameraStatus:
+    def test_active_status_true(self):
+        result = MagicMock(stdout="active\n")
+        with patch("obsession.cli.cameras.subprocess.run", return_value=result):
+            assert cameras.check_camera_status("192.168.8.50") is True
+
+    def test_inactive_status_false(self):
+        result = MagicMock(stdout="inactive\n")
+        with patch("obsession.cli.cameras.subprocess.run", return_value=result):
+            assert cameras.check_camera_status("192.168.8.50") is False
+
+    def test_invalid_ip_returns_false_without_ssh(self):
         with patch("obsession.cli.cameras.subprocess.run") as mock_run:
-            with pytest.raises(SystemExit) as exc:
-                cameras.main()
-            assert exc.value.code == 1
+            assert cameras.check_camera_status("bad") is False
             mock_run.assert_not_called()
+
+
+class TestMainSubcommands:
+    def test_main_deploy_rejects_bad_ip_exits_nonzero(self):
+        with patch("sys.argv", ["cameras.py", "deploy", "bad-ip"]):
+            with patch("obsession.cli.cameras.subprocess.run") as mock_run:
+                with pytest.raises(SystemExit) as exc:
+                    cameras.main()
+                assert exc.value.code == 1
+                mock_run.assert_not_called()
+
+    def test_main_status_valid_ip(self):
+        result = MagicMock(stdout="active\n")
+        with patch("sys.argv", ["cameras.py", "status", "192.168.8.50"]):
+            with patch(
+                "obsession.cli.cameras.subprocess.run", return_value=result
+            ):
+                cameras.main()  # no SystemExit on status path
+
+    def test_main_restart_valid_ip(self):
+        with patch("sys.argv", ["cameras.py", "restart", "192.168.8.50"]):
+            with patch("obsession.cli.cameras.subprocess.run") as mock_run:
+                cameras.main()
+                assert mock_run.called
+
+    def test_main_stop_valid_ip(self):
+        with patch("sys.argv", ["cameras.py", "stop", "192.168.8.50"]):
+            with patch("obsession.cli.cameras.subprocess.run") as mock_run:
+                cameras.main()
+                assert mock_run.called
+
+    def test_main_deploy_valid_ip_exits_zero(self):
+        ok = MagicMock(returncode=0, stderr="")
+        with patch("sys.argv", ["cameras.py", "deploy", "192.168.8.50"]):
+            with patch("obsession.cli.cameras.subprocess.run", return_value=ok):
+                with pytest.raises(SystemExit) as exc:
+                    cameras.main()
+                assert exc.value.code == 0

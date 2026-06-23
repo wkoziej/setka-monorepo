@@ -292,16 +292,18 @@ def sample_recording_structure(tmp_path):
     recording_dir = tmp_path / "sample_recording"
     recording_dir.mkdir()
 
-    # Create metadata.json
+    # Create metadata.json — matches the real obs_script shape:
+    # canvas_size is a [w, h] LIST and sources is a DICT keyed by source name.
     metadata_file = recording_dir / "metadata.json"
     metadata_content = """
     {
-        "canvas_size": {"width": 1920, "height": 1080},
+        "canvas_size": [1920, 1080],
         "fps": 30,
+        "timestamp": 1736085045.0,
         "recording_started": "2025-01-05T14:30:22",
         "recording_stopped": "2025-01-05T14:35:45",
-        "sources": [
-            {
+        "sources": {
+            "Camera1": {
                 "name": "Camera1",
                 "id": "camera_source",
                 "type": "dshow_input",
@@ -313,9 +315,11 @@ def sample_recording_structure(tmp_path):
                     "source_height": 1080,
                     "final_width": 1920,
                     "final_height": 1080
-                }
+                },
+                "has_audio": false,
+                "has_video": true
             }
-        ]
+        }
     }
     """
     metadata_file.write_text(metadata_content)
@@ -345,9 +349,12 @@ def sample_recording_multiple_audio(tmp_path):
     recording_dir = tmp_path / "sample_recording_multi"
     recording_dir.mkdir()
 
-    # Create metadata.json
+    # Create metadata.json (real obs_script shape: list canvas_size, dict sources)
     metadata_file = recording_dir / "metadata.json"
-    metadata_content = '{"canvas_size": {"width": 1920, "height": 1080}, "fps": 30}'
+    metadata_content = (
+        '{"canvas_size": [1920, 1080], "fps": 30, "timestamp": 1736085045.0, '
+        '"sources": {}}'
+    )
     metadata_file.write_text(metadata_content)
 
     # Create main recording file
@@ -377,9 +384,12 @@ def sample_recording_no_audio(tmp_path):
     recording_dir = tmp_path / "sample_recording_no_audio"
     recording_dir.mkdir()
 
-    # Create metadata.json
+    # Create metadata.json (real obs_script shape: list canvas_size, dict sources)
     metadata_file = recording_dir / "metadata.json"
-    metadata_content = '{"canvas_size": {"width": 1920, "height": 1080}, "fps": 30}'
+    metadata_content = (
+        '{"canvas_size": [1920, 1080], "fps": 30, "timestamp": 1736085045.0, '
+        '"sources": {}}'
+    )
     metadata_file.write_text(metadata_content)
 
     # Create main recording file

@@ -18,10 +18,6 @@ from obsession.obs_integration.obs_script import (
 class TestOBSScript:
     """Test cases for OBS script functionality."""
 
-    def setup_method(self):
-        """Setup method for each test."""
-        pass
-
     def test_script_description(self):
         """Test script description returns proper HTML."""
         description = script_description()

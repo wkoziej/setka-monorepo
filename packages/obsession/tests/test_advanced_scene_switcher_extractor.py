@@ -244,3 +244,78 @@ class TestAdvancedSceneSwitcherExtractor:
                     result = run_extraction(str(recording_file))
 
                     assert result is False
+
+    def test_run_extraction_cli_missing_returns_false(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            recording_file = Path(temp_dir) / "test.mkv"
+            recording_file.touch()
+            with patch("pathlib.Path.exists", return_value=False):
+                assert run_extraction(str(recording_file)) is False
+
+    def test_run_extraction_timeout_returns_false(self):
+        import subprocess
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            recording_file = Path(temp_dir) / "test.mkv"
+            recording_file.touch()
+            with patch("pathlib.Path.exists", return_value=True):
+                with patch(
+                    "subprocess.run",
+                    side_effect=subprocess.TimeoutExpired(cmd="uv", timeout=1800),
+                ):
+                    assert run_extraction(str(recording_file)) is False
+
+    def test_run_extraction_unexpected_error_returns_false(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            recording_file = Path(temp_dir) / "test.mkv"
+            recording_file.touch()
+            with patch("pathlib.Path.exists", return_value=True):
+                with patch("subprocess.run", side_effect=RuntimeError("boom")):
+                    assert run_extraction(str(recording_file)) is False
+
+
+class TestFindUv:
+    def test_find_uv_prefers_existing_candidate(self):
+        from obsession.obs_integration.advanced_scene_switcher_extractor import find_uv
+
+        with patch("pathlib.Path.exists", return_value=True):
+            uv_path = find_uv()
+            assert uv_path.endswith("uv")
+
+    def test_find_uv_falls_back_to_path(self):
+        from obsession.obs_integration.advanced_scene_switcher_extractor import find_uv
+
+        with patch("pathlib.Path.exists", return_value=False):
+            assert find_uv() == "uv"
+
+
+class TestAdvancedMain:
+    def test_main_no_recording_returns_1(self):
+        from obsession.obs_integration import advanced_scene_switcher_extractor as adv
+
+        with patch.object(adv, "time") as mock_time:
+            mock_time.sleep = lambda *_a, **_k: None
+            with patch.object(adv, "find_latest_recording", return_value=None):
+                assert adv.main() == 1
+
+    def test_main_success_returns_0(self):
+        from obsession.obs_integration import advanced_scene_switcher_extractor as adv
+
+        with patch.object(adv, "time") as mock_time:
+            mock_time.sleep = lambda *_a, **_k: None
+            with patch.object(
+                adv, "find_latest_recording", return_value="/tmp/rec.mkv"
+            ):
+                with patch.object(adv, "run_extraction", return_value=True):
+                    assert adv.main() == 0
+
+    def test_main_extraction_failure_returns_1(self):
+        from obsession.obs_integration import advanced_scene_switcher_extractor as adv
+
+        with patch.object(adv, "time") as mock_time:
+            mock_time.sleep = lambda *_a, **_k: None
+            with patch.object(
+                adv, "find_latest_recording", return_value="/tmp/rec.mkv"
+            ):
+                with patch.object(adv, "run_extraction", return_value=False):
+                    assert adv.main() == 1
