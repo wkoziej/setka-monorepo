@@ -13,87 +13,32 @@ import pytest
 from pathlib import Path
 from unittest.mock import patch
 
-from medusa.utils.config import ConfigLoader, PlatformConfig, MedusaConfig
+from medusa.utils.config import ConfigLoader, MedusaConfig
+from medusa.models import PlatformConfig
 from medusa.exceptions import ConfigurationError
 
 
-class TestPlatformConfig:
-    """Test the PlatformConfig dataclass."""
-
-    def test_platform_config_creation(self):
-        """Test basic platform configuration creation."""
-        config = PlatformConfig(
-            client_secrets_file="secrets.json", credentials_file="creds.json"
-        )
-        assert config.client_secrets_file == "secrets.json"
-        assert config.credentials_file == "creds.json"
-        assert config.access_token is None
-        assert config.api_key is None
-
-    def test_platform_config_with_all_fields(self):
-        """Test platform configuration with all optional fields."""
-        config = PlatformConfig(
-            client_secrets_file="secrets.json",
-            credentials_file="creds.json",
-            access_token="token123",
-            api_key="key456",
-            api_secret="secret789",
-            page_id="page123",
-        )
-        assert config.access_token == "token123"
-        assert config.api_key == "key456"
-        assert config.api_secret == "secret789"
-        assert config.page_id == "page123"
-
-    def test_platform_config_validation_missing_required(self):
-        """Test platform config creation with no required fields (all optional)."""
-        # PlatformConfig has no required fields, all are optional
-        config = PlatformConfig()
-        assert config.client_secrets_file is None
-        assert config.access_token is None
-
-    def test_platform_config_from_dict(self):
-        """Test creating platform config from dictionary."""
-        data = {
-            "client_secrets_file": "secrets.json",
-            "credentials_file": "creds.json",
-            "access_token": "token123",
-        }
-        config = PlatformConfig.from_dict(data)
-        assert config.client_secrets_file == "secrets.json"
-        assert config.access_token == "token123"
-
-    def test_platform_config_from_dict_with_extra_fields(self):
-        """Test creating platform config from dict with extra fields that should be filtered."""
-        data = {
-            "client_secrets_file": "secrets.json",
-            "credentials_file": "creds.json",
-            "unknown_field": "should_be_ignored",
-            "another_extra": "also_ignored",
-        }
-        config = PlatformConfig.from_dict(data)
-        assert config.client_secrets_file == "secrets.json"
-        assert config.credentials_file == "creds.json"
-        # Extra fields should not cause errors and should be ignored
-        assert not hasattr(config, "unknown_field")
-
-    def test_platform_config_post_init(self):
-        """Test __post_init__ method is called during creation."""
-        # This test ensures __post_init__ is covered
-        config = PlatformConfig(access_token="test_token")
-        assert config.access_token == "test_token"
-
-
 class TestMedusaConfig:
-    """Test the MedusaConfig dataclass."""
+    """Test the MedusaConfig dataclass.
+
+    NOTE: After Unit 6.1 the config layer uses the unified
+    models.PlatformConfig (flat JSON fields are folded into `credentials`),
+    rather than a separate flat dataclass.
+    """
 
     def test_medusa_config_creation(self):
         """Test basic Medusa configuration creation."""
         youtube_config = PlatformConfig(
-            client_secrets_file="youtube_secrets.json",
-            credentials_file="youtube_creds.json",
+            platform_name="youtube",
+            credentials={
+                "client_secrets_file": "youtube_secrets.json",
+                "credentials_file": "youtube_creds.json",
+            },
         )
-        facebook_config = PlatformConfig(access_token="fb_token", page_id="fb_page_123")
+        facebook_config = PlatformConfig(
+            platform_name="facebook",
+            credentials={"access_token": "fb_token", "page_id": "fb_page_123"},
+        )
 
         config = MedusaConfig(youtube=youtube_config, facebook=facebook_config)
 
@@ -106,15 +51,27 @@ class TestMedusaConfig:
         """Test Medusa configuration with all supported platforms."""
         platforms = {
             "youtube": PlatformConfig(
-                client_secrets_file="youtube_secrets.json",
-                credentials_file="youtube_creds.json",
+                platform_name="youtube",
+                credentials={
+                    "client_secrets_file": "youtube_secrets.json",
+                    "credentials_file": "youtube_creds.json",
+                },
             ),
-            "facebook": PlatformConfig(access_token="fb_token", page_id="fb_page_123"),
-            "vimeo": PlatformConfig(access_token="vimeo_token"),
+            "facebook": PlatformConfig(
+                platform_name="facebook",
+                credentials={"access_token": "fb_token", "page_id": "fb_page_123"},
+            ),
+            "vimeo": PlatformConfig(
+                platform_name="vimeo",
+                credentials={"access_token": "vimeo_token"},
+            ),
             "twitter": PlatformConfig(
-                api_key="twitter_key",
-                api_secret="twitter_secret",
-                access_token="twitter_token",
+                platform_name="twitter",
+                credentials={
+                    "api_key": "twitter_key",
+                    "api_secret": "twitter_secret",
+                    "access_token": "twitter_token",
+                },
             ),
         }
 
@@ -126,7 +83,10 @@ class TestMedusaConfig:
 
     def test_get_platform_config(self):
         """Test getting platform configuration by name."""
-        youtube_config = PlatformConfig(client_secrets_file="secrets.json")
+        youtube_config = PlatformConfig(
+            platform_name="youtube",
+            credentials={"client_secrets_file": "secrets.json"},
+        )
         config = MedusaConfig(youtube=youtube_config)
 
         # Test existing platform
@@ -141,7 +101,10 @@ class TestMedusaConfig:
 
     def test_has_platform(self):
         """Test checking if platform is configured."""
-        youtube_config = PlatformConfig(client_secrets_file="secrets.json")
+        youtube_config = PlatformConfig(
+            platform_name="youtube",
+            credentials={"client_secrets_file": "secrets.json"},
+        )
         config = MedusaConfig(youtube=youtube_config)
 
         assert config.has_platform("youtube") is True
@@ -151,8 +114,13 @@ class TestMedusaConfig:
 
     def test_get_configured_platforms(self):
         """Test getting list of configured platforms."""
-        youtube_config = PlatformConfig(client_secrets_file="secrets.json")
-        facebook_config = PlatformConfig(access_token="token")
+        youtube_config = PlatformConfig(
+            platform_name="youtube",
+            credentials={"client_secrets_file": "secrets.json"},
+        )
+        facebook_config = PlatformConfig(
+            platform_name="facebook", credentials={"access_token": "token"}
+        )
 
         config = MedusaConfig(youtube=youtube_config, facebook=facebook_config)
 
@@ -215,13 +183,14 @@ class TestConfigLoader:
         assert config.vimeo is not None
         assert config.twitter is not None
 
-        # Verify specific values
+        # Verify specific values (now read from the unified credentials dict)
         assert (
-            config.youtube.client_secrets_file == "secrets/youtube_client_secrets.json"
+            config.youtube.credentials["client_secrets_file"]
+            == "secrets/youtube_client_secrets.json"
         )
-        assert config.facebook.page_id == "1234567890"
-        assert config.vimeo.access_token == "vimeo_token_456"
-        assert config.twitter.api_key == "twitter_api_key"
+        assert config.facebook.credentials["page_id"] == "1234567890"
+        assert config.vimeo.credentials["access_token"] == "vimeo_token_456"
+        assert config.twitter.credentials["api_key"] == "twitter_api_key"
 
     def test_load_nonexistent_file(self):
         """Test loading a non-existent configuration file."""
@@ -364,12 +333,18 @@ class TestConfigLoader:
         config = loader.load()
 
         # Environment variables should override file values
-        assert config.youtube.client_secrets_file == "env_youtube_secrets.json"
-        assert config.facebook.access_token == "env_fb_token"
+        assert (
+            config.youtube.credentials["client_secrets_file"]
+            == "env_youtube_secrets.json"
+        )
+        assert config.facebook.credentials["access_token"] == "env_fb_token"
 
         # Non-overridden values should remain from file
-        assert config.youtube.credentials_file == "secrets/youtube_credentials.json"
-        assert config.facebook.page_id == "1234567890"
+        assert (
+            config.youtube.credentials["credentials_file"]
+            == "secrets/youtube_credentials.json"
+        )
+        assert config.facebook.credentials["page_id"] == "1234567890"
 
     @patch.dict(os.environ, {"MEDUSA_YOUTUBE_ACCESS_TOKEN": "env_youtube_token"})
     def test_environment_variable_adds_missing_field(self):
@@ -387,7 +362,7 @@ class TestConfigLoader:
         config = loader.load()
 
         # Environment variable should add the missing field
-        assert config.youtube.access_token == "env_youtube_token"
+        assert config.youtube.credentials["access_token"] == "env_youtube_token"
 
     def test_config_file_permissions_error(self):
         """Test handling of file permission errors."""
@@ -419,7 +394,9 @@ class TestConfigLoader:
 
         # Should load successfully, ignoring extra fields
         assert config.youtube is not None
-        assert config.youtube.client_secrets_file == "secrets.json"
+        assert config.youtube.credentials["client_secrets_file"] == "secrets.json"
+        # The unknown flat field must not leak into credentials.
+        assert "extra_field" not in config.youtube.credentials
 
     def test_reload_configuration(self):
         """Test reloading configuration after file changes."""
@@ -435,7 +412,10 @@ class TestConfigLoader:
         loader = ConfigLoader(str(self.config_file))
         config1 = loader.load()
 
-        assert config1.youtube.client_secrets_file == "initial_secrets.json"
+        assert (
+            config1.youtube.credentials["client_secrets_file"]
+            == "initial_secrets.json"
+        )
 
         # Update config file
         updated_config = {
@@ -448,7 +428,10 @@ class TestConfigLoader:
 
         # Reload should pick up changes
         config2 = loader.load()
-        assert config2.youtube.client_secrets_file == "updated_secrets.json"
+        assert (
+            config2.youtube.credentials["client_secrets_file"]
+            == "updated_secrets.json"
+        )
 
     def test_config_loader_string_representation(self):
         """Test string representation of ConfigLoader."""
