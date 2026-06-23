@@ -17,8 +17,8 @@ pub enum RecordingStatus {
     Recorded,       // .mkv exists
     Extracted,      // extracted/ exists
     Analyzed,       // analysis/ exists
-    SetupRendered,  // blender/*.blend exists (cinemon done)
-    Rendered,       // blender/render/*.mp4 exists (blender rendering done)
+    SetupRendered,  // blender/*.blend exists (cymatic scene built)
+    Rendered,       // blender/render/*.mp4 exists (cymatic render done)
     Uploaded,       // uploads/ exists
     Failed(String),
 }

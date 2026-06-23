@@ -57,76 +57,34 @@ impl ProcessRunner {
         self.execute_command(cmd).await
     }
 
-    /// Generate YAML config and setup Blender project (2-step process)
-    pub async fn run_cinemon_render(&self, recording_path: &Path, preset: &str, main_audio: Option<&str>) -> anyhow::Result<ProcessResult> {
-        // Step 1: Generate YAML configuration
-        log::info!("🎬 Generating cinemon config: preset={}, main_audio={:?}", preset, main_audio);
-        let config_result = self.run_cinemon_generate_config(recording_path, preset, main_audio).await?;
+    /// Render the 3D Geometry Nodes audio visualizer for a recording.
+    ///
+    /// Drives `cymatic-render <recording_dir> [--main-audio NAME]`. cymatic
+    /// resolves the beatrix `*_analysis.json` itself (auto-detecting the main
+    /// audio in `extracted/`, or using `--main-audio` as a hint) and writes the
+    /// final mp4 under `blender/render/`. This replaces the retired cinemon VSE
+    /// path; there is no separate config-generation step.
+    pub async fn run_cymatic_render(
+        &self,
+        recording_path: &Path,
+        main_audio: Option<&str>,
+    ) -> anyhow::Result<ProcessResult> {
+        log::info!(
+            "🎬 Running cymatic-render: {} (main_audio={:?})",
+            recording_path.display(),
+            main_audio
+        );
 
-        if !config_result.success {
-            log::error!("❌ Config generation failed: {}", config_result.stderr);
-            return Ok(config_result);
-        }
-
-        // Step 2: Setup Blender project with generated config
-        let config_filename = format!("animation_config_{}.yaml", preset);
-        let config_path = recording_path.join(&config_filename);
-
-        if !config_path.exists() {
-            return Ok(ProcessResult {
-                success: false,
-                stdout: String::new(),
-                stderr: format!("Generated config file not found: {}", config_path.display()),
-                exit_code: Some(1),
-            });
-        }
-
-        log::info!("🎬 Setting up Blender project with config: {}", config_path.display());
         let mut cmd = AsyncCommand::new(&self.uv_path);
-        cmd.args(&["run", "--package", "cinemon", "cinemon-blend-setup"])
-            .arg(recording_path)
-            .args(&["--config", &config_path.to_string_lossy()])
-            .current_dir(&self.workspace_root);
-
-        self.execute_command(cmd).await
-    }
-
-    /// Generate cinemon YAML configuration
-    pub async fn run_cinemon_generate_config(&self, recording_path: &Path, preset: &str, main_audio: Option<&str>) -> anyhow::Result<ProcessResult> {
-        let mut cmd = AsyncCommand::new(&self.uv_path);
-        cmd.args(&["run", "--package", "cinemon", "cinemon-generate-config"])
-            .arg(recording_path)
-            .args(&["--preset", preset]);
+        cmd.args(["run", "--package", "cymatic", "cymatic-render"])
+            .arg(recording_path);
 
         if let Some(audio_file) = main_audio {
-            cmd.args(&["--main-audio", audio_file]);
+            cmd.args(["--main-audio", audio_file]);
         }
 
         cmd.current_dir(&self.workspace_root);
         self.execute_command(cmd).await
-    }
-
-    /// List available cinemon presets
-    pub async fn list_cinemon_presets(&self) -> anyhow::Result<ProcessResult> {
-        let mut cmd = AsyncCommand::new(&self.uv_path);
-        cmd.args(&["run", "--package", "cinemon", "cinemon-generate-config", "--list-presets"])
-            .current_dir(&self.workspace_root);
-
-        self.execute_command(cmd).await
-    }
-
-    /// Legacy method for backwards compatibility - delegates to new preset-based method
-    pub async fn run_cinemon_render_with_audio(&self, recording_path: &Path, animation_mode: &str, main_audio: Option<&str>) -> anyhow::Result<ProcessResult> {
-        // Map legacy animation modes to presets
-        let preset = match animation_mode {
-            "beat-switch" => "beat-switch",
-            "energy-pulse" => "music-video",
-            "multi-pip" => "vintage",
-            _ => "beat-switch", // Default fallback
-        };
-
-        log::warn!("🔄 Using legacy animation mode '{}', mapping to preset '{}'", animation_mode, preset);
-        self.run_cinemon_render(recording_path, preset, main_audio).await
     }
 
     /// Run medusa upload command
@@ -188,11 +146,11 @@ impl ProcessRunner {
             return Err(anyhow::anyhow!("Package 'beatrix' not available in workspace"));
         }
 
-        // cinemon and medusa: CLI entry points
-        let packages = ["cinemon", "medusa"];
+        // cymatic and medusa: CLI entry points (cinemon retired).
+        let packages = ["cymatic", "medusa"];
         for package in packages {
             let mut cmd = AsyncCommand::new(&self.uv_path);
-            cmd.args(&["run", "--package", package, "--help"])
+            cmd.args(["run", "--package", package, "--help"])
                 .current_dir(&self.workspace_root);
 
             let output = cmd.output().await?;
@@ -277,16 +235,35 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_cinemon_render_command_structure() {
+    async fn test_cymatic_render_command_structure() {
         let (runner, temp_dir) = create_test_runner();
 
         let recording_path = temp_dir.path().join("test_recording");
         fs::create_dir_all(&recording_path).unwrap();
 
-        let result = runner.run_cinemon_render(&recording_path, "minimal", None).await;
+        // echo stands in for uv, so stdout echoes the constructed command line.
+        let result = runner.run_cymatic_render(&recording_path, None).await;
 
-        // Should not panic and should return some result
         assert!(result.is_ok());
+        let process_result = result.unwrap();
+        // Drives cymatic-render, not the retired cinemon CLIs.
+        assert!(process_result.stdout.contains("cymatic-render"));
+        assert!(!process_result.stdout.contains("cinemon"));
+    }
+
+    #[tokio::test]
+    async fn test_cymatic_render_forwards_main_audio() {
+        let (runner, temp_dir) = create_test_runner();
+
+        let recording_path = temp_dir.path().join("test_recording");
+        fs::create_dir_all(&recording_path).unwrap();
+
+        let result = runner
+            .run_cymatic_render(&recording_path, Some("master.wav"))
+            .await
+            .unwrap();
+        assert!(result.stdout.contains("--main-audio"));
+        assert!(result.stdout.contains("master.wav"));
     }
 
     #[tokio::test]

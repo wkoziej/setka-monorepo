@@ -13,7 +13,9 @@ export function VideoPlayer({ videoPath, recordingName, onClose }: VideoPlayerPr
     const openVideo = async () => {
       try {
         console.log('🎬 Opening video in external player:', videoPath);
-        await invoke('open_video_external', { filePath: videoPath });
+        // Pass the recording name, not a raw path: the backend resolves the
+        // playable video server-side (path-traversal hardening).
+        await invoke('open_video_external', { recordingName });
         console.log('✅ Video opened successfully');
         // Zamknij modal od razu po otwarciu
         onClose();
@@ -25,7 +27,7 @@ export function VideoPlayer({ videoPath, recordingName, onClose }: VideoPlayerPr
     };
 
     openVideo();
-  }, [videoPath, onClose]);
+  }, [videoPath, recordingName, onClose]);
 
   // Prosty modal z informacją o ładowaniu
   return (

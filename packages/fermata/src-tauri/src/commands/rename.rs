@@ -17,25 +17,15 @@ pub fn rename_recording_impl(
     recordings_path: &Path
 ) -> Result<(), String> {
     // Validation
-    if old_name.is_empty() {
-        return Err("Recording name cannot be empty".to_string());
-    }
-
-    if new_name.is_empty() {
-        return Err("New recording name cannot be empty".to_string());
-    }
-
     if old_name == new_name {
         return Err("Cannot rename to the same name".to_string());
     }
 
-    let old_dir = recordings_path.join(old_name);
-    let new_dir = recordings_path.join(new_name);
-
-    // Check if source exists
-    if !old_dir.exists() {
-        return Err(format!("Recording '{}' not found", old_name));
-    }
+    // Resolve server-side: both names must be safe single components under the
+    // recordings root. The source must exist; the target must not (and is
+    // validated lexically, since it cannot be canonicalized before creation).
+    let old_dir = crate::commands::path_guard::resolve_recording_dir(recordings_path, old_name)?;
+    let new_dir = crate::commands::path_guard::resolve_new_recording_dir(recordings_path, new_name)?;
 
     if !old_dir.is_dir() {
         return Err(format!("Recording '{}' is not a directory", old_name));
@@ -241,6 +231,26 @@ mod tests {
 
         // Cleanup
         let _ = fs::remove_dir_all(&temp_dir);
+    }
+
+    #[test]
+    fn test_rename_recording_rejects_traversal() {
+        let base = std::env::temp_dir().join("fermata_rename_test_traversal");
+        let root = base.join("recordings");
+        let secret = base.join("secret");
+        fs::create_dir_all(&secret).unwrap();
+        setup_test_recording(&root, "legit");
+
+        // Traversal in either name must be rejected before any fs::rename.
+        assert!(rename_recording_impl("../secret", "x", &root).is_err());
+        assert!(rename_recording_impl("legit", "../escape", &root).is_err());
+        assert!(rename_recording_impl("legit", "a/b", &root).is_err());
+        // Sibling secret untouched.
+        assert!(secret.exists());
+        // Source recording untouched.
+        assert!(root.join("legit").exists());
+
+        let _ = fs::remove_dir_all(&base);
     }
 
     #[test]

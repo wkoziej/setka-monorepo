@@ -6,7 +6,7 @@ use commands::recordings::{
     AppConfig, get_recordings, get_recording_details, get_recordings_by_status,
     get_recordings_needing_attention, update_recordings_path, get_app_config, delete_recording
 };
-use commands::operations::{run_next_step, run_specific_step, run_specific_step_with_options, list_animation_presets};
+use commands::operations::{run_next_step, run_specific_step, run_specific_step_with_options};
 use commands::rename::rename_recording;
 use commands::video::{get_playable_video_path, get_structure_heatmap, open_video_external, play_video_with_subtitles};
 
@@ -25,7 +25,6 @@ pub fn run() {
       run_next_step,
       run_specific_step,
       run_specific_step_with_options,
-      list_animation_presets,
       rename_recording,
       get_playable_video_path,
       open_video_external,
