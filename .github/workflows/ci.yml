@@ -39,12 +39,23 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # python-rtmidi (paternologia) builds against ALSA headers; cymatic's
-      # structure-brief renders PNGs with matplotlib, which scans system fonts
-      # via fontconfig — install fonts + fontconfig so that scan succeeds on the
-      # runner. Harmless for the other packages, so install unconditionally.
-      - name: Install system deps (ALSA + fonts)
-        run: sudo apt-get update && sudo apt-get install -y libasound2-dev fonts-dejavu-core fontconfig
+      # python-rtmidi (a paternologia dependency) builds against ALSA headers.
+      - name: Install ALSA headers
+        run: sudo apt-get update && sudo apt-get install -y libasound2-dev
+
+      # cymatic's structure-brief renders PNGs with matplotlib, which scans
+      # system fonts at import time via `fc-list`. On the GH runner that scan
+      # hits a str/bytes TypeError inside matplotlib 3.10.9's
+      # `_get_fontconfig_fonts` (fc-list output typed as str, not bytes) — a
+      # matplotlib/runner bug, unrelated to our code. Shadow `fc-list` with a
+      # stub that exits non-zero so matplotlib catches CalledProcessError and
+      # falls back to its bundled DejaVu fonts (sufficient for headless PNGs).
+      - name: Neutralize fc-list for matplotlib font scan
+        run: |
+          mkdir -p "$HOME/binshim"
+          printf '#!/bin/sh\nexit 1\n' > "$HOME/binshim/fc-list"
+          chmod +x "$HOME/binshim/fc-list"
+          echo "$HOME/binshim" >> "$GITHUB_PATH"
 
       - name: Install uv
         uses: astral-sh/setup-uv@v5
