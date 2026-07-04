@@ -2,7 +2,9 @@
 
 **Branch:** `fix/setka-audit-remediation` (off `master`, 24 commits) · **Run:** autonomous, 2026-06-23/24 · **Plan:** `docs/plans/2026-06-22-001-fix-setka-audit-remediation-plan.md`
 
-**Status: ALL 8 PHASES COMPLETE.** cinemon retired; security closed; contract versioned; build unblocked; CI added; docs aligned. One branch, per-phase commits, **DRAFT PR — never merged, master untouched.**
+**Status: ALL 8 PHASES COMPLETE + CI FULLY GREEN.** cinemon retired; security closed; contract versioned; build unblocked; CI added; docs aligned. One branch, per-phase commits, **DRAFT PR — never merged, master untouched.**
+
+> **CI update (2026-07-04):** all 7 jobs green (6 python packages + fermata). Two CI-only failures were fixed after the initial run: (a) **fermata** — `package-lock.json` was gitignored so `npm ci`/setup-node cache failed before tests ran; committed the lockfile → the fermata **`cargo test` gate now passes, so the Phase 7 Rust is VERIFIED (flag #1 CLOSED)**. (b) **cymatic** — matplotlib 3.10.9's import-time `fc-list` font scan returns `str` on the Linux runner (bytes on macOS), crashing `test_brief`; fixed with a `check_output`→bytes shim in `packages/cymatic/tests/conftest.py`. Neither was a remediation-logic bug.
 
 > Executed from current `master` (which was ~103 commits ahead of the audited feature branch). All P0 findings were re-validated against master before work — they still held. Each phase agent re-located file:line on current code; several plan line numbers were stale and adapted.
 
@@ -23,7 +25,7 @@ All touched packages meet the **80% coverage** target (most far exceed). Pipelin
 
 ## ⚠️ FLAGGED — awaiting your decision / verification
 
-1. **Rust build unverified (fermata).** No `cargo`/`rustc` in the run environment — all `src-tauri/` Rust was hand-written against current signatures but NOT compiled. **The CI `cargo test` job (added in P8) is the gate** — it runs on push. Reviewer should confirm Tauri-2 APIs (`app.state`, `async_runtime::spawn`) resolve and the timeout pipe-drain impl compiles.
+1. ~~**Rust build unverified (fermata).**~~ **✅ CLOSED.** The CI `cargo test` gate now runs green — the Phase 7 Rust (path-traversal guard, subprocess timeouts, cinemon→cymatic render rewire) **compiles and passes** (72/72 tests). Tauri-2 APIs resolve; the timeout pipe-drain impl compiles.
 2. **Live `-map` audio mapping (obsession).** The source→audio-stream index assumes OBS multitrack output orders streams in source-iteration order; `metadata.json` carries no explicit stream index (inline ⚠️ at `extractor.py:294-300`). **Verify against a real OBS recording's `.mkv` + `metadata.json`** before trusting per-source audio.
 3. **Live render E2E.** cymatic render + fermata→cymatic wiring have code + mocked tests only. A real end-to-end render (real analysis + Blender 5.1.2) was deferred (no live assets in env).
 4. **fermata judgment calls** (sign-off wanted): SetupRender AND Render both now shell to `cymatic-render` (cymatic renders single-shot, no separate blend stage); `RenderOptions.preset` is now informational/no-op for cymatic; 6 pre-existing vitest failures fixed to get `npm test` green (test-matcher/label fixes incl. a UI label EN→PL "Usuń").
