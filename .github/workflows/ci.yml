@@ -39,10 +39,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # python-rtmidi (a paternologia dependency) builds against ALSA headers on
-      # Linux; harmless for the other packages, so install it unconditionally.
-      - name: Install ALSA headers
-        run: sudo apt-get update && sudo apt-get install -y libasound2-dev
+      # python-rtmidi (paternologia) builds against ALSA headers; cymatic's
+      # structure-brief renders PNGs with matplotlib, which scans system fonts
+      # via fontconfig — install fonts + fontconfig so that scan succeeds on the
+      # runner. Harmless for the other packages, so install unconditionally.
+      - name: Install system deps (ALSA + fonts)
+        run: sudo apt-get update && sudo apt-get install -y libasound2-dev fonts-dejavu-core fontconfig
 
       - name: Install uv
         uses: astral-sh/setup-uv@v5
@@ -60,6 +62,8 @@ jobs:
       # the per-package `--cov-fail-under` gate fires from inside the package dir.
       - name: Test ${{ matrix.package }}
         working-directory: packages/${{ matrix.dir }}
+        env:
+          MPLBACKEND: Agg
         run: uv run --with pytest-cov --package ${{ matrix.package }} pytest
 
   # Fermata is a Tauri app, not a uv workspace member: its frontend is built and
@@ -92,7 +96,7 @@ jobs:
       - name: Set up Node
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "22"
           cache: npm
           cache-dependency-path: packages/fermata/package-lock.json
 
