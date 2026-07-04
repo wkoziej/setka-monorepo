@@ -16,6 +16,35 @@ if str(blender_script_path) not in sys.path:
     sys.path.insert(0, str(blender_script_path))
 
 
+# --- matplotlib font-scan compatibility shim --------------------------------
+# On the GitHub Linux runner, matplotlib 3.10.9 builds its FontManager at import
+# time by calling ``subprocess.check_output(['fc-list', '--help'])`` and testing
+# ``b'--format' not in <output>``. On that runner the call comes back as ``str``
+# instead of the expected ``bytes``, raising
+# ``TypeError: 'in <string>' requires string as left operand, not bytes``.
+# (macOS goes through a different font path, so this never fires locally.)
+# Force check_output back to bytes when the caller did not request text mode, so
+# the scan works. Installed before any matplotlib import (tests import it lazily
+# inside render_heatmap); only affects this test process.
+_orig_check_output = subprocess.check_output
+
+
+def _check_output_bytes(*args, **kwargs):
+    result = _orig_check_output(*args, **kwargs)
+    text_mode = (
+        kwargs.get("text")
+        or kwargs.get("encoding")
+        or kwargs.get("universal_newlines")
+    )
+    if isinstance(result, str) and not text_mode:
+        return result.encode("utf-8", "surrogateescape")
+    return result
+
+
+subprocess.check_output = _check_output_bytes
+# ----------------------------------------------------------------------------
+
+
 # Markers are registered in pyproject.toml. Tests are unit tests by default, so
 # tag any test that carries no explicit marker as `unit` — this keeps
 # ``pytest -m unit`` meaningful (non-empty) without retagging every module.

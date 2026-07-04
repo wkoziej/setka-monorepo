@@ -43,16 +43,9 @@ jobs:
       - name: Install ALSA headers
         run: sudo apt-get update && sudo apt-get install -y libasound2-dev
 
-      # cymatic's structure-brief renders PNGs with matplotlib, which scans
-      # system fonts at import time via `fc-list`. On the GH runner that scan
-      # hits a str/bytes TypeError inside matplotlib 3.10.9's
-      # `_get_fontconfig_fonts` (fc-list output comes back as str, not bytes) —
-      # a matplotlib/runner bug, unrelated to our code. Remove `fc-list` so the
-      # call raises FileNotFoundError, which matplotlib catches, falling back to
-      # its bundled DejaVu fonts (sufficient for headless PNGs). A PATH-shim did
-      # not work because uv's subprocess did not pick it up.
-      - name: Neutralize fc-list for matplotlib font scan
-        run: sudo rm -f /usr/bin/fc-list /usr/local/bin/fc-list /bin/fc-list || true
+      # NOTE: cymatic's matplotlib font-scan str/bytes crash on this runner is
+      # handled at the right layer — a subprocess.check_output shim in
+      # packages/cymatic/tests/conftest.py — not with a CI hack here.
 
       - name: Install uv
         uses: astral-sh/setup-uv@v5
