@@ -156,6 +156,12 @@ impl ProcessRunner {
             Err(_elapsed) => {
                 // Kill the overrunning child so it doesn't linger.
                 let _ = child.kill().await;
+                // Reap the child to release OS resources (avoids zombie processes).
+                let _ = child.wait().await;
+                // Bound-join the drain tasks so their OS pipe handles are released.
+                // A short timeout prevents a deadlock if a task is itself stuck.
+                let _ = tokio::time::timeout(Duration::from_secs(5), stdout_task).await;
+                let _ = tokio::time::timeout(Duration::from_secs(5), stderr_task).await;
                 return Err(anyhow::anyhow!("Command timed out after {:?}", timeout));
             }
         };

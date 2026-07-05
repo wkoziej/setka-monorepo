@@ -5,7 +5,6 @@ import { DeletionConfirmDialog } from './DeletionConfirmDialog';
 import { VideoPlayer } from './VideoPlayer';
 import { ControlsBar } from './ControlsBar';
 import { ResultsCounter } from './ResultsCounter';
-import { invoke } from '@tauri-apps/api/core';
 import { useState } from 'react';
 
 function formatFileSize(bytes: number): string {
@@ -168,7 +167,6 @@ export function RecordingList({ onSelectRecording }: RecordingListProps) {
   } = useSortingAndFiltering(recordings);
 
   const [showVideoPlayer, setShowVideoPlayer] = useState(false);
-  const [videoPath, setVideoPath] = useState<string | null>(null);
   const [currentRecordingName, setCurrentRecordingName] = useState<string | null>(null);
 
   const handleAction = async (recordingName: string, action: string) => {
@@ -180,16 +178,9 @@ export function RecordingList({ onSelectRecording }: RecordingListProps) {
     }
 
     if (action === 'Play Video') {
-      try {
-        const path = await invoke('get_playable_video_path', { recordingName }) as string;
-        console.log('🎬 Video path from backend:', path);
-        setVideoPath(path);
-        setCurrentRecordingName(recordingName);
-        setShowVideoPlayer(true);
-      } catch (error) {
-        console.error('🚨 Video error:', error);
-        alert(error instanceof Error ? error.message : 'Failed to find video file');
-      }
+      // The backend resolves the video path from recordingName server-side.
+      setCurrentRecordingName(recordingName);
+      setShowVideoPlayer(true);
       return;
     }
 
@@ -334,13 +325,11 @@ export function RecordingList({ onSelectRecording }: RecordingListProps) {
       />
 
       {/* Video Player Modal */}
-      {showVideoPlayer && videoPath && currentRecordingName && (
+      {showVideoPlayer && currentRecordingName && (
         <VideoPlayer
-          videoPath={videoPath}
           recordingName={currentRecordingName}
           onClose={() => {
             setShowVideoPlayer(false);
-            setVideoPath(null);
             setCurrentRecordingName(null);
           }}
         />

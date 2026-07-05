@@ -99,7 +99,7 @@ pub async fn run_next_step(recording_name: String, config: State<'_, AppConfig>)
     let recordings = FileScanner::scan_recordings(&config.recordings_path);
     log::info!("🔍 [run_next_step] Found {} recordings total", recordings.len());
 
-    let recording = recordings
+    let mut recording = recordings
         .into_iter()
         .find(|r| r.name == recording_name)
         .ok_or_else(|| {
@@ -108,6 +108,14 @@ pub async fn run_next_step(recording_name: String, config: State<'_, AppConfig>)
         })?;
 
     log::info!("✅ [run_next_step] Found recording: {}, status: {:?}", recording.name, recording.status);
+
+    // Enforce path-guard containment: re-resolve via canonicalization + symlink check
+    // so a symlink inside the recordings root cannot escape to an arbitrary path.
+    let safe_path = crate::commands::path_guard::resolve_recording_dir(
+        &config.recordings_path,
+        &recording_name,
+    )?;
+    recording.path = safe_path;
 
     // Determine next step
     let next_step = recording
@@ -137,10 +145,18 @@ pub async fn run_specific_step(
 
     // Get the recording details first
     let recordings = FileScanner::scan_recordings(&config.recordings_path);
-    let recording = recordings
+    let mut recording = recordings
         .into_iter()
         .find(|r| r.name == recording_name)
         .ok_or_else(|| format!("Recording '{}' not found", recording_name))?;
+
+    // Enforce path-guard containment: re-resolve via canonicalization + symlink check
+    // so a symlink inside the recordings root cannot escape to an arbitrary path.
+    let safe_path = crate::commands::path_guard::resolve_recording_dir(
+        &config.recordings_path,
+        &recording_name,
+    )?;
+    recording.path = safe_path;
 
     // Validate that the step can be run
     if !recording.can_run_step(&step) {

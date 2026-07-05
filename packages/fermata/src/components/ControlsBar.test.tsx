@@ -101,4 +101,17 @@ describe('ControlsBar', () => {
 
     expect(mockOnClearFilters).toHaveBeenCalled();
   });
+
+  test('status filter calls onUpdateFilter with object shape when failed is selected', () => {
+    const failedFilterConfig: FilterConfig = {
+      ...mockFilterConfig,
+      status: { Failed: '' }
+    };
+    render(<ControlsBar {...defaultProps} filterConfig={failedFilterConfig} />);
+
+    const statusSelect = screen.getByLabelText(/status/i);
+    fireEvent.change(statusSelect, { target: { value: 'failed' } });
+
+    expect(mockOnUpdateFilter).toHaveBeenCalledWith('status', { Failed: '' });
+  });
 });
