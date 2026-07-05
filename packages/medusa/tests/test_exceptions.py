@@ -20,6 +20,7 @@ from medusa.exceptions import (
     NetworkError,
     translate_api_error,
     create_error_chain,
+    _mask_secrets,
 )
 
 
@@ -720,3 +721,33 @@ class TestErrorIntegration:
         chain = chained_error.context["error_chain"]
         assert chain[0]["type"] == "ConnectionError"
         assert chain[1]["type"] == "TimeoutError"
+
+
+class TestMaskSecrets:
+    """Regression tests for _mask_secrets secret-scrubbing utility."""
+
+    def test_masks_input_token_in_url(self):
+        """input_token query param must be masked (Facebook /debug_token URL)."""
+        msg = "https://graph.facebook.com/debug_token?input_token=SECRET123&x=1"
+        masked = _mask_secrets(msg)
+        assert "SECRET123" not in masked
+        # Parameter name stays visible for debuggability.
+        assert "input_token" in masked
+
+    def test_masks_authorization_bearer_header(self):
+        """Authorization: Bearer <token> form must be masked."""
+        msg = "Request failed with Authorization: Bearer ya29.SECRET header"
+        masked = _mask_secrets(msg)
+        assert "ya29.SECRET" not in masked
+        # Header name stays visible.
+        assert "Authorization" in masked
+        assert "Bearer" in masked
+
+    def test_mask_secrets_returns_none_for_none(self):
+        """_mask_secrets(None) must return None unchanged."""
+        assert _mask_secrets(None) is None
+
+    def test_mask_secrets_leaves_clean_strings_unchanged(self):
+        """A string with no sensitive params must pass through unchanged."""
+        msg = "Upload succeeded for file.mp4"
+        assert _mask_secrets(msg) == msg

@@ -19,6 +19,7 @@ from ..exceptions import (
     ValidationError,
     TemplateError,
     ConfigError,
+    _mask_secrets,
 )
 
 logger = logging.getLogger(__name__)
@@ -102,7 +103,7 @@ class FacebookPublisher(BasePublisher):
             if isinstance(e, AuthenticationError):
                 raise
 
-            logger.error(f"Facebook authentication failed: {e}")
+            logger.error("Facebook authentication failed: %s", _mask_secrets(str(e)))
             raise AuthenticationError(
                 f"Authentication failed: {e}", platform="facebook"
             ) from e
@@ -273,7 +274,7 @@ class FacebookPublisher(BasePublisher):
             # configuration problem, not a publish failure).
             raise
         except Exception as e:
-            logger.error(f"Failed to publish Facebook post: {e}")
+            logger.error("Failed to publish Facebook post: %s", _mask_secrets(str(e)))
             raise PublishError(
                 f"Failed to publish post to Facebook: {e}", platform="facebook"
             ) from e

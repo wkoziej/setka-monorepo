@@ -364,14 +364,35 @@ class PlatformConfig:
 
     def to_dict(self) -> Dict[str, Any]:
         """
-        Serialize PlatformConfig to dictionary.
+        Serialize PlatformConfig to dictionary (faithful round-trip).
 
-        Credential VALUES are masked (key names preserved) so callers such as
-        Registry.export_config can serialize/log the configuration without
-        leaking secrets.
+        Credential VALUES are preserved verbatim so that
+        ``from_dict(config.to_dict())`` reconstructs the original object.
+        Use :meth:`to_safe_dict` when serializing for logging or export.
 
         Returns:
             Dictionary representation of the configuration
+        """
+        return {
+            "platform_name": self.platform_name,
+            "enabled": self.enabled,
+            "credentials": dict(self.credentials),
+            "metadata": self.metadata,
+            "rate_limit": self.rate_limit,
+            "retry_attempts": self.retry_attempts,
+            "timeout": self.timeout,
+        }
+
+    def to_safe_dict(self) -> Dict[str, Any]:
+        """
+        Serialize PlatformConfig to dictionary with masked credentials.
+
+        Credential VALUES are replaced with :attr:`_CREDENTIAL_MASK` (key names
+        preserved) so callers such as :meth:`Registry.export_config` can
+        serialize/log the configuration without leaking secrets.
+
+        Returns:
+            Dictionary representation of the configuration with credentials masked
         """
         return {
             "platform_name": self.platform_name,

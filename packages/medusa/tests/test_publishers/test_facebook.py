@@ -606,3 +606,87 @@ class TestFacebookPublisherIntegration:
     def platform_config(self, publisher_config: Dict[str, Any]) -> PlatformConfig:
         """Provide PlatformConfig for integration tests."""
         return PlatformConfig(platform_name="facebook", credentials=publisher_config)
+
+
+class TestFacebookPublisherSecretMasking:
+    """logger.error must never interpolate raw token-bearing exception messages."""
+
+    @pytest.fixture
+    def platform_config(self) -> PlatformConfig:
+        return PlatformConfig(
+            platform_name="facebook",
+            credentials={
+                "page_id": "123456",
+                "access_token": "SECRET_TOKEN_ya29",
+            },
+        )
+
+    @pytest.mark.asyncio
+    async def test_authenticate_error_masks_token_in_log(
+        self, platform_config: PlatformConfig, caplog
+    ):
+        """authenticate() logger.error must not contain raw token values."""
+        import logging
+        import requests
+
+        publisher = FacebookPublisher(config=platform_config)
+
+        # Craft an exception whose message embeds the token in a URL, mimicking
+        # what the requests library would produce for a /debug_token?input_token=...
+        # call failure.
+        token_url_msg = (
+            "GET https://graph.facebook.com/debug_token"
+            "?input_token=SECRET_TOKEN_ya29&access_token=SECRET_TOKEN_ya29 failed"
+        )
+        exc = requests.exceptions.RequestException(token_url_msg)
+
+        with patch(
+            "medusa.publishers.facebook.FacebookAuth"
+        ) as mock_auth_cls:
+            mock_auth = Mock()
+            mock_auth_cls.return_value = mock_auth
+            # test_connection is called first — make it raise our crafted exception
+            mock_auth.test_connection = Mock(side_effect=exc)
+
+            with caplog.at_level(logging.ERROR, logger="medusa.publishers.facebook"):
+                with pytest.raises(AuthenticationError):
+                    await publisher.authenticate()
+
+        # The raw token must not appear in any log record.
+        for record in caplog.records:
+            assert "SECRET_TOKEN_ya29" not in record.getMessage(), (
+                f"Token leaked into log: {record.getMessage()}"
+            )
+
+    @pytest.mark.asyncio
+    async def test_publish_error_masks_token_in_log(
+        self, platform_config: PlatformConfig, caplog
+    ):
+        """publish() logger.error must not contain raw token values."""
+        import logging
+        import requests
+
+        publisher = FacebookPublisher(config=platform_config)
+
+        # Set up a mock auth with a page_id so _get_page_id() succeeds.
+        mock_auth = Mock()
+        mock_auth.credentials = {"page_id": "123456", "access_token": "SECRET_TOKEN_ya29"}
+        publisher._auth = mock_auth
+
+        # Simulate the Graph API call raising with a token-bearing URL.
+        token_url_msg = (
+            "POST https://graph.facebook.com/v19.0/123456/feed"
+            "?access_token=SECRET_TOKEN_ya29 failed"
+        )
+        exc = requests.exceptions.RequestException(token_url_msg)
+        mock_auth._make_api_request = Mock(side_effect=exc)
+
+        with caplog.at_level(logging.ERROR, logger="medusa.publishers.facebook"):
+            with pytest.raises(PublishError):
+                await publisher._publish_post("Test post", {})
+
+        # The raw token must not appear in any log record.
+        for record in caplog.records:
+            assert "SECRET_TOKEN_ya29" not in record.getMessage(), (
+                f"Token leaked into log: {record.getMessage()}"
+            )

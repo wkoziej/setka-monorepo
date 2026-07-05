@@ -79,6 +79,11 @@ class YouTubeUploader(BaseUploader):
     # Maximum retry attempts for resumable uploads
     MAX_RESUMABLE_RETRIES = 10
 
+    # Upper bound for a server-supplied Retry-After value (seconds).  Fermata's
+    # subprocess timeout is 30 min (1 800 s); trusting an unbounded value would
+    # turn a rate-limit into a confusing kill.  15 min (900 s) is the ceiling.
+    MAX_RETRY_AFTER_SECONDS = 900
+
     def __init__(
         self, platform_name: str = "youtube", config: Optional[PlatformConfig] = None
     ):
@@ -726,8 +731,9 @@ class YouTubeUploader(BaseUploader):
                     )
 
                 if retry_after_seconds is not None:
-                    # Server told us exactly how long to wait.
-                    sleep_seconds = retry_after_seconds
+                    # Server told us exactly how long to wait — clamp so we
+                    # never exceed Fermata's subprocess timeout ceiling.
+                    sleep_seconds = min(retry_after_seconds, self.MAX_RETRY_AFTER_SECONDS)
                 else:
                     # Exponential backoff with jitter
                     max_sleep = 2**retry

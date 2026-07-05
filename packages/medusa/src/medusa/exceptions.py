@@ -14,10 +14,17 @@ _SECRET_MASK = "***REDACTED***"
 _SENSITIVE_PARAM_RE = re.compile(
     r"(?i)\b("
     r"access_token|refresh_token|client_secret|app_secret|fb_exchange_token"
-    r"|client_id|api_key|api_secret|access_token_secret|key|token|password|secret"
+    r"|client_id|api_key|api_secret|access_token_secret|input_token"
+    r"|key|token|password|secret"
     r")"
     r"(=|\"?\s*:\s*\"?)"  # separator: '=' (URL query) or ':' / '":"' (JSON)
     r"([^&\"\s,}]+)"  # the secret value, up to a delimiter
+)
+
+# Masks the `Authorization: Bearer <token>` header form that can appear in
+# request-exception messages (e.g. from the requests library repr).
+_AUTH_HEADER_RE = re.compile(
+    r"(?i)(Authorization\s*:\s*Bearer\s+)([^\s,\"']+)"
 )
 
 
@@ -26,11 +33,13 @@ def _mask_secrets(text: Optional[str]) -> Optional[str]:
 
     Keeps the parameter name visible (so the error stays debuggable) but
     replaces the value with a mask. Used before any error detail is serialized
-    for logging.
+    for logging. Also masks `Authorization: Bearer <token>` header forms.
     """
     if not text:
         return text
-    return _SENSITIVE_PARAM_RE.sub(rf"\1\2{_SECRET_MASK}", text)
+    text = _SENSITIVE_PARAM_RE.sub(rf"\1\2{_SECRET_MASK}", text)
+    text = _AUTH_HEADER_RE.sub(rf"\1{_SECRET_MASK}", text)
+    return text
 
 
 class MedusaError(Exception):

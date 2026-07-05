@@ -398,6 +398,36 @@ class TestConfigLoader:
         # The unknown flat field must not leak into credentials.
         assert "extra_field" not in config.youtube.credentials
 
+    def test_typo_in_credential_key_logs_warning(self, caplog):
+        """Unknown platform keys (e.g. typo 'acess_token') must emit a warning.
+
+        The load must still succeed — the warning is diagnostic, not fatal.
+        """
+        import logging
+
+        config_with_typo = {
+            "facebook": {
+                "page_id": "123456",
+                "access_token": "fb_token",
+                "acess_token": "typo_value",  # deliberate typo
+            },
+        }
+        self.write_config_file(config_with_typo)
+        loader = ConfigLoader(str(self.config_file))
+
+        with caplog.at_level(logging.WARNING, logger="medusa.utils.config"):
+            config = loader.load()
+
+        # Load must succeed.
+        assert config.facebook is not None
+        assert config.facebook.credentials["access_token"] == "fb_token"
+        # Typo key must not silently land in credentials.
+        assert "acess_token" not in config.facebook.credentials
+        # A warning must have been logged naming the unknown key.
+        assert any("acess_token" in record.message for record in caplog.records), (
+            f"Expected warning about 'acess_token' but got: {[r.message for r in caplog.records]}"
+        )
+
     def test_reload_configuration(self):
         """Test reloading configuration after file changes."""
         # Write initial config

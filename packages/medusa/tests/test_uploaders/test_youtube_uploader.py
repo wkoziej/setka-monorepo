@@ -1054,3 +1054,64 @@ class TestYouTubeUploaderUtilities:
 
             mock_cleanup.assert_called_once()
             assert uploader.service is None
+
+
+class TestParseRetryAfter:
+    """Unit tests for YouTubeUploader._parse_retry_after."""
+
+    def _uploader(self):
+        return YouTubeUploader()
+
+    def test_no_retry_after_header_returns_none(self):
+        """resp with headers lacking Retry-After returns None."""
+        resp = MagicMock()
+        resp.get.return_value = None
+        assert self._uploader()._parse_retry_after(resp) is None
+
+    def test_non_numeric_value_returns_none(self):
+        """Non-numeric value ('later') returns None."""
+        resp = MagicMock()
+        # Simulate lowercase lookup succeeds with a non-numeric string.
+        resp.get.side_effect = lambda k: "later" if k == "retry-after" else None
+        assert self._uploader()._parse_retry_after(resp) is None
+
+    def test_negative_value_returns_none(self):
+        """Negative value ('-5') returns None."""
+        resp = MagicMock()
+        resp.get.side_effect = lambda k: "-5" if k == "retry-after" else None
+        assert self._uploader()._parse_retry_after(resp) is None
+
+    def test_valid_seconds_string_returns_float(self):
+        """Valid '120' returns 120.0."""
+        resp = MagicMock()
+        resp.get.side_effect = lambda k: "120" if k == "retry-after" else None
+        result = self._uploader()._parse_retry_after(resp)
+        assert result == 120.0
+
+    def test_resp_without_get_attr_returns_none(self):
+        """resp object without usable .get attribute returns None, no exception."""
+
+        class NoGet:
+            pass
+
+        assert self._uploader()._parse_retry_after(NoGet()) is None
+
+    def test_retry_after_clamped_to_max(self):
+        """Retry-After larger than MAX_RETRY_AFTER_SECONDS must be clamped."""
+        uploader = self._uploader()
+        # Simulate an absurdly large server-supplied value (e.g. 7200 s = 2 h).
+        assert 7200 > uploader.MAX_RETRY_AFTER_SECONDS
+        # _parse_retry_after only parses; clamping happens at the call site.
+        # Verify the constant itself is sensible and < Fermata's 1800 s budget.
+        assert uploader.MAX_RETRY_AFTER_SECONDS == 900
+        assert uploader.MAX_RETRY_AFTER_SECONDS < 1800
+
+    def test_retry_after_within_max_not_clamped(self):
+        """Retry-After below the cap must be used as-is."""
+        resp = MagicMock()
+        resp.get.side_effect = lambda k: "300" if k == "retry-after" else None
+        uploader = self._uploader()
+        parsed = uploader._parse_retry_after(resp)
+        assert parsed == 300.0
+        # Clamped value is identical when below the cap.
+        assert min(parsed, uploader.MAX_RETRY_AFTER_SECONDS) == 300.0

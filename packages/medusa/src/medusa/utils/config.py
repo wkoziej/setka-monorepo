@@ -7,6 +7,7 @@ environment variable overrides, and comprehensive validation.
 """
 
 import json
+import logging
 import os
 from dataclasses import dataclass
 from pathlib import Path
@@ -14,6 +15,8 @@ from typing import Optional, Dict, Any, Union
 
 from ..exceptions import ConfigurationError
 from ..models import PlatformConfig
+
+logger = logging.getLogger(__name__)
 
 # Flat configuration fields recognized in the JSON config file. They are mapped
 # into the unified PlatformConfig.credentials dict that uploaders/publishers read.
@@ -159,6 +162,21 @@ class ConfigLoader:
                         for key, value in platform_data.items()
                         if key in KNOWN_PLATFORM_FIELDS
                     }
+
+                    # Warn about unrecognised keys so typos (e.g. 'acess_token')
+                    # surface immediately instead of silently producing empty credentials.
+                    unknown_keys = [
+                        key for key in platform_data if key not in KNOWN_PLATFORM_FIELDS
+                    ]
+                    if unknown_keys:
+                        logger.warning(
+                            "Platform '%s': unknown config keys ignored: %s. "
+                            "Check for typos; valid keys are: %s",
+                            platform,
+                            unknown_keys,
+                            list(KNOWN_PLATFORM_FIELDS),
+                        )
+
                     platform_configs[platform] = PlatformConfig(
                         platform_name=platform,
                         credentials=credentials,

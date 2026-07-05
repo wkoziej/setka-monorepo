@@ -555,11 +555,10 @@ class TestPlatformConfig:
         assert config3.is_configured() is False
 
     def test_platform_config_to_dict(self):
-        """Test PlatformConfig serialization to dictionary.
+        """Test PlatformConfig faithful round-trip serialization to dictionary.
 
-        Security: credential VALUES must be masked in to_dict() (used by
-        Registry.export_config), while the key names are preserved so the
-        serialized shape stays useful for debugging.
+        to_dict() must preserve raw credentials so from_dict(to_dict()) round-trips
+        correctly. Use to_safe_dict() for logging/export.
         """
         config = PlatformConfig(
             platform_name="youtube",
@@ -573,13 +572,36 @@ class TestPlatformConfig:
         assert config_dict["platform_name"] == "youtube"
         assert config_dict["enabled"] is True
         assert config_dict["retry_attempts"] == 5
-        # Key preserved, value masked — raw secret never serialized.
+        # Round-trip: raw credential value preserved.
         assert "token" in config_dict["credentials"]
-        assert config_dict["credentials"]["token"] != "test"
-        assert config_dict["credentials"]["token"] == "***REDACTED***"
+        assert config_dict["credentials"]["token"] == "test"
+
+    def test_platform_config_to_safe_dict(self):
+        """Test PlatformConfig masked serialization for logging/export.
+
+        Security: credential VALUES must be masked in to_safe_dict() (used by
+        Registry.export_config), while the key names are preserved so the
+        serialized shape stays useful for debugging.
+        """
+        config = PlatformConfig(
+            platform_name="youtube",
+            enabled=True,
+            credentials={"token": "test"},
+            retry_attempts=5,
+        )
+
+        safe_dict = config.to_safe_dict()
+
+        assert safe_dict["platform_name"] == "youtube"
+        assert safe_dict["enabled"] is True
+        assert safe_dict["retry_attempts"] == 5
+        # Key preserved, value masked — raw secret never serialized.
+        assert "token" in safe_dict["credentials"]
+        assert safe_dict["credentials"]["token"] != "test"
+        assert safe_dict["credentials"]["token"] == "***REDACTED***"
 
     def test_platform_config_to_dict_masks_all_secrets(self):
-        """Security: every credential value is masked, regardless of key."""
+        """Security: every credential value is masked in to_safe_dict(), regardless of key."""
         config = PlatformConfig(
             platform_name="youtube",
             credentials={
@@ -589,10 +611,27 @@ class TestPlatformConfig:
             },
         )
 
-        dumped = repr(config.to_dict())
+        dumped = repr(config.to_safe_dict())
         assert "ya29.SECRET_TOKEN" not in dumped
         assert "GOCSPX-supersecret" not in dumped
         assert "1234567890" not in dumped
+
+    def test_platform_config_round_trip(self):
+        """from_dict(to_dict()) must reproduce the original credentials exactly."""
+        config = PlatformConfig(
+            platform_name="youtube",
+            enabled=True,
+            credentials={"access_token": "ya29.REAL_TOKEN", "client_secret": "secret123"},
+            retry_attempts=5,
+        )
+
+        restored = PlatformConfig.from_dict(config.to_dict())
+
+        assert restored.credentials["access_token"] == "ya29.REAL_TOKEN"
+        assert restored.credentials["client_secret"] == "secret123"
+        assert restored.platform_name == config.platform_name
+        assert restored.enabled == config.enabled
+        assert restored.retry_attempts == config.retry_attempts
 
     def test_platform_config_repr_hides_credentials(self):
         """Security: repr() must not expose credential values (field repr=False)."""
