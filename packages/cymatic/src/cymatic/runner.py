@@ -41,7 +41,10 @@ import shutil
 import subprocess
 import tempfile
 from pathlib import Path
-from typing import List, Optional
+from typing import TYPE_CHECKING, List, Optional
+
+if TYPE_CHECKING:
+    from cymatic.analysis_loader import AnalysisData
 
 from setka_common.file_structure.specialized import RecordingStructureManager
 
@@ -233,7 +236,7 @@ class CymaticRunner:
             if frames_dir is not None:
                 shutil.rmtree(frames_dir, ignore_errors=True)
 
-    def _expected_frame_count(self, cfg: VisualizerConfig, data=None) -> int:
+    def _expected_frame_count(self, cfg: VisualizerConfig, data: Optional["AnalysisData"] = None) -> int:
         """Expected rendered frame count: ``max(1, frame_end - frame_start + 1)``.
 
         ``frame_end`` falls back to ``int(duration * fps)`` derived from the
@@ -258,7 +261,7 @@ class CymaticRunner:
         return max(1, int(frame_end) - int(cfg.frame_start) + 1)
 
     def _validate_frame_count(
-        self, frames_dir: Path, cfg: VisualizerConfig, data=None
+        self, frames_dir: Path, cfg: VisualizerConfig, data: Optional["AnalysisData"] = None
     ) -> None:
         """Raise if fewer frames were rendered than expected."""
         expected = self._expected_frame_count(cfg, data)
