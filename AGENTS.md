@@ -54,14 +54,19 @@ uv run ruff format .
 # `uv run pytest` currently fails to COLLECT — obsession and paternologia
 # both ship a top-level tests/conftest.py and collide under pytest's
 # `tests.conftest` module name (ImportPathMismatchError). Test per-package.
-cd packages/obsession && uv run --package obsession pytest
-cd packages/beatrix  && uv run --package beatrix pytest
-cd packages/cymatic  && uv run --package cymatic pytest
-cd packages/medusa   && uv run --package medusa pytest
+cd packages/obsession   && uv run --package obsession pytest
+cd packages/beatrix     && uv run --package beatrix pytest
+cd packages/cymatic     && uv run --package cymatic pytest
+cd packages/medusa      && uv run --package medusa pytest
+cd packages/common      && uv run --with pytest-cov --package setka-common pytest
+cd packages/paternologia && uv run --package paternologia pytest
 
 # Each package pyproject forces --cov; if pytest-cov is not installed in the
 # environment, add it for the run:
 cd packages/cymatic && uv run --with pytest-cov --package cymatic pytest
+
+# On Linux, cymatic tests need a non-interactive matplotlib backend (CI sets this):
+MPLBACKEND=Agg cd packages/cymatic && uv run --with pytest-cov --package cymatic pytest
 
 # Run single test file
 uv run pytest packages/obsession/tests/test_extractor.py -v
@@ -203,7 +208,7 @@ Managed by `setka-common.file_structure.specialized.RecordingStructureManager`
 - **medusa**: Separates unit tests from integration tests with YouTube/Facebook APIs
 - **beatrix**: Uses mock AudioAnalyzer for testing audio processing components
 - **setka-common**: Provides file structure utilities and validates directory organization
-- **fermata**: Tauri frontend testing with Vitest, backend Rust testing with cargo test
+- **fermata**: Tauri frontend testing with Vitest, backend Rust testing with cargo test. Configuration env vars: `FERMATA_RECORDINGS_PATH` (default: `$HOME/Videos/obs-recordings`), `FERMATA_WORKSPACE_ROOT` (default: cwd at startup), `FERMATA_MAIN_AUDIO` (default: `"Przechwytywanie wejścia dźwięku (PulseAudio).m4a"` — the primary audio source name used for analysis routing).
 - **paternologia**: FastAPI HTTP tests via TestClient; `conftest.py` disables the lifespan MIDI subsystem so tests need no ALSA hardware
 
 ### Test Markers

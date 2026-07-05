@@ -211,6 +211,10 @@ recording_name/
     "facebook": {
       "enabled": true,
       "page_id": "123456789",
+      "access_token": "your_facebook_access_token",
+      "app_id": "your-app-id",
+      "app_secret": "your-app-secret",
+      "api_version": "v19.0",
       "message": "Check out my new video!",
       "scheduled_time": "2024-01-15T15:00:00Z"
     },
