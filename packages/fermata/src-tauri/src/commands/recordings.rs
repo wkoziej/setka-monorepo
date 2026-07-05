@@ -46,9 +46,25 @@ impl Default for AppConfig {
         log::info!("Final config - workspace_root: {}", workspace_root_str);
         log::info!("Final config - main_audio_file: {}", main_audio_file);
 
+        // Canonicalize the recordings root once at startup. The IPC path-traversal
+        // guard asserts resolved paths start_with this root; an un-canonicalized
+        // (relative or symlinked) root would let an attacker-controlled name slip
+        // the containment check. Fall back to the raw path if it does not yet exist.
+        let recordings_path = PathBuf::from(&recordings_path_str);
+        let recordings_path = recordings_path
+            .canonicalize()
+            .unwrap_or_else(|e| {
+                log::warn!(
+                    "Could not canonicalize recordings_path '{}': {} — using raw path",
+                    recordings_path_str,
+                    e
+                );
+                recordings_path
+            });
+
         // Default configuration - can be overridden by user settings
         AppConfig {
-            recordings_path: PathBuf::from(recordings_path_str),
+            recordings_path,
             cli_paths: CliPaths {
                 uv_path: "uv".to_string(),
                 workspace_root: PathBuf::from(workspace_root_str),
@@ -74,13 +90,10 @@ pub fn get_recordings(config: State<AppConfig>) -> Result<Vec<Recording>, String
 pub fn get_recording_details(name: String, config: State<AppConfig>) -> Result<Recording, String> {
     log::info!("Getting details for recording: {}", name);
 
-    let recording_path = config.recordings_path.join(&name);
+    // Resolve server-side: reject traversal/absolute names, confirm the dir lives
+    // under the recordings root (defends against `name="../.."` via direct invoke).
+    let recording_path = crate::commands::path_guard::resolve_recording_dir(&config.recordings_path, &name)?;
     log::info!("Looking for recording at path: {}", recording_path.display());
-
-    if !recording_path.exists() {
-        log::error!("Recording path does not exist: {}", recording_path.display());
-        return Err(format!("Recording '{}' not found", name));
-    }
 
     let mut recording = Recording::from_path(recording_path)
         .map_err(|e| format!("Failed to load recording '{}': {}", name, e))?;
@@ -130,13 +143,10 @@ pub fn delete_recording(recording_name: String, config: State<AppConfig>) -> Res
 fn delete_recording_impl(recording_name: &str, recordings_path: &std::path::Path) -> Result<(), String> {
     log::info!("Attempting to delete recording: {}", recording_name);
 
-    let recording_path = recordings_path.join(recording_name);
-
-    if !recording_path.exists() {
-        let error_msg = format!("Recording '{}' not found at path: {}", recording_name, recording_path.display());
-        log::error!("{}", error_msg);
-        return Err(error_msg);
-    }
+    // Resolve + validate server-side before any destructive fs op: a malicious
+    // `recording_name` (traversal/absolute) must never reach remove_dir_all.
+    let recording_path =
+        crate::commands::path_guard::resolve_recording_dir(recordings_path, recording_name)?;
 
     if !recording_path.is_dir() {
         let error_msg = format!("Recording '{}' is not a directory", recording_name);
@@ -243,5 +253,27 @@ mod delete_tests {
 
         // Cleanup
         let _ = std::fs::remove_dir_all(&temp_dir);
+    }
+
+    #[test]
+    fn test_delete_recording_impl_rejects_traversal() {
+        // A sibling secret dir next to the recordings root must be safe even if an
+        // attacker passes a traversal name via direct invoke.
+        let base = std::env::temp_dir().join("fermata_test_delete_traversal");
+        let root = base.join("recordings");
+        let secret = base.join("secret");
+        std::fs::create_dir_all(&root).unwrap();
+        std::fs::create_dir_all(&secret).unwrap();
+        std::fs::write(secret.join("keep.txt"), "x").unwrap();
+
+        // "../secret" would escape the recordings root → must be rejected.
+        let result = delete_recording_impl("../secret", &root);
+        assert!(result.is_err(), "traversal name must be rejected");
+        assert!(secret.exists(), "sibling secret dir must be untouched");
+
+        // Absolute path as the name → rejected.
+        assert!(delete_recording_impl("/etc", &root).is_err());
+
+        let _ = std::fs::remove_dir_all(&base);
     }
 }

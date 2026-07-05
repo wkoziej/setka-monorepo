@@ -6,7 +6,6 @@ ABOUTME: Extends base structure with recording-specific directories
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
-import json
 import logging
 import re
 
@@ -93,29 +92,17 @@ class RecordingStructure(MediaStructure):
     bitwig_dir: Path
 
     def exists(self) -> bool:
-        """Check if recording structure exists."""
+        """Check if recording structure exists.
+
+        Overrides the base check to require ``extracted/`` (recordings have no
+        ``processed/`` dir). ``is_valid`` is inherited from ``MediaStructure``
+        unchanged — its metadata-aware logic is identical here.
+        """
         return (
             self.project_dir.exists()
             and self.media_file.exists()
             and self.extracted_dir.exists()
         )
-
-    def is_valid(self) -> bool:
-        """Validate recording structure including metadata."""
-        try:
-            if not self.project_dir.exists():
-                return False
-
-            if not self.media_file.exists():
-                return False
-
-            if self.metadata_file.exists():
-                with open(self.metadata_file, "r", encoding="utf-8") as f:
-                    json.load(f)
-
-            return True
-        except (json.JSONDecodeError, IOError, OSError):
-            return False
 
 
 class RecordingStructureManager(StructureManager):

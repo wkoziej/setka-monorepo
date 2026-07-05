@@ -20,7 +20,7 @@ from .validators import (
     CLIValidationError,
 )
 from ..uploaders.youtube import YouTubeUploader
-from ..models import MediaMetadata, PlatformConfig
+from ..models import MediaMetadata
 from ..utils.config import ConfigLoader
 from ..exceptions import AuthenticationError, NetworkError
 
@@ -124,23 +124,18 @@ async def upload_video_async(
     config_loader = ConfigLoader(config_path)
     medusa_config = config_loader.load()
 
-    # Get YouTube configuration
+    # Get YouTube configuration. ConfigLoader now produces the unified
+    # models.PlatformConfig (with a populated `credentials` dict), so it can be
+    # handed straight to the uploader — no lossy re-wrapping, no always-False
+    # hasattr guard that previously dropped every credential.
     youtube_config = medusa_config.get_platform_config("youtube")
     if not youtube_config:
         raise AuthenticationError(
             "YouTube configuration not found in config file", platform="youtube"
         )
 
-    # Create platform config for YouTubeUploader
-    platform_config = PlatformConfig(
-        platform_name="youtube",
-        credentials=youtube_config.credentials
-        if hasattr(youtube_config, "credentials")
-        else {},
-    )
-
     # Create and configure uploader
-    uploader = YouTubeUploader(config=platform_config)
+    uploader = YouTubeUploader(config=youtube_config)
 
     try:
         # Authenticate

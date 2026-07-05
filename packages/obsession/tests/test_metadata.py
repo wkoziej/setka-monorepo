@@ -15,10 +15,6 @@ from obsession.core.metadata import (
 class TestSourceCapabilitiesDetection:
     """Test source capabilities detection using OBS API."""
 
-    def setup_method(self):
-        """Setup method for each test."""
-        pass
-
     def test_determine_source_capabilities_audio_only(self):
         """Test detection of audio-only source."""
         # Mock OBS source with only audio flag
@@ -89,10 +85,6 @@ class TestSourceCapabilitiesDetection:
 
 class TestMetadataWithCapabilities:
     """Test metadata creation with new has_audio/has_video fields."""
-
-    def setup_method(self):
-        """Setup method for each test."""
-        pass
 
     def test_metadata_has_audio_video_flags(self):
         """Test that metadata contains has_audio and has_video fields."""
@@ -291,10 +283,6 @@ class TestMetadataValidation:
 
 class TestMetadataIntegration:
     """Integration tests for metadata functionality."""
-
-    def setup_method(self):
-        """Setup method for each test."""
-        pass
 
     def test_metadata_json_serialization(self):
         """Test that metadata can be serialized to JSON."""

@@ -109,24 +109,23 @@ class FacebookAuth:
         """
         Build complete Facebook Graph API URL.
 
+        Security: the access token is NOT placed in the URL — URLs leak through
+        server logs, proxies and browser history. The token is delivered via the
+        ``Authorization: Bearer`` header in ``_make_api_request`` instead. Only
+        non-secret query params (e.g. ``fields``, ``input_token``) are encoded
+        here.
+
         Args:
             endpoint: API endpoint (e.g., "/me", "/debug_token")
-            params: Optional query parameters
+            params: Optional non-secret query parameters
 
         Returns:
-            Complete API URL with parameters
+            Complete API URL (without any credential)
         """
         url = f"{self.base_url}{endpoint}"
 
         if params:
-            # Add access token to parameters
-            params = dict(params)
-            if "access_token" not in params:
-                params["access_token"] = self.access_token
-
-            url += "?" + urlencode(params, quote_via=quote)
-        else:
-            url += f"?access_token={self.access_token}"
+            url += "?" + urlencode(dict(params), quote_via=quote)
 
         return url
 
@@ -136,15 +135,26 @@ class FacebookAuth:
         endpoint: str,
         params: Optional[Dict[str, Any]] = None,
         data: Optional[Dict[str, Any]] = None,
+        auth_token: Optional[str] = None,
+        body_secrets: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
         """
         Make authenticated request to Facebook Graph API.
 
+        Credentials are kept out of the URL (see ``_build_api_url``): the
+        authenticating token goes in the ``Authorization: Bearer`` header, and
+        any per-request secrets (e.g. ``client_secret`` for token exchange) go
+        in the POST body, never the query string.
+
         Args:
             method: HTTP method (GET, POST, etc.)
             endpoint: API endpoint
-            params: Query parameters
-            data: Request body data
+            params: Non-secret query parameters
+            data: Request body data (for POST)
+            auth_token: Token to send as ``Authorization: Bearer``. Defaults to
+                the page access token when not given.
+            body_secrets: Secret fields that must travel in the request body
+                instead of the URL (forces POST).
 
         Returns:
             API response as dictionary
@@ -154,11 +164,24 @@ class FacebookAuth:
         """
         url = self._build_api_url(endpoint, params)
 
+        # The token authenticating this request never appears in the URL.
+        bearer = auth_token if auth_token is not None else self.access_token
+        headers = {"Authorization": f"Bearer {bearer}"}
+
+        # Secrets that the API expects as request fields (e.g. client_secret in
+        # the long-lived token exchange) ride in the POST body, not the URL.
+        method_upper = method.upper()
+        if body_secrets:
+            data = {**(data or {}), **body_secrets}
+            method_upper = "POST"
+
         try:
-            if method.upper() == "GET":
-                response = requests.get(url, timeout=30)
-            elif method.upper() == "POST":
-                response = requests.post(url, json=data, timeout=30)
+            if method_upper == "GET":
+                response = requests.get(url, headers=headers, timeout=30)
+            elif method_upper == "POST":
+                response = requests.post(
+                    url, json=data, headers=headers, timeout=30
+                )
             else:
                 raise NetworkError(
                     f"Unsupported HTTP method: {method}", platform="facebook"
@@ -215,12 +238,15 @@ class FacebookAuth:
         logger.info("Validating Facebook access token")
 
         try:
-            params = {
-                "input_token": self.access_token,
-                "access_token": f"{self.app_id}|{self.app_secret}",
-            }
+            # input_token (the token being inspected) is a normal query param;
+            # the app-token (app_id|app_secret) authenticates the call and must
+            # travel out-of-band in the Authorization header, not the URL.
+            params = {"input_token": self.access_token}
+            app_token = f"{self.app_id}|{self.app_secret}"
 
-            response_data = self._make_api_request("GET", "/debug_token", params)
+            response_data = self._make_api_request(
+                "GET", "/debug_token", params, auth_token=app_token
+            )
             token_data = response_data.get("data", {})
 
             # Check if token is valid
@@ -407,14 +433,21 @@ class FacebookAuth:
         logger.info("Exchanging for long-lived token")
 
         try:
+            # Non-secret params stay in the query string; the client_secret and
+            # the token being exchanged are secrets and must travel in the POST
+            # body, never the URL.
             params = {
                 "grant_type": "fb_exchange_token",
                 "client_id": self.app_id,
+            }
+            body_secrets = {
                 "client_secret": self.app_secret,
                 "fb_exchange_token": self.access_token,
             }
 
-            response_data = self._make_api_request("GET", "/oauth/access_token", params)
+            response_data = self._make_api_request(
+                "GET", "/oauth/access_token", params, body_secrets=body_secrets
+            )
 
             long_lived_token = response_data.get("access_token")
             if not long_lived_token:

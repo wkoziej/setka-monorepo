@@ -43,8 +43,19 @@ from .normalization import normalize_band, precompute_envelope
 
 logger = logging.getLogger(__name__)
 
-# beatrix uses librosa hop_length=512; dt == hop_length / sample_rate.
-HOP_LENGTH = 512
+# beatrix's default librosa hop_length; dt == hop_length / sample_rate. Used
+# only as a FALLBACK when an analysis file omits the emitted hop_length field
+# (pre-existing on-disk files predate it). beatrix now emits hop_length and the
+# loader reads it from the JSON.
+DEFAULT_HOP_LENGTH = 512
+
+# The analysis JSON schema major version this loader understands. beatrix emits
+# "1.0"; a file with a different MAJOR is a hard error (the shape may differ in
+# ways this consumer cannot interpret). A MISSING schema_version is assumed to
+# be "1.0" for backward compatibility with files written before the field
+# existed.
+SUPPORTED_SCHEMA_MAJOR = 1
+ASSUMED_SCHEMA_VERSION = "1.0"
 
 # Default envelope decay windows (seconds). Beats are denser/snappier than
 # energy peaks. PresetParams.decay/tau can override per preset later.
@@ -105,6 +116,39 @@ def _finite_times(raw, label: str, path: Path) -> list[float]:
     return out
 
 
+def _validate_schema_version(data: dict, path: Path) -> None:
+    """Validate the analysis ``schema_version`` major against this consumer.
+
+    - MISSING ``schema_version`` ⇒ assume ``"1.0"`` (backward compat for files
+      written before beatrix emitted the field).
+    - A parseable major equal to ``SUPPORTED_SCHEMA_MAJOR`` ⇒ OK.
+    - A different major ⇒ hard ``ValueError`` (the shape may differ in ways this
+      consumer cannot interpret).
+    - An unparseable version string ⇒ hard ``ValueError``.
+
+    Args:
+        data: the parsed analysis JSON.
+        path: the analysis file path (for error messages).
+
+    Raises:
+        ValueError: on a mismatched or malformed major version.
+    """
+    raw = data.get("schema_version", ASSUMED_SCHEMA_VERSION)
+    try:
+        major = int(str(raw).split(".", 1)[0])
+    except (ValueError, TypeError):
+        raise ValueError(
+            f"Analysis file has a malformed schema_version {raw!r} "
+            f"(expected e.g. '1.0'): {path}"
+        )
+    if major != SUPPORTED_SCHEMA_MAJOR:
+        raise ValueError(
+            f"Analysis schema_version {raw!r} (major {major}) is incompatible "
+            f"with this consumer (supports major {SUPPORTED_SCHEMA_MAJOR}.x). "
+            f"Re-run beatrix to regenerate: {path}"
+        )
+
+
 def _resolve_audio(config: VisualizerConfig) -> Optional[Path]:
     """Best-effort audio selection via AudioValidator from ``extracted/``.
 
@@ -148,6 +192,11 @@ def load_analysis(config: VisualizerConfig) -> AnalysisData:
 
     data = json.loads(path.read_text())
 
+    # Validate the producer contract version before reading the body: a
+    # mismatched major fails fast with a clear message; a missing version is
+    # assumed compatible (1.0) for pre-existing on-disk files.
+    _validate_schema_version(data, path)
+
     # Required-key access is wrapped so a malformed analysis file fails with a
     # clear, path-carrying ValueError instead of a bare KeyError.
     try:
@@ -173,12 +222,16 @@ def load_analysis(config: VisualizerConfig) -> AnalysisData:
         raise ValueError(f"Analysis file missing required key {exc}: {path}")
 
     # Sanity: dt should match hop_length / sample_rate (advisory log only).
-    expected_dt = HOP_LENGTH / sample_rate
+    # Read the EMITTED hop_length (beatrix now writes it); fall back to the
+    # default 512 only when the field is absent (pre-existing files).
+    hop_length = int(data.get("hop_length", DEFAULT_HOP_LENGTH))
+    expected_dt = hop_length / sample_rate
     if not np.isclose(dt, expected_dt, atol=1e-4):
         logger.warning(
-            "dt=%.6f from times[] differs from hop/sr=%.6f (sr=%d)",
+            "dt=%.6f from times[] differs from hop/sr=%.6f (hop=%d, sr=%d)",
             dt,
             expected_dt,
+            hop_length,
             sample_rate,
         )
 

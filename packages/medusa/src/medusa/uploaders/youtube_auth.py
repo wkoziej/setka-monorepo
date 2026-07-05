@@ -5,6 +5,7 @@ Handles OAuth flow, token refresh, and credential validation for YouTube API.
 
 import json
 import logging
+import os
 from pathlib import Path
 from typing import Optional, List, Dict, Any
 
@@ -28,10 +29,12 @@ class YouTubeAuth:
     - Credential persistence
     """
 
-    # Required OAuth scopes for YouTube operations
+    # Required OAuth scopes for YouTube operations. Upload-only: this client
+    # only uploads videos + thumbnails, so it requests the narrow
+    # `youtube.upload` scope rather than the broad read/write `youtube` scope
+    # (principle of least privilege — a leaked token can only upload).
     SCOPES = [
         "https://www.googleapis.com/auth/youtube.upload",
-        "https://www.googleapis.com/auth/youtube",
     ]
 
     def __init__(self, config: Optional[PlatformConfig] = None):
@@ -283,8 +286,19 @@ class YouTubeAuth:
             credentials_path = Path(self.credentials_file)
             credentials_path.parent.mkdir(parents=True, exist_ok=True)
 
-            with open(credentials_path, "w") as f:
+            # Write with mode 0600 — the file holds OAuth refresh tokens, so it
+            # must be private to the owner (relying on the default umask leaves
+            # it world/group-readable, e.g. 0644). os.open with the mode set at
+            # creation avoids the race of a brief 0644 window before chmod.
+            fd = os.open(
+                credentials_path,
+                os.O_WRONLY | os.O_CREAT | os.O_TRUNC,
+                0o600,
+            )
+            with os.fdopen(fd, "w") as f:
                 f.write(credentials_data)
+            # Enforce 0600 even if the file pre-existed with looser perms.
+            os.chmod(credentials_path, 0o600)
 
             self.logger.info(f"Credentials saved to {self.credentials_file}")
 

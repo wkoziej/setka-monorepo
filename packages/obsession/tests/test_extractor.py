@@ -7,9 +7,9 @@ from unittest.mock import patch
 from obsession.core.extractor import (
     ExtractionResult,
     calculate_crop_params,
-    sanitize_filename,
     extract_sources,
 )
+from setka_common import sanitize_filename
 from pathlib import Path
 import pytest
 

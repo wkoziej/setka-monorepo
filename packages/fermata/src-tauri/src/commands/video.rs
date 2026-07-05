@@ -105,18 +105,27 @@ pub fn get_playable_video_path(
     recording_name: String,
     config: State<AppConfig>,
 ) -> Result<String, String> {
-    let recording_path = config.recordings_path.join(&recording_name);
-
-    if !recording_path.exists() {
-        return Err(format!("Recording '{}' not found", recording_name));
-    }
+    let recording_path =
+        crate::commands::path_guard::resolve_recording_dir(&config.recordings_path, &recording_name)?;
 
     resolve_video_path(&recording_path, &recording_name)
 }
 
-/// Open video file in external system player
+/// Open a recording's video in the external system player.
+///
+/// The contract takes a `recording_name` (not a raw path): the playable video is
+/// resolved server-side under the canonicalized recordings root, so a malicious
+/// `invoke('open_video_external', { filePath: '/etc/...' })` can no longer make
+/// the host open an arbitrary file.
 #[tauri::command]
-pub fn open_video_external(file_path: String) -> Result<(), String> {
+pub fn open_video_external(
+    recording_name: String,
+    config: State<AppConfig>,
+) -> Result<(), String> {
+    let recording_path =
+        crate::commands::path_guard::resolve_recording_dir(&config.recordings_path, &recording_name)?;
+    let file_path = resolve_video_path(&recording_path, &recording_name)?;
+
     let path = Path::new(&file_path);
     if !path.exists() {
         return Err(format!("Video file not found: {}", file_path));
@@ -186,11 +195,8 @@ pub fn play_video_with_subtitles(
     recording_name: String,
     config: State<AppConfig>,
 ) -> Result<(), String> {
-    let recording_path = config.recordings_path.join(&recording_name);
-
-    if !recording_path.exists() {
-        return Err(format!("Recording '{}' not found", recording_name));
-    }
+    let recording_path =
+        crate::commands::path_guard::resolve_recording_dir(&config.recordings_path, &recording_name)?;
 
     let video_path = resolve_video_path(&recording_path, &recording_name)?;
     let subtitle_path = resolve_subtitle_path(&recording_path)?;
@@ -225,11 +231,8 @@ pub fn get_structure_heatmap(
     recording_name: String,
     config: State<AppConfig>,
 ) -> Result<String, String> {
-    let recording_path = config.recordings_path.join(&recording_name);
-
-    if !recording_path.exists() {
-        return Err(format!("Recording '{}' not found", recording_name));
-    }
+    let recording_path =
+        crate::commands::path_guard::resolve_recording_dir(&config.recordings_path, &recording_name)?;
 
     heatmap_data_url(&recording_path)
 }

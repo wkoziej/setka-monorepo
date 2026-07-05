@@ -3,9 +3,6 @@ Test module for OBS script functionality.
 Using shared OBS fixtures from conftest.py to avoid duplication.
 """
 
-import json
-import os
-import tempfile
 from unittest.mock import Mock, patch
 
 # Import our module - obspython mock is handled by conftest.py
@@ -15,17 +12,11 @@ from obsession.obs_integration.obs_script import (
     script_unload,
     on_event,
     prepare_metadata_collection,
-    collect_and_save_metadata,
-    save_metadata_to_file,
 )
 
 
 class TestOBSScript:
     """Test cases for OBS script functionality."""
-
-    def setup_method(self):
-        """Setup method for each test."""
-        pass
 
     def test_script_description(self):
         """Test script description returns proper HTML."""
@@ -86,3 +77,27 @@ class TestOBSScript:
         mock_obs_functions.obs_source_get_name.assert_called_once_with(mock_obs_scene)
         mock_obs_functions.obs_source_release.assert_called_once_with(mock_obs_scene)
         mock_obs_functions.obs_get_video_info.assert_called_once()
+
+    def test_prepare_metadata_collection_rejects_zero_canvas(
+        self, mock_obs_functions, mock_obs_scene
+    ):
+        """A 0x0 canvas is rejected: scene_data stays empty and source is released."""
+        import obsession.obs_integration.obs_script as script_module
+
+        class ZeroVideoInfo:
+            base_width = 0
+            base_height = 0
+            output_width = 0
+            output_height = 0
+            fps_num = 30
+            fps_den = 1
+
+        mock_obs_functions.obs_frontend_get_current_scene.return_value = mock_obs_scene
+        mock_obs_functions.obs_video_info = Mock(return_value=ZeroVideoInfo())
+        script_module.current_scene_data = {}
+
+        prepare_metadata_collection()
+
+        # No metadata gets prepared, and the scene reference is still released.
+        assert script_module.current_scene_data == {}
+        mock_obs_functions.obs_source_release.assert_called_once_with(mock_obs_scene)

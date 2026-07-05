@@ -458,6 +458,34 @@ class TestYouTubeAuthCredentialsSaving:
             saved_data = json.loads(credentials_path.read_text())
             assert saved_data["token"] == "test_token"
 
+    def test_save_credentials_file_mode_is_0600(self):
+        """Security: saved credentials file must be private (0600), not umask 0644.
+
+        Credentials contain OAuth refresh tokens; a world/group-readable file
+        leaks them to other local users.
+        """
+        import os
+        import stat
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            credentials_path = Path(temp_dir) / "credentials.json"
+
+            mock_credentials = Mock()
+            mock_credentials.to_json.return_value = '{"token": "secret_token"}'
+
+            config = PlatformConfig(
+                platform_name="youtube",
+                credentials={"credentials_file": str(credentials_path)},
+            )
+
+            auth = YouTubeAuth(config)
+            auth.credentials = mock_credentials
+
+            auth.save_credentials()
+
+            mode = stat.S_IMODE(os.stat(credentials_path).st_mode)
+            assert mode == 0o600, f"expected 0600, got {oct(mode)}"
+
     def test_save_credentials_without_config(self):
         """Test saving credentials without file configuration."""
         mock_credentials = Mock()
@@ -638,6 +666,16 @@ class TestYouTubeAuthUtilityMethods:
         assert isinstance(scopes, list)
         assert len(scopes) > 0
         assert "https://www.googleapis.com/auth/youtube.upload" in scopes
+
+    def test_scopes_are_minimal_upload_only(self):
+        """Security: the uploader must request the upload-only scope, not the
+        broad read/write `youtube` scope. Over-broad scopes grant the stored
+        token far more authority than uploading needs.
+        """
+        auth = YouTubeAuth()
+
+        assert "https://www.googleapis.com/auth/youtube" not in auth.SCOPES
+        assert auth.SCOPES == ["https://www.googleapis.com/auth/youtube.upload"]
 
     def test_is_token_expired_with_expired_credentials(self):
         """Test token expiry check with expired credentials."""

@@ -6,8 +6,6 @@ ensuring robust handling of task states, metadata, and platform configurations.
 """
 
 import pytest
-import tempfile
-import os
 from datetime import datetime, timezone
 
 from medusa.models import (
@@ -15,7 +13,6 @@ from medusa.models import (
     TaskResult,
     MediaMetadata,
     PlatformConfig,
-    PublishRequest,
     TaskTransition,
     validate_task_transition,
 )
@@ -558,7 +555,11 @@ class TestPlatformConfig:
         assert config3.is_configured() is False
 
     def test_platform_config_to_dict(self):
-        """Test PlatformConfig serialization to dictionary."""
+        """Test PlatformConfig faithful round-trip serialization to dictionary.
+
+        to_dict() must preserve raw credentials so from_dict(to_dict()) round-trips
+        correctly. Use to_safe_dict() for logging/export.
+        """
         config = PlatformConfig(
             platform_name="youtube",
             enabled=True,
@@ -570,8 +571,79 @@ class TestPlatformConfig:
 
         assert config_dict["platform_name"] == "youtube"
         assert config_dict["enabled"] is True
-        assert config_dict["credentials"] == {"token": "test"}
         assert config_dict["retry_attempts"] == 5
+        # Round-trip: raw credential value preserved.
+        assert "token" in config_dict["credentials"]
+        assert config_dict["credentials"]["token"] == "test"
+
+    def test_platform_config_to_safe_dict(self):
+        """Test PlatformConfig masked serialization for logging/export.
+
+        Security: credential VALUES must be masked in to_safe_dict() (used by
+        Registry.export_config), while the key names are preserved so the
+        serialized shape stays useful for debugging.
+        """
+        config = PlatformConfig(
+            platform_name="youtube",
+            enabled=True,
+            credentials={"token": "test"},
+            retry_attempts=5,
+        )
+
+        safe_dict = config.to_safe_dict()
+
+        assert safe_dict["platform_name"] == "youtube"
+        assert safe_dict["enabled"] is True
+        assert safe_dict["retry_attempts"] == 5
+        # Key preserved, value masked — raw secret never serialized.
+        assert "token" in safe_dict["credentials"]
+        assert safe_dict["credentials"]["token"] != "test"
+        assert safe_dict["credentials"]["token"] == "***REDACTED***"
+
+    def test_platform_config_to_dict_masks_all_secrets(self):
+        """Security: every credential value is masked in to_safe_dict(), regardless of key."""
+        config = PlatformConfig(
+            platform_name="youtube",
+            credentials={
+                "access_token": "ya29.SECRET_TOKEN",
+                "client_secret": "GOCSPX-supersecret",
+                "page_id": "1234567890",
+            },
+        )
+
+        dumped = repr(config.to_safe_dict())
+        assert "ya29.SECRET_TOKEN" not in dumped
+        assert "GOCSPX-supersecret" not in dumped
+        assert "1234567890" not in dumped
+
+    def test_platform_config_round_trip(self):
+        """from_dict(to_dict()) must reproduce the original credentials exactly."""
+        config = PlatformConfig(
+            platform_name="youtube",
+            enabled=True,
+            credentials={"access_token": "ya29.REAL_TOKEN", "client_secret": "secret123"},
+            retry_attempts=5,
+        )
+
+        restored = PlatformConfig.from_dict(config.to_dict())
+
+        assert restored.credentials["access_token"] == "ya29.REAL_TOKEN"
+        assert restored.credentials["client_secret"] == "secret123"
+        assert restored.platform_name == config.platform_name
+        assert restored.enabled == config.enabled
+        assert restored.retry_attempts == config.retry_attempts
+
+    def test_platform_config_repr_hides_credentials(self):
+        """Security: repr() must not expose credential values (field repr=False)."""
+        config = PlatformConfig(
+            platform_name="youtube",
+            credentials={"access_token": "ya29.SECRET_TOKEN"},
+        )
+
+        rendered = repr(config)
+        assert "ya29.SECRET_TOKEN" not in rendered
+        # The object is still identifiable by its non-secret fields.
+        assert "youtube" in rendered
 
     def test_platform_config_from_dict(self):
         """Test PlatformConfig deserialization from dictionary."""
@@ -594,193 +666,3 @@ class TestPlatformConfig:
         assert config.rate_limit == 100
         assert config.retry_attempts == 3
         assert config.timeout == 30
-
-
-class TestPublishRequest:
-    """Test the PublishRequest dataclass."""
-
-    def test_publish_request_creation(self):
-        """Test basic PublishRequest creation."""
-        request = PublishRequest(
-            media_file_path="/path/to/video.mp4", platforms=["youtube", "facebook"]
-        )
-
-        assert request.media_file_path == "/path/to/video.mp4"
-        assert request.platforms == ["youtube", "facebook"]
-        assert request.metadata == {}
-        assert request.priority == 1
-        assert request.schedule_time is None
-        assert request.created_at is not None
-
-    def test_publish_request_with_metadata(self):
-        """Test PublishRequest with platform-specific metadata."""
-        metadata = {
-            "youtube": {
-                "title": "Test Video",
-                "description": "Test description",
-                "privacy": "unlisted",
-            },
-            "facebook": {"message": "Check out my video: {youtube_url}"},
-        }
-
-        request = PublishRequest(
-            media_file_path="/path/to/video.mp4",
-            platforms=["youtube", "facebook"],
-            metadata=metadata,
-            priority=2,
-        )
-
-        assert request.metadata == metadata
-        assert request.priority == 2
-
-    def test_publish_request_validation_with_real_file(self):
-        """Test PublishRequest validation with a real temporary file."""
-        # Create a temporary file
-        with tempfile.NamedTemporaryFile(delete=False) as temp_file:
-            temp_file.write(b"test video content")
-            temp_path = temp_file.name
-
-        try:
-            request = PublishRequest(media_file_path=temp_path, platforms=["youtube"])
-
-            # Should not raise any exceptions
-            request.validate()
-        finally:
-            # Clean up
-            os.unlink(temp_path)
-
-    def test_publish_request_validation_file_not_found(self):
-        """Test PublishRequest validation fails when file doesn't exist."""
-        request = PublishRequest(
-            media_file_path="/path/to/nonexistent_video.mp4", platforms=["youtube"]
-        )
-
-        with pytest.raises(MedusaError) as exc_info:
-            request.validate()
-
-        assert "Media file not found" in str(exc_info.value)
-
-    def test_publish_request_validation_empty_platforms(self):
-        """Test PublishRequest validation fails for empty platforms list."""
-        request = PublishRequest(media_file_path="/path/to/video.mp4", platforms=[])
-
-        with pytest.raises(MedusaError) as exc_info:
-            request.validate()
-
-        assert "At least one platform must be specified" in str(exc_info.value)
-
-    def test_publish_request_validation_invalid_priority(self):
-        """Test PublishRequest validation fails for invalid priority."""
-        request = PublishRequest(
-            media_file_path="/path/to/video.mp4",
-            platforms=["youtube"],
-            priority=0,  # Invalid priority (must be >= 1)
-        )
-
-        with pytest.raises(MedusaError) as exc_info:
-            request.validate()
-
-        assert "Priority must be >= 1" in str(exc_info.value)
-
-    def test_publish_request_validation_invalid_platform(self):
-        """Test PublishRequest validation fails for unsupported platform."""
-        # Create a temporary file so file existence check passes
-        with tempfile.NamedTemporaryFile(delete=False) as temp_file:
-            temp_file.write(b"test content")
-            temp_path = temp_file.name
-
-        try:
-            request = PublishRequest(
-                media_file_path=temp_path, platforms=["invalid_platform"]
-            )
-
-            with pytest.raises(MedusaError) as exc_info:
-                request.validate()
-
-            assert "Unsupported platform" in str(exc_info.value)
-        finally:
-            # Clean up
-            os.unlink(temp_path)
-
-    def test_publish_request_get_platform_metadata(self):
-        """Test getting platform-specific metadata."""
-        metadata = {
-            "youtube": {"title": "YouTube Title"},
-            "facebook": {"message": "Facebook Message"},
-        }
-
-        request = PublishRequest(
-            media_file_path="/path/to/video.mp4",
-            platforms=["youtube", "facebook"],
-            metadata=metadata,
-        )
-
-        youtube_meta = request.get_platform_metadata("youtube")
-        facebook_meta = request.get_platform_metadata("facebook")
-        vimeo_meta = request.get_platform_metadata("vimeo")
-
-        assert youtube_meta == {"title": "YouTube Title"}
-        assert facebook_meta == {"message": "Facebook Message"}
-        assert vimeo_meta == {}  # Should return empty dict for missing platform
-
-    def test_publish_request_to_dict(self):
-        """Test PublishRequest serialization to dictionary."""
-        request = PublishRequest(
-            media_file_path="/path/to/video.mp4", platforms=["youtube"], priority=2
-        )
-
-        request_dict = request.to_dict()
-
-        assert request_dict["media_file_path"] == "/path/to/video.mp4"
-        assert request_dict["platforms"] == ["youtube"]
-        assert request_dict["priority"] == 2
-        assert "created_at" in request_dict
-
-    def test_publish_request_to_dict_with_schedule_time(self):
-        """Test PublishRequest serialization with schedule time."""
-        schedule_time = datetime.now(timezone.utc)
-        request = PublishRequest(
-            media_file_path="/path/to/video.mp4",
-            platforms=["youtube"],
-            schedule_time=schedule_time,
-        )
-
-        request_dict = request.to_dict()
-
-        assert request_dict["schedule_time"] == schedule_time.isoformat()
-
-    def test_publish_request_from_dict(self):
-        """Test PublishRequest deserialization from dictionary."""
-        data = {
-            "media_file_path": "/path/to/video.mp4",
-            "platforms": ["youtube", "facebook"],
-            "metadata": {"youtube": {"title": "Test"}},
-            "priority": 3,
-            "schedule_time": None,
-            "created_at": "2024-01-01T12:00:00Z",
-        }
-
-        request = PublishRequest.from_dict(data)
-
-        assert request.media_file_path == "/path/to/video.mp4"
-        assert request.platforms == ["youtube", "facebook"]
-        assert request.metadata == {"youtube": {"title": "Test"}}
-        assert request.priority == 3
-
-    def test_publish_request_from_dict_with_schedule_time(self):
-        """Test PublishRequest deserialization with schedule time."""
-        data = {
-            "media_file_path": "/path/to/video.mp4",
-            "platforms": ["youtube"],
-            "metadata": {},
-            "priority": 1,
-            "schedule_time": "2024-12-31T23:59:59Z",
-            "created_at": "2024-01-01T12:00:00Z",
-        }
-
-        request = PublishRequest.from_dict(data)
-
-        assert request.schedule_time is not None
-        assert request.schedule_time.year == 2024
-        assert request.schedule_time.month == 12
-        assert request.schedule_time.day == 31

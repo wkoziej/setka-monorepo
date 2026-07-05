@@ -4,6 +4,9 @@ Tests for AudioValidator.
 This module contains unit tests for the AudioValidator class.
 """
 
+import wave
+from unittest.mock import patch, PropertyMock
+
 import pytest
 
 from beatrix import (
@@ -11,6 +14,17 @@ from beatrix import (
     NoAudioFileError,
     MultipleAudioFilesError,
 )
+from beatrix.exceptions import AudioValidationError
+
+
+def _write_real_wav(path, sample_rate=22050, n_samples=2205):
+    """Write a decodable mono 16-bit WAV so the decode probe accepts it."""
+    with wave.open(str(path), "wb") as wf:
+        wf.setnchannels(1)
+        wf.setsampwidth(2)
+        wf.setframerate(sample_rate)
+        wf.writeframes(b"\x00\x00" * n_samples)
+    return path
 
 
 class TestAudioValidator:
@@ -97,9 +111,8 @@ class TestAudioValidator:
         assert all(f.suffix.lower() in [".mp3", ".wav", ".m4a"] for f in found_audio)
 
     def test_detect_main_audio_single_file(self, tmp_path):
-        """Test detect_main_audio with single audio file."""
-        audio_file = tmp_path / "main.mp3"
-        audio_file.touch()
+        """Test detect_main_audio with single audio file (decode-probed)."""
+        audio_file = _write_real_wav(tmp_path / "main.wav")
 
         validator = AudioValidator()
         result = validator.detect_main_audio(tmp_path)
@@ -128,11 +141,9 @@ class TestAudioValidator:
             validator.detect_main_audio(tmp_path)
 
     def test_detect_main_audio_specified_valid(self, tmp_path):
-        """Test detect_main_audio with valid specified audio."""
-        audio_files = [tmp_path / "audio1.mp3", tmp_path / "audio2.wav"]
-
-        for file_path in audio_files:
-            file_path.touch()
+        """Test detect_main_audio with valid specified audio (decode-probed)."""
+        (tmp_path / "audio1.mp3").touch()
+        _write_real_wav(tmp_path / "audio2.wav")
 
         validator = AudioValidator()
         result = validator.detect_main_audio(tmp_path, "audio2.wav")
@@ -147,7 +158,7 @@ class TestAudioValidator:
         validator = AudioValidator()
 
         with pytest.raises(
-            ValueError, match="Specified audio file not found: nonexistent.mp3"
+            ValueError, match="Nie znaleziono wskazanego pliku audio: nonexistent.mp3"
         ):
             validator.detect_main_audio(tmp_path, "nonexistent.mp3")
 
@@ -160,7 +171,7 @@ class TestAudioValidator:
         validator = AudioValidator()
 
         with pytest.raises(
-            ValueError, match="Specified audio path is not a file: audio_dir"
+            ValueError, match="Wskazana ścieżka audio nie jest plikiem: audio_dir"
         ):
             validator.detect_main_audio(tmp_path, "audio_dir")
 
@@ -172,17 +183,17 @@ class TestAudioValidator:
         validator = AudioValidator()
 
         with pytest.raises(
-            ValueError, match="Specified file is not a valid audio file: document.txt"
+            ValueError,
+            match="Wskazany plik jest nieprawidłowym plikiem audio: document.txt",
         ):
             validator.detect_main_audio(tmp_path, "document.txt")
 
     def test_validate_specified_audio_valid(self, tmp_path):
-        """Test _validate_specified_audio with valid audio file."""
-        audio_file = tmp_path / "test.mp3"
-        audio_file.touch()
+        """Test _validate_specified_audio with valid audio file (decode-probed)."""
+        audio_file = _write_real_wav(tmp_path / "test.wav")
 
         validator = AudioValidator()
-        result = validator._validate_specified_audio(tmp_path, "test.mp3")
+        result = validator._validate_specified_audio(tmp_path, "test.wav")
 
         assert result == audio_file
 
@@ -191,7 +202,7 @@ class TestAudioValidator:
         validator = AudioValidator()
 
         with pytest.raises(
-            ValueError, match="Specified audio file not found: missing.mp3"
+            ValueError, match="Nie znaleziono wskazanego pliku audio: missing.mp3"
         ):
             validator._validate_specified_audio(tmp_path, "missing.mp3")
 
@@ -203,6 +214,32 @@ class TestAudioValidator:
         validator = AudioValidator()
 
         with pytest.raises(
-            ValueError, match="Specified file is not a valid audio file"
+            ValueError, match="Wskazany plik jest nieprawidłowym plikiem audio"
         ):
             validator._validate_specified_audio(tmp_path, "document.txt")
+
+
+class TestValidateAudioFileImportError:
+    """validate_audio_file must propagate ImportError from a broken librosa env."""
+
+    def test_import_error_propagates_not_masked_as_validation_error(self, tmp_path):
+        """If the librosa lazy-loader raises ImportError (missing dependency),
+        validate_audio_file must re-raise it as ImportError, not AudioValidationError.
+
+        This follows the FAIL-FAST rule: a broken environment must be immediately
+        visible, not silently disguised as 'invalid file'.
+        """
+        audio_file = tmp_path / "audio.m4a"
+        audio_file.touch()
+
+        validator = AudioValidator()
+
+        # Patch the 'librosa' property to raise ImportError when accessed.
+        with patch.object(
+            type(validator),
+            "librosa",
+            new_callable=PropertyMock,
+            side_effect=ImportError("librosa is not installed"),
+        ):
+            with pytest.raises(ImportError):
+                validator.validate_audio_file(audio_file)

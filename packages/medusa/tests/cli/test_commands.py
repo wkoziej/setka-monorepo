@@ -237,3 +237,62 @@ class TestUploadVideoAsync:
                     config_path=temp_config_file,
                     metadata=metadata,
                 )
+
+    @pytest.mark.asyncio
+    async def test_config_loader_to_uploader_seam(self, temp_config_file):
+        """Regression: ConfigLoader.load() must produce a config the uploader can
+        actually authenticate with.
+
+        This is the seam that previously hid the broken-CLI P0: the CLI passed a
+        flat config.PlatformConfig (no .credentials) into the uploader, so the
+        hasattr(..., "credentials") guard silently produced credentials={}, and
+        YouTubeAuth got no client_secrets_file. We mock only the OAuth boundary
+        (YouTubeAuth.authenticate) so the loader -> uploader wiring runs for real.
+        """
+        from medusa.cli.commands import upload_video_async
+        from medusa.models import MediaMetadata
+        from medusa.uploaders.base import UploadResult
+
+        captured = {}
+
+        async def fake_auth(self):
+            # Capture what the auth manager actually received from the config seam.
+            captured["client_secrets_file"] = self.client_secrets_file
+            captured["credentials_file"] = self.credentials_file
+            self.is_authenticated = True
+            self.credentials = object()  # non-None so the uploader proceeds
+            return True
+
+        async def fake_upload(self, file_path, metadata, progress_callback=None):
+            return UploadResult(
+                platform="youtube",
+                success=True,
+                upload_id="seam_id",
+                media_url="https://youtube.com/watch?v=seam_id",
+            )
+
+        metadata = MediaMetadata(
+            title="Seam Video", description="Seam Description", privacy="private"
+        )
+
+        with (
+            patch(
+                "medusa.uploaders.youtube_auth.YouTubeAuth.authenticate",
+                fake_auth,
+            ),
+            patch(
+                "medusa.uploaders.youtube.YouTubeUploader._upload_media",
+                fake_upload,
+            ),
+            patch("medusa.uploaders.youtube.build"),
+        ):
+            result = await upload_video_async(
+                video_path="/fake/video.mp4",
+                config_path=temp_config_file,
+                metadata=metadata,
+            )
+
+        assert result.success is True
+        # The credentials from the config file must reach the auth manager.
+        assert captured["client_secrets_file"] == "path/to/client_secrets.json"
+        assert captured["credentials_file"] == "path/to/credentials.json"

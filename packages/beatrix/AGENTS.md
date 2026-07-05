@@ -38,10 +38,10 @@ uv run --group dev pytest -k "test_analyze_for_animation" -v
 ### Development Workflow
 ```bash
 # CLI command (installed as script entry point)
-beatrix audio.m4a analysis/
+beatrix analyze audio.m4a analysis/
 
 # Module execution (alternative)
-uv run python -m beatrix.cli.analyze_audio audio.m4a analysis/
+uv run python -m beatrix.cli.analyze_audio analyze audio.m4a analysis/
 
 # Python API usage
 uv run python -c "from beatrix import AudioAnalyzer; analyzer = AudioAnalyzer(); result = analyzer.analyze_for_animation('audio.m4a')"
@@ -103,7 +103,7 @@ The `analyze_for_animation` method returns a structured JSON with:
 - **scipy**: Signal processing algorithms
 
 ### Usage by Other Packages
-- **cinemon**: Uses beatrix for Blender VSE animation timing
+- **cymatic**: Consumes the emitted `analysis.json` to drive the Geometry Nodes visualizer
 - **obsession**: May use beatrix for OBS recording analysis
 
 ### File Structure Integration
@@ -145,9 +145,9 @@ def test_component(mock_analyzer):
 
 ### Integrating with New Animation Modes
 1. Analyze required timing data structure
-2. Extend `animation_events` output format if needed
+2. Extend `animation_events` output format if needed (bump `schema_version` on a breaking change)
 3. Update `beat_division` or add new configuration parameters
-4. Test integration with cinemon package
+4. Test integration with the cymatic consumer
 
 ### Performance Optimization
 - Lazy loading pattern is already implemented for heavy imports
@@ -158,17 +158,19 @@ def test_component(mock_analyzer):
 
 ### Basic Analysis
 ```bash
-# Analyze single audio file
-beatrix audio.m4a analysis/
+# Analyze a single audio file → <output_dir>/<stem>_analysis.json
+beatrix analyze audio.m4a analysis/
 
 # With custom parameters
-beatrix audio.m4a analysis/ --beat-division 4 --min-onset-interval 1.5
+beatrix analyze audio.m4a analysis/ --beat-division 4 --min-onset-interval 1.5
 ```
 
-### Integration with Cinemon
+### Recording-wide Analysis
 ```bash
-# Cinemon automatically runs beatrix when needed
-cinemon-blend-setup /path/to/recording --animation-mode beat-switch
+# Analyze every track of a recording in one shot (master from mixed/, stems from
+# mixed/stems/ with bitwig/samples/ then extracted/ as fallbacks). Writes
+# per-track *_analysis.json + the discovery manifest analysis/index.json.
+beatrix analyze-recording /path/to/recording
 ```
 
 ## Key Files and Locations

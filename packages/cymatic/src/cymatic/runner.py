@@ -41,7 +41,10 @@ import shutil
 import subprocess
 import tempfile
 from pathlib import Path
-from typing import List, Optional
+from typing import TYPE_CHECKING, List, Optional
+
+if TYPE_CHECKING:
+    from cymatic.analysis_loader import AnalysisData
 
 from setka_common.file_structure.specialized import RecordingStructureManager
 
@@ -195,13 +198,32 @@ class CymaticRunner:
             if result.stderr and result.stderr.strip():
                 logger.debug("Blender stderr: %s", result.stderr)
 
+            # Load the analysis ONCE here (only needed when frame_end is unset,
+            # to derive duration*fps) and thread it through so the frame-count
+            # check never re-parses the same JSON. With an explicit frame_end
+            # the analysis is not needed at all, so skip the parse.
+            analysis = None
+            if cfg.frame_end is None:
+                from cymatic.analysis_loader import load_analysis
+
+                analysis = load_analysis(cfg)
+
             # Validate the rendered frame count against expectation before mux,
             # so a partial/aborted render fails loudly instead of silently
             # producing a short clip.
-            self._validate_frame_count(frames_dir, cfg)
+            self._validate_frame_count(frames_dir, cfg, analysis)
 
             # Mux the rendered PNG frames (+ optional audio) into the mp4.
             self._mux_frames(frames_dir, output_path, cfg)
+
+            # ffmpeg can exit 0 yet write nothing (e.g. a pattern that matched
+            # no files on a build where image2 tolerates it); assert the output
+            # actually exists rather than returning a path to a missing file.
+            if not output_path.exists():
+                raise RuntimeError(
+                    f"Render reported success but produced no output file: "
+                    f"{output_path}"
+                )
 
             logger.info("cymatic render finished, output: %s", output_path)
             return output_path
@@ -214,23 +236,35 @@ class CymaticRunner:
             if frames_dir is not None:
                 shutil.rmtree(frames_dir, ignore_errors=True)
 
-    def _expected_frame_count(self, cfg: VisualizerConfig) -> int:
-        """Expected rendered frame count: ``frame_end - frame_start + 1``.
+    def _expected_frame_count(self, cfg: VisualizerConfig, data: Optional["AnalysisData"] = None) -> int:
+        """Expected rendered frame count: ``max(1, frame_end - frame_start + 1)``.
 
         ``frame_end`` falls back to ``int(duration * fps)`` derived from the
         analysis (consistent with how ``build_scene.py`` sets the frame range).
+        The ``max(1, ...)`` floor mirrors ``build_preset_scene`` so a degenerate
+        (zero/negative) span never under-counts to 0.
+
+        Args:
+            cfg: the (local) render config.
+            data: an already-loaded ``AnalysisData``; passed in by ``run()`` so
+                the duration fallback never re-parses the analysis JSON. When
+                ``None`` and ``frame_end`` is unset, the analysis is loaded here
+                (covers direct/test callers).
         """
         frame_end = cfg.frame_end
         if frame_end is None:
-            from cymatic.analysis_loader import load_analysis
+            if data is None:
+                from cymatic.analysis_loader import load_analysis
 
-            data = load_analysis(cfg)
+                data = load_analysis(cfg)
             frame_end = int(data.duration * cfg.fps)
-        return int(frame_end) - int(cfg.frame_start) + 1
+        return max(1, int(frame_end) - int(cfg.frame_start) + 1)
 
-    def _validate_frame_count(self, frames_dir: Path, cfg: VisualizerConfig) -> None:
+    def _validate_frame_count(
+        self, frames_dir: Path, cfg: VisualizerConfig, data: Optional["AnalysisData"] = None
+    ) -> None:
         """Raise if fewer frames were rendered than expected."""
-        expected = self._expected_frame_count(cfg)
+        expected = self._expected_frame_count(cfg, data)
         actual = len(list(frames_dir.glob("frame_*.png")))
         if actual < expected:
             raise RuntimeError(
@@ -238,6 +272,20 @@ class CymaticRunner:
                 f"(frame_start={cfg.frame_start}, frame_end={cfg.frame_end}); "
                 "the render appears incomplete."
             )
+
+    @staticmethod
+    def _frame_pattern(first_frame: Path) -> str:
+        """Derive the ffmpeg image2 pattern from the first frame's stem.
+
+        Blender pads frame numbers to the width needed for the highest frame,
+        so a render with >= 10000 frames produces ``frame_000001.png`` (6+
+        digits), not the 4-digit ``frame_0001.png``. Hardcoding ``%04d`` would
+        match zero files there and ffmpeg would fail. Reading the actual digit
+        count off the first frame keeps the pattern correct at any pad width.
+        """
+        digits = first_frame.stem.split("frame_", 1)[-1]
+        width = len(digits) if digits.isdigit() else 4
+        return f"frame_%0{width}d.png"
 
     def _mux_frames(
         self,
@@ -247,10 +295,12 @@ class CymaticRunner:
     ) -> None:
         """Mux a PNG frame sequence (+ optional audio) into mp4 via ffmpeg.
 
-        Blender writes frames named ``frame_0001.png`` (4-digit pad). We feed
-        them to ffmpeg as an image2 sequence starting at ``frame_start`` and
-        encode H.264 (yuv420p for broad compatibility), muxing the source audio
-        with ``-shortest`` when ``audio_file`` is set.
+        Blender writes frames named ``frame_0001.png`` (pad widens to fit the
+        highest frame number). We derive the image2 pattern from the first
+        frame's stem (see :meth:`_frame_pattern`), feed the sequence to ffmpeg
+        starting at ``frame_start`` and encode H.264 (yuv420p for broad
+        compatibility), muxing the source audio with ``-shortest`` when
+        ``audio_file`` is set.
 
         Args:
             frames_dir: Directory holding the rendered ``frame_####.png`` files.
@@ -275,7 +325,7 @@ class CymaticRunner:
             raise RuntimeError(f"No frames rendered in {frames_dir}")
 
         output_path.parent.mkdir(parents=True, exist_ok=True)
-        pattern = str(frames_dir / "frame_%04d.png")
+        pattern = str(frames_dir / self._frame_pattern(frames[0]))
         cmd: List[str] = [
             ffmpeg, "-y",
             "-framerate", str(cfg.fps),

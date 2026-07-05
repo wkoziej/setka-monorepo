@@ -33,20 +33,49 @@ def _skip_mux(monkeypatch):
     "No frames rendered" and _validate_frame_count would have nothing to count.
     The dedicated mux test uses _REAL_MUX directly.
     """
+    # The stubbed mux writes the output file (a real mux produces one) so the
+    # post-mux output-existence check in run() is satisfied for invocation
+    # tests that don't render real frames.
+    def _fake_mux(self, fdir, out, cfg=None):
+        Path(out).parent.mkdir(parents=True, exist_ok=True)
+        Path(out).write_bytes(b"mp4")
+
+    monkeypatch.setattr(CymaticRunner, "_mux_frames", _fake_mux)
     monkeypatch.setattr(
-        CymaticRunner, "_mux_frames", lambda self, fdir, out, cfg=None: None
-    )
-    monkeypatch.setattr(
-        CymaticRunner, "_validate_frame_count", lambda self, fdir, cfg: None
+        CymaticRunner,
+        "_validate_frame_count",
+        lambda self, fdir, cfg, data=None: None,
     )
 
 
 @pytest.fixture
 def recording_dir(tmp_path):
-    """A recording directory with the expected analysis layout."""
+    """A recording directory with the expected analysis layout.
+
+    The analysis carries a minimal-but-valid shape so run() can load it once
+    (to derive the frame range when frame_end is unset) without raising.
+    """
+    import json
+
     (tmp_path / "analysis").mkdir()
     analysis_file = tmp_path / "analysis" / "song_analysis.json"
-    analysis_file.write_text("{}")
+    analysis_file.write_text(
+        json.dumps(
+            {
+                "schema_version": "1.0",
+                "hop_length": 512,
+                "sample_rate": 48000,
+                "duration": 1.0,
+                "animation_events": {"beats": [], "energy_peaks": []},
+                "frequency_bands": {
+                    "times": [0.0, 0.010667],
+                    "bass_energy": [0.0, 0.0],
+                    "mid_energy": [0.0, 0.0],
+                    "high_energy": [0.0, 0.0],
+                },
+            }
+        )
+    )
     return tmp_path
 
 
@@ -213,6 +242,72 @@ def test_mux_frames_no_frames_raises(config, tmp_path, monkeypatch):
         _REAL_MUX(CymaticRunner(config), tmp_path / "empty", tmp_path / "o.mp4")
 
 
+def test_mux_frames_pattern_matches_4digit_padding(config, tmp_path, monkeypatch):
+    """4-digit frame stem -> ffmpeg pattern frame_%04d.png."""
+    frames_dir = tmp_path / "frames"
+    frames_dir.mkdir()
+    (frames_dir / "frame_0001.png").write_bytes(b"\x89PNG")
+    output = tmp_path / "out.mp4"
+
+    monkeypatch.setattr(shutil, "which", lambda name: "/usr/bin/ffmpeg")
+    captured = {}
+
+    def fake_run(cmd, *a, **k):
+        captured["cmd"] = list(cmd)
+        return Mock(returncode=0, stdout="", stderr="")
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+    _REAL_MUX(CymaticRunner(config), frames_dir, output)
+
+    pattern = captured["cmd"][captured["cmd"].index("-i") + 1]
+    assert pattern.endswith("frame_%04d.png")
+
+
+def test_mux_frames_pattern_matches_6digit_padding(config, tmp_path, monkeypatch):
+    """>=10000 frames -> Blender widens the pad; ffmpeg pattern must follow.
+
+    Blender names frames by the actual digit count, so a 6-digit frame
+    (frame_000001.png) must produce a frame_%06d.png pattern, not the
+    hardcoded frame_%04d.png (which would match zero files -> ffmpeg fails).
+    """
+    frames_dir = tmp_path / "frames"
+    frames_dir.mkdir()
+    # Blender pads to the width needed for the highest frame number.
+    (frames_dir / "frame_000001.png").write_bytes(b"\x89PNG")
+    (frames_dir / "frame_123456.png").write_bytes(b"\x89PNG")
+    output = tmp_path / "out.mp4"
+
+    monkeypatch.setattr(shutil, "which", lambda name: "/usr/bin/ffmpeg")
+    captured = {}
+
+    def fake_run(cmd, *a, **k):
+        captured["cmd"] = list(cmd)
+        return Mock(returncode=0, stdout="", stderr="")
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+    _REAL_MUX(CymaticRunner(config), frames_dir, output)
+
+    pattern = captured["cmd"][captured["cmd"].index("-i") + 1]
+    assert pattern.endswith("frame_%06d.png"), pattern
+
+
+def test_run_raises_when_mux_writes_no_output(config, monkeypatch):
+    """ffmpeg 'succeeds' but writes no file -> run() raises (not silent)."""
+    # Stub validation (no real frames) and make _mux_frames a no-op that
+    # leaves no output file behind, simulating a silent ffmpeg failure.
+    monkeypatch.setattr(
+        CymaticRunner,
+        "_validate_frame_count",
+        lambda self, fdir, cfg, data=None: None,
+    )
+    monkeypatch.setattr(
+        CymaticRunner, "_mux_frames", lambda self, fdir, out, cfg=None: None
+    )
+    runner = CymaticRunner(config)
+    with pytest.raises(RuntimeError, match="no output file|did not produce|produced no output"):
+        runner.run()
+
+
 def test_run_does_not_mutate_caller_config(config):
     """run() must not mutate the caller's VisualizerConfig.frames_dir."""
     assert config.frames_dir is None
@@ -286,6 +381,42 @@ def test_short_frame_count_raises(config, monkeypatch, tmp_path):
         runner.run()
 
 
+def test_expected_frame_count_floor_is_one(config):
+    """A degenerate (<1 frame) expectation floors to 1, never 0 or negative.
+
+    With frame_end == frame_start - 1 the naive (end - start + 1) is 0; the
+    unified max(1, ...) guards a zero/negative expectation.
+    """
+    config.frame_start = 5
+    config.frame_end = 3  # naive: 3 - 5 + 1 = -1
+    runner = CymaticRunner(config)
+    assert runner._expected_frame_count(config) == 1
+
+
+def test_expected_frame_count_uses_passed_analysis_not_reparse(config, monkeypatch):
+    """When AnalysisData is passed in, _expected_frame_count must not re-parse.
+
+    frame_end is None so the count derives from duration*fps; passing the
+    already-loaded analysis avoids a second json read of the analysis file.
+    """
+    config.frame_start = 1
+    config.frame_end = None
+    config.fps = 30
+
+    from types import SimpleNamespace
+
+    import cymatic.runner as runner_mod
+
+    def boom(*a, **k):
+        raise AssertionError("load_analysis must not be called when data is passed")
+
+    monkeypatch.setattr(runner_mod, "load_analysis", boom, raising=False)
+
+    fake = SimpleNamespace(duration=2.0)  # 2.0 * 30 = 60 frames
+    runner = CymaticRunner(config)
+    assert runner._expected_frame_count(config, fake) == 60
+
+
 def test_full_frame_count_passes(config, monkeypatch):
     """Exactly the expected frame count passes validation."""
     monkeypatch.setattr(CymaticRunner, "_validate_frame_count", _REAL_VALIDATE)
@@ -304,5 +435,11 @@ def test_full_frame_count_passes(config, monkeypatch):
         return Mock(returncode=0, stdout="", stderr="")
 
     monkeypatch.setattr(subprocess, "run", fake_run)
-    # mux is still stubbed by the autouse fixture; should not raise.
+    # Stub the mux to write an output file (a real mux produces one); the
+    # autouse _skip_mux no-op would otherwise trip the output-existence check.
+    monkeypatch.setattr(
+        CymaticRunner,
+        "_mux_frames",
+        lambda self, fdir, out, cfg=None: Path(out).write_bytes(b"mp4"),
+    )
     CymaticRunner(config).run()

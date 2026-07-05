@@ -5,7 +5,10 @@
     },
     "facebook": {
         "page_id": "your_facebook_page_id",
-        "access_token": "your_facebook_access_token"
+        "access_token": "your_facebook_access_token",
+        "app_id": "your-app-id",
+        "app_secret": "your-app-secret",
+        "api_version": "v19.0"
     },
     "vimeo": {
         "access_token": "your_vimeo_access_token"

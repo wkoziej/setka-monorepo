@@ -272,3 +272,37 @@ class TestMediaDiscovery:
 
         assert len(audio_files) == 1
         assert "Przechwytywanie wejścia dźwięku.m4a" in audio_files
+
+
+class TestMediaDiscoveryDirNameConstants:
+    """MediaDiscovery must derive dir names from RecordingStructureManager (single source of truth)."""
+
+    def test_extracted_dir_uses_recording_constant(self, tmp_path):
+        """extracted_dir is built from EXTRACTED_DIRNAME, not a hardcoded string."""
+        from setka_common.file_structure.specialized import RecordingStructureManager
+
+        recording_dir = tmp_path / "recording_20250105_143022"
+        extracted_dir = recording_dir / RecordingStructureManager.EXTRACTED_DIRNAME
+        extracted_dir.mkdir(parents=True)
+
+        discovery = MediaDiscovery(recording_dir)
+
+        assert (
+            discovery.extracted_dir
+            == recording_dir / RecordingStructureManager.EXTRACTED_DIRNAME
+        )
+
+    def test_analysis_dir_uses_recording_constant(self, tmp_path):
+        """analysis_dir is built from ANALYSIS_DIRNAME, not a hardcoded string."""
+        from setka_common.file_structure.specialized import RecordingStructureManager
+
+        recording_dir = tmp_path / "recording_20250105_143022"
+        extracted_dir = recording_dir / RecordingStructureManager.EXTRACTED_DIRNAME
+        extracted_dir.mkdir(parents=True)
+
+        discovery = MediaDiscovery(recording_dir)
+
+        assert (
+            discovery.analysis_dir
+            == recording_dir / RecordingStructureManager.ANALYSIS_DIRNAME
+        )

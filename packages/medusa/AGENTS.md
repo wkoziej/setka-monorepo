@@ -11,8 +11,8 @@ Medusa is a Python library for automating media uploads to hosting platforms (Yo
 
 ### Testing
 ```bash
-# Run all tests
-uv run pytest
+# Run all tests (from the package directory — matches root AGENTS.md isolation rule)
+cd packages/medusa && uv run --package medusa pytest
 
 # Run specific test file or test
 uv run pytest tests/test_models.py

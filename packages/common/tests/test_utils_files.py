@@ -282,10 +282,10 @@ class TestSanitizeFilename:
     """Testy dla funkcji sanitize_filename."""
 
     def test_remove_invalid_characters(self):
-        """Test usuwania niepoprawnych znaków."""
+        """Test usuwania niepoprawnych znaków (superset collapse'uje powtórzone _)."""
         filename = 'test<>:"|?*file.mp4'
         result = sanitize_filename(filename)
-        assert result == "test_______file.mp4"
+        assert result == "test_file.mp4"
 
     def test_remove_leading_trailing_spaces(self):
         """Test usuwania spacji na początku i końcu."""
@@ -329,16 +329,16 @@ class TestSanitizeFilename:
         assert result == filename
 
     def test_empty_filename(self):
-        """Test dla pustej nazwy pliku."""
+        """Test dla pustej nazwy pliku — fallback do 'source'."""
         filename = ""
         result = sanitize_filename(filename)
-        assert result == ""
+        assert result == "source"
 
     def test_only_spaces_and_dots(self):
-        """Test dla nazwy składającej się tylko ze spacji i kropek."""
+        """Test dla nazwy składającej się tylko ze spacji i kropek — fallback do 'source'."""
         filename = "  ...  "
         result = sanitize_filename(filename)
-        assert result == ""
+        assert result == "source"
 
     def test_filename_with_multiple_dots(self):
         """Test dla nazwy z wieloma kropkami."""
@@ -347,7 +347,7 @@ class TestSanitizeFilename:
         assert result == "my.video.file.mp4"
 
     def test_complex_filename(self):
-        """Test dla złożonej nazwy pliku."""
+        """Test dla złożonej nazwy pliku (superset: collapse + strip _)."""
         filename = ' . <test>file|name"with*chars?.mp4 . '
         result = sanitize_filename(filename)
-        assert result == "_test_file_name_with_chars_.mp4"
+        assert result == "test_file_name_with_chars_.mp4"

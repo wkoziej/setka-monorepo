@@ -1,0 +1,125 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+# Cancel superseded runs on the same ref to save CI minutes.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # Per-package Python tests.
+  #
+  # We deliberately do NOT run a workspace-root `uv run pytest`: collecting from
+  # the repo root fails with pytest's ImportPathMismatchError because two
+  # packages ship a top-level `tests/conftest.py` (obsession and paternologia),
+  # which pytest cannot import under the same `tests.conftest` module name. Each
+  # package is therefore tested from its own directory, where its conftest is
+  # unambiguous and its own coverage gate (defined in that package's
+  # pyproject.toml `--cov-fail-under`) applies.
+  #
+  # `package` is the uv package name (pyproject `[project].name`); `dir` is the
+  # workspace directory. They differ for setka-common (dir `common`).
+  python:
+    name: py / ${{ matrix.package }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { package: setka-common, dir: common }
+          - { package: beatrix, dir: beatrix }
+          - { package: cymatic, dir: cymatic }
+          - { package: obsession, dir: obsession }
+          - { package: medusa, dir: medusa }
+          - { package: paternologia, dir: paternologia }
+    steps:
+      - uses: actions/checkout@v4
+
+      # python-rtmidi (a paternologia dependency) builds against ALSA headers.
+      - name: Install ALSA headers
+        run: sudo apt-get update && sudo apt-get install -y libasound2-dev
+
+      # NOTE: cymatic's matplotlib font-scan str/bytes crash on this runner is
+      # handled at the right layer — a subprocess.check_output shim in
+      # packages/cymatic/tests/conftest.py — not with a CI hack here.
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          version: "0.5.x"
+          enable-cache: true
+
+      - name: Set up Python
+        run: uv python install 3.12
+
+      - name: Sync workspace
+        run: uv sync --all-packages
+
+      # Each package's pyproject forces `--cov`, so pytest-cov must be present;
+      # the per-package `--cov-fail-under` gate fires from inside the package dir.
+      - name: Test ${{ matrix.package }}
+        working-directory: packages/${{ matrix.dir }}
+        env:
+          MPLBACKEND: Agg
+        run: uv run --with pytest-cov --package ${{ matrix.package }} pytest
+
+  # Fermata is a Tauri app, not a uv workspace member: its frontend is built and
+  # tested with npm/vitest, and its Rust backend is verified with cargo test.
+  # This cargo-test gate is what verifies the Phase 7 Rust changes that were
+  # landed BUILD-UNVERIFIED (path-traversal guard, subprocess timeouts, the
+  # cinemon→cymatic render rewire), so it must compile and pass here.
+  fermata:
+    name: fermata (vitest + cargo)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: packages/fermata
+    steps:
+      - uses: actions/checkout@v4
+
+      # Tauri 2 on Linux needs the WebKitGTK / GTK / libsoup system libraries to
+      # build the Rust crate; without them `cargo test` fails to link.
+      - name: Install Tauri system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            libgtk-3-dev \
+            libsoup-3.0-dev \
+            librsvg2-dev \
+            libayatana-appindicator3-dev \
+            patchelf
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: packages/fermata/package-lock.json
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo build
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: packages/fermata/src-tauri
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      # tsc + vite build: this is the gate that catches the Phase 7 TS type-import
+      # breakage that had rotted the frontend build.
+      - name: Build frontend
+        run: npm run build
+
+      - name: Test frontend
+        run: npx vitest run
+
+      - name: Test Rust backend
+        working-directory: packages/fermata/src-tauri
+        run: cargo test

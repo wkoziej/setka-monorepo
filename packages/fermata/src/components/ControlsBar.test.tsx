@@ -1,5 +1,5 @@
 import { render, screen, fireEvent } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import { vi } from 'vitest';
 import { ControlsBar } from './ControlsBar';
 import type { FilterConfig } from '../types';
 
@@ -10,11 +10,11 @@ describe('ControlsBar', () => {
     sortOption: 'date-desc'
   };
 
-  const mockOnUpdateFilter = jest.fn();
-  const mockOnClearFilters = jest.fn();
+  const mockOnUpdateFilter = vi.fn();
+  const mockOnClearFilters = vi.fn();
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   const defaultProps = {
@@ -54,34 +54,31 @@ describe('ControlsBar', () => {
     ]);
   });
 
-  test('search input calls onUpdateFilter when typing', async () => {
-    const user = userEvent.setup();
+  test('search input calls onUpdateFilter when typing', () => {
     render(<ControlsBar {...defaultProps} />);
 
     const searchInput = screen.getByPlaceholderText(/search recordings/i);
-    await user.type(searchInput, 'test');
+    fireEvent.change(searchInput, { target: { value: 'test' } });
 
     expect(mockOnUpdateFilter).toHaveBeenCalledWith('searchTerm', 'test');
   });
 
-  test('sort dropdown calls onUpdateFilter when changed', async () => {
-    const user = userEvent.setup();
+  test('sort dropdown calls onUpdateFilter when changed', () => {
     render(<ControlsBar {...defaultProps} />);
 
     const sortSelect = screen.getByLabelText(/sort by/i);
-    await user.selectOptions(sortSelect, 'name-asc');
+    fireEvent.change(sortSelect, { target: { value: 'name-asc' } });
 
     expect(mockOnUpdateFilter).toHaveBeenCalledWith('sortOption', 'name-asc');
   });
 
-  test('status filter calls onUpdateFilter when changed', async () => {
-    const user = userEvent.setup();
+  test('status filter calls onUpdateFilter when changed', () => {
     render(<ControlsBar {...defaultProps} />);
 
     const statusSelect = screen.getByLabelText(/status/i);
-    await user.selectOptions(statusSelect, 'analyzed');
+    fireEvent.change(statusSelect, { target: { value: 'Analyzed' } });
 
-    expect(mockOnUpdateFilter).toHaveBeenCalledWith('status', 'analyzed');
+    expect(mockOnUpdateFilter).toHaveBeenCalledWith('status', 'Analyzed');
   });
 
   test('clear filters button appears when hasActiveFilters is true', () => {
@@ -96,13 +93,25 @@ describe('ControlsBar', () => {
     expect(screen.queryByText(/clear filters/i)).not.toBeInTheDocument();
   });
 
-  test('clear filters button calls onClearFilters when clicked', async () => {
-    const user = userEvent.setup();
+  test('clear filters button calls onClearFilters when clicked', () => {
     render(<ControlsBar {...defaultProps} hasActiveFilters={true} />);
 
     const clearButton = screen.getByText(/clear filters/i);
-    await user.click(clearButton);
+    fireEvent.click(clearButton);
 
     expect(mockOnClearFilters).toHaveBeenCalled();
+  });
+
+  test('status filter calls onUpdateFilter with object shape when failed is selected', () => {
+    const failedFilterConfig: FilterConfig = {
+      ...mockFilterConfig,
+      status: { Failed: '' }
+    };
+    render(<ControlsBar {...defaultProps} filterConfig={failedFilterConfig} />);
+
+    const statusSelect = screen.getByLabelText(/status/i);
+    fireEvent.change(statusSelect, { target: { value: 'failed' } });
+
+    expect(mockOnUpdateFilter).toHaveBeenCalledWith('status', { Failed: '' });
   });
 });

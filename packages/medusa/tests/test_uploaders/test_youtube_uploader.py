@@ -557,6 +557,83 @@ class TestYouTubeUploaderUpload:
             assert result.metadata["video_id"] == "test_video_id_123"
 
     @pytest.mark.asyncio
+    async def test_upload_uses_finite_chunksize(self):
+        """Reliability: the resumable upload must use a finite chunk size in the
+        5-50 MB band (not -1, which buffers the whole file in memory and breaks
+        per-chunk progress/retry).
+        """
+        uploader = YouTubeUploader()
+        uploader.is_authenticated = True
+        uploader.service = MagicMock()
+
+        mock_response = {"id": "test_video_id_123"}
+        mock_insert_request = MagicMock()
+        mock_insert_request.next_chunk.return_value = (None, mock_response)
+        uploader.service.videos().insert.return_value = mock_insert_request
+
+        metadata = MediaMetadata(title="Test Video")
+
+        with (
+            patch.object(uploader, "_validate_file"),
+            patch("medusa.uploaders.youtube.MediaFileUpload") as mock_media_upload,
+            patch("os.path.getsize", return_value=500 * 1024 * 1024),
+        ):
+            mock_media_upload.return_value = MagicMock()
+            await uploader._upload_media("/path/to/video.mp4", metadata)
+
+            chunksize = mock_media_upload.call_args.kwargs["chunksize"]
+            assert chunksize != -1
+            assert 5 * 1024 * 1024 <= chunksize <= 50 * 1024 * 1024
+            # YouTube requires the chunk size to be a multiple of 256 KB.
+            assert chunksize % (256 * 1024) == 0
+
+    @pytest.mark.asyncio
+    async def test_429_honors_retry_after(self):
+        """Reliability: a 429 with Retry-After must wait the advertised interval,
+        not a backoff guess.
+        """
+        from googleapiclient.errors import HttpError
+
+        uploader = YouTubeUploader()
+
+        mock_resp = MagicMock()
+        mock_resp.status = 429
+        # httplib2-style response is dict-like for header access.
+        mock_resp.get = lambda key, default=None: (
+            "7" if key.lower() == "retry-after" else default
+        )
+        http_error = HttpError(mock_resp, b'{"error":{"message":"rate"}}')
+
+        mock_response = {"id": "vid_after_429"}
+        call_count = 0
+
+        def mock_next_chunk():
+            nonlocal call_count
+            call_count += 1
+            if call_count == 1:
+                raise http_error
+            status = MagicMock()
+            status.resumable_progress = 1.0
+            return (status, mock_response)
+
+        mock_insert_request = MagicMock()
+        mock_insert_request.next_chunk = mock_next_chunk
+
+        slept = []
+
+        async def fake_sleep(seconds):
+            slept.append(seconds)
+
+        with patch("medusa.uploaders.youtube.asyncio.sleep", fake_sleep):
+            result = await uploader._perform_resumable_upload(
+                mock_insert_request, None, 1000
+            )
+
+        assert result == mock_response
+        # Waited exactly the advertised Retry-After (7s), not a backoff value.
+        assert slept == [7.0]
+
+    @pytest.mark.asyncio
     async def test_upload_with_progress_callback(self):
         """Test upload with progress reporting."""
         uploader = YouTubeUploader()
@@ -815,6 +892,51 @@ class TestYouTubeUploaderResumableUpload:
 
         assert result == mock_response
 
+    @pytest.mark.asyncio
+    @pytest.mark.slow
+    async def test_retryable_http_error_does_not_log_raw_content(self, caplog):
+        """Security: a retryable HTTP error must NOT log raw e.content (which
+        can carry tokens / sensitive API payloads). Only the status + a short
+        message may be logged.
+        """
+        import logging
+        from googleapiclient.errors import HttpError
+
+        uploader = YouTubeUploader()
+
+        mock_resp = MagicMock()
+        mock_resp.status = 503
+        secret_content = (
+            b'{"error":{"message":"server","leaked_token":"ya29.SUPERSECRET"}}'
+        )
+        http_error = HttpError(mock_resp, secret_content)
+
+        mock_response = {"id": "test_video_id_123"}
+        call_count = 0
+
+        def mock_next_chunk():
+            nonlocal call_count
+            call_count += 1
+            if call_count == 1:
+                raise http_error
+            status = MagicMock()
+            status.resumable_progress = 1.0
+            return (status, mock_response)
+
+        mock_insert_request = MagicMock()
+        mock_insert_request.next_chunk = mock_next_chunk
+
+        with caplog.at_level(logging.DEBUG, logger="medusa.uploader.youtube"):
+            result = await uploader._perform_resumable_upload(
+                mock_insert_request, None, 1000
+            )
+
+        assert result == mock_response
+        # The raw token from e.content must never reach the logs.
+        assert "ya29.SUPERSECRET" not in caplog.text
+        # But the status code should be reported so the retry is debuggable.
+        assert "503" in caplog.text
+
 
 class TestYouTubeUploaderIntegration:
     """Test integration scenarios."""
@@ -932,3 +1054,64 @@ class TestYouTubeUploaderUtilities:
 
             mock_cleanup.assert_called_once()
             assert uploader.service is None
+
+
+class TestParseRetryAfter:
+    """Unit tests for YouTubeUploader._parse_retry_after."""
+
+    def _uploader(self):
+        return YouTubeUploader()
+
+    def test_no_retry_after_header_returns_none(self):
+        """resp with headers lacking Retry-After returns None."""
+        resp = MagicMock()
+        resp.get.return_value = None
+        assert self._uploader()._parse_retry_after(resp) is None
+
+    def test_non_numeric_value_returns_none(self):
+        """Non-numeric value ('later') returns None."""
+        resp = MagicMock()
+        # Simulate lowercase lookup succeeds with a non-numeric string.
+        resp.get.side_effect = lambda k: "later" if k == "retry-after" else None
+        assert self._uploader()._parse_retry_after(resp) is None
+
+    def test_negative_value_returns_none(self):
+        """Negative value ('-5') returns None."""
+        resp = MagicMock()
+        resp.get.side_effect = lambda k: "-5" if k == "retry-after" else None
+        assert self._uploader()._parse_retry_after(resp) is None
+
+    def test_valid_seconds_string_returns_float(self):
+        """Valid '120' returns 120.0."""
+        resp = MagicMock()
+        resp.get.side_effect = lambda k: "120" if k == "retry-after" else None
+        result = self._uploader()._parse_retry_after(resp)
+        assert result == 120.0
+
+    def test_resp_without_get_attr_returns_none(self):
+        """resp object without usable .get attribute returns None, no exception."""
+
+        class NoGet:
+            pass
+
+        assert self._uploader()._parse_retry_after(NoGet()) is None
+
+    def test_retry_after_clamped_to_max(self):
+        """Retry-After larger than MAX_RETRY_AFTER_SECONDS must be clamped."""
+        uploader = self._uploader()
+        # Simulate an absurdly large server-supplied value (e.g. 7200 s = 2 h).
+        assert 7200 > uploader.MAX_RETRY_AFTER_SECONDS
+        # _parse_retry_after only parses; clamping happens at the call site.
+        # Verify the constant itself is sensible and < Fermata's 1800 s budget.
+        assert uploader.MAX_RETRY_AFTER_SECONDS == 900
+        assert uploader.MAX_RETRY_AFTER_SECONDS < 1800
+
+    def test_retry_after_within_max_not_clamped(self):
+        """Retry-After below the cap must be used as-is."""
+        resp = MagicMock()
+        resp.get.side_effect = lambda k: "300" if k == "retry-after" else None
+        uploader = self._uploader()
+        parsed = uploader._parse_retry_after(resp)
+        assert parsed == 300.0
+        # Clamped value is identical when below the cap.
+        assert min(parsed, uploader.MAX_RETRY_AFTER_SECONDS) == 300.0

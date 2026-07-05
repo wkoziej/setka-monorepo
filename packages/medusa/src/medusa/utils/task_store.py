@@ -38,6 +38,12 @@ class TaskStore:
     - Task querying and filtering
     - Automatic cleanup of old tasks
     - Concurrent access support
+
+    LIMITATION — in-memory only: task state lives in this process and is lost on
+    restart, and is not shared across processes/workers. This means it provides
+    no cross-process idempotency (e.g. a duplicate upload submitted to a second
+    worker is not deduplicated). A durable/shared backend (DB, Redis) is a
+    deliberate follow-up, out of scope for the current audit remediation.
     """
 
     def __init__(

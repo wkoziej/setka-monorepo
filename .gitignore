@@ -190,6 +190,8 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 package-lock.json
+# fermata (Tauri app) commits its lockfile so CI `npm ci` + setup-node cache work
+!packages/fermata/package-lock.json
 .npm/
 .yarn/
 

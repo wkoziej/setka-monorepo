@@ -7,59 +7,31 @@ environment variable overrides, and comprehensive validation.
 """
 
 import json
+import logging
 import os
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional, Dict, Any, Union
 
 from ..exceptions import ConfigurationError
+from ..models import PlatformConfig
 
+logger = logging.getLogger(__name__)
 
-@dataclass
-class PlatformConfig:
-    """
-    Configuration for a single platform (YouTube, Facebook, Vimeo, Twitter).
-
-    This dataclass holds all possible configuration fields for any platform,
-    with appropriate defaults and validation.
-    """
-
-    # Common fields
-    client_secrets_file: Optional[str] = None
-    credentials_file: Optional[str] = None
-    access_token: Optional[str] = None
-
-    # API authentication fields
-    api_key: Optional[str] = None
-    api_secret: Optional[str] = None
-    access_token_secret: Optional[str] = None
-
-    # Platform-specific fields
-    page_id: Optional[str] = None  # Facebook page ID
-
-    def __post_init__(self):
-        """Post-initialization validation."""
-        # Basic validation can be added here if needed
-        pass
-
-    @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "PlatformConfig":
-        """
-        Create PlatformConfig from dictionary, filtering unknown fields.
-
-        Args:
-            data: Dictionary containing platform configuration
-
-        Returns:
-            PlatformConfig instance
-        """
-        # Get valid field names from dataclass
-        valid_fields = {f.name for f in cls.__dataclass_fields__.values()}
-
-        # Filter data to only include valid fields
-        filtered_data = {k: v for k, v in data.items() if k in valid_fields}
-
-        return cls(**filtered_data)
+# Flat configuration fields recognized in the JSON config file. They are mapped
+# into the unified PlatformConfig.credentials dict that uploaders/publishers read.
+KNOWN_PLATFORM_FIELDS = (
+    "client_secrets_file",
+    "credentials_file",
+    "access_token",
+    "api_key",
+    "api_secret",
+    "access_token_secret",
+    "page_id",
+    "app_id",
+    "app_secret",
+    "api_version",
+)
 
 
 @dataclass
@@ -178,8 +150,37 @@ class ConfigLoader:
                     # Validate required fields
                     self._validate_platform_config(platform, platform_data)
 
-                    # Create platform config
-                    platform_configs[platform] = PlatformConfig.from_dict(platform_data)
+                    # Create the unified platform config. Flat fields from the
+                    # JSON file are folded into `credentials`, which is the shape
+                    # every uploader/publisher reads (e.g. YouTubeAuth reads
+                    # credentials["client_secrets_file"], FacebookAuth reads
+                    # credentials["page_id"]). This kills the previous split where
+                    # a flat config object had no `.credentials` attribute and the
+                    # CLI silently produced credentials={}.
+                    credentials = {
+                        key: value
+                        for key, value in platform_data.items()
+                        if key in KNOWN_PLATFORM_FIELDS
+                    }
+
+                    # Warn about unrecognised keys so typos (e.g. 'acess_token')
+                    # surface immediately instead of silently producing empty credentials.
+                    unknown_keys = [
+                        key for key in platform_data if key not in KNOWN_PLATFORM_FIELDS
+                    ]
+                    if unknown_keys:
+                        logger.warning(
+                            "Platform '%s': unknown config keys ignored: %s. "
+                            "Check for typos; valid keys are: %s",
+                            platform,
+                            unknown_keys,
+                            list(KNOWN_PLATFORM_FIELDS),
+                        )
+
+                    platform_configs[platform] = PlatformConfig(
+                        platform_name=platform,
+                        credentials=credentials,
+                    )
 
             return MedusaConfig(**platform_configs)
 

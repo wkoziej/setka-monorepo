@@ -19,17 +19,73 @@ impl Default for RenderOptions {
     }
 }
 
-/// Resolve the cinemon `--main-audio` target for a recording.
+/// Resolve the `--main-audio` target for a recording's render.
 /// Prefers the polished Bitwig master at `mixed/master.wav` (returned as an absolute
-/// path, since the cinemon master-aware selection expects one), so the render picks
-/// `master_analysis.json`. Returns None when the master is absent, letting callers
-/// keep their existing audio resolution.
+/// path) so cymatic picks `master_analysis.json`. Returns None when the master is
+/// absent, letting callers keep their existing audio resolution.
 fn resolve_master_main_audio(recording_path: &std::path::Path) -> Option<String> {
     let master = recording_path.join("mixed").join("master.wav");
     if master.exists() {
         Some(master.to_string_lossy().to_string())
     } else {
         None
+    }
+}
+
+/// Resolve the `--main-audio` to pass to cymatic-render for a recording.
+///
+/// Precedence: the polished `mixed/master.wav` (absolute path) wins; otherwise,
+/// when `extracted/` holds multiple `.m4a` files we require the configured
+/// `main_audio_file` to disambiguate (erroring if it is unset/absent); a single
+/// audio file (or none) needs no override and returns `Ok(None)`, letting
+/// cymatic auto-detect.
+fn resolve_render_main_audio(
+    recording_path: &std::path::Path,
+    config: &AppConfig,
+) -> Result<Option<String>, String> {
+    if let Some(master_audio) = resolve_master_main_audio(recording_path) {
+        log::info!("🎯 Using mixed master as main audio: {}", master_audio);
+        return Ok(Some(master_audio));
+    }
+
+    let extracted_dir = recording_path.join("extracted");
+    if !extracted_dir.exists() {
+        return Ok(None);
+    }
+
+    let audio_files: Vec<String> = std::fs::read_dir(&extracted_dir)
+        .map_err(|e| format!("Failed to read extracted directory: {}", e))?
+        .filter_map(|entry| {
+            let entry = entry.ok()?;
+            let path = entry.path();
+            if path.extension()?.to_str()? == "m4a" {
+                path.file_name()?.to_str().map(|s| s.to_string())
+            } else {
+                None
+            }
+        })
+        .collect();
+
+    log::info!("🎵 Found {} audio file(s) for render: {:?}", audio_files.len(), audio_files);
+
+    if audio_files.len() > 1 {
+        if !config.main_audio_file.is_empty() && audio_files.contains(&config.main_audio_file) {
+            log::info!("🎯 Using configured main audio: {}", config.main_audio_file);
+            Ok(Some(config.main_audio_file.clone()))
+        } else {
+            log::warn!(
+                "⚠️ Multiple audio files found but main audio '{}' not available in: {:?}",
+                config.main_audio_file,
+                audio_files
+            );
+            Err(format!(
+                "Multiple audio files found: {:?}. Configure FERMATA_MAIN_AUDIO environment variable to specify which one to use.",
+                audio_files
+            ))
+        }
+    } else {
+        // Single audio file or none: let cymatic auto-detect from extracted/.
+        Ok(None)
     }
 }
 
@@ -43,7 +99,7 @@ pub async fn run_next_step(recording_name: String, config: State<'_, AppConfig>)
     let recordings = FileScanner::scan_recordings(&config.recordings_path);
     log::info!("🔍 [run_next_step] Found {} recordings total", recordings.len());
 
-    let recording = recordings
+    let mut recording = recordings
         .into_iter()
         .find(|r| r.name == recording_name)
         .ok_or_else(|| {
@@ -52,6 +108,14 @@ pub async fn run_next_step(recording_name: String, config: State<'_, AppConfig>)
         })?;
 
     log::info!("✅ [run_next_step] Found recording: {}, status: {:?}", recording.name, recording.status);
+
+    // Enforce path-guard containment: re-resolve via canonicalization + symlink check
+    // so a symlink inside the recordings root cannot escape to an arbitrary path.
+    let safe_path = crate::commands::path_guard::resolve_recording_dir(
+        &config.recordings_path,
+        &recording_name,
+    )?;
+    recording.path = safe_path;
 
     // Determine next step
     let next_step = recording
@@ -81,10 +145,18 @@ pub async fn run_specific_step(
 
     // Get the recording details first
     let recordings = FileScanner::scan_recordings(&config.recordings_path);
-    let recording = recordings
+    let mut recording = recordings
         .into_iter()
         .find(|r| r.name == recording_name)
         .ok_or_else(|| format!("Recording '{}' not found", recording_name))?;
+
+    // Enforce path-guard containment: re-resolve via canonicalization + symlink check
+    // so a symlink inside the recordings root cannot escape to an arbitrary path.
+    let safe_path = crate::commands::path_guard::resolve_recording_dir(
+        &config.recordings_path,
+        &recording_name,
+    )?;
+    recording.path = safe_path;
 
     // Validate that the step can be run
     if !recording.can_run_step(&step) {
@@ -179,83 +251,16 @@ async fn execute_step(
 
             analyze_result
         }
-        NextStep::SetupRender => {
-            // Check if analysis exists
+        NextStep::SetupRender | NextStep::Render => {
+            // cymatic-render does setup + render in one shot (no separate cinemon
+            // config/blend step), so SetupRender and Render both drive cymatic.
             if !recording.path.join("analysis").exists() {
                 return Err("Analysis directory not found - run analyze step first".to_string());
             }
 
-            // Prefer the polished Bitwig master so cinemon selects master_analysis.json.
-            if let Some(master_audio) = resolve_master_main_audio(&recording.path) {
-                log::info!("🎯 Using mixed master as main audio: {}", master_audio);
-                return runner.run_cinemon_render(&recording.path, "minimal", Some(&master_audio)).await
-                    .map_err(|e| format!("Command execution failed: {}", e));
-            }
-
-            // Check if we have multiple audio files and use configured main audio
-            let extracted_dir = recording.path.join("extracted");
-            if extracted_dir.exists() {
-                let audio_files: Vec<_> = std::fs::read_dir(&extracted_dir)
-                    .map_err(|e| format!("Failed to read extracted directory: {}", e))?
-                    .filter_map(|entry| {
-                        let entry = entry.ok()?;
-                        let path = entry.path();
-                        if path.extension()?.to_str()? == "m4a" {
-                            path.file_name()?.to_str().map(|s| s.to_string())
-                        } else {
-                            None
-                        }
-                    })
-                    .collect();
-
-                log::info!("🎵 Found {} audio files for setup render: {:?}", audio_files.len(), audio_files);
-
-                if audio_files.len() > 1 {
-                    // Use configured main audio file if available
-                    if !config.main_audio_file.is_empty() && audio_files.contains(&config.main_audio_file) {
-                        log::info!("🎯 Using configured main audio: {}", config.main_audio_file);
-                        runner.run_cinemon_render(&recording.path, "minimal", Some(&config.main_audio_file)).await
-                    } else {
-                        log::warn!("⚠️ Multiple audio files found but main audio '{}' not available in: {:?}", config.main_audio_file, audio_files);
-                        return Err(format!("Multiple audio files found: {:?}. Configure FERMATA_MAIN_AUDIO environment variable to specify which one to use.", audio_files));
-                    }
-                } else {
-                    // Single audio file, use without --main-audio parameter
-                    runner.run_cinemon_render(&recording.path, "minimal", None).await
-                }
-            } else {
-                // No extracted directory, use basic render
-                runner.run_cinemon_render(&recording.path, "minimal", None).await
-            }
-        }
-        NextStep::Render => {
-            // Check if blender project exists
-            let blender_dir = recording.path.join("blender");
-            if !blender_dir.exists() {
-                return Err("Blender project not found - run setup render step first".to_string());
-            }
-
-            // Find .blend file
-            let blend_files: Vec<_> = std::fs::read_dir(&blender_dir)
-                .map_err(|e| format!("Failed to read blender directory: {}", e))?
-                .filter_map(|entry| {
-                    let entry = entry.ok()?;
-                    let path = entry.path();
-                    if path.extension()?.to_str()? == "blend" {
-                        Some(path)
-                    } else {
-                        None
-                    }
-                })
-                .collect();
-
-            if blend_files.is_empty() {
-                return Err("No .blend file found in blender directory".to_string());
-            }
-
-            // For now, return error asking user to render manually
-            // TODO: Implement automatic Blender rendering
-            return Err("Manual Blender rendering required. Open the .blend file and render manually, or implement automatic rendering.".to_string());
+            let main_audio = resolve_render_main_audio(&recording.path, config)?;
+            log::info!("🎬 cymatic-render main_audio: {:?}", main_audio);
+            runner.run_cymatic_render(&recording.path, main_audio.as_deref()).await
         }
         NextStep::Upload => {
             // Check if render output exists
@@ -333,33 +338,10 @@ pub async fn run_specific_step_with_options(
     }
 }
 
-#[tauri::command]
-pub async fn list_animation_presets(config: State<'_, AppConfig>) -> Result<Vec<String>, String> {
-    let runner = ProcessRunner::new(
-        config.cli_paths.workspace_root.clone(),
-        config.cli_paths.uv_path.clone()
-    );
-    let result = runner.list_cinemon_presets().await.map_err(|e| e.to_string())?;
-
-    if result.success {
-        // Parse preset names from output
-        let presets: Vec<String> = result.stdout
-            .lines()
-            .filter_map(|line| {
-                if line.trim().starts_with("  ") && !line.contains("Available presets:") {
-                    Some(line.trim().to_string())
-                } else {
-                    None
-                }
-            })
-            .collect();
-        Ok(presets)
-    } else {
-        Err(format!("Failed to list presets: {}", result.stderr))
-    }
-}
-
-/// Execute a specific pipeline step with preset options
+/// Execute a render step with an explicit main-audio override.
+///
+/// `preset` is retained for UI/back-compat but is a no-op for cymatic (the GN
+/// visualizer has no preset concept); only the audio selection is honored.
 async fn execute_step_with_preset(
     recording: &Recording,
     step: &NextStep,
@@ -373,20 +355,25 @@ async fn execute_step_with_preset(
     );
 
     match step {
-        NextStep::SetupRender => {
+        NextStep::SetupRender | NextStep::Render => {
             // Check if analysis exists
             if !recording.path.join("analysis").exists() {
                 return Err("Analysis directory not found - run analyze step first".to_string());
             }
 
-            // Prefer an explicit main_audio; otherwise fall back to the polished master
-            // so cinemon selects master_analysis.json without a manual override.
-            let resolved_audio = main_audio
-                .map(|a| a.to_string())
-                .or_else(|| resolve_master_main_audio(&recording.path));
+            // Prefer an explicit main_audio; otherwise resolve as the default render
+            // path does (mixed master, configured multi-audio, or auto-detect).
+            let resolved_audio = match main_audio {
+                Some(a) => Some(a.to_string()),
+                None => resolve_render_main_audio(&recording.path, config)?,
+            };
 
-            log::info!("🎬 Setting up render with preset: {}, main_audio: {:?}", preset, resolved_audio);
-            runner.run_cinemon_render(&recording.path, preset, resolved_audio.as_deref()).await
+            log::info!(
+                "🎬 cymatic-render (preset '{}' ignored by GN visualizer), main_audio: {:?}",
+                preset,
+                resolved_audio
+            );
+            runner.run_cymatic_render(&recording.path, resolved_audio.as_deref()).await
                 .map_err(|e| format!("Command execution failed: {}", e))
         }
         _ => {
@@ -591,11 +578,27 @@ mod tests {
     }
 
     #[test]
-    fn test_render_options_default_uses_supported_preset() {
-        // The default preset must be one cinemon actually ships (see
-        // `cinemon-generate-config --list-presets`); a stale default makes the
-        // quick "Setup" button fail with "Preset '<name>' not found".
+    fn test_render_options_default_has_preset() {
+        // cymatic (the GN visualizer) has no preset concept, so the value is
+        // informational only — but the default must still be a stable, non-empty
+        // string matching the UI's AVAILABLE_PRESETS for the "Setup" button.
         let supported = ["minimal", "multi_pip"];
         assert!(supported.contains(&RenderOptions::default().preset.as_str()));
+    }
+
+    #[tokio::test]
+    async fn test_render_step_drives_cymatic() {
+        let temp_dir = TempDir::new().unwrap();
+        let config = create_test_config(&temp_dir);
+
+        // Analyzed recording: Render now drives cymatic-render (no manual-Blender stub).
+        let recording = create_test_recording(&temp_dir, "test_recording", RecordingStatus::Analyzed);
+
+        let result = execute_step(&recording, &NextStep::Render, &config).await;
+        assert!(result.is_ok());
+        let process_result = result.unwrap();
+        // echo stub: stdout echoes the constructed command line.
+        assert!(process_result.stdout.contains("cymatic-render"));
+        assert!(!process_result.stdout.contains("cinemon"));
     }
 }

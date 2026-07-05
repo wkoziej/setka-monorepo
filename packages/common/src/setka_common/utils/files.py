@@ -6,6 +6,7 @@ ABOUTME: Provides functions for finding and organizing media files
 from pathlib import Path
 from typing import List
 import logging
+import re
 
 from dataclasses import dataclass
 from typing import Optional
@@ -53,18 +54,26 @@ class MediaDiscovery:
         Raises:
             FileNotFoundError: If recording directory or extracted directory doesn't exist
         """
+        # Local import avoids a module-level cycle: recording.py imports from
+        # this module, so the dir-name constants are pulled in lazily here.
+        from ..file_structure.specialized import RecordingStructureManager
+
         self.recording_dir = Path(recording_dir)
 
         if not self.recording_dir.exists():
             raise FileNotFoundError(f"Recording directory not found: {recording_dir}")
 
-        self.extracted_dir = self.recording_dir / "extracted"
+        self.extracted_dir = (
+            self.recording_dir / RecordingStructureManager.EXTRACTED_DIRNAME
+        )
         if not self.extracted_dir.exists():
             raise FileNotFoundError(
                 f"Extracted directory not found: {self.extracted_dir}"
             )
 
-        self.analysis_dir = self.recording_dir / "analysis"
+        self.analysis_dir = (
+            self.recording_dir / RecordingStructureManager.ANALYSIS_DIRNAME
+        )
 
     def discover_video_files(self) -> List[str]:
         """
@@ -258,6 +267,21 @@ def find_media_files(directory: Path) -> dict[MediaType, List[Path]]:
 def sanitize_filename(filename: str) -> str:
     """Sanitize filename for cross-platform compatibility.
 
+    This is the single canonical sanitizer for the monorepo. It is a *superset*
+    of obsession's ``core/extractor.py`` rules and is guaranteed (by the
+    ``test_sanitize_superset`` regression test) to produce byte-identical output
+    to that implementation on real OBS source names — so adopting it in
+    obsession renames no already-extracted files.
+
+    Rules applied in order:
+    1. Replace path separators and reserved characters ``/ \\ : * ? " < > |``
+       with ``_``.
+    2. Collapse runs of consecutive underscores into a single ``_``.
+    3. Strip leading/trailing spaces and dots.
+    4. Strip leading/trailing underscores.
+    5. Fall back to ``"source"`` when nothing usable remains.
+    6. Truncate to 255 chars, preserving the extension when present.
+
     Args:
         filename: Filename to sanitize
 
@@ -270,24 +294,32 @@ def sanitize_filename(filename: str) -> str:
     if not isinstance(filename, str):
         raise ValueError(f"Filename must be a string, got {type(filename)}")
 
-    # Handle empty filename
-    if not filename:
-        return filename
+    # 1. Replace path separators and reserved characters with underscores.
+    sanitized = re.sub(r'[/\\:*?"<>|]', "_", filename)
 
-    # Remove invalid characters
-    invalid_chars = '<>:"|?*'
-    for char in invalid_chars:
-        filename = filename.replace(char, "_")
+    # 2. Collapse repeated underscores into one.
+    sanitized = re.sub(r"_+", "_", sanitized)
 
-    # Remove leading/trailing spaces and dots
-    filename = filename.strip(". ")
+    # 3. Strip leading/trailing spaces and dots.
+    sanitized = sanitized.strip(". ")
 
-    # Limit length
+    # 4. Strip leading/trailing underscores.
+    sanitized = sanitized.strip("_")
+
+    # 5. Non-empty fallback so a source never maps to an empty path.
+    if not sanitized:
+        return "source"
+
+    # 6. Limit length, preserving the extension when present.
     max_length = 255
-    if len(filename) > max_length:
-        name, ext = filename.rsplit(".", 1) if "." in filename else (filename, "")
-        filename = (
-            name[: max_length - len(ext) - 1] + "." + ext if ext else name[:max_length]
+    if len(sanitized) > max_length:
+        name, ext = (
+            sanitized.rsplit(".", 1) if "." in sanitized else (sanitized, "")
+        )
+        sanitized = (
+            name[: max_length - len(ext) - 1] + "." + ext
+            if ext
+            else name[:max_length]
         )
 
-    return filename
+    return sanitized

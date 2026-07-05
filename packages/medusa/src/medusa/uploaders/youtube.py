@@ -45,6 +45,12 @@ class YouTubeUploader(BaseUploader):
     # File size limits (YouTube allows up to 256GB)
     MAX_FILE_SIZE = 256 * 1024 * 1024 * 1024  # 256GB in bytes
 
+    # Resumable-upload chunk size. A finite chunk (not -1) keeps memory bounded
+    # for large files and makes the upload genuinely resumable; -1 buffers the
+    # whole file in memory and defeats per-chunk progress/retry. 10 MB sits in
+    # the recommended 5-50 MB band and must be a multiple of 256 KB.
+    UPLOAD_CHUNK_SIZE = 10 * 1024 * 1024  # 10 MB
+
     # YouTube category mappings
     CATEGORY_MAPPINGS = {
         "film": "1",
@@ -72,6 +78,11 @@ class YouTubeUploader(BaseUploader):
 
     # Maximum retry attempts for resumable uploads
     MAX_RESUMABLE_RETRIES = 10
+
+    # Upper bound for a server-supplied Retry-After value (seconds).  Fermata's
+    # subprocess timeout is 30 min (1 800 s); trusting an unbounded value would
+    # turn a rate-limit into a confusing kill.  15 min (900 s) is the ceiling.
+    MAX_RETRY_AFTER_SECONDS = 900
 
     def __init__(
         self, platform_name: str = "youtube", config: Optional[PlatformConfig] = None
@@ -365,7 +376,10 @@ class YouTubeUploader(BaseUploader):
             return True
 
         except HttpError as e:
-            self.logger.error(f"Thumbnail upload failed: {e}")
+            # Status only — str(HttpError) leaks the tokenized request URI.
+            self.logger.error(
+                f"Thumbnail upload failed (status {e.resp.status})"
+            )
             self._handle_http_error(e)
 
         except Exception as e:
@@ -541,7 +555,7 @@ class YouTubeUploader(BaseUploader):
             file_size = os.path.getsize(file_path)
             media = MediaFileUpload(
                 file_path,
-                chunksize=-1,  # Upload entire file at once for better performance
+                chunksize=self.UPLOAD_CHUNK_SIZE,  # bounded memory + real resume
                 resumable=True,
             )
 
@@ -593,7 +607,12 @@ class YouTubeUploader(BaseUploader):
             )
 
         except HttpError as e:
-            self.logger.error(f"YouTube API error: {e}")
+            # Log only the status code. str(HttpError) embeds the full request
+            # URI (which carries the API key / access_token) plus raw response
+            # content — neither belongs in logs.
+            self.logger.error(
+                f"YouTube API error (status {e.resp.status})"
+            )
             self._handle_http_error(e)
             # _handle_http_error always raises, this line never executes
             raise
@@ -641,6 +660,7 @@ class YouTubeUploader(BaseUploader):
         response = None
         error = None
         retry = 0
+        retry_after_seconds = None
 
         while response is None:
             try:
@@ -679,8 +699,16 @@ class YouTubeUploader(BaseUploader):
                         )
 
             except HttpError as e:
-                if e.resp.status in self.RETRYABLE_STATUS_CODES:
-                    error = f"Retriable HTTP error {e.resp.status}: {e.content}"
+                retry_after_seconds = None
+                if e.resp.status == 429:
+                    # Rate limited: honor the server's Retry-After interval
+                    # instead of guessing with exponential backoff.
+                    error = "Rate limited (status 429)"
+                    retry_after_seconds = self._parse_retry_after(e.resp)
+                elif e.resp.status in self.RETRYABLE_STATUS_CODES:
+                    # Log only the status code — never raw e.content, which can
+                    # carry tokens / sensitive payloads into the logs.
+                    error = f"Retriable HTTP error (status {e.resp.status})"
                 else:
                     raise self._handle_http_error(e)
 
@@ -702,9 +730,14 @@ class YouTubeUploader(BaseUploader):
                         platform=self.platform_name,
                     )
 
-                # Exponential backoff with jitter
-                max_sleep = 2**retry
-                sleep_seconds = random.random() * max_sleep
+                if retry_after_seconds is not None:
+                    # Server told us exactly how long to wait — clamp so we
+                    # never exceed Fermata's subprocess timeout ceiling.
+                    sleep_seconds = min(retry_after_seconds, self.MAX_RETRY_AFTER_SECONDS)
+                else:
+                    # Exponential backoff with jitter
+                    max_sleep = 2**retry
+                    sleep_seconds = random.random() * max_sleep
 
                 self.logger.warning(
                     f"Upload retry {retry}/{self.MAX_RESUMABLE_RETRIES}. "
@@ -783,6 +816,37 @@ class YouTubeUploader(BaseUploader):
                 platform=self.platform_name,
                 original_error=error,
             )
+
+    def _parse_retry_after(self, resp: Any) -> Optional[float]:
+        """
+        Extract the Retry-After interval (seconds) from a 429 response.
+
+        Handles the delta-seconds form (e.g. "120"). Returns None when the
+        header is absent or unparseable so the caller falls back to backoff.
+
+        Args:
+            resp: The response object from the HttpError (httplib2-style mapping)
+
+        Returns:
+            Seconds to wait, or None if not specified/parseable
+        """
+        # httplib2.Response (what HttpError.resp is) subclasses dict, so headers
+        # are read via .get(); header names are lower-cased there.
+        if not hasattr(resp, "get"):
+            return None
+
+        value = resp.get("retry-after")
+        if value is None:
+            value = resp.get("Retry-After")
+        if value is None:
+            return None
+
+        try:
+            seconds = float(value)
+        except (TypeError, ValueError):
+            return None
+
+        return seconds if seconds >= 0 else None
 
     def _is_retryable_error(self, error: Exception) -> bool:
         """

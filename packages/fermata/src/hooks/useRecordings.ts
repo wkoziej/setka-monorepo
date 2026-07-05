@@ -1,9 +1,9 @@
 import { useState, useCallback, useEffect } from 'react';
-import { Recording, RecordingListState, DeletionConfirmationState, RenameConfirmationState, RenderOptions } from '../types';
+import { Recording, RecordingListState, DeletionState, RenameState, RenderOptions } from '../types';
 import { invoke } from '@tauri-apps/api/core';
 
 // Tauri API wrapper with fallback for development
-const invokeCommand = async (command: string, args?: any): Promise<any> => {
+const invokeCommand = async (command: string, args?: Record<string, unknown>): Promise<unknown> => {
   try {
     // Use modern Tauri 2.0 API
     console.log(`Invoking Tauri command: ${command}`, args);
@@ -75,7 +75,7 @@ export function useRecordings() {
     setState(prev => ({ ...prev, loading: true, error: null }));
 
     try {
-      const recordings = await invokeCommand('get_recordings') as Recording[];
+      const recordings = (await invokeCommand('get_recordings')) as Recording[];
 
       setState({
         recordings,
@@ -98,9 +98,9 @@ export function useRecordings() {
     refreshRecordings();
   }, [refreshRecordings]);
 
-  const [deletionState, setDeletionState] = useState<DeletionConfirmationState>({
+  const [deletionState, setDeletionState] = useState<DeletionState>({
     isOpen: false,
-    recording: undefined,
+    recording: null,
     isDeleting: false
   });
 
@@ -108,14 +108,14 @@ export function useRecordings() {
     setDeletionState(prev => ({ ...prev, isDeleting: true }));
     try {
       await invoke('delete_recording', { recordingName });
-      setDeletionState({ isOpen: false, recording: undefined, isDeleting: false });
+      setDeletionState({ isOpen: false, recording: null, isDeleting: false });
       refreshRecordings(); // Odśwież listę
     } catch (error) {
       setDeletionState(prev => ({ ...prev, isDeleting: false }));
       // TODO: Pokaż error toast
       console.error('Delete failed:', error);
     }
-  }, []);
+  }, [refreshRecordings]);
 
   return {
     ...state,
@@ -126,7 +126,7 @@ export function useRecordings() {
       setDeletionState({ isOpen: true, recording, isDeleting: false });
     },
     hideDeletionDialog: () => {
-      setDeletionState({ isOpen: false, recording: undefined, isDeleting: false });
+      setDeletionState({ isOpen: false, recording: null, isDeleting: false });
     }
   };
 }
@@ -150,13 +150,13 @@ export function useRecordingOperations() {
     try {
       // Always try to use Tauri command first
       console.log(`📞 Invoking run_next_step for: ${recordingName}`);
-      const result = await invokeCommand('run_next_step', { recordingName });
+      const result = (await invokeCommand('run_next_step', { recordingName })) as string;
       console.log(`✅ runNextStep result:`, result);
 
       setOperationState(prev => ({
         ...prev,
         running: { ...prev.running, [recordingName]: false },
-        output: result as string,
+        output: result,
         error: null
       }));
     } catch (error) {
@@ -182,13 +182,13 @@ export function useRecordingOperations() {
     try {
       // Always try to use Tauri command first
       console.log(`📞 Invoking run_specific_step for: ${recordingName}, step: ${step}`);
-      const result = await invokeCommand('run_specific_step', { recordingName, step });
+      const result = (await invokeCommand('run_specific_step', { recordingName, step })) as string;
       console.log(`✅ runSpecificStep result:`, result);
 
       setOperationState(prev => ({
         ...prev,
         running: { ...prev.running, [recordingName]: false },
-        output: result as string,
+        output: result,
         error: null
       }));
     } catch (error) {
@@ -213,16 +213,16 @@ export function useRecordingOperations() {
 
     try {
       const options: RenderOptions = { preset, main_audio: mainAudio };
-      const result = await invokeCommand('run_specific_step_with_options', {
+      const result = (await invokeCommand('run_specific_step_with_options', {
         recordingName,
         step: 'setuprender',
         options
-      });
+      })) as string;
 
       setOperationState(prev => ({
         ...prev,
         running: { ...prev.running, [recordingName]: false },
-        output: result as string,
+        output: result,
         error: null
       }));
     } catch (error) {
@@ -246,9 +246,9 @@ export function useRecordingOperations() {
 
 // Hook for rename recording functionality
 export function useRenameRecording() {
-  const [renameState, setRenameState] = useState<RenameConfirmationState>({
+  const [renameState, setRenameState] = useState<RenameState>({
     isOpen: false,
-    recording: undefined,
+    recording: null,
     isRenaming: false,
   });
 
@@ -263,7 +263,7 @@ export function useRenameRecording() {
   const hideRenameDialog = useCallback(() => {
     setRenameState({
       isOpen: false,
-      recording: undefined,
+      recording: null,
       isRenaming: false,
     });
   }, []);
@@ -277,8 +277,8 @@ export function useRenameRecording() {
 
     try {
       await invokeCommand('rename_recording', {
-        oldName: recording.name,
-        newName: newName
+        oldName: recording.name as string,
+        newName: newName as string
       });
 
       console.log(`✅ Successfully renamed recording to '${newName}'`);

@@ -97,10 +97,22 @@ def main(argv=None) -> int:
         print(f"cymatic build_scene: {exc}")
         return 1
 
-    config = VisualizerConfig.from_json(Path(config_path).read_text())
+    # Parsing the config and loading/validating the analysis can fail on a
+    # malformed config or an incompatible/corrupt analysis. Surface a readable
+    # message and exit non-zero instead of dumping a traceback (this runs inside
+    # headless Blender, where an unhandled exception is hard to read).
+    try:
+        config = VisualizerConfig.from_json(Path(config_path).read_text())
+    except (ValueError, KeyError, OSError) as exc:
+        print(f"cymatic build_scene: could not read config {config_path}: {exc}")
+        return 1
 
     # 1. host-side load + normalize (pure numpy, no bpy).
-    analysis = load_analysis(config)
+    try:
+        analysis = load_analysis(config)
+    except (ValueError, FileNotFoundError, OSError) as exc:
+        print(f"cymatic build_scene: could not load analysis: {exc}")
+        return 1
 
     # 2. data-object: numpy channels -> mesh + FLOAT/POINT attributes (Unit 6).
     channels = {
@@ -118,6 +130,9 @@ def main(argv=None) -> int:
     )
 
     # 4. hybrid_v1 preset: rings + core + camera + sun + world + render (Unit 8).
+    # frame_start/frame_end are threaded in so the preset owns the frame range —
+    # build_scene no longer re-sets it afterward (that hidden ordering
+    # dependency let a render reuse a stale range if step 5 was skipped).
     build_preset_scene(
         analysis,
         data_obj,
@@ -125,16 +140,17 @@ def main(argv=None) -> int:
         config.preset,
         fps=config.fps,
         resolution=config.resolution,
+        frame_start=config.frame_start,
+        frame_end=config.frame_end,
     )
 
     # 5. optional headless render of the PNG frame sequence (Unit 9 mux seam).
     # When the runner sets config.frames_dir, render the animation to PNG frames
     # there; the host-side runner then muxes them + audio to mp4 via ffmpeg
-    # (this Blender build has no internal FFMPEG encoder).
+    # (this Blender build has no internal FFMPEG encoder). The frame range was
+    # already set by build_preset_scene; here we only wire the output sink.
     if bpy is not None and config.frames_dir:
         scene = bpy.context.scene
-        scene.frame_start = config.frame_start
-        scene.frame_end = config.frame_end or int(analysis.duration * config.fps)
         scene.render.image_settings.file_format = "PNG"
         frames_dir = Path(config.frames_dir)
         frames_dir.mkdir(parents=True, exist_ok=True)

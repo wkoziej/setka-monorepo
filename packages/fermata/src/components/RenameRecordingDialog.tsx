@@ -3,7 +3,7 @@ import { Recording } from '../types';
 
 interface RenameRecordingDialogProps {
   isOpen: boolean;
-  recording?: Recording;
+  recording?: Recording | null;
   onRename: (newName: string) => void;
   onCancel: () => void;
   isRenaming: boolean;

@@ -1,5 +1,5 @@
 use crate::models::Recording;
-use crate::services::{StatusDetector, update_recording_status};
+use crate::services::{StatusDetector, update_recording_status_lite};
 use std::path::Path;
 
 pub struct FileScanner;
@@ -22,8 +22,10 @@ impl FileScanner {
                     if path.is_dir() && Self::is_valid_recording_dir(&path) {
                         match Recording::from_path(path) {
                             Ok(mut recording) => {
-                                // Update status and file sizes based on current filesystem state
-                                update_recording_status(&mut recording);
+                                // List view: detect status + aggregate size only.
+                                // The full per-file breakdown loads lazily when a
+                                // recording's details are opened.
+                                update_recording_status_lite(&mut recording);
                                 recordings.push(recording);
                             }
                             Err(e) => {

@@ -11,17 +11,6 @@ const SORT_OPTIONS: { value: SortOption; label: string }[] = [
   { value: 'size-asc', label: 'Smallest First' }
 ];
 
-const STATUS_OPTIONS: { value: RecordingStatus | 'all'; label: string }[] = [
-  { value: 'all', label: 'All Statuses' },
-  { value: 'Recorded', label: '📹 Recorded' },
-  { value: 'Extracted', label: '📁 Extracted' },
-  { value: 'Analyzed', label: '📊 Analyzed' },
-  { value: 'SetupRendered', label: '🎬 Setup' },
-  { value: 'Rendered', label: '✅ Rendered' },
-  { value: 'Uploaded', label: '🚀 Uploaded' },
-  { value: { Failed: '' }, label: '❌ Failed' }
-];
-
 export function ControlsBar({
   filterConfig,
   onUpdateFilter,

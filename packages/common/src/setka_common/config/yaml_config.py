@@ -59,8 +59,10 @@ from typing import (
 from pathlib import Path
 import yaml
 
+from ..exceptions import SetkaCommonError
 
-class ConfigValidationError(Exception):
+
+class ConfigValidationError(SetkaCommonError):
     """Raised when YAML configuration validation fails."""
 
     pass
@@ -323,15 +325,9 @@ class YAMLConfigLoader:
         """Load and validate YAML configuration.
 
         This method is kept for backward compatibility.
-        It delegates to load_from_file for consistency.
+        It delegates to load_from_file, which already resolves relative paths.
         """
-        config = self.load_from_file(config_path)
-
-        # Resolve relative paths using base_directory (only if enabled and base_directory exists)
-        if self.resolve_paths and config.project.base_directory:
-            config = self._resolve_relative_paths(config)
-
-        return config
+        return self.load_from_file(config_path)
 
     def _parse_project_config(self, data: Dict[str, Any]) -> ProjectConfig:
         """Parse project configuration section."""
@@ -339,17 +335,14 @@ class YAMLConfigLoader:
         if not isinstance(video_files, list):
             raise ConfigValidationError("video_files must be a list")
 
-        # Parse resolution
+        # Parse resolution (always a mapping in YAML, or absent)
         resolution_data = data.get("resolution")
         resolution = None
         if resolution_data:
-            if isinstance(resolution_data, dict):
-                resolution = Resolution(
-                    width=resolution_data.get("width", 1920),
-                    height=resolution_data.get("height", 1080),
-                )
-            else:
-                resolution = resolution_data  # Backwards compatibility
+            resolution = Resolution(
+                width=resolution_data.get("width", 1920),
+                height=resolution_data.get("height", 1080),
+            )
 
         return ProjectConfig(
             video_files=video_files,
@@ -387,13 +380,8 @@ class YAMLConfigLoader:
             errors.append("FPS must be greater than 0")
 
         if config.project.resolution:
-            if isinstance(config.project.resolution, Resolution):
-                width = config.project.resolution.width
-                height = config.project.resolution.height
-            else:
-                # Backwards compatibility with dict
-                width = config.project.resolution.get("width", 0)
-                height = config.project.resolution.get("height", 0)
+            width = config.project.resolution.width
+            height = config.project.resolution.height
 
             if width <= 0 or height <= 0:
                 errors.append("Resolution width and height must be greater than 0")
@@ -502,22 +490,3 @@ class YAMLConfigLoader:
             layout=config.layout,
             strip_animations=config.strip_animations,
         )
-
-    def _validate_for_blender_execution(self, config: BlenderYAMLConfig):
-        """Validate config is ready for Blender execution.
-
-        Args:
-            config: Configuration to validate
-
-        Raises:
-            ConfigValidationError: If validation fails
-        """
-        if not config.project.base_directory:
-            raise ConfigValidationError("base_directory required for Blender execution")
-
-        if not config.project.video_files:
-            raise ConfigValidationError("video_files required for Blender execution")
-
-        base_dir = Path(config.project.base_directory)
-        if not base_dir.exists():
-            raise ConfigValidationError(f"Base directory does not exist: {base_dir}")

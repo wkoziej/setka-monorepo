@@ -20,7 +20,6 @@ export function RecordingDetails({ recordingName, onBack, onRecordingRenamed }: 
   const [selectedPreset, setSelectedPreset] = useState("minimal");
   const [showPresetConfig, setShowPresetConfig] = useState(false);
   const [showVideoPlayer, setShowVideoPlayer] = useState(false);
-  const [videoPath, setVideoPath] = useState<string | null>(null);
   const [heatmapUrl, setHeatmapUrl] = useState<string | null>(null);
   const { runNextStep, runSpecificStep, runSetupRenderWithPreset, running, output, error: operationError } = useRecordingOperations();
   const { renameState, showRenameDialog, hideRenameDialog, renameRecording } = useRenameRecording();
@@ -123,19 +122,10 @@ export function RecordingDetails({ recordingName, onBack, onRecordingRenamed }: 
     }
   };
 
-  const handlePlayVideo = async () => {
-    try {
-      const path = await invoke('get_playable_video_path', { recordingName }) as string;
-      console.log('🎬 Video path from backend:', path);
-      console.log('🎬 Setting videoPath to:', path);
-      setVideoPath(path);
-      console.log('🎬 Setting showVideoPlayer to true');
-      setShowVideoPlayer(true);
-      console.log('🎬 State after setting - showVideoPlayer should be true, videoPath should be:', path);
-    } catch (error) {
-      console.error('🚨 Video error:', error);
-      alert(error instanceof Error ? error.message : 'Failed to find video file');
-    }
+  const handlePlayVideo = () => {
+    // The backend resolves the video path from recordingName server-side.
+    // No need to pre-fetch the path here.
+    setShowVideoPlayer(true);
   };
 
   const handlePlayWithBrief = async () => {
@@ -196,13 +186,18 @@ export function RecordingDetails({ recordingName, onBack, onRecordingRenamed }: 
     let currentIndex = 0;
 
     if (typeof currentStatus === 'object' && 'Failed' in currentStatus) {
-      // For failed status, mark appropriate steps as completed based on what exists
-      const path = recording.path;
-      if (path.includes('extracted')) currentIndex = 1;
-      if (path.includes('analysis')) currentIndex = 2;
-      if (path.includes('blender') && !path.includes('render')) currentIndex = 3;
-      if (path.includes('render')) currentIndex = 4;
-      if (path.includes('uploads')) currentIndex = 5;
+      // Derive how far the pipeline got from the backend-reported file map
+      // (relative paths under the recording), not the recording's own dir path
+      // (which never contains "extracted"/"render" and so always read as 0).
+      const files = Object.keys(recording.file_sizes);
+      const has = (segment: string) =>
+        files.some((f) => f.split(/[\\/]/).includes(segment));
+
+      if (has('extracted')) currentIndex = 1;
+      if (has('analysis')) currentIndex = 2;
+      if (has('blender') && !has('render')) currentIndex = 3;
+      if (has('render')) currentIndex = 4;
+      if (has('uploads')) currentIndex = 5;
 
       steps[currentIndex].status = 'failed';
     } else {
@@ -614,20 +609,14 @@ export function RecordingDetails({ recordingName, onBack, onRecordingRenamed }: 
       />
 
       {/* Video Player Modal */}
-      {(() => {
-        console.log('🎬 VideoPlayer render check - showVideoPlayer:', showVideoPlayer, 'videoPath:', videoPath);
-        return showVideoPlayer && videoPath && (
-          <VideoPlayer
-            videoPath={videoPath}
-            recordingName={recording.name}
-            onClose={() => {
-              console.log('🎬 Closing VideoPlayer');
-              setShowVideoPlayer(false);
-              setVideoPath(null);
-            }}
-          />
-        );
-      })()}
+      {showVideoPlayer && (
+        <VideoPlayer
+          recordingName={recording.name}
+          onClose={() => {
+            setShowVideoPlayer(false);
+          }}
+        />
+      )}
     </div>
   );
 }

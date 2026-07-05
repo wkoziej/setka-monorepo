@@ -17,9 +17,12 @@ export type RecordingStatus =
   | { Failed: string };
 
 // Configuration types
+// Manually kept in sync with the Rust AppConfigDto in commands/recordings.rs
+// (no ts-rs/specta codegen yet — see plan's Deferred section).
 export interface AppConfig {
   recordings_path: string;
   cli_paths: CliPaths;
+  main_audio_file: string;
 }
 
 export interface CliPaths {
@@ -35,11 +38,15 @@ export interface ProcessResult {
   exit_code: number | null;
 }
 
+// Manually kept in sync with the Rust NextStep enum in models/recording.rs
+// (no ts-rs/specta codegen yet — see plan's Deferred section).
 export type NextStep =
   | 'Extract'
   | 'Analyze'
+  | 'SetupRender'
   | 'Render'
-  | 'Upload';
+  | 'Upload'
+  | 'Retry';
 
 // UI State types
 export interface RecordingListState {
@@ -64,6 +71,13 @@ export interface OperationState {
   running: Record<string, boolean>;
   output: string | null;
   error: string | null;
+}
+
+// Options for the preset-driven render step.
+// Mirrors the Rust `RenderOptions` struct in commands/operations.rs.
+export interface RenderOptions {
+  preset: string;
+  main_audio?: string;
 }
 
 // Video types

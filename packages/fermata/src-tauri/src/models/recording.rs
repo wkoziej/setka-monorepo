@@ -17,8 +17,8 @@ pub enum RecordingStatus {
     Recorded,       // .mkv exists
     Extracted,      // extracted/ exists
     Analyzed,       // analysis/ exists
-    SetupRendered,  // blender/*.blend exists (cinemon done)
-    Rendered,       // blender/render/*.mp4 exists (blender rendering done)
+    SetupRendered,  // blender/*.blend exists (cymatic scene built)
+    Rendered,       // blender/render/*.mp4 exists (cymatic render done)
     Uploaded,       // uploads/ exists
     Failed(String),
 }
@@ -146,13 +146,20 @@ mod tests {
 
     #[test]
     fn test_recording_creation_from_valid_path() {
-        let path = PathBuf::from("/test/stream_20240115_120000");
+        // `from_path` reads the directory's mtime, so the path must exist on
+        // disk — use a unique temp dir named like a real recording.
+        let base = std::env::temp_dir().join(format!("fermata_rec_test_{}", std::process::id()));
+        let path = base.join("stream_20240115_120000");
+        std::fs::create_dir_all(&path).unwrap();
+
         let recording = Recording::from_path(path.clone()).unwrap();
 
         assert_eq!(recording.name, "stream_20240115_120000");
         assert_eq!(recording.path, path);
         assert_eq!(recording.status, RecordingStatus::Recorded);
         assert!(recording.file_sizes.is_empty());
+
+        std::fs::remove_dir_all(&base).ok();
     }
 
     #[test]

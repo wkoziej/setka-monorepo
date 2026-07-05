@@ -2,7 +2,7 @@ import { Recording } from '../types';
 
 interface DeletionConfirmDialogProps {
   isOpen: boolean;
-  recording?: Recording;
+  recording?: Recording | null;
   onConfirm: () => void;
   onCancel: () => void;
   isDeleting: boolean;

@@ -2,18 +2,19 @@ import { invoke } from '@tauri-apps/api/core';
 import { useEffect } from 'react';
 
 interface VideoPlayerProps {
-  videoPath: string;
   recordingName: string;
   onClose: () => void;
 }
 
-export function VideoPlayer({ videoPath, recordingName, onClose }: VideoPlayerProps) {
+export function VideoPlayer({ recordingName, onClose }: VideoPlayerProps) {
   useEffect(() => {
     // Bezpośrednio otwórz w zewnętrznym odtwarzaczu
     const openVideo = async () => {
       try {
-        console.log('🎬 Opening video in external player:', videoPath);
-        await invoke('open_video_external', { filePath: videoPath });
+        console.log('🎬 Opening video in external player for recording:', recordingName);
+        // Pass the recording name, not a raw path: the backend resolves the
+        // playable video server-side (path-traversal hardening).
+        await invoke('open_video_external', { recordingName });
         console.log('✅ Video opened successfully');
         // Zamknij modal od razu po otwarciu
         onClose();
@@ -25,7 +26,7 @@ export function VideoPlayer({ videoPath, recordingName, onClose }: VideoPlayerPr
     };
 
     openVideo();
-  }, [videoPath, onClose]);
+  }, [recordingName, onClose]);
 
   // Prosty modal z informacją o ładowaniu
   return (
@@ -46,7 +47,7 @@ export function VideoPlayer({ videoPath, recordingName, onClose }: VideoPlayerPr
     >
       <div style={{ textAlign: 'center' }}>
         <div style={{ fontSize: '48px', marginBottom: '20px' }}>🎬</div>
-        <div>Opening video in external player...</div>
+        <div>Opening in external player...</div>
         <div style={{ fontSize: '14px', marginTop: '10px', opacity: 0.7 }}>
           {recordingName}
         </div>
