@@ -127,7 +127,7 @@ class AudioAnalyzer:
 
         result["tempo"] = {
             "bpm": tempo_value,
-            "beat_times": beats.tolist(),
+            "beat_times": _finite_floats(beats.tolist()),
             "beat_count": len(beats),
         }
 

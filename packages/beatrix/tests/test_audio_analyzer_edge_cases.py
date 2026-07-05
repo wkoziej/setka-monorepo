@@ -258,3 +258,65 @@ class TestSanitizeNonFinite:
         for band in ("bass_energy", "mid_energy", "high_energy"):
             for v in result["frequency_bands"][band]:
                 assert math.isfinite(v)
+
+
+# ---------------------------------------------------------------------------
+# Item 2 — producer contract: schema_version, hop_length, n_fft, finite beat_times
+# ---------------------------------------------------------------------------
+
+
+class TestProducerContractExplicit:
+    """Explicit contract assertions covering the fix-queue requirements (item 2)."""
+
+    @pytest.fixture
+    def click_result(self, tmp_path):
+        """Click track at 120 BPM — guarantees a non-empty beat_times list."""
+        sr = 22050
+        n = int(4.0 * sr)
+        y = np.zeros(n, dtype=np.float32)
+        for i in range(8):
+            start = int(i * 0.5 * sr)
+            y[start : start + 200] = 0.9
+        pcm = np.int16(y * 32000)
+        path = tmp_path / "clicks.wav"
+        with wave.open(str(path), "wb") as wf:
+            wf.setnchannels(1)
+            wf.setsampwidth(2)
+            wf.setframerate(sr)
+            wf.writeframes(pcm.tobytes())
+        return AudioAnalyzer().analyze_for_animation(path)
+
+    def test_schema_version_is_1_0(self, click_result):
+        assert click_result["schema_version"] == "1.0"
+
+    def test_hop_length_is_512(self, click_result):
+        assert click_result["hop_length"] == 512
+
+    def test_n_fft_is_2048(self, click_result):
+        assert click_result["n_fft"] == 2048
+
+    def test_beat_times_all_finite(self, click_result):
+        beat_times = click_result["tempo"]["beat_times"]
+        assert len(beat_times) > 0, "click track must produce at least one beat time"
+        assert all(math.isfinite(t) for t in beat_times), (
+            "every value in tempo.beat_times must be finite"
+        )
+
+
+# ---------------------------------------------------------------------------
+# Item 5 — _detect_boundaries k-clamping: 2-9 frames must not crash
+# ---------------------------------------------------------------------------
+
+
+class TestDetectBoundariesKClamping:
+    """_detect_boundaries k = min(10, n_frames) branch with 2-9 analysis frames."""
+
+    @pytest.mark.parametrize("duration_s", [0.05, 0.10, 0.20])
+    def test_short_audio_boundaries_does_not_crash(self, tmp_path, duration_s):
+        """~0.05-0.20 s of audio yields 2-9 STFT frames; agglomerative must not crash."""
+        sr = 22050
+        n_samples = int(duration_s * sr)
+        # Use silence; we only care that the code path completes, not the result shape.
+        audio = _write_silence(tmp_path / f"short_{n_samples}.wav", n_samples)
+        result = AudioAnalyzer().analyze_for_animation(audio)
+        assert isinstance(result["animation_events"]["sections"], list)

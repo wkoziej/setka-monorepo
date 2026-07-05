@@ -64,8 +64,12 @@ class AudioValidator:
         Raises:
             AudioValidationError: When the file cannot be decoded
         """
+        # Trigger the lazy librosa import BEFORE the try block so that an
+        # ImportError (broken environment) propagates as-is, not silently
+        # converted to AudioValidationError (FAIL-FAST rule).
+        librosa = self.librosa
         try:
-            self.librosa.get_duration(path=str(audio_path))
+            librosa.get_duration(path=str(audio_path))
         except Exception as exc:
             raise AudioValidationError(
                 f"Nie można zdekodować pliku audio: {audio_path.name} ({exc})"

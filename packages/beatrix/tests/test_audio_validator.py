@@ -5,6 +5,7 @@ This module contains unit tests for the AudioValidator class.
 """
 
 import wave
+from unittest.mock import patch, PropertyMock
 
 import pytest
 
@@ -13,6 +14,7 @@ from beatrix import (
     NoAudioFileError,
     MultipleAudioFilesError,
 )
+from beatrix.exceptions import AudioValidationError
 
 
 def _write_real_wav(path, sample_rate=22050, n_samples=2205):
@@ -215,3 +217,29 @@ class TestAudioValidator:
             ValueError, match="Wskazany plik jest nieprawidłowym plikiem audio"
         ):
             validator._validate_specified_audio(tmp_path, "document.txt")
+
+
+class TestValidateAudioFileImportError:
+    """validate_audio_file must propagate ImportError from a broken librosa env."""
+
+    def test_import_error_propagates_not_masked_as_validation_error(self, tmp_path):
+        """If the librosa lazy-loader raises ImportError (missing dependency),
+        validate_audio_file must re-raise it as ImportError, not AudioValidationError.
+
+        This follows the FAIL-FAST rule: a broken environment must be immediately
+        visible, not silently disguised as 'invalid file'.
+        """
+        audio_file = tmp_path / "audio.m4a"
+        audio_file.touch()
+
+        validator = AudioValidator()
+
+        # Patch the 'librosa' property to raise ImportError when accessed.
+        with patch.object(
+            type(validator),
+            "librosa",
+            new_callable=PropertyMock,
+            side_effect=ImportError("librosa is not installed"),
+        ):
+            with pytest.raises(ImportError):
+                validator.validate_audio_file(audio_file)
