@@ -208,3 +208,127 @@ class TestFfmpegTimeout:
         assert mock_run.call_args_list, "ffmpeg was never invoked"
         for call in mock_run.call_args_list:
             assert call.kwargs.get("timeout"), "subprocess.run called without timeout"
+
+    def test_audio_timeout_removes_partial_output(self):
+        """TimeoutExpired during audio extraction must delete any partial output file."""
+        metadata = {
+            "canvas_size": [1920, 1080],
+            "fps": 30.0,
+            "timestamp": 1.0,
+            "sources": {
+                "Microphone": {
+                    "position": {"x": 0, "y": 0},
+                    "has_video": False,
+                    "has_audio": True,
+                },
+            },
+        }
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            video = _make_video(temp_dir)
+            output_dir = Path(temp_dir) / "extracted"
+            output_dir.mkdir()
+            # Pre-create a partial output to simulate FFmpeg writing before timeout.
+            partial = output_dir / "Microphone.m4a"
+            partial.write_bytes(b"partial")
+
+            with patch(
+                "obsession.core.extractor.subprocess.run",
+                side_effect=subprocess.TimeoutExpired(cmd="ffmpeg", timeout=1800),
+            ):
+                result = extract_sources(str(video), metadata, str(output_dir))
+
+        assert result.success is False
+        assert not partial.exists(), "Partial audio output file was not removed after timeout"
+
+    def test_video_timeout_removes_partial_output(self):
+        """TimeoutExpired during video extraction must delete any partial output file."""
+        metadata = {
+            "canvas_size": [1920, 1080],
+            "fps": 30.0,
+            "timestamp": 1.0,
+            "sources": {
+                "Camera1": {
+                    "position": {"x": 0, "y": 0},
+                    "dimensions": {"source_width": 800, "source_height": 600},
+                    "has_video": True,
+                    "has_audio": False,
+                },
+            },
+        }
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            video = _make_video(temp_dir)
+            output_dir = Path(temp_dir) / "extracted"
+            output_dir.mkdir()
+            # Pre-create a partial output to simulate FFmpeg writing before timeout.
+            partial = output_dir / "Camera1.mp4"
+            partial.write_bytes(b"partial")
+
+            with patch(
+                "obsession.core.extractor.subprocess.run",
+                side_effect=subprocess.TimeoutExpired(cmd="ffmpeg", timeout=1800),
+            ):
+                result = extract_sources(str(video), metadata, str(output_dir))
+
+        assert result.success is False
+        assert not partial.exists(), "Partial video output file was not removed after timeout"
+
+
+class TestAudioIndexWithInvalidDims:
+    """Audio stream index must be advanced even when video dims are invalid."""
+
+    def test_invalid_video_dims_source_advances_audio_index(self):
+        """Source A (has_audio, invalid video dims) then source B (has_audio, valid) =>
+        source B must map to 0:a:1, not 0:a:0."""
+        metadata = {
+            "canvas_size": [1920, 1080],
+            "fps": 30.0,
+            "timestamp": 1.0,
+            "sources": {
+                "SourceA": {
+                    "position": {"x": 0, "y": 0},
+                    "dimensions": {"source_width": 0, "source_height": 0},
+                    "has_video": True,
+                    "has_audio": True,
+                },
+                "SourceB": {
+                    "position": {"x": 0, "y": 0},
+                    "dimensions": {"source_width": 800, "source_height": 600},
+                    "has_video": True,
+                    "has_audio": True,
+                },
+            },
+        }
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            video = _make_video(temp_dir)
+
+            with patch(
+                "obsession.core.extractor.subprocess.run"
+            ) as mock_run:
+                mock_run.return_value = subprocess.CompletedProcess(
+                    args=[], returncode=0, stdout="", stderr=""
+                )
+
+                result = extract_sources(str(video), metadata)
+
+        assert result.success is True
+
+        # Collect all -map values from audio extraction calls (those with -vn flag).
+        map_values = []
+        for call in mock_run.call_args_list:
+            cmd = call[0][0]
+            if "-vn" in cmd:
+                for i, token in enumerate(cmd):
+                    if token == "-map":
+                        map_values.append(cmd[i + 1])
+
+        # SourceA is skipped (invalid dims) but its audio stream still exists in the
+        # recording; SourceB must map to 0:a:1, not 0:a:0.
+        assert "0:a:1" in map_values, (
+            f"SourceB should map to 0:a:1 after skipped SourceA, got: {map_values}"
+        )
+        assert "0:a:0" not in map_values, (
+            f"0:a:0 should belong to skipped SourceA, not SourceB: {map_values}"
+        )

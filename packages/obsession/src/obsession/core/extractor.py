@@ -315,6 +315,11 @@ def extract_sources(
                     print(
                         f"Warning: Skipping video extraction for {source_name}: Source has invalid dimensions: {source_width}x{source_height}"
                     )
+                    # The source's audio stream (if any) is still present in the
+                    # recording; skip the video but advance the index so subsequent
+                    # has_audio sources are mapped to the correct stream.
+                    if has_audio:
+                        audio_stream_index += 1
                     continue
 
                 video_output_file = output_dir_path / f"{safe_source_name}.mp4"
@@ -324,6 +329,8 @@ def extract_sources(
                 )
                 extracted_files.append(str(video_output_file))
             except subprocess.TimeoutExpired:
+                # Remove any partial output so downstream glob doesn't pick it up.
+                video_output_file.unlink(missing_ok=True)
                 return ExtractionResult(
                     success=False,
                     error_message=(
@@ -352,6 +359,8 @@ def extract_sources(
                 )
                 extracted_files.append(str(audio_output_file))
             except subprocess.TimeoutExpired:
+                # Remove any partial output so downstream glob doesn't pick it up.
+                audio_output_file.unlink(missing_ok=True)
                 return ExtractionResult(
                     success=False,
                     error_message=(
