@@ -433,13 +433,17 @@ nigdy wymyślonymi.
 
 ## Open Questions
 
-- **Co wsadzić na switch A?** Plan daje mechanizm, nie treść. Kandydaci:
-  nuta toggle nagrywania (najsilniejszy — jedno pewne miejsce niezależne od tego,
-  który preset jest załadowany), `Panic`/All Notes Off, tuner w multiefekcie.
-  Odrzucony kandydat: `ALL ST/STP` w RC-600 — **nie ma dowodu, że jest zmapowany**
-  (mapa CC z 11 piosenek go nie zawiera; nieopisane są tylko CC 10 i 13).
+- ~~**Co wsadzić na switch A?**~~ **Rozstrzygnięte 2026-09-10: nuta toggle
+  nagrywania.** Jedno pewne miejsce, niezależne od tego, który preset jest
+  załadowany. Wiąże U1–U4 z U5+U7 — obie gałęzie planu spotykają się na tym
+  jednym switchu, ale nadal można je wydać osobno (toggle działa z dowolnego
+  kroku dowolnego switcha; `A` to tylko docelowe miejsce).
+  Odrzucony kandydat `ALL ST/STP` — patrz niżej.
 - **Czym są CC 10 i CC 13** wysyłane do RC-600 na kanale 13? Bez labelek
-  w `data/songs/*.yaml`. Do sprawdzenia w `MENU > ASSIGN` na urządzeniu.
+  w `data/songs/*.yaml`. Operator (2026-09-10): *„najczęściej to mapowanie
+  włączania nagrywania lub efektów w RC-600"* — czyli **track rec albo FX on/off**,
+  w każdym razie **nie `ALL ST/STP`**. To domyka wątpliwość, czy `A` jest wolne:
+  jest. Sam test schodzi do higieny danych (dopisanie labelek), nie blokuje planu.
 - **Higiena labelek** w konfigach utworów: 8 wystąpień CC 1 ma `label: None`,
   CC 2 ma `label: null` w dwóch, a CC 1 raz nosi „Track 1 Rec/Play", raz
   „nagraj gitarę (track2)". Nie zmienia zachowania, ale utrudnia czytanie mapy CC.
