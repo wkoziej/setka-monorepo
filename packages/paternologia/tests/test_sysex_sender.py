@@ -26,9 +26,18 @@ class FakeMidiOut:
     calls: list[tuple[str, object]] = []
     ports: list[str] = ["Midi Through:Midi Through Port-0 14:0", "PACER MIDI1 20:0"]
     fail_on: str | None = None
+    #: if set, each get_ports() call across all instances pops the next list
+    #: (sticking to the last once exhausted) - simulates the port list
+    #: changing between two separate MidiOut() enumerations.
+    ports_sequence: list[list[str]] | None = None
 
     def get_ports(self):
         self.calls.append(("get_ports", None))
+        if FakeMidiOut.ports_sequence:
+            result = FakeMidiOut.ports_sequence[0]
+            if len(FakeMidiOut.ports_sequence) > 1:
+                FakeMidiOut.ports_sequence.pop(0)
+            return list(result)
         return list(self.ports)
 
     def open_port(self, idx):
@@ -63,6 +72,7 @@ def fake_rtmidi(monkeypatch):
         "Midi Through:Midi Through Port-0 14:0",
         "PACER MIDI1 20:0",
     ]
+    FakeMidiOut.ports_sequence = None
     monkeypatch.setattr(rtmidi, "MidiOut", FakeMidiOut)
     return FakeMidiOut
 
@@ -98,6 +108,13 @@ class TestSplitSysexMessages:
     def test_truncated_last_frame_raises(self):
         blob = frame(b"\x00\x01") + bytes([c.SYSEX_START]) + b"\x02\x03"
         with pytest.raises(ValueError, match="Truncated"):
+            split_sysex_messages(blob)
+
+    def test_garbage_byte_at_frame_boundary_raises(self):
+        """A byte other than 0xF0 where a frame should start (not just a
+        missing trailing 0xF7) must be rejected, not silently included."""
+        blob = frame(b"\x00\x01") + b"\x01\x02\xf7"
+        with pytest.raises(ValueError, match="Expected SysEx start"):
             split_sysex_messages(blob)
 
 
@@ -157,6 +174,27 @@ class TestSendSysex:
         # throwaway probe MidiOut find_rtmidi_output_port deletes internally).
         assert len(close_calls) == 1
         assert len(delete_calls) == 2
+
+    def test_port_list_changed_between_lookup_and_open_raises(
+        self, fake_rtmidi, no_sleep
+    ):
+        """Regression: find_rtmidi_output_port() enumerates ports on its own
+        throwaway MidiOut instance; send_sysex opens a second, independent
+        instance and must not blindly reuse that index. If the port list
+        changed in between (replug, another app opening/closing a virtual
+        CoreMIDI port), reusing the index would silently send real SysEx to
+        whatever now sits at that position instead of raising."""
+        fake_rtmidi.ports_sequence = [
+            ["Midi Through:Midi Through Port-0 14:0", "PACER MIDI1 20:0"],
+            ["Midi Through:Midi Through Port-0 14:0", "Some Other Device 99:0"],
+        ]
+        blob = frame(b"\x00\x01")
+
+        with pytest.raises(PacerPortNotFoundError):
+            send_sysex(blob, device_name="PACER", interval_ms=20)
+
+        assert all(call[0] != "open_port" for call in fake_rtmidi.calls)
+        assert all(call[0] != "send_message" for call in fake_rtmidi.calls)
 
     def test_open_port_raises_still_releases_port(self, fake_rtmidi, no_sleep):
         fake_rtmidi.fail_on = "open_port"

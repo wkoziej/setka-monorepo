@@ -88,7 +88,16 @@ def send_sysex(data: bytes, device_name: str, interval_ms: int) -> str | None:
 
     midi_out = rtmidi.MidiOut()
     try:
-        port_name = midi_out.get_ports()[port_idx]
+        # port_idx came from a separate, already-discarded MidiOut instance
+        # (inside find_rtmidi_output_port). The port list can change between
+        # that enumeration and this one (replug, another app opening/closing
+        # a virtual CoreMIDI port) - reusing the index blindly could send
+        # real SysEx to whatever now sits at that position. Re-validate the
+        # name at that index on *this* instance before trusting it.
+        ports = midi_out.get_ports()
+        if port_idx >= len(ports) or device_name.upper() not in ports[port_idx].upper():
+            raise PacerPortNotFoundError(device_name)
+        port_name = ports[port_idx]
         midi_out.open_port(port_idx)
         interval_s = interval_ms / 1000
         last_index = len(frames) - 1
