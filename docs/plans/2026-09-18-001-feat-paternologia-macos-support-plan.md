@@ -269,7 +269,7 @@ nie tylko "tak samo dobra" — stąd wymóg realnej weryfikacji sprzętowej w U1
 
 ## Implementation Units
 
-- [ ] **Unit 1: Natywny cross-platform SysEx sender**
+- [x] **Unit 1: Natywny cross-platform SysEx sender**
 
 **Goal:** Nowy moduł zastępujący `amidi -s` — parsuje blob `.syx` na pojedyncze
 ramki i wysyła je przez `python-rtmidi` z zachowanym pacingiem, identycznie na
@@ -332,6 +332,19 @@ testu `split_sysex_messages` na realnym blobie z `export_song_to_syx()`
   sanity check modułu w izolacji. **Pełna bramka kill (obowiązkowa,
   Linux)** jest w Unit 2 Verification, nie tutaj — sender sam nie ma
   konsumenta HTTP do end-to-end testu.
+
+**STATUS: DONE (2026-09-20).** 10/10 testów jednostkowych zielone
+(`tests/test_sysex_sender.py`, mock `rtmidi`+`time.sleep`). Sanity check na
+sprzęcie: wysłano preset A1 piosenki „cisza” (`a1-w-ciszy`, 79 ramek) przez
+`send_sysex()` bezpośrednio (poza HTTP — `routers/pacer.py` nadal woła
+`amidi`, to Unit 2) na fizyczny Pacer na macOS, port `PACER MIDI1`, bez
+wyjątków. **Operacyjna nauka:** realny `rtmidi.MidiOut()`/CoreMIDI I/O w tym
+środowisku wymaga wyłączenia macOS Seatbelt sandboxa dla polecenia (Bash
+`dangerouslyDisableSandbox`) — w sandboxie tworzenie klienta CoreMIDI rzuca
+`RtMidiError: MidiInCore::initialize: error creating OS-X MIDI client object
+(-10833)`; testy jednostkowe (mock) i cały pozostały pakiet nie są tym
+dotknięte. Pełna regresja na scenicznym Linuksie (Unit 2 Verification)
+pozostaje `STATUS: PENDING` — nie wykonana w tej sesji.
 
 ---
 
