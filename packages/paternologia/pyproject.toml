@@ -3,7 +3,7 @@ name = "paternologia"
 version = "0.1.0"
 description = "Aplikacja do zarządzania konfiguracjami MIDI dla utworów muzycznych"
 readme = "README.md"
-requires-python = ">=3.12"
+requires-python = ">=3.11"
 dependencies = [
     "setka-common",
     "fastapi[standard]>=0.124.4",

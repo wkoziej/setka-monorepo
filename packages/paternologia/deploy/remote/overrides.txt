@@ -1,0 +1,2 @@
+# Replaces fastapi[standard] with plain fastapi on remote hosts (see install.sh).
+fastapi>=0.124.4
