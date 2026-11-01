@@ -133,3 +133,13 @@ The project is ~65% complete. Core infrastructure is done, YouTube integration w
 - YouTube: OAuth flow with stored credentials
 - Facebook: Page access tokens
 - All credential files must be in `.gitignore`
+
+## Common Development Patterns
+
+### Adding New Uploader/Publisher (medusa)
+
+1. Inherit from `BaseUploader` or `BasePublisher`
+2. Implement required authentication flow
+3. Add configuration schema to `config.py`
+4. Register in `registry.py`
+5. Add integration tests with real API mocking

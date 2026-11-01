@@ -554,3 +554,13 @@ If animations appear to be missing:
 - **Audio analysis**: Auto-generated via beatrix integration
 - **PyYAML**: Included in `vendor/` directory for addon compatibility
 - **Python 3.11+**: Required for Blender 4.5+ compatibility
+
+## Common Development Patterns
+
+### Adding New Animation Modes (cinemon)
+
+1. Create animator class in `cinemon/vse/animators/`
+2. Implement `get_animation_mode()` and `animate()` methods
+3. Register in `animation_engine.py`
+4. Add CLI option in `blend_setup.py`
+5. Update audio analysis data consumption
