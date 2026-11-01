@@ -4,7 +4,7 @@ Aplikacja webowa do zarządzania konfiguracjami MIDI dla utworów muzycznych. G�
 
 ## Wymagania
 
-- Python ≥ 3.12
+- Python ≥ 3.11
 - [`uv`](https://docs.astral.sh/uv/) do zarządzania zależnościami
 - `amidi` (ALSA) do komunikacji z Pacerem (Linux)
 - Opcjonalnie podłączone urządzenia MIDI (Pacer, BOSS RC-600, Elektron Model:Samples, Arturia MicroFreak)
@@ -91,6 +91,21 @@ spod `uv run`) podnoszą proces po crashu/zawiśnięciu (~2 s). Bitwig słucha s
 `hw:Virmidi`, który trwa niezależnie od paternologii — link most→virmidi wraca sam po
 restarcie usługi.
 
+### Wdrożenie na zdalnym hoście bez systemd
+
+Dla starszych maszyn (np. 32-bitowy laptop z Ubuntu 14.04/upstart) — z checkoutu:
+
+```bash
+packages/paternologia/deploy/remote/deploy.sh <ssh-host>
+```
+
+Skrypt synchronizuje kod do `~/paternologia/src`, przy pierwszym wdrożeniu kopiuje
+`data/` do `~/paternologia/data` (kolejne wdrożenia **nie** nadpisują danych na hoście),
+instaluje `uv` + Python 3.11 (`python-build-standalone` nie ma nowszego dla i686)
+i (re)startuje aplikację. Start po reboocie: wpis `@reboot` w crontabie; `run.sh`
+podnosi uvicorn po crashu (~2 s). Nasłuch: `0.0.0.0:8000` (zmiana przez
+`PATERNOLOGIA_HOST` / `PATERNOLOGIA_PORT`), log: `~/paternologia/paternologia.log`.
+
 ### Zdrowie i replug
 
 - `GET /health` → `pacer_input_open`, `bridge_port_active`, `obs_connected`,
@@ -118,7 +133,7 @@ src/paternologia/
   routers/           # songs, devices, pacer, live, health
   midi/              # listener (rtmidi), bridge (fan-out), index, EventBus, ports
   pacer/             # SysEx, mappings A1-D6, export .syx
-deploy/              # paternologia.service (systemd --user)
+deploy/              # paternologia.service (systemd --user), remote/ (host bez systemd)
 templates/           # Jinja2 + HTMX + TailwindCSS (CDN)
 static/              # zasoby statyczne (CSS)
 data/                # devices.yaml, pacer.yaml, songs/*.yaml, songs_order.yaml
