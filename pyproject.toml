@@ -10,6 +10,7 @@ members = [
     "packages/beatrix",
     "packages/cymatic",
     "packages/paternologia",
+    "packages/launchpad-rc600",
 ]
 
 [project]
@@ -27,6 +28,7 @@ medusa = { workspace = true }
 beatrix = { workspace = true }
 cymatic = { workspace = true }
 paternologia = { workspace = true }
+launchpad-rc600 = { workspace = true }
 
 [tool.pytest.ini_options]
 testpaths = [
@@ -37,6 +39,7 @@ testpaths = [
     "packages/beatrix/tests",
     "packages/cymatic/tests",
     "packages/paternologia/tests",
+    "packages/launchpad-rc600/tests",
 ]
 pythonpath = [
     "packages/obsession/src",

@@ -1,0 +1,37 @@
+[project]
+name = "launchpad-rc600"
+version = "0.1.0"
+description = "Launchpad Mini to Boss RC-600 MIDI translator and virtual RC-600"
+readme = "README.md"
+authors = [
+    { name = "Wojciech Koziej", email = "wkoziej@gmail.com" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "mido>=1.3.3",
+    "python-rtmidi>=1.5.8",
+    "rich>=15.0.0",
+]
+
+[project.scripts]
+lp-rc600 = "launchpad_rc600.translator_app:main"
+rc600-sim = "launchpad_rc600.sim_app:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.2.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = ["--strict-markers", "--strict-config"]
+markers = [
+    "integration: tests that need the ALSA sequencer (integration and e2e)",
+    "manual: marks tests that require manual intervention",
+    "audio: marks tests that require audio processing",
+    "slow: marks slow tests",
+]
