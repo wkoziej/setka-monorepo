@@ -193,18 +193,29 @@ def action_to_midi_config(
         raise ValueError(f"Nieznane urządzenie w on_load: '{action.device}'")
     channel = device_channel_map[action.device]
 
+    # Wpis on_load wysyła się przy każdym załadowaniu presetu, więc niepełna
+    # akcja to błąd — nie cichy fallback na PC 0 / CC 0 jak w action_to_midi.
     if action.type == ActionType.PRESET:
+        if not isinstance(action.value, int):
+            raise ValueError(f"on_load: preset bez numeru ({action.device})")
         return (c.MSG_SW_PRG_BANK, channel, *preset_program_bank(action))
 
     if action.type == ActionType.PATTERN:
-        return (c.MSG_SW_PRG_BANK, channel, pattern_to_program(action.value), 0, 0)
+        return (c.MSG_SW_PRG_BANK, channel, _strict_pattern_program(action), 0, 0)
 
     if action.type == ActionType.CC:
-        return (c.MSG_LOAD_CC, channel, action.cc or 0, action.value, 0)
+        if action.cc is None:
+            raise ValueError(f"on_load: CC bez numeru kontrolera ({action.device})")
+        return (c.MSG_LOAD_CC, channel, action.cc, action.value, 0)
 
     if action.type == ActionType.NOTE:
         midi_note = note_to_midi(action.note)
-        is_obs_trigger = channel - 1 == pacer_config.record_trigger_channel and (
+        # channel: 1-16 jak w devices.yaml, 0 = kanał Global Pacera (może być
+        # kanałem triggera); record_trigger_channel: 0-15 (protokół MIDI).
+        on_trigger_channel = (
+            channel == 0 or channel - 1 == pacer_config.record_trigger_channel
+        )
+        is_obs_trigger = on_trigger_channel and (
             midi_note in (pacer_config.record_start_note, pacer_config.record_stop_note)
         )
         if is_obs_trigger:
@@ -216,3 +227,18 @@ def action_to_midi_config(
         return (c.MSG_SW_NOTE, channel, midi_note, velocity, 0)
 
     raise ValueError(f"Typ akcji nieobsługiwany w on_load: {action.type.value}")
+
+
+_PATTERN_ID = re.compile(r"^[A-Fa-f](0?[1-9]|1[0-6])$")
+
+
+def _strict_pattern_program(action: Action) -> int:
+    """Program dla patternu on_load; błędny zapis to ValueError (nie PC 0)."""
+    value = action.value
+    valid = (isinstance(value, int) and 0 <= value <= 127) or (
+        isinstance(value, str)
+        and ((value.isdigit() and int(value) <= 127) or bool(_PATTERN_ID.match(value)))
+    )
+    if not valid:
+        raise ValueError(f"on_load: nieprawidłowy pattern '{value}' ({action.device})")
+    return pattern_to_program(value)

@@ -1,3 +1,5 @@
+{# ABOUTME: Song edit form: metadata, on_load (preset recall MIDI) and PACER buttons. #}
+{# ABOUTME: Action rows come from HTMX partials (action_row, action_fields). #}
 {% extends "base.html" %}
 
 {% block title %}{% if is_new %}Nowy utwór{% else %}Edycja: {{ song.song.name }}{% endif %} - Paternologia{% endblock %}

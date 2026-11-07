@@ -3,7 +3,9 @@
 
 import logging
 import re
+from collections.abc import Mapping
 from datetime import date
+from typing import Literal
 
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
@@ -14,6 +16,7 @@ from paternologia.display import to_stored
 from paternologia.models import (
     Action,
     ActionType,
+    Device,
     PacerButton,
     PacerExportSettings,
     Song,
@@ -141,6 +144,11 @@ async def create_song(request: Request):
         )
     except ValidationError as exc:
         raise HTTPException(status_code=400, detail=_format_validation_error(exc))
+    except ValueError as exc:
+        # Nieliczbowa wartość albo nieznany typ akcji w polach formularza
+        raise HTTPException(
+            status_code=400, detail=f"Niepoprawne dane formularza: {exc}"
+        )
     storage.save_song(song)
     _rebuild_midi_index(request)
 
@@ -169,6 +177,11 @@ async def update_song(request: Request, song_id: str):
         )
     except ValidationError as exc:
         raise HTTPException(status_code=400, detail=_format_validation_error(exc))
+    except ValueError as exc:
+        # Nieliczbowa wartość albo nieznany typ akcji w polach formularza
+        raise HTTPException(
+            status_code=400, detail=f"Niepoprawne dane formularza: {exc}"
+        )
     storage.save_song(song)
     _rebuild_midi_index(request)
 
@@ -206,6 +219,10 @@ async def update_songs_order(order: list[str]):
     storage = get_storage()
     storage.save_songs_order(order)
     return {"status": "ok"}
+
+
+# Pole urządzenia wiersza on_load: on_load_{idx}_device
+_ON_LOAD_DEVICE_FIELD = re.compile(r"on_load_(\d+)_device")
 
 
 def _build_song_from_form(
@@ -274,10 +291,9 @@ def _build_song_from_form(
     )
 
 
-_ON_LOAD_DEVICE_FIELD = re.compile(r"on_load_(\d+)_device")
-
-
-def _parse_action(form_data, prefix: str, device_map) -> Action | None:
+def _parse_action(
+    form_data: Mapping[str, str], prefix: str, device_map: dict[str, Device]
+) -> Action | None:
     """Zbuduj Action z pól formularza `{prefix}_device`, `{prefix}_type` itd.
 
     Zwraca None, gdy wiersz nie ma urządzenia albo typu (wiersz niekompletny).
@@ -334,7 +350,10 @@ def _format_validation_error(exc: ValidationError) -> str:
 
 @router.get("/partials/action-row", response_class=HTMLResponse)
 async def get_action_row(
-    request: Request, button_idx: int, action_idx: int, context: str = ""
+    request: Request,
+    button_idx: int,
+    action_idx: int,
+    context: Literal["", "on_load"] = "",
 ):
     """Return a new action row partial for HTMX.
 
@@ -455,7 +474,7 @@ async def get_action_fields(
     action_type: str,
     button_idx: int,
     action_idx: int,
-    context: str = "",
+    context: Literal["", "on_load"] = "",
 ):
     """Return input fields for selected action type (HTMX cascade)."""
     templates = get_templates()

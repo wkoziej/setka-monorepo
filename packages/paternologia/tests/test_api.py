@@ -396,6 +396,57 @@ class TestPacerSendEndpoint:
         assert "nie zapisał 1" in response.text
         assert "text-red-600" in response.text
 
+    def test_send_bad_on_load_is_400_and_does_not_call_amidi(
+        self, client, sample_devices, test_storage
+    ):
+        from paternologia.models import Action, Song, SongMetadata
+
+        test_storage.save_song(
+            Song(
+                song=SongMetadata(id="test", name="Test"),
+                on_load=[Action(device="nope", type=ActionType.PRESET, value=1)],
+            )
+        )
+        test_storage.save_pacer_config(PacerConfig(device_name="PACER"))
+        with (
+            patch(
+                "paternologia.routers.pacer.find_amidi_port", return_value="hw:8,0,0"
+            ),
+            patch("subprocess.run") as run,
+        ):
+            response = client.post("/pacer/send/test")
+
+        assert response.status_code == 400
+        assert "nope" in response.json()["detail"]
+        run.assert_not_called()
+
+    def test_send_passes_listener_pause_to_read_back(
+        self, client, sample_devices, test_storage, pacer_read_back
+    ):
+        sentinel = object()
+
+        class _Listener:
+            def paused(self):
+                return sentinel
+
+        original = client.app.state.midi_listener
+        client.app.state.midi_listener = _Listener()
+        try:
+            self._send_ok(client, test_storage)
+        finally:
+            client.app.state.midi_listener = original
+
+        assert pacer_read_back.call_args[0][2] is sentinel
+
+    def test_concurrent_send_is_rejected(self, client, sample_devices, test_storage):
+        """Druga wysyłka w trakcie pierwszej zdublowałaby porty listenera."""
+        from paternologia.routers import pacer as pacer_router
+
+        with pacer_router._send_lock:
+            response = self._send_ok(client, test_storage)
+
+        assert response.status_code == 409
+
     def test_send_reports_read_back_failure(
         self, client, sample_devices, test_storage, pacer_read_back
     ):
@@ -1288,3 +1339,32 @@ class TestSongOnLoadPlacement:
         html = client.get("/songs/zima/edit").text
 
         assert html.index("Przy załadowaniu presetu") < html.index("Przyciski PACER")
+
+
+class TestActionPartialContextValidation:
+    def test_unknown_context_is_rejected(self, client, sample_devices):
+        """context trafia do wyrażenia JS w hx-vals — tylko znane wartości."""
+        response = client.get(
+            "/partials/action-row?context=%27;alert(1);%27&button_idx=0&action_idx=0"
+        )
+        assert response.status_code == 422
+
+    def test_unknown_context_rejected_in_fields(self, client, sample_devices):
+        response = client.get(
+            "/partials/action-fields?context=x&action_type=cc&button_idx=0&action_idx=0"
+        )
+        assert response.status_code == 422
+
+    def test_non_numeric_on_load_value_is_400(self, client, sample_devices):
+        response = client.post(
+            "/songs",
+            data={
+                "song_id": "bad-num",
+                "song_name": "Bad",
+                "on_load_0_device": "boss",
+                "on_load_0_type": "preset",
+                "on_load_0_value": "abc",
+            },
+            follow_redirects=False,
+        )
+        assert response.status_code == 400

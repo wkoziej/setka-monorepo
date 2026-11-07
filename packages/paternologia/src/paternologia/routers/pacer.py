@@ -4,6 +4,7 @@
 import html
 import logging
 import subprocess
+import threading
 from tempfile import NamedTemporaryFile
 
 from fastapi import APIRouter, HTTPException, Depends, Request, Form
@@ -20,6 +21,10 @@ from ..pacer import constants as c
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/pacer", tags=["pacer"])
+
+# Jedna wysyłka naraz: read-back wstrzymuje wejścia listenera, a nakładające
+# się pauzy zostawiłyby porty Pacera otwarte podwójnie.
+_send_lock = threading.Lock()
 
 
 @router.get("/export/{song_id}.syx")
@@ -64,6 +69,27 @@ def send_to_pacer(
     """Wyślij piosenkę do Pacera przez amidi."""
     is_htmx = request.headers.get("HX-Request") == "true"
 
+    if not _send_lock.acquire(blocking=False):
+        error_msg = "Wysyłka do Pacera już trwa — poczekaj na jej koniec."
+        if is_htmx:
+            return HTMLResponse(
+                f'<span class="text-red-600 font-semibold">❌ {error_msg}</span>'
+            )
+        raise HTTPException(409, error_msg)
+    try:
+        return _send_to_pacer(request, song_id, preset, storage, is_htmx)
+    finally:
+        _send_lock.release()
+
+
+def _send_to_pacer(
+    request: Request,
+    song_id: str,
+    preset: str | None,
+    storage: Storage,
+    is_htmx: bool,
+):
+    """Wysyłka i read-back; wywoływana pod _send_lock."""
     try:
         song = storage.get_song(song_id)
         if not song:
@@ -178,7 +204,7 @@ def send_to_pacer(
 
         lost = missing_frames(syx_data, dump)
         if lost:
-            error_msg = (
+            error_msg = html.escape(
                 f"Pacer nie zapisał {len(lost)} ramek presetu {target}. "
                 "Wyjdź z menu Pacera i wyślij ponownie."
             )

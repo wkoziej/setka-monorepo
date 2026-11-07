@@ -109,6 +109,10 @@ class MidiListener:
         so Model A must read every matching port. Returns True if any opened.
         """
         self._device_name = device_name
+        # Ponowny start przy otwartych portach dublowałby uchwyty (każdy PC i
+        # trigger nagrywania podwójnie) — najpierw zamknij stare.
+        if self._midi_ins:
+            self.stop()
         port_indices = find_rtmidi_ports(device_name)
         if not port_indices:
             logger.warning(

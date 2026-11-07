@@ -343,3 +343,20 @@ class TestPausedForReadBack:
             raise RuntimeError("amidi failed")
 
         assert starts == ["PACER"]
+
+
+class TestStartDoesNotDuplicateInputs:
+    """start() przy otwartych portach nie dubluje uchwytów (podwójny PC/trigger)."""
+
+    def test_start_closes_existing_inputs_first(self, monkeypatch):
+        listener = MidiListener(
+            song_index=SongMidiIndex.build([], []), event_bus=EventBus()
+        )
+        listener._midi_ins.append(object())
+        stops = []
+        monkeypatch.setattr(listener, "stop", lambda: stops.append("stop"))
+        monkeypatch.setattr(listener_mod, "find_rtmidi_ports", lambda name: [])
+
+        listener.start("PACER")
+
+        assert stops == ["stop"]

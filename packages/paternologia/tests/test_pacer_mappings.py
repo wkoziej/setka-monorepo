@@ -363,3 +363,42 @@ class TestActionToMidiConfig:
         )
         action = Action(device="ms", type=ActionType.NOTE, note=94)
         assert self._map(action, config) == (c.MSG_SW_NOTE, 14, 94, 100, 0)
+
+
+class TestActionToMidiConfigFailFast:
+    """Wpis on_load wysyła się przy każdym załadowaniu — błędna akcja to błąd, nie PC/CC 0."""
+
+    def _map(self, action, channels=None, config=None):
+        return action_to_midi_config(
+            action, channels or RIG_CHANNELS, config or PacerConfig()
+        )
+
+    def test_cc_without_controller_is_rejected(self):
+        action = Action(device="boss", type=ActionType.CC, value=99)
+        with pytest.raises(ValueError, match="CC"):
+            self._map(action)
+
+    @pytest.mark.parametrize("value", ["G01", "A17", "A00", "xyz", None])
+    def test_invalid_pattern_is_rejected(self, value):
+        action = Action(device="ms", type=ActionType.PATTERN, value=value)
+        with pytest.raises(ValueError, match="pattern"):
+            self._map(action)
+
+    @pytest.mark.parametrize("value", ["A01", "a1", "0", 0])
+    def test_pattern_a01_is_program_zero(self, value):
+        action = Action(device="ms", type=ActionType.PATTERN, value=value)
+        assert self._map(action)[2] == 0
+
+    def test_preset_without_number_is_rejected(self):
+        action = Action(device="freak", type=ActionType.PRESET, value=None)
+        with pytest.raises(ValueError, match="preset"):
+            self._map(action)
+
+    def test_obs_trigger_note_on_global_channel_is_rejected(self):
+        """Kanał 0 = Global Pacera — może być kanałem triggera OBS."""
+        config = PacerConfig(
+            record_trigger_channel=0, record_start_note=94, record_stop_note=93
+        )
+        action = Action(device="glob", type=ActionType.NOTE, note=94)
+        with pytest.raises(ValueError, match="OBS"):
+            self._map(action, {"glob": 0}, config)
