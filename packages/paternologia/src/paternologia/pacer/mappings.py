@@ -114,13 +114,17 @@ def pattern_to_program(value: int | str | None) -> int:
 
 
 def action_to_midi(
-    action: Action, device_channel_map: dict[str, int]
+    action: Action,
+    device_channel_map: dict[str, int],
+    cc_release_same_devices: set[str] | frozenset[str] = frozenset(),
 ) -> tuple[int, int, int, int, int]:
     """Konwertuj Action na parametry MIDI.
 
     Args:
         action: Akcja do skonwertowania
         device_channel_map: Mapa device_id → MIDI channel
+        cc_release_same_devices: ID urządzeń, dla których CC trigger wysyła
+            przy puszczeniu tę samą wartość co przy naciśnięciu (up = down)
 
     Returns:
         (msg_type, channel, data1, data2, data3)
@@ -156,8 +160,10 @@ def action_to_midi(
         # CC Trigger dla stompswitch: data1=controller, data2=down, data3=up
         # Wysyła wartość "down" przy naciśnięciu przycisku, "up" przy puszczeniu
         # Dla RC-600 w trybie MOMENT: down=127 (ON), up=0 (OFF)
+        # Urządzenia z cc_release_same (np. GP-50: CC0 = patch): up = down
         cc_value = action.value if isinstance(action.value, int) else 127
-        return (c.MSG_SW_MIDI_CC, channel, action.cc or 0, cc_value, 0)
+        cc_up = cc_value if action.device in cc_release_same_devices else 0
+        return (c.MSG_SW_MIDI_CC, channel, action.cc or 0, cc_value, cc_up)
 
     elif action.type == ActionType.NOTE:
         # Note: data1=note, data2=velocity, data3=unused

@@ -164,6 +164,32 @@ class TestActionToMidiCC:
         assert data2 == 64  # down (naciśnięcie)
         assert data3 == 0  # up (puszczenie)
 
+    def test_cc_release_same_device_sends_down_value_on_release(self):
+        """Urządzenie z cc_release_same: puszczenie wysyła tę samą wartość.
+
+        GP-50 wybiera patch przez CC0 — up=0 cofałby patch na 00.
+        """
+        action = Action(device="gp50", type=ActionType.CC, cc=0, value=12)
+        msg_type, channel, data1, data2, data3 = action_to_midi(
+            action, {"gp50": 5}, cc_release_same_devices={"gp50"}
+        )
+
+        assert msg_type == c.MSG_SW_MIDI_CC
+        assert channel == 5
+        assert data1 == 0
+        assert data2 == 12  # down
+        assert data3 == 12  # up = down
+
+    def test_cc_release_same_other_device_keeps_up_zero(self):
+        """Urządzenie spoza cc_release_same dalej wysyła up=0 (RC-600 MOMENT)."""
+        action = Action(device="boss", type=ActionType.CC, cc=1, value=127)
+        _, _, _, data2, data3 = action_to_midi(
+            action, {"boss": 13, "gp50": 5}, cc_release_same_devices={"gp50"}
+        )
+
+        assert data2 == 127
+        assert data3 == 0
+
 
 class TestActionToMidiUnknownDevice:
     """Tests for unknown device handling."""

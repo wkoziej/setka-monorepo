@@ -12,6 +12,7 @@ from paternologia.models import (
     SongMetadata,
 )
 from paternologia.pacer.export import export_song_to_syx
+from paternologia.pacer.sysex import PacerSysExBuilder
 from paternologia.pacer import constants as c
 
 
@@ -96,6 +97,33 @@ class TestExportWithButtons:
         # 2 PRESET actions + 1 PATTERN action
         assert syx.count(bytes([c.MSG_SW_PRG_BANK])) >= 2
         assert syx.count(bytes([c.MSG_SW_PRG_STEP])) >= 1
+
+    def test_export_cc_release_same_device_up_equals_down(self):
+        """Urządzenie z cc_release_same eksportuje krok CC z up == down."""
+        devices = [
+            Device(id="gp50", name="GP-50", midi_channel=5, cc_release_same=True),
+        ]
+        song = Song(
+            song=SongMetadata(id="test", name="TEST"),
+            pacer=[
+                PacerButton(
+                    name="Patch 12",
+                    actions=[Action(device="gp50", type=ActionType.CC, cc=0, value=12)],
+                )
+            ],
+        )
+        syx = export_song_to_syx(song, devices, "A1")
+
+        expected_step = PacerSysExBuilder(c.PRESET_INDICES["A1"]).build_control_step(
+            control_id=c.STOMPSWITCHES[0],
+            step_index=1,
+            msg_type=c.MSG_SW_MIDI_CC,
+            channel=5,
+            data1=0,
+            data2=12,
+            data3=12,
+        )
+        assert expected_step in syx
 
 
 class TestExportEmptySteps:

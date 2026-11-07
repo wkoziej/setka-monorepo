@@ -26,6 +26,7 @@ def export_song_to_syx(
 
     # Buduj mapę device_id → MIDI channel z devices
     device_channel_map = build_device_channel_map(devices)
+    cc_release_same_devices = {d.id for d in devices if d.cc_release_same}
 
     # 1. Nazwa presetu
     messages.append(builder.build_preset_name(song.song.name))
@@ -44,7 +45,7 @@ def export_song_to_syx(
                 # Akcja istnieje - konfiguruj normalnie
                 action = button.actions[step_idx - 1]
                 msg_type, channel, data1, data2, data3 = action_to_midi(
-                    action, device_channel_map
+                    action, device_channel_map, cc_release_same_devices
                 )
                 messages.append(
                     builder.build_control_step(
