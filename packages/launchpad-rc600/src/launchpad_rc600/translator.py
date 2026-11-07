@@ -14,7 +14,7 @@ from launchpad_rc600.assign import (
 
 # Index 0 is the bottom row (row 7), index 7 is the top row (row 0).
 LEVELS = (0, 14, 29, 43, 57, 71, 86, 100)
-START_LEVEL = 71  # about 70%, leaves room to raise to unity (100)
+START_LEVEL = 57  # about 57%, leaves room to raise to unity (100)
 FADER_COLS = range(len(LEVEL_TARGETS))
 # FX pads: 2x2 block in the top right corner. A B / C D.
 FX_PADS = {(0, 6): 0, (0, 7): 1, (1, 6): 2, (1, 7): 3}
