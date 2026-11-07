@@ -19,7 +19,7 @@
 </div>
 {% elif action_type == 'pattern' %}
 <input type="text" name="{{ field_prefix }}_value"
-       value="{{ action.value if action else '' }}" placeholder="Pattern" required
+       value="{{ pattern_display(action.value) if action else '' }}" placeholder="Pattern" required
        class="border border-gray-300 rounded px-2 py-1 text-sm w-20"
        hx-get="/partials/preset-usage"
        hx-target="next .preset-usage"

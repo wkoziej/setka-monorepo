@@ -1,7 +1,8 @@
-# ABOUTME: Display-number conversion for preset values using a hidden per-device offset.
-# ABOUTME: Bridges the raw MIDI value stored in YAML and the number shown on the device.
+# ABOUTME: Display conversion: preset numbers via a hidden per-device offset, patterns
+# ABOUTME: in canonical M:S spelling; bridges raw YAML values and what the user sees.
 
 from paternologia.models import Device
+from paternologia.pacer.mappings import PATTERN_ID, pattern_to_program
 
 
 def to_display(value: int | str | None, device: Device) -> int | str | None:
@@ -29,3 +30,18 @@ def to_stored(value: int | str | None, device: Device) -> int | str | None:
     if isinstance(value, int):
         return value - device.preset_display_offset
     return value
+
+
+def pattern_display(value: int | str | None) -> int | str | None:
+    """Pattern M:S w kanonicznej pisowni slotu: "d01" → "D01", "e9" → "E09", 48 → "D01".
+
+    Wartość, która nie jest slotem A01-F16, zostaje bez zmian.
+    """
+    is_number = isinstance(value, int) or (isinstance(value, str) and value.isdigit())
+    is_slot = isinstance(value, str) and bool(PATTERN_ID.match(value))
+    if not (is_number or is_slot):
+        return value
+    program = pattern_to_program(value)
+    if not 0 <= program <= 95:
+        return value
+    return f"{'ABCDEF'[program // 16]}{program % 16 + 1:02d}"

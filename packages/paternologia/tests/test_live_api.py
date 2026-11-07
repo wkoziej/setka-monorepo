@@ -129,3 +129,40 @@ class TestLiveSSE:
         sse_line = f"event: song-change\ndata: {event.song_id}\n\n"
         assert "event: song-change" in sse_line
         assert "data: zen" in sse_line
+
+
+class TestLiveSongDisplay:
+    def test_live_partial_shows_device_screen_numbers(self, client, test_storage):
+        """Live view pokazuje numer z ekranu urządzenia, jak edytor."""
+        test_storage.save_devices(
+            [
+                Device(
+                    id="boss",
+                    name="RC-600",
+                    midi_channel=13,
+                    preset_display_offset=1,
+                    action_types=[ActionType.PRESET],
+                ),
+                Device(id="ms", name="M:S", action_types=[ActionType.PATTERN]),
+            ]
+        )
+        test_storage.save_song(
+            Song(
+                song=SongMetadata(id="cisza", name="Cisza"),
+                pacer=[
+                    PacerButton(
+                        name="SW1",
+                        actions=[
+                            Action(device="boss", type=ActionType.PRESET, value=0),
+                            Action(device="ms", type=ActionType.PATTERN, value="d01"),
+                        ],
+                    )
+                ],
+            )
+        )
+
+        html = client.get("/live/song/cisza").text
+
+        assert "preset 1" in html
+        assert "preset 0" not in html
+        assert "pattern D01" in html

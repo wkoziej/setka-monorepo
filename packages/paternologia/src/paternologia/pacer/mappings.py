@@ -251,7 +251,8 @@ def action_to_midi_config(
     raise ValueError(f"Typ akcji nieobsługiwany w on_load: {action.type.value}")
 
 
-_PATTERN_ID = re.compile(r"^[A-Fa-f](0?[1-9]|1[0-6])$")
+# Pattern M:S zapisany jako bank A-F + numer 1-16 (np. "D01", "e9").
+PATTERN_ID = re.compile(r"^[A-Fa-f](0?[1-9]|1[0-6])$")
 
 
 def _strict_pattern_program(action: Action) -> int:
@@ -259,7 +260,7 @@ def _strict_pattern_program(action: Action) -> int:
     value = action.value
     valid = (isinstance(value, int) and 0 <= value <= 127) or (
         isinstance(value, str)
-        and ((value.isdigit() and int(value) <= 127) or bool(_PATTERN_ID.match(value)))
+        and ((value.isdigit() and int(value) <= 127) or bool(PATTERN_ID.match(value)))
     )
     if not valid:
         raise ValueError(f"on_load: nieprawidłowy pattern '{value}' ({action.device})")

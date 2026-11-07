@@ -1368,3 +1368,62 @@ class TestActionPartialContextValidation:
             follow_redirects=False,
         )
         assert response.status_code == 400
+
+
+class TestSongViewDisplay:
+    def test_view_shows_device_screen_numbers_for_buttons_and_on_load(
+        self, client, test_storage
+    ):
+        """Widok utworu: ten sam numer co w edytorze (z preset_display_offset)."""
+        from paternologia.models import Action, PacerButton, Song, SongMetadata
+
+        test_storage.save_devices(
+            [
+                Device(
+                    id="freak",
+                    name="MicroFreak",
+                    midi_channel=1,
+                    preset_display_offset=1,
+                    action_types=[ActionType.PRESET],
+                ),
+                Device(id="ms", name="M:S", action_types=[ActionType.PATTERN]),
+            ]
+        )
+        test_storage.save_song(
+            Song(
+                song=SongMetadata(id="w", name="W"),
+                pacer=[
+                    PacerButton(
+                        name="SW1",
+                        actions=[
+                            Action(device="freak", type=ActionType.PRESET, value=64)
+                        ],
+                    )
+                ],
+                on_load=[Action(device="ms", type=ActionType.PATTERN, value="e9")],
+            )
+        )
+
+        html = client.get("/songs/w").text
+
+        assert "preset 65" in html
+        assert "preset 64" not in html
+        assert "pattern E09" in html
+
+    def test_edit_shows_canonical_pattern(self, client, test_storage):
+        from paternologia.models import Action, Song, SongMetadata
+
+        test_storage.save_devices(
+            [Device(id="ms", name="M:S", action_types=[ActionType.PATTERN])]
+        )
+        test_storage.save_song(
+            Song(
+                song=SongMetadata(id="p", name="P"),
+                on_load=[Action(device="ms", type=ActionType.PATTERN, value="d01")],
+            )
+        )
+
+        html = client.get("/songs/p/edit").text
+
+        assert 'value="D01"' in html
+        assert 'value="d01"' not in html
