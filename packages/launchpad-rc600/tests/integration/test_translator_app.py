@@ -211,7 +211,7 @@ def test_bad_config_stops_with_violations(tmp_path, launchpad, target):
 def test_startup_sends_start_state_and_led_frame(running):
     _, _, leds, out = running
     startup = receive(out, 10)
-    assert startup == [cc(64 + n, cc_for_level(71)) for n in range(6)] + [
+    assert startup == [cc(64 + n, cc_for_level(57)) for n in range(6)] + [
         cc(70 + n, 0) for n in range(4)
     ]
     frame = receive(leds, 64)
