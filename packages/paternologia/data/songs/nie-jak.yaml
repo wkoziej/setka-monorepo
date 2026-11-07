@@ -15,7 +15,7 @@ pacer:
     type: pattern
     value: e2
     cc: null
-    label: None
+    label: null
     bank_lsb: 0
     bank_msb: 0
     note: null
@@ -24,7 +24,7 @@ pacer:
     type: preset
     value: 137
     cc: null
-    label: None
+    label: null
     bank_lsb: 0
     bank_msb: 0
     note: null
@@ -34,7 +34,7 @@ on_load:
   type: pattern
   value: e1
   cc: null
-  label: None
+  label: null
   bank_lsb: 0
   bank_msb: 0
   note: null
@@ -43,7 +43,7 @@ on_load:
   type: preset
   value: 134
   cc: null
-  label: None
+  label: null
   bank_lsb: 0
   bank_msb: 0
   note: null
@@ -52,7 +52,7 @@ on_load:
   type: preset
   value: 28
   cc: null
-  label: None
+  label: null
   bank_lsb: 0
   bank_msb: 0
   note: null

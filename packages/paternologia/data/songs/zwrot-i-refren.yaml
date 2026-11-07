@@ -24,7 +24,7 @@ pacer:
     type: cc
     value: 127
     cc: 21
-    label: None
+    label: null
     bank_lsb: 0
     bank_msb: 0
     note: null
@@ -33,7 +33,7 @@ pacer:
     type: pattern
     value: d10
     cc: null
-    label: None
+    label: null
     bank_lsb: 0
     bank_msb: 0
     note: null
@@ -44,7 +44,7 @@ pacer:
     type: cc
     value: 127
     cc: 22
-    label: None
+    label: null
     bank_lsb: 0
     bank_msb: 0
     note: null
@@ -53,7 +53,7 @@ pacer:
     type: pattern
     value: d11
     cc: null
-    label: None
+    label: null
     bank_lsb: 0
     bank_msb: 0
     note: null
@@ -62,7 +62,7 @@ pacer:
     type: cc
     value: 127
     cc: 20
-    label: None
+    label: null
     bank_lsb: 0
     bank_msb: 0
     note: null
@@ -73,7 +73,7 @@ pacer:
     type: cc
     value: 127
     cc: 23
-    label: None
+    label: null
     bank_lsb: 0
     bank_msb: 0
     note: null
@@ -82,7 +82,7 @@ pacer:
     type: pattern
     value: d12
     cc: null
-    label: None
+    label: null
     bank_lsb: 0
     bank_msb: 0
     note: null
@@ -91,7 +91,7 @@ pacer:
     type: cc
     value: 127
     cc: 21
-    label: None
+    label: null
     bank_lsb: 0
     bank_msb: 0
     note: null
@@ -110,7 +110,7 @@ on_load:
   type: pattern
   value: D9
   cc: null
-  label: None
+  label: null
   bank_lsb: 0
   bank_msb: 0
   note: null

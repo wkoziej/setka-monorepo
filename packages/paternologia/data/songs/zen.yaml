@@ -24,7 +24,7 @@ pacer:
     type: pattern
     value: C02
     cc: null
-    label: None
+    label: null
     bank_lsb: 0
     bank_msb: 0
     note: null
@@ -44,7 +44,7 @@ pacer:
     type: pattern
     value: C03
     cc: null
-    label: None
+    label: null
     bank_lsb: 0
     bank_msb: 0
     note: null
@@ -53,7 +53,7 @@ pacer:
     type: cc
     value: 1
     cc: 2
-    label: None
+    label: null
     bank_lsb: 0
     bank_msb: 0
     note: null
@@ -64,7 +64,7 @@ pacer:
     type: cc
     value: 1
     cc: 2
-    label: None
+    label: null
     bank_lsb: 0
     bank_msb: 0
     note: null
@@ -73,7 +73,7 @@ pacer:
     type: pattern
     value: C04
     cc: null
-    label: None
+    label: null
     bank_lsb: 0
     bank_msb: 0
     note: null
@@ -93,7 +93,7 @@ pacer:
     type: pattern
     value: C03
     cc: null
-    label: None
+    label: null
     bank_lsb: 0
     bank_msb: 0
     note: null
@@ -123,7 +123,7 @@ on_load:
   type: preset
   value: 66
   cc: null
-  label: None
+  label: null
   bank_lsb: 0
   bank_msb: 0
   note: null

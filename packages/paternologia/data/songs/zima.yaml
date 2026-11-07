@@ -13,7 +13,7 @@ pacer:
     type: cc
     value: 1
     cc: 1
-    label: None
+    label: null
     bank_lsb: 0
     bank_msb: 0
     note: null
@@ -24,7 +24,7 @@ pacer:
     type: pattern
     value: d02
     cc: null
-    label: None
+    label: null
     bank_lsb: 0
     bank_msb: 0
     note: null
@@ -33,7 +33,7 @@ pacer:
     type: preset
     value: 68
     cc: null
-    label: None
+    label: null
     bank_lsb: 0
     bank_msb: 0
     note: null
@@ -42,7 +42,7 @@ pacer:
     type: cc
     value: 1
     cc: 1
-    label: None
+    label: null
     bank_lsb: 0
     bank_msb: 0
     note: null
@@ -53,7 +53,7 @@ pacer:
     type: pattern
     value: d03
     cc: null
-    label: None
+    label: null
     bank_lsb: 0
     bank_msb: 0
     note: null
@@ -71,7 +71,7 @@ pacer:
     type: preset
     value: 1
     cc: null
-    label: None
+    label: null
     bank_lsb: 0
     bank_msb: 0
     note: null
@@ -82,7 +82,7 @@ pacer:
     type: cc
     value: 1
     cc: 2
-    label: None
+    label: null
     bank_lsb: 0
     bank_msb: 0
     note: null
@@ -91,7 +91,7 @@ pacer:
     type: pattern
     value: d04
     cc: null
-    label: None
+    label: null
     bank_lsb: 0
     bank_msb: 0
     note: null
@@ -113,7 +113,7 @@ pacer:
     type: cc
     value: 1
     cc: 4
-    label: None
+    label: null
     bank_lsb: 0
     bank_msb: 0
     note: null
@@ -123,7 +123,7 @@ on_load:
   type: preset
   value: 3
   cc: null
-  label: None
+  label: null
   bank_lsb: 0
   bank_msb: 0
   note: null
@@ -132,7 +132,7 @@ on_load:
   type: pattern
   value: d01
   cc: null
-  label: None
+  label: null
   bank_lsb: 0
   bank_msb: 0
   note: null
@@ -141,7 +141,7 @@ on_load:
   type: preset
   value: 67
   cc: null
-  label: None
+  label: null
   bank_lsb: 0
   bank_msb: 0
   note: null
