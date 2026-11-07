@@ -2,36 +2,18 @@ song:
   id: a1-w-ciszy
   name: cisza
   author: Wojtas
-  created: '2026-05-22'
+  created: '2026-11-07'
   notes: tempo 117 :)
   pacer_export:
     target_preset: A1
 pacer:
 - name: Uruchomienie beatów i gotowości nagrywania. M:S gra na Freaku. Nagrywamy akustyka
   actions:
-  - device: boss
-    type: preset
-    value: 0
-    cc: null
-    label: W ciszy
-    bank_lsb: 0
-    bank_msb: 0
-    note: null
-    velocity: null
   - device: freak
     type: preset
     value: 64
     cc: null
     label: W ciszy
-    bank_lsb: 0
-    bank_msb: 0
-    note: null
-    velocity: null
-  - device: ms
-    type: pattern
-    value: A01
-    cc: null
-    label: Gramy melodię na MicroFreak
     bank_lsb: 0
     bank_msb: 0
     note: null
@@ -50,6 +32,15 @@ pacer:
     value: 127
     cc: 1
     label: None
+    bank_lsb: 0
+    bank_msb: 0
+    note: null
+    velocity: null
+  - device: gp50
+    type: cc
+    value: 1
+    cc: 0
+    label: null
     bank_lsb: 0
     bank_msb: 0
     note: null
@@ -199,3 +190,49 @@ pacer:
     bank_msb: 0
     note: null
     velocity: null
+on_load:
+- device: boss
+  type: preset
+  value: 0
+  cc: null
+  label: None
+  bank_lsb: 0
+  bank_msb: 0
+  note: null
+  velocity: null
+- device: freak
+  type: preset
+  value: 64
+  cc: null
+  label: None
+  bank_lsb: 0
+  bank_msb: 0
+  note: null
+  velocity: null
+- device: modrex
+  type: preset
+  value: 1
+  cc: null
+  label: None
+  bank_lsb: 0
+  bank_msb: 0
+  note: null
+  velocity: null
+- device: gp50
+  type: preset
+  value: 55
+  cc: null
+  label: None
+  bank_lsb: 0
+  bank_msb: 0
+  note: null
+  velocity: null
+- device: ms
+  type: pattern
+  value: A01
+  cc: null
+  label: Gramy melodię na MicroFreak
+  bank_lsb: 0
+  bank_msb: 0
+  note: null
+  velocity: null

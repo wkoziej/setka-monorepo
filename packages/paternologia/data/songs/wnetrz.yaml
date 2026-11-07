@@ -10,33 +10,6 @@ pacer:
 - name: ustaw presety i nagraj gitarę (1,2,3)
   actions:
   - device: boss
-    type: preset
-    value: 1
-    cc: null
-    label: None
-    bank_lsb: 0
-    bank_msb: 0
-    note: null
-    velocity: null
-  - device: freak
-    type: preset
-    value: 65
-    cc: null
-    label: None
-    bank_lsb: 0
-    bank_msb: 0
-    note: null
-    velocity: null
-  - device: ms
-    type: pattern
-    value: B01
-    cc: null
-    label: None
-    bank_lsb: 0
-    bank_msb: 0
-    note: null
-    velocity: null
-  - device: boss
     type: cc
     value: 127
     cc: 1
@@ -145,3 +118,31 @@ pacer:
     bank_msb: 0
     note: null
     velocity: null
+on_load:
+- device: boss
+  type: preset
+  value: 1
+  cc: null
+  label: None
+  bank_lsb: 0
+  bank_msb: 0
+  note: null
+  velocity: null
+- device: freak
+  type: preset
+  value: 65
+  cc: null
+  label: None
+  bank_lsb: 0
+  bank_msb: 0
+  note: null
+  velocity: null
+- device: ms
+  type: pattern
+  value: B01
+  cc: null
+  label: None
+  bank_lsb: 0
+  bank_msb: 0
+  note: null
+  velocity: null
