@@ -1,5 +1,5 @@
 {# ABOUTME: Read-only summary of one action (device, label, type/value) in the song view. #}
-{# ABOUTME: Shared by PACER buttons and on_load; expects `action` and `devices_map`. #}
+{# ABOUTME: Shared by song view, live view and on_load; numbers as on the device screen. #}
 {% set device = devices_map.get(action.device) %}
 <div class="border-l-4 pl-2 device-{{ action.device }}">
     <div class="text-xs text-gray-500">
@@ -10,9 +10,9 @@
     </div>
     <div class="text-sm text-gray-700">
         {% if action.type.value == 'preset' %}
-        preset {{ action.value }}
+        preset {{ to_display(action.value, device) if device else action.value }}
         {% elif action.type.value == 'pattern' %}
-        pattern {{ action.value }}
+        pattern {{ pattern_display(action.value) }}
         {% elif action.type.value == 'cc' %}
         CC{{ action.cc }}
         {% elif action.type.value == 'note' %}

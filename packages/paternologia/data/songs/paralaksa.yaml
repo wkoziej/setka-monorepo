@@ -10,37 +10,10 @@ pacer:
 - name: presety i nabij beat
   actions:
   - device: boss
-    type: preset
-    value: 8
-    cc: null
-    label: None
-    bank_lsb: 0
-    bank_msb: 0
-    note: null
-    velocity: null
-  - device: ms
-    type: pattern
-    value: A09
-    cc: null
-    label: None
-    bank_lsb: 0
-    bank_msb: 0
-    note: null
-    velocity: null
-  - device: freak
-    type: preset
-    value: 72
-    cc: null
-    label: None
-    bank_lsb: 0
-    bank_msb: 0
-    note: null
-    velocity: null
-  - device: boss
     type: cc
     value: 1
     cc: 1
-    label: None
+    label: null
     bank_lsb: 0
     bank_msb: 0
     note: null
@@ -51,7 +24,7 @@ pacer:
     type: pattern
     value: A10
     cc: null
-    label: None
+    label: null
     bank_lsb: 0
     bank_msb: 0
     note: null
@@ -60,7 +33,7 @@ pacer:
     type: preset
     value: 73
     cc: null
-    label: None
+    label: null
     bank_lsb: 0
     bank_msb: 0
     note: null
@@ -69,7 +42,7 @@ pacer:
     type: cc
     value: 1
     cc: 1
-    label: None
+    label: null
     bank_lsb: 0
     bank_msb: 0
     note: null
@@ -80,7 +53,7 @@ pacer:
     type: pattern
     value: A11
     cc: null
-    label: None
+    label: null
     bank_lsb: 0
     bank_msb: 0
     note: null
@@ -98,7 +71,7 @@ pacer:
     type: preset
     value: 74
     cc: null
-    label: None
+    label: null
     bank_lsb: 0
     bank_msb: 0
     note: null
@@ -109,7 +82,7 @@ pacer:
     type: cc
     value: 1
     cc: 2
-    label: None
+    label: null
     bank_lsb: 0
     bank_msb: 0
     note: null
@@ -118,7 +91,7 @@ pacer:
     type: pattern
     value: A12
     cc: null
-    label: None
+    label: null
     bank_lsb: 0
     bank_msb: 0
     note: null
@@ -140,8 +113,36 @@ pacer:
     type: cc
     value: 1
     cc: 4
-    label: None
+    label: null
     bank_lsb: 0
     bank_msb: 0
     note: null
     velocity: null
+on_load:
+- device: boss
+  type: preset
+  value: 8
+  cc: null
+  label: null
+  bank_lsb: 0
+  bank_msb: 0
+  note: null
+  velocity: null
+- device: ms
+  type: pattern
+  value: A09
+  cc: null
+  label: null
+  bank_lsb: 0
+  bank_msb: 0
+  note: null
+  velocity: null
+- device: freak
+  type: preset
+  value: 72
+  cc: null
+  label: null
+  bank_lsb: 0
+  bank_msb: 0
+  note: null
+  velocity: null

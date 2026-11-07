@@ -1,0 +1,77 @@
+song:
+  id: test-presety
+  name: TEST PRESETY
+  author: Wojtas
+  created: '2026-11-06'
+  notes: 'Test presetow 2026-11-06: RC-600 07, M:S A01, Freak 1, GP-50 patch 56 (CC0),
+    Mod Rex 01 (PC 0)'
+  pacer_export:
+    target_preset: D6
+pacer:
+- name: RC-600 07
+  actions: []
+- name: M:S A01
+  actions:
+  - device: ms
+    type: pattern
+    value: A01
+    cc: null
+    label: A01
+    bank_lsb: 0
+    bank_msb: 0
+    note: null
+    velocity: null
+- name: Freak 1
+  actions:
+  - device: freak
+    type: preset
+    value: 0
+    cc: null
+    label: '1'
+    bank_lsb: 0
+    bank_msb: 0
+    note: null
+    velocity: null
+- name: GP-50 56
+  actions:
+  - device: gp50
+    type: preset
+    value: 56
+    cc: null
+    label: patch 56
+    bank_lsb: 0
+    bank_msb: 0
+    note: null
+    velocity: null
+- name: Mod Rex 01
+  actions:
+  - device: modrex
+    type: preset
+    value: 0
+    cc: null
+    label: '01'
+    bank_lsb: 0
+    bank_msb: 0
+    note: null
+    velocity: null
+- name: Freak 3 PC
+  actions:
+  - device: freak
+    type: pattern
+    value: 2
+    cc: null
+    label: 3 (czysty PC)
+    bank_lsb: 0
+    bank_msb: 0
+    note: null
+    velocity: null
+on_load:
+- device: boss
+  type: preset
+  value: 6
+  cc: null
+  label: '07'
+  bank_lsb: 0
+  bank_msb: 0
+  note: null
+  velocity: null

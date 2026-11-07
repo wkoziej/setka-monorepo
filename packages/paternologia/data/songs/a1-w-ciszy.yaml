@@ -10,33 +10,6 @@ pacer:
 - name: Uruchomienie beatów i gotowości nagrywania. M:S gra na Freaku. Nagrywamy akustyka
   actions:
   - device: boss
-    type: preset
-    value: 0
-    cc: null
-    label: W ciszy
-    bank_lsb: 0
-    bank_msb: 0
-    note: null
-    velocity: null
-  - device: freak
-    type: preset
-    value: 64
-    cc: null
-    label: W ciszy
-    bank_lsb: 0
-    bank_msb: 0
-    note: null
-    velocity: null
-  - device: ms
-    type: pattern
-    value: A01
-    cc: null
-    label: Gramy melodię na MicroFreak
-    bank_lsb: 0
-    bank_msb: 0
-    note: null
-    velocity: null
-  - device: boss
     type: cc
     value: 127
     cc: 1
@@ -49,7 +22,7 @@ pacer:
     type: cc
     value: 127
     cc: 1
-    label: None
+    label: null
     bank_lsb: 0
     bank_msb: 0
     note: null
@@ -60,7 +33,7 @@ pacer:
     type: cc
     value: 127
     cc: 1
-    label: None
+    label: null
     bank_lsb: 0
     bank_msb: 0
     note: null
@@ -69,7 +42,7 @@ pacer:
     type: pattern
     value: a02
     cc: null
-    label: None
+    label: null
     bank_lsb: 0
     bank_msb: 0
     note: null
@@ -78,7 +51,7 @@ pacer:
     type: cc
     value: 127
     cc: 2
-    label: None
+    label: null
     bank_lsb: 0
     bank_msb: 0
     note: null
@@ -89,7 +62,7 @@ pacer:
     type: pattern
     value: A03
     cc: null
-    label: None
+    label: null
     bank_lsb: 0
     bank_msb: 0
     note: null
@@ -107,7 +80,7 @@ pacer:
     type: cc
     value: 127
     cc: 3
-    label: None
+    label: null
     bank_lsb: 0
     bank_msb: 0
     note: null
@@ -118,7 +91,7 @@ pacer:
     type: cc
     value: 127
     cc: 2
-    label: None
+    label: null
     bank_lsb: 0
     bank_msb: 0
     note: null
@@ -127,7 +100,7 @@ pacer:
     type: pattern
     value: a04
     cc: null
-    label: None
+    label: null
     bank_lsb: 0
     bank_msb: 0
     note: null
@@ -136,7 +109,7 @@ pacer:
     type: cc
     value: 127
     cc: 4
-    label: None
+    label: null
     bank_lsb: 0
     bank_msb: 0
     note: null
@@ -147,7 +120,7 @@ pacer:
     type: cc
     value: 127
     cc: 4
-    label: None
+    label: null
     bank_lsb: 0
     bank_msb: 0
     note: null
@@ -156,7 +129,7 @@ pacer:
     type: preset
     value: 64
     cc: null
-    label: None
+    label: null
     bank_lsb: 0
     bank_msb: 0
     note: null
@@ -165,7 +138,7 @@ pacer:
     type: cc
     value: 127
     cc: 5
-    label: None
+    label: null
     bank_lsb: 0
     bank_msb: 0
     note: null
@@ -176,7 +149,7 @@ pacer:
     type: cc
     value: 127
     cc: 3
-    label: None
+    label: null
     bank_lsb: 0
     bank_msb: 0
     note: null
@@ -185,7 +158,7 @@ pacer:
     type: pattern
     value: a03
     cc: null
-    label: None
+    label: null
     bank_lsb: 0
     bank_msb: 0
     note: null
@@ -194,8 +167,54 @@ pacer:
     type: cc
     value: 127
     cc: 6
-    label: None
+    label: null
     bank_lsb: 0
     bank_msb: 0
     note: null
     velocity: null
+on_load:
+- device: boss
+  type: preset
+  value: 0
+  cc: null
+  label: null
+  bank_lsb: 0
+  bank_msb: 0
+  note: null
+  velocity: null
+- device: freak
+  type: preset
+  value: 64
+  cc: null
+  label: null
+  bank_lsb: 0
+  bank_msb: 0
+  note: null
+  velocity: null
+- device: modrex
+  type: preset
+  value: 1
+  cc: null
+  label: null
+  bank_lsb: 0
+  bank_msb: 0
+  note: null
+  velocity: null
+- device: gp50
+  type: preset
+  value: 55
+  cc: null
+  label: null
+  bank_lsb: 0
+  bank_msb: 0
+  note: null
+  velocity: null
+- device: ms
+  type: pattern
+  value: A01
+  cc: null
+  label: Gramy melodię na MicroFreak
+  bank_lsb: 0
+  bank_msb: 0
+  note: null
+  velocity: null

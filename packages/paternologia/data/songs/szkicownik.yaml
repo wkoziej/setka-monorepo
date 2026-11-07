@@ -9,31 +9,32 @@ song:
     target_preset: B4
 pacer:
 - name: Start - testowanie pomysłów
-  actions:
-  - device: boss
-    type: preset
-    value: 6
-    cc: null
-    label: Sandbox
-    bank_lsb: 0
-    bank_msb: 0
-    note: null
-    velocity: null
-  - device: ms
-    type: pattern
-    value: F01
-    cc: null
-    label: Wolny pattern do nagrywania
-    bank_lsb: 0
-    bank_msb: 0
-    note: null
-    velocity: null
-  - device: freak
-    type: preset
-    value: 99
-    cc: null
-    label: Sandbox
-    bank_lsb: 0
-    bank_msb: 0
-    note: null
-    velocity: null
+  actions: []
+on_load:
+- device: boss
+  type: preset
+  value: 6
+  cc: null
+  label: Sandbox
+  bank_lsb: 0
+  bank_msb: 0
+  note: null
+  velocity: null
+- device: ms
+  type: pattern
+  value: F01
+  cc: null
+  label: Wolny pattern do nagrywania
+  bank_lsb: 0
+  bank_msb: 0
+  note: null
+  velocity: null
+- device: freak
+  type: preset
+  value: 99
+  cc: null
+  label: Sandbox
+  bank_lsb: 0
+  bank_msb: 0
+  note: null
+  velocity: null

@@ -8,41 +8,14 @@ song:
     target_preset: B3
 pacer:
 - name: beat
-  actions:
-  - device: ms
-    type: pattern
-    value: e1
-    cc: null
-    label: None
-    bank_lsb: 0
-    bank_msb: 0
-    note: null
-    velocity: null
-  - device: freak
-    type: preset
-    value: 134
-    cc: null
-    label: None
-    bank_lsb: 0
-    bank_msb: 0
-    note: null
-    velocity: null
-  - device: boss
-    type: preset
-    value: 28
-    cc: null
-    label: None
-    bank_lsb: 0
-    bank_msb: 0
-    note: null
-    velocity: null
+  actions: []
 - name: afg
   actions:
   - device: ms
     type: pattern
     value: e2
     cc: null
-    label: None
+    label: null
     bank_lsb: 0
     bank_msb: 0
     note: null
@@ -51,8 +24,36 @@ pacer:
     type: preset
     value: 137
     cc: null
-    label: None
+    label: null
     bank_lsb: 0
     bank_msb: 0
     note: null
     velocity: null
+on_load:
+- device: ms
+  type: pattern
+  value: e1
+  cc: null
+  label: null
+  bank_lsb: 0
+  bank_msb: 0
+  note: null
+  velocity: null
+- device: freak
+  type: preset
+  value: 134
+  cc: null
+  label: null
+  bank_lsb: 0
+  bank_msb: 0
+  note: null
+  velocity: null
+- device: boss
+  type: preset
+  value: 28
+  cc: null
+  label: null
+  bank_lsb: 0
+  bank_msb: 0
+  note: null
+  velocity: null

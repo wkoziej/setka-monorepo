@@ -29,7 +29,19 @@ devices:
     description: "Synthesizer"
     action_types:
       - preset
+
+  - id: gp50
+    name: "Valeton GP-50"
+    midi_channel: 5
+    preset_cc: 0          # preset = CC0 z numerem patcha (brak Program Change)
+    cc_release_same: true # CC z przycisku: puszczenie wysyła tę samą wartość
+    action_types:
+      - preset
+      - cc
 ```
+
+- `preset_cc` — urządzenie wybiera preset przez CC o tym numerze (wartość = numer presetu, 0-127) zamiast Program Change. Akcja `preset` eksportuje się wtedy jako CC (przycisk: up = down; `on_load`: CC przy załadowaniu) i nie trafia do indeksu live view (urządzenie nie dostaje PC).
+- `cc_release_same` — akcja `cc` z przycisku wysyła przy puszczeniu tę samą wartość co przy naciśnięciu (dla CC ustawiających stan, np. głośność).
 
 ### 2.2 Utwór (songs/*.yaml)
 

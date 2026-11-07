@@ -3,7 +3,12 @@
 
 from ..models import Device, PacerConfig, Song
 from . import constants as c
-from .mappings import action_to_midi, action_to_midi_config, build_device_channel_map
+from .mappings import (
+    action_to_midi,
+    action_to_midi_config,
+    build_device_channel_map,
+    build_preset_cc_map,
+)
 from .sysex import PacerSysExBuilder
 
 
@@ -32,6 +37,7 @@ def export_song_to_syx(
     # Buduj mapę device_id → MIDI channel z devices
     device_channel_map = build_device_channel_map(devices)
     cc_release_same_devices = {d.id for d in devices if d.cc_release_same}
+    preset_cc_devices = build_preset_cc_map(devices)
 
     # 1. Nazwa presetu
     messages.append(builder.build_preset_name(song.song.name))
@@ -50,7 +56,10 @@ def export_song_to_syx(
                 # Akcja istnieje - konfiguruj normalnie
                 action = button.actions[step_idx - 1]
                 msg_type, channel, data1, data2, data3 = action_to_midi(
-                    action, device_channel_map, cc_release_same_devices
+                    action,
+                    device_channel_map,
+                    cc_release_same_devices,
+                    preset_cc_devices,
                 )
                 messages.append(
                     builder.build_control_step(
@@ -108,7 +117,10 @@ def export_song_to_syx(
     for entry_idx in range(1, c.MIDI_CONFIG_ENTRIES + 1):
         if entry_idx <= len(song.on_load):
             msg_type, channel, data1, data2, data3 = action_to_midi_config(
-                song.on_load[entry_idx - 1], device_channel_map, config
+                song.on_load[entry_idx - 1],
+                device_channel_map,
+                config,
+                preset_cc_devices,
             )
             messages.append(
                 builder.build_midi_config_entry(

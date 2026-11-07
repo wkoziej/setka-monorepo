@@ -1,3 +1,5 @@
+{# ABOUTME: Live view partial: current song with its PACER buttons and actions. #}
+{# ABOUTME: Action summaries come from the shared action_summary partial. #}
 <div class="mb-4">
     <h2 class="text-2xl font-bold text-gray-800 uppercase">{{ song.song.name }}</h2>
     {% if song.song.notes %}
@@ -15,26 +17,7 @@
         </div>
         <div class="p-3 action-list space-y-3">
             {% for action in button.actions %}
-            {% set device = devices_map.get(action.device) %}
-            <div class="border-l-4 pl-2 device-{{ action.device }}">
-                <div class="text-xs text-gray-500">
-                    {% if action.label %}{{ action.label }}{% else %}&nbsp;{% endif %}
-                </div>
-                <div class="font-semibold text-sm text-gray-800">
-                    {{ device.name if device else action.device }}
-                </div>
-                <div class="text-sm text-gray-700">
-                    {% if action.type.value == 'preset' %}
-                    preset {{ action.value }}
-                    {% elif action.type.value == 'pattern' %}
-                    pattern {{ action.value }}
-                    {% elif action.type.value == 'cc' %}
-                    CC{{ action.cc }}
-                    {% elif action.type.value == 'note' %}
-                    note {{ action.note }} vel={{ action.velocity or 100 }}
-                    {% endif %}
-                </div>
-            </div>
+            {% include "partials/action_summary.html" %}
             {% endfor %}
             {% if not button.actions %}
             <p class="text-gray-400 italic text-sm">Brak akcji</p>

@@ -1368,3 +1368,108 @@ class TestActionPartialContextValidation:
             follow_redirects=False,
         )
         assert response.status_code == 400
+
+
+class TestSongViewDisplay:
+    def test_view_shows_device_screen_numbers_for_buttons_and_on_load(
+        self, client, test_storage
+    ):
+        """Widok utworu: ten sam numer co w edytorze (z preset_display_offset)."""
+        from paternologia.models import Action, PacerButton, Song, SongMetadata
+
+        test_storage.save_devices(
+            [
+                Device(
+                    id="freak",
+                    name="MicroFreak",
+                    midi_channel=1,
+                    preset_display_offset=1,
+                    action_types=[ActionType.PRESET],
+                ),
+                Device(id="ms", name="M:S", action_types=[ActionType.PATTERN]),
+            ]
+        )
+        test_storage.save_song(
+            Song(
+                song=SongMetadata(id="w", name="W"),
+                pacer=[
+                    PacerButton(
+                        name="SW1",
+                        actions=[
+                            Action(device="freak", type=ActionType.PRESET, value=64)
+                        ],
+                    )
+                ],
+                on_load=[Action(device="ms", type=ActionType.PATTERN, value="e9")],
+            )
+        )
+
+        html = client.get("/songs/w").text
+
+        assert "preset 65" in html
+        assert "preset 64" not in html
+        assert "pattern E09" in html
+
+    def test_edit_shows_canonical_pattern(self, client, test_storage):
+        from paternologia.models import Action, Song, SongMetadata
+
+        test_storage.save_devices(
+            [Device(id="ms", name="M:S", action_types=[ActionType.PATTERN])]
+        )
+        test_storage.save_song(
+            Song(
+                song=SongMetadata(id="p", name="P"),
+                on_load=[Action(device="ms", type=ActionType.PATTERN, value="d01")],
+            )
+        )
+
+        html = client.get("/songs/p/edit").text
+
+        assert 'value="D01"' in html
+        assert 'value="d01"' not in html
+
+
+class TestSongSavePreservesData:
+    """Zapis z formularza nie psuje danych utworu."""
+
+    def test_edit_form_renders_empty_label_not_none(self, client, test_storage):
+        from paternologia.models import Action, PacerButton, Song, SongMetadata
+
+        test_storage.save_devices(
+            [Device(id="ms", name="M:S", action_types=[ActionType.PATTERN])]
+        )
+        test_storage.save_song(
+            Song(
+                song=SongMetadata(id="l", name="L"),
+                pacer=[
+                    PacerButton(
+                        name="SW1",
+                        actions=[
+                            Action(device="ms", type=ActionType.PATTERN, value="A01")
+                        ],
+                    )
+                ],
+            )
+        )
+
+        html = client.get("/songs/l/edit").text
+
+        assert 'value="None"' not in html
+
+    def test_update_keeps_created_date(self, client, sample_devices, test_storage):
+        from datetime import date
+
+        from paternologia.models import Song, SongMetadata
+
+        test_storage.save_song(
+            Song(song=SongMetadata(id="old", name="Old", created=date(2026, 3, 7)))
+        )
+
+        response = client.put(
+            "/songs/old",
+            data={"song_name": "Old", "song_author": "", "song_notes": ""},
+            follow_redirects=False,
+        )
+
+        assert response.status_code == 303
+        assert test_storage.get_song("old").song.created == date(2026, 3, 7)

@@ -1,0 +1,77 @@
+song:
+  id: test-presety-2
+  name: TEST PRESETY 2
+  author: Wojtas
+  created: '2026-11-06'
+  notes: 'Diagnoza 2026-11-06: czysty PC (bez Bank Select) i CC dla Mod Rexa, Freak
+    PC 9, GP-50 CC0=10, M:S B01 kontrola'
+  pacer_export:
+    target_preset: D6
+pacer:
+- name: ModRex 05 PC
+  actions: []
+- name: ModRex CC93
+  actions:
+  - device: modrex
+    type: cc
+    value: 127
+    cc: 93
+    label: MOD depth 127
+    bank_lsb: 0
+    bank_msb: 0
+    note: null
+    velocity: null
+- name: Freak 10 PC
+  actions:
+  - device: freak
+    type: pattern
+    value: 9
+    cc: null
+    label: 10 czysty PC
+    bank_lsb: 0
+    bank_msb: 0
+    note: null
+    velocity: null
+- name: GP-50 10
+  actions:
+  - device: gp50
+    type: preset
+    value: 10
+    cc: null
+    label: patch 10
+    bank_lsb: 0
+    bank_msb: 0
+    note: null
+    velocity: null
+- name: M:S B01
+  actions:
+  - device: ms
+    type: pattern
+    value: B01
+    cc: null
+    label: B01
+    bank_lsb: 0
+    bank_msb: 0
+    note: null
+    velocity: null
+- name: ModRex 05 BK
+  actions:
+  - device: modrex
+    type: preset
+    value: 4
+    cc: null
+    label: 05 z bankiem
+    bank_lsb: 0
+    bank_msb: 0
+    note: null
+    velocity: null
+on_load:
+- device: modrex
+  type: pattern
+  value: 4
+  cc: null
+  label: 05 czysty PC
+  bank_lsb: 0
+  bank_msb: 0
+  note: null
+  velocity: null

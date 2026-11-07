@@ -570,7 +570,7 @@ class TestOnLoadWorkflow:
 
         edit = client.get("/songs/zima-e2e/edit")
         assert 'name="on_load_1_value"' in edit.text
-        assert 'value="d01"' in edit.text
+        assert 'value="D01"' in edit.text
 
         response = client.put(
             "/songs/zima-e2e",

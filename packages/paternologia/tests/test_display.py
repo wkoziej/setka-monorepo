@@ -1,7 +1,7 @@
 # ABOUTME: Tests for preset display-number conversion helpers (to_display/to_stored).
 # ABOUTME: Verifies the hidden per-device offset round-trips and never touches patterns.
 
-from paternologia.display import to_display, to_stored
+from paternologia.display import pattern_display, to_display, to_stored
 from paternologia.models import ActionType, Device
 
 
@@ -66,3 +66,20 @@ class TestRoundTrip:
         ms = _device(offset=0)
         for raw in range(0, 16):
             assert to_stored(to_display(raw, ms), ms) == raw
+
+
+class TestPatternDisplay:
+    """Pattern M:S w jednej, kanonicznej pisowni: bank A-F + dwucyfrowy numer."""
+
+    def test_lowercase_and_short_forms_are_canonical(self):
+        assert pattern_display("d01") == "D01"
+        assert pattern_display("e9") == "E09"
+        assert pattern_display("A9") == "A09"
+
+    def test_program_number_shown_as_slot(self):
+        assert pattern_display(48) == "D01"
+        assert pattern_display("83") == "F04"
+
+    def test_unknown_value_passes_through(self):
+        assert pattern_display("xyz") == "xyz"
+        assert pattern_display(None) is None
