@@ -1,6 +1,7 @@
 # ABOUTME: FastAPI router for Pacer SysEx export and send endpoints.
 # ABOUTME: Provides GET /pacer/export/{song_id}.syx and POST /pacer/send/{song_id}.
 
+import html
 import logging
 import subprocess
 from tempfile import NamedTemporaryFile
@@ -36,7 +37,12 @@ def export_syx(
     # Pobierz devices do mapowania MIDI channels
     devices = storage.get_devices()
 
-    syx_data = export_song_to_syx(song, devices, preset)
+    try:
+        syx_data = export_song_to_syx(
+            song, devices, preset, pacer_config=storage.get_pacer_config()
+        )
+    except ValueError as e:
+        raise HTTPException(400, str(e))
 
     return Response(
         content=syx_data,
@@ -104,7 +110,17 @@ def send_to_pacer(
         sysex_interval = pacer_config.sysex_interval_ms
 
         devices = storage.get_devices()
-        syx_data = export_song_to_syx(song, devices, target)
+        try:
+            syx_data = export_song_to_syx(
+                song, devices, target, pacer_config=pacer_config
+            )
+        except ValueError as e:
+            error_msg = html.escape(str(e))
+            if is_htmx:
+                return HTMLResponse(
+                    f'<span class="text-red-600 font-semibold">❌ {error_msg}</span>'
+                )
+            raise HTTPException(400, error_msg)
 
         try:
             with NamedTemporaryFile(suffix=".syx", delete=True) as tmp:

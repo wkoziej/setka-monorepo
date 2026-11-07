@@ -8,6 +8,7 @@ from paternologia.models import (
     ActionType,
     Device,
     PacerButton,
+    PacerConfig,
     Song,
     SongMetadata,
 )
@@ -72,9 +73,9 @@ class TestExportWithButtons:
         )
         syx = export_song_to_syx(song, devices, "A1")
 
-        # Message count: 1 name + 6 × (1 mode + 6 steps + 6 LED) = 79
+        # Message count: 1 name + 6 × (1 mode + 6 steps + 6 LED) + 16 M CFG = 95
         f0_count = syx.count(bytes([c.SYSEX_START]))
-        assert f0_count == 79
+        assert f0_count == 95
 
     def test_export_multiple_actions(self, devices):
         """Export button with multiple actions."""
@@ -132,7 +133,9 @@ class TestExportEmptySteps:
     def test_empty_button_generates_steps(self, devices):
         """Empty song generates step messages for all 6 steps per button."""
         song = Song(song=SongMetadata(id="empty", name="XYZ"), pacer=[])
-        syx = export_song_to_syx(song, devices, "A1")
+        all_frames = _frames(export_song_to_syx(song, devices, "A1"))
+        stompswitch_ids = set(c.STOMPSWITCHES.values())
+        syx = b"".join(f for f in all_frames if f[8] in stompswitch_ids)
 
         # MSG_CTRL_OFF (0x61) appears in each step as msg_type value
         # Element IDs for msg_type: step1=0x02, step2=0x08, step3=0x0E, etc.
@@ -265,5 +268,76 @@ class TestExportLed:
 
         # Count F0 (message starts)
         f0_count = syx.count(bytes([c.SYSEX_START]))
-        # 1 name + 6 × (1 mode + 6 steps + 6 LED) = 79
-        assert f0_count == 79
+        # 1 name + 6 × (1 mode + 6 steps + 6 LED) + 16 M CFG = 95
+        assert f0_count == 95
+
+
+def _frames(syx: bytes) -> list[bytes]:
+    return [bytes([c.SYSEX_START]) + f for f in syx.split(bytes([c.SYSEX_START]))[1:]]
+
+
+def _midi_config_entries(syx: bytes) -> dict[int, tuple[int, int, int, int, int]]:
+    """Parsuj ramki M CFG (obiekt 0x7E) do {wpis: (channel, typ, d1, d2, d3)}."""
+    entries = {}
+    for f in _frames(syx):
+        if f[8] != c.CONTROL_MIDI:
+            continue
+        values = f[9:-2][2::4]  # [elm, 0x01, wartość, 0x00] ...
+        entries[(f[9] - 1) // 6 + 1] = tuple(values)
+    return entries
+
+
+class TestExportMidiConfig:
+    """Eksport on_load jako 16 wpisów M CFG."""
+
+    def test_on_load_actions_fill_first_entries_rest_cleared(self, devices):
+        song = Song(
+            song=SongMetadata(id="test", name="T"),
+            on_load=[
+                Action(device="ms", type=ActionType.PATTERN, value="D01"),
+                Action(device="boss", type=ActionType.CC, cc=40, value=99),
+            ],
+        )
+        entries = _midi_config_entries(export_song_to_syx(song, devices, "D5"))
+
+        assert sorted(entries) == list(range(1, 17))
+        assert entries[1] == (1, c.MSG_SW_PRG_BANK, 48, 0, 0)
+        assert entries[2] == (0, c.MSG_LOAD_CC, 40, 99, 0)
+        for n in range(3, 17):
+            assert entries[n] == (0, c.MSG_CTRL_OFF, 0, 0, 0)
+
+    def test_song_without_on_load_clears_all_entries(self, devices):
+        """Eksport bez on_load czyści M CFG ustawione wcześniej w presecie."""
+        song = Song(song=SongMetadata(id="test", name="T"))
+        entries = _midi_config_entries(export_song_to_syx(song, devices, "A1"))
+
+        assert len(entries) == 16
+        assert all(e == (0, c.MSG_CTRL_OFF, 0, 0, 0) for e in entries.values())
+
+    def test_midi_config_frames_follow_buttons(self, devices):
+        song = Song(song=SongMetadata(id="test", name="T"))
+        objects = [f[8] for f in _frames(export_song_to_syx(song, devices, "A1"))]
+
+        assert objects[-16:] == [c.CONTROL_MIDI] * 16
+        assert c.CONTROL_MIDI not in objects[:-16]
+
+    def test_midi_config_frames_target_preset_only(self, devices):
+        song = Song(
+            song=SongMetadata(id="test", name="T"),
+            on_load=[Action(device="freak", type=ActionType.PRESET, value=67)],
+        )
+        for f in _frames(export_song_to_syx(song, devices, "D5")):
+            assert f[6] == c.TARGET_PRESET
+            assert f[7] == c.PRESET_INDICES["D5"]
+
+    def test_obs_trigger_note_in_on_load_fails(self, devices):
+        # fixture: freak na kanale 2 (1-16) = record_trigger_channel 1 (0-15)
+        config = PacerConfig(
+            record_trigger_channel=1, record_start_note=94, record_stop_note=93
+        )
+        song = Song(
+            song=SongMetadata(id="test", name="T"),
+            on_load=[Action(device="freak", type=ActionType.NOTE, note=94)],
+        )
+        with pytest.raises(ValueError, match="OBS"):
+            export_song_to_syx(song, devices, "A1", pacer_config=config)

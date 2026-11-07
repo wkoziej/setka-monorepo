@@ -212,3 +212,8 @@ Uwagi do Fazy B:
 - **(f) zapis SysEx a wysyłka M CFG:** monitor działał w czasie pierwszego zapisu do D5 (16:39:14, monitor do 16:39:38) — brak zdarzeń. Zapis do presetu, który nie jest aktywny, nie wyzwala M CFG. Zapis do aktywnego presetu nie był testowany.
 - **Checksum:** Paternologia liczyła checksum od Manufacturer ID (przesunięcie o 9 względem Pacera). Pacer nie sprawdza checksumy, więc eksport działał. Poprawione w osobnym commicie: checksum od bajtu CMD; round-trip eksportu „Zimy” na D5 — 78/78 ramek (poza nazwą) bajt w bajt, potem restore D5 z read-backiem.
 - Ramka nazwy presetu w dumpie ma inny układ niż wysyłana przez Paternologię (Pacer zwraca element `0x01` z długością; Paternologia wysyła element `0x00`). Nazwa zapisuje się poprawnie — poza zakresem.
+
+## Unit 5 — eksport z on_load (round-trip)
+
+„Zima” z `on_load` = stan SW1 (RC-600 PC 3, M:S d01, MicroFreak PC 67), eksport na D5: 95 ramek (16 × `0x7E`), wszystkie `TARGET_PRESET` idx `0x17`.
+Dump D5: 94/94 ramki poza nazwą bajt w bajt. Restore D5 z backupu, read-back zgodny.

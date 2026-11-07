@@ -1,14 +1,17 @@
 # ABOUTME: Main export function for generating Pacer .syx files from songs.
-# ABOUTME: Concatenates SysEx messages for preset name and control steps.
+# ABOUTME: Concatenates SysEx messages for preset name, control steps and M CFG.
 
-from ..models import Song, Device
-from .sysex import PacerSysExBuilder
-from .mappings import action_to_midi, build_device_channel_map
+from ..models import Device, PacerConfig, Song
 from . import constants as c
+from .mappings import action_to_midi, action_to_midi_config, build_device_channel_map
+from .sysex import PacerSysExBuilder
 
 
 def export_song_to_syx(
-    song: Song, devices: list[Device], target_preset: str = "A1"
+    song: Song,
+    devices: list[Device],
+    target_preset: str = "A1",
+    pacer_config: PacerConfig | None = None,
 ) -> bytes:
     """Eksportuj piosenkę do pliku .syx.
 
@@ -16,6 +19,8 @@ def export_song_to_syx(
         song: Piosenka z Paternologii
         devices: Lista urządzeń (do mapowania device_id → MIDI channel)
         target_preset: Preset docelowy (CURRENT, A1-D6)
+        pacer_config: Konfiguracja Pacera (nuty triggera OBS do walidacji
+            on_load); None = wartości domyślne, jak w main.py
 
     Returns:
         bytes: Zawartość pliku .syx (konkatenacja wiadomości)
@@ -96,5 +101,21 @@ def export_song_to_syx(
                         inactive_color=c.LED_OFF,
                     )
                 )
+
+    # 3. M CFG: wiadomości przy załadowaniu presetu. Zawsze wszystkie 16 wpisów,
+    # nieużywane wyczyszczone — stan presetu w pełni określa YAML.
+    config = pacer_config or PacerConfig()
+    for entry_idx in range(1, c.MIDI_CONFIG_ENTRIES + 1):
+        if entry_idx <= len(song.on_load):
+            msg_type, channel, data1, data2, data3 = action_to_midi_config(
+                song.on_load[entry_idx - 1], device_channel_map, config
+            )
+            messages.append(
+                builder.build_midi_config_entry(
+                    entry_idx, msg_type, channel, data1, data2, data3
+                )
+            )
+        else:
+            messages.append(builder.build_empty_midi_config_entry(entry_idx))
 
     return b"".join(messages)
