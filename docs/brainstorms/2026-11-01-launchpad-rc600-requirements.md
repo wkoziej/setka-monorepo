@@ -26,7 +26,7 @@ Laptop musi więc tłumaczyć komunikaty. Przed podłączeniem prawdziwego RC-60
   - Kolumny 7–8, górne 2 wiersze (blok 2×2): przełączniki Track FX A–D. Wiersz 1: A, B. Wiersz 2: C, D.
 - R2. Naciśnięcie padu fadera wysyła CC z wartością poziomu na kanale 13. Diody kolumny pokazują słupek do wybranego wiersza.
 - R3. Naciśnięcie padu FX zmienia stan FX na przeciwny i wysyła **jawną wartość** (on albo off), a nie impuls „toggle”. Dioda pokazuje stan: on albo off.
-- R4. Po uruchomieniu tłumacz wysyła stan startowy (wszystkie poziomy 71, czyli ok. 70%, wszystkie FX off; zmiana ze 100 na prośbę Wojciecha po teście z Launchpadem) i ustawia diody tak, żeby pokazywały ten stan.
+- R4. Po uruchomieniu tłumacz wysyła stan startowy (wszystkie poziomy 57, czyli ok. 57%, wszystkie FX off; zmiana ze 100 na 71 na prośbę Wojciecha po teście z Launchpadem, potem z 71 na 57 po teście na żywo) i ustawia diody tak, żeby pokazywały ten stan.
 - R5. Wszystkie numery CC są poza CC 1–4, bo tych numerów używa Pacer. Wszystkie numery CC mieszczą się w zakresach ASSIGN (1–31 albo 64–95).
 - R6. Tłumacz nie wie, czy po drugiej stronie jest prawdziwy, czy wirtualny RC-600. Wybór celu to tylko wybór portu MIDI.
 - R7. Tłumacz zapisuje w logu każdy komunikat: wejście z Launchpada i wyjście do RC-600.
