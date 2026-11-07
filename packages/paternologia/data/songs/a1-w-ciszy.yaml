@@ -9,15 +9,6 @@ song:
 pacer:
 - name: Uruchomienie beatów i gotowości nagrywania. M:S gra na Freaku. Nagrywamy akustyka
   actions:
-  - device: freak
-    type: preset
-    value: 64
-    cc: null
-    label: W ciszy
-    bank_lsb: 0
-    bank_msb: 0
-    note: null
-    velocity: null
   - device: boss
     type: cc
     value: 127
@@ -40,7 +31,7 @@ pacer:
     type: cc
     value: 1
     cc: 0
-    label: null
+    label: None
     bank_lsb: 0
     bank_msb: 0
     note: null
