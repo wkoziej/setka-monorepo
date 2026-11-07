@@ -43,7 +43,7 @@ def color(red: int, green: int) -> int:
 OFF = color(0, 0)
 FADER_ON = color(0, 3)
 FX_ON = color(3, 0)  # full red
-FX_OFF = color(0, 1)  # dim green
+FX_OFF = color(1, 1)  # dim amber
 
 
 def led(row: int, col: int, velocity: int) -> mido.Message:

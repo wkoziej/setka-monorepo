@@ -84,7 +84,11 @@ def test_named_colors():
     assert OFF == color(0, 0)
     assert FADER_ON == color(0, 3)
     assert FX_ON == color(3, 0)  # full red
-    assert FX_OFF == color(0, 1)  # dim green
+    assert FX_OFF == color(1, 1) == 29  # dim amber (0x1D)
+
+
+def test_fx_off_stands_out_from_fader_bars_and_fx_on():
+    assert FX_OFF not in (FADER_ON, FX_ON)
 
 
 def test_led_message():
