@@ -402,3 +402,44 @@ class TestActionToMidiConfigFailFast:
         action = Action(device="glob", type=ActionType.NOTE, note=94)
         with pytest.raises(ValueError, match="OBS"):
             self._map(action, {"glob": 0}, config)
+
+
+class TestPresetViaCc:
+    """PRESET na urządzeniu z preset_cc to CC (np. GP-50 patch = CC0), nie PC."""
+
+    PRESET_CC = {"gp50": 0}
+
+    def test_button_preset_is_cc_trigger_with_up_equal_down(self):
+        """Puszczenie przycisku nie może wrócić do patcha 00."""
+        action = Action(device="gp50", type=ActionType.PRESET, value=10)
+        assert action_to_midi(
+            action, {"gp50": 5}, preset_cc_devices=self.PRESET_CC
+        ) == (c.MSG_SW_MIDI_CC, 5, 0, 10, 10)
+
+    def test_button_preset_other_device_stays_program_change(self):
+        action = Action(device="freak", type=ActionType.PRESET, value=10)
+        msg_type = action_to_midi(
+            action, {"freak": 1}, preset_cc_devices=self.PRESET_CC
+        )[0]
+        assert msg_type == c.MSG_SW_PRG_BANK
+
+    def test_on_load_preset_is_load_cc(self):
+        action = Action(device="gp50", type=ActionType.PRESET, value=10)
+        assert action_to_midi_config(
+            action, {"gp50": 5}, PacerConfig(), preset_cc_devices=self.PRESET_CC
+        ) == (c.MSG_LOAD_CC, 5, 0, 10, 0)
+
+    @pytest.mark.parametrize("mapper", ["button", "on_load"])
+    def test_preset_above_cc_range_is_rejected(self, mapper):
+        """Wartość CC to 0-127 — preset 128 nie ma reprezentacji."""
+        action = Action(device="gp50", type=ActionType.PRESET, value=128)
+        with pytest.raises(ValueError, match="0-127"):
+            if mapper == "button":
+                action_to_midi(action, {"gp50": 5}, preset_cc_devices=self.PRESET_CC)
+            else:
+                action_to_midi_config(
+                    action,
+                    {"gp50": 5},
+                    PacerConfig(),
+                    preset_cc_devices=self.PRESET_CC,
+                )

@@ -341,3 +341,25 @@ class TestExportMidiConfig:
         )
         with pytest.raises(ValueError, match="OBS"):
             export_song_to_syx(song, devices, "A1", pacer_config=config)
+
+
+class TestExportPresetViaCc:
+    def test_preset_cc_device_exported_as_cc_on_button_and_on_load(self):
+        devices = [Device(id="gp50", name="GP-50", midi_channel=5, preset_cc=0)]
+        song = Song(
+            song=SongMetadata(id="t", name="T"),
+            pacer=[
+                PacerButton(
+                    name="patch",
+                    actions=[Action(device="gp50", type=ActionType.PRESET, value=10)],
+                )
+            ],
+            on_load=[Action(device="gp50", type=ActionType.PRESET, value=12)],
+        )
+        syx = export_song_to_syx(song, devices, "A1")
+
+        expected_step = PacerSysExBuilder(c.PRESET_INDICES["A1"]).build_control_step(
+            c.STOMPSWITCHES[0], 1, c.MSG_SW_MIDI_CC, 5, 0, 10, 10
+        )
+        assert expected_step in syx
+        assert _midi_config_entries(syx)[1] == (5, c.MSG_LOAD_CC, 0, 12, 0)

@@ -2,6 +2,8 @@
 # ABOUTME: Converts Action types to SysEx message parameters.
 
 import re
+from collections.abc import Mapping
+from types import MappingProxyType
 
 from ..models import Action, ActionType, Device, PacerConfig
 from . import constants as c
@@ -127,6 +129,7 @@ def action_to_midi(
     action: Action,
     device_channel_map: dict[str, int],
     cc_release_same_devices: set[str] | frozenset[str] = frozenset(),
+    preset_cc_devices: Mapping[str, int] = MappingProxyType({}),
 ) -> tuple[int, int, int, int, int]:
     """Konwertuj Action na parametry MIDI.
 
@@ -135,6 +138,8 @@ def action_to_midi(
         device_channel_map: Mapa device_id → MIDI channel
         cc_release_same_devices: ID urządzeń, dla których CC trigger wysyła
             przy puszczeniu tę samą wartość co przy naciśnięciu (up = down)
+        preset_cc_devices: Mapa device_id → numer CC wyboru presetu
+            (urządzenia bez Program Change, np. GP-50: CC0)
 
     Returns:
         (msg_type, channel, data1, data2, data3)
@@ -143,6 +148,18 @@ def action_to_midi(
     Dla MSG_SW_MIDI_CC: data1=controller, data2=down (naciśnięcie), data3=up (puszczenie)
     """
     channel = get_device_channel(action.device, device_channel_map)
+
+    if action.type == ActionType.PRESET and action.device in preset_cc_devices:
+        # Preset przez CC: up = down, bo puszczenie z wartością 0 wróciłoby
+        # do presetu 0
+        value = _preset_cc_value(action)
+        return (
+            c.MSG_SW_MIDI_CC,
+            channel,
+            preset_cc_devices[action.device],
+            value,
+            value,
+        )
 
     if action.type == ActionType.PRESET:
         # MSG_SW_PRG_BANK wysyła Program Change + Bank Select
@@ -178,6 +195,7 @@ def action_to_midi_config(
     action: Action,
     device_channel_map: dict[str, int],
     pacer_config: PacerConfig,
+    preset_cc_devices: Mapping[str, int] = MappingProxyType({}),
 ) -> tuple[int, int, int, int, int]:
     """Konwertuj akcję on_load na wpis M CFG (msg_type, channel, data1-3).
 
@@ -195,6 +213,10 @@ def action_to_midi_config(
 
     # Wpis on_load wysyła się przy każdym załadowaniu presetu, więc niepełna
     # akcja to błąd — nie cichy fallback na PC 0 / CC 0 jak w action_to_midi.
+    if action.type == ActionType.PRESET and action.device in preset_cc_devices:
+        cc = preset_cc_devices[action.device]
+        return (c.MSG_LOAD_CC, channel, cc, _preset_cc_value(action), 0)
+
     if action.type == ActionType.PRESET:
         if not isinstance(action.value, int):
             raise ValueError(f"on_load: preset bez numeru ({action.device})")
@@ -242,3 +264,17 @@ def _strict_pattern_program(action: Action) -> int:
     if not valid:
         raise ValueError(f"on_load: nieprawidłowy pattern '{value}' ({action.device})")
     return pattern_to_program(value)
+
+
+def _preset_cc_value(action: Action) -> int:
+    """Numer presetu jako wartość CC (0-127) dla urządzenia z preset_cc."""
+    if not isinstance(action.value, int) or not 0 <= action.value <= 127:
+        raise ValueError(
+            f"Preset przez CC ({action.device}) musi być 0-127, jest {action.value!r}"
+        )
+    return action.value
+
+
+def build_preset_cc_map(devices: list[Device]) -> dict[str, int]:
+    """Mapa device_id → numer CC wyboru presetu (tylko urządzenia z preset_cc)."""
+    return {d.id: d.preset_cc for d in devices if d.preset_cc is not None}

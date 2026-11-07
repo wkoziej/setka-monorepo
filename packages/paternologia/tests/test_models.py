@@ -63,6 +63,21 @@ class TestDevice:
         assert device.preset_display_offset == 1
 
 
+class TestDevicePresetCc:
+    """Urządzenie wybierające preset przez CC (np. GP-50: CC0) zamiast PC."""
+
+    def test_preset_cc_defaults_to_none(self):
+        assert Device(id="boss", name="Boss").preset_cc is None
+
+    def test_preset_cc_accepts_controller_number(self):
+        assert Device(id="gp50", name="GP-50", preset_cc=0).preset_cc == 0
+
+    @pytest.mark.parametrize("bad", [-1, 128])
+    def test_preset_cc_out_of_range(self, bad):
+        with pytest.raises(ValidationError):
+            Device(id="gp50", name="GP-50", preset_cc=bad)
+
+
 class TestDevicesConfig:
     """Tests for DevicesConfig model."""
 

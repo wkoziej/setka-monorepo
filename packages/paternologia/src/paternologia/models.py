@@ -38,6 +38,15 @@ class Device(BaseModel):
             "applied transparently in the editor. 0 = no shift."
         ),
     )
+    preset_cc: int | None = Field(
+        default=None,
+        ge=0,
+        le=127,
+        description=(
+            "Device selects presets with this CC number (value = preset number) "
+            "instead of Program Change, e.g. GP-50 patch via CC0. None = PC."
+        ),
+    )
     cc_release_same: bool = Field(
         default=False,
         description=(

@@ -23,10 +23,12 @@ devices:
       - note
   - id: gp50
     name: Valeton GP-50
-    description: Multieffect (gitara) — patch przez CC0 (0-99), brak Program Change
+    description: Multieffect (gitara) — patch 00-99 jako preset (wysyłany przez CC0, brak Program Change)
     midi_channel: 5
+    preset_cc: 0
     cc_release_same: true
     action_types:
+      - preset
       - cc
   - id: modrex
     name: EHX Mod Rex

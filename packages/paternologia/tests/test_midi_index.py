@@ -200,3 +200,22 @@ class TestSongMidiIndexOnLoad:
         index = SongMidiIndex.build(songs, devices)
         assert index.lookup(channel=0, program=5) == "zen"
         assert "MIDI conflict" in caplog.text
+
+
+class TestSongMidiIndexPresetViaCc:
+    def test_preset_cc_device_is_not_indexed_as_program_change(self):
+        """GP-50 dostaje CC0, nie PC — nie może zająć klucza (kanał, program)."""
+        devices = [
+            Device(
+                id="gp50",
+                name="GP-50",
+                midi_channel=5,
+                preset_cc=0,
+                action_types=[ActionType.PRESET],
+            )
+        ]
+        songs = [
+            _make_song("a", [Action(device="gp50", type=ActionType.PRESET, value=10)])
+        ]
+
+        assert SongMidiIndex.build(songs, devices).lookup(channel=4, program=10) is None

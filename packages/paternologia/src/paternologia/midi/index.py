@@ -41,6 +41,9 @@ class SongMidiIndex:
                         action.device,
                     )
                     continue
+                if device.preset_cc is not None:
+                    # Preset przez CC (np. GP-50) — urządzenie nie dostaje PC
+                    continue
 
                 program = int(action.value) % 128
                 # devices.yaml uses 1-16 (musician convention),
