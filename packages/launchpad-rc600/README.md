@@ -23,9 +23,9 @@ row7   0    0    0    0    0    0   (unused)
 ```
 
 - Fader pad: sets the TRK level. LEDs: a bar from the pressed row down; level 0 = dark column.
-- FX pad: flips the FX and sends an explicit value (127 = on, 0 = off). Red = on, dim green = off.
+- FX pad: flips the FX and sends an explicit value (127 = on, 0 = off). Red = on, dim amber = off.
 - Unused pads and round buttons: ignored, with a log line.
-- At start, the translator sends all levels 71 (about 70%, so you can raise them to unity 100) and all FX off. **This changes the sound on the real RC-600.**
+- At start, the translator sends all levels 57 (about 57%, so you can raise them to unity 100) and all FX off. **This changes the sound on the real RC-600.**
 
 ## Install and test (development machine)
 
@@ -77,9 +77,9 @@ Verified on the RC-600 (2026-11-01, slots 5 and 11): FX with ACT LO 64 — 127 �
 
 ## Manual check with the physical Launchpad
 
-1. Start `rc600-sim`, then `lp-rc600 --out "RC-600 SIM"`. The simulator shows levels 71 and FX off; the Launchpad shows green bars from row 3 down in columns 1–6 and dim green FX pads.
+1. Start `rc600-sim`, then `lp-rc600 --out "RC-600 SIM"`. The simulator shows levels 57 and FX off; the Launchpad shows green bars from row3 (level 57) down in columns 1–6 and dim amber FX pads.
 2. In each fader column, press every row from top to bottom. The simulator shows 100, 86, 71, 57, 43, 29, 14, 0; the LED bar follows; at 0 the column is dark.
-3. Press each FX pad twice: on (red), then off (dim green). The simulator agrees.
+3. Press each FX pad twice: on (red), then off (dim amber). The simulator agrees.
 4. Press an unused pad (for example column 7, row 5) and a round button: no change; `lp-rc600` logs "ignored".
 5. Press Ctrl+C in `lp-rc600`: all LEDs turn off.
 
