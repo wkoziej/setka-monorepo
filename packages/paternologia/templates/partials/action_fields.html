@@ -10,7 +10,7 @@
        hx-trigger="change, keyup changed delay:400ms"
        hx-vals="js:{device_id: (event.target || event).closest('.action-row').querySelector('select[name$=_device]').value, action_type: 'preset', value: (event.target || event).value, song_id: ((event.target || event).closest('form').dataset.songId || '')}">
 <input type="text" name="{{ field_prefix }}_label"
-       value="{{ action.label if action else '' }}" placeholder="Label"
+       value="{{ (action.label or '') if action else '' }}" placeholder="Label"
        class="border border-gray-300 rounded px-2 py-1 text-sm w-24">
 <div class="preset-usage basis-full text-xs mt-1">
 {%- if action and action.value not in (None, '') and usage_index is defined and usage_index -%}
@@ -26,7 +26,7 @@
        hx-trigger="change, keyup changed delay:400ms"
        hx-vals="js:{device_id: (event.target || event).closest('.action-row').querySelector('select[name$=_device]').value, action_type: 'pattern', value: (event.target || event).value, song_id: ((event.target || event).closest('form').dataset.songId || '')}">
 <input type="text" name="{{ field_prefix }}_label"
-       value="{{ action.label if action else '' }}" placeholder="Label"
+       value="{{ (action.label or '') if action else '' }}" placeholder="Label"
        class="border border-gray-300 rounded px-2 py-1 text-sm w-24">
 <div class="preset-usage basis-full text-xs mt-1">
 {%- if action and action.value not in (None, '') and usage_index is defined and usage_index -%}
@@ -41,7 +41,7 @@
        value="{{ action.value if action else '' }}" placeholder="Value" required min="0" max="127"
        class="border border-gray-300 rounded px-2 py-1 text-sm w-16">
 <input type="text" name="{{ field_prefix }}_label"
-       value="{{ action.label if action else '' }}" placeholder="Label"
+       value="{{ (action.label or '') if action else '' }}" placeholder="Label"
        class="border border-gray-300 rounded px-2 py-1 text-sm w-24">
 {% if action_context == 'on_load' %}
 <p class="basis-full text-xs text-amber-700 mt-1">⚠ CC przy załadowaniu trafia do urządzenia przy każdej zmianie presetu — na RC-600 może zmienić stan pętli w trakcie grania.</p>
@@ -54,6 +54,6 @@
        value="{{ action.velocity if action else 100 }}" placeholder="Velocity" min="1" max="127"
        class="border border-gray-300 rounded px-2 py-1 text-sm w-16">
 <input type="text" name="{{ field_prefix }}_label"
-       value="{{ action.label if action else '' }}" placeholder="Label"
+       value="{{ (action.label or '') if action else '' }}" placeholder="Label"
        class="border border-gray-300 rounded px-2 py-1 text-sm w-24">
 {% endif %}

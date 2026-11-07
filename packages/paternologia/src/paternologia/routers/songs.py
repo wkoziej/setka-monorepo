@@ -173,7 +173,13 @@ async def update_song(request: Request, song_id: str):
 
     try:
         song = _build_song_from_form(
-            form_data, song_id, song_name, song_author, song_notes, storage
+            form_data,
+            song_id,
+            song_name,
+            song_author,
+            song_notes,
+            storage,
+            created=storage.get_song(song_id).song.created,
         )
     except ValidationError as exc:
         raise HTTPException(status_code=400, detail=_format_validation_error(exc))
@@ -232,8 +238,12 @@ def _build_song_from_form(
     song_author: str,
     song_notes: str,
     storage,
+    created: date | None = None,
 ) -> Song:
-    """Build a Song model from form data."""
+    """Build a Song model from form data.
+
+    created: data utworzenia istniejącego utworu (edycja); None = dziś (nowy).
+    """
     target_preset = form_data.get("pacer_export_target_preset", "A1").strip()
     pacer_export = PacerExportSettings(target_preset=target_preset or "A1")
 
@@ -282,7 +292,7 @@ def _build_song_from_form(
             id=song_id,
             name=song_name,
             author=song_author,
-            created=date.today(),
+            created=created or date.today(),
             notes=song_notes,
             pacer_export=pacer_export,
         ),
