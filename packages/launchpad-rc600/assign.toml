@@ -1,0 +1,122 @@
+# RC-600 ASSIGN sheet for the Launchpad Mini translator.
+# Control channel: RX CH CTL = 13 (fixed in code). Write ASSIGN to every memory used with the Launchpad.
+
+[[reserved]]
+slot = 1
+cc = 1
+owner = "Pacer"
+
+[[reserved]]
+slot = 2
+cc = 2
+owner = "Pacer"
+
+[[reserved]]
+slot = 3
+cc = 3
+owner = "Pacer"
+
+[[reserved]]
+slot = 4
+cc = 4
+owner = "Pacer"
+
+[[slot]]
+slot = 5
+source_cc = 64
+source_mode = "MOMENT"
+act_lo = 0
+act_hi = 127
+target = "TRK1 LEVEL"
+target_min = 0
+target_max = 100
+
+[[slot]]
+slot = 6
+source_cc = 65
+source_mode = "MOMENT"
+act_lo = 0
+act_hi = 127
+target = "TRK2 LEVEL"
+target_min = 0
+target_max = 100
+
+[[slot]]
+slot = 7
+source_cc = 66
+source_mode = "MOMENT"
+act_lo = 0
+act_hi = 127
+target = "TRK3 LEVEL"
+target_min = 0
+target_max = 100
+
+[[slot]]
+slot = 8
+source_cc = 67
+source_mode = "MOMENT"
+act_lo = 0
+act_hi = 127
+target = "TRK4 LEVEL"
+target_min = 0
+target_max = 100
+
+[[slot]]
+slot = 9
+source_cc = 68
+source_mode = "MOMENT"
+act_lo = 0
+act_hi = 127
+target = "TRK5 LEVEL"
+target_min = 0
+target_max = 100
+
+[[slot]]
+slot = 10
+source_cc = 69
+source_mode = "MOMENT"
+act_lo = 0
+act_hi = 127
+target = "TRK6 LEVEL"
+target_min = 0
+target_max = 100
+
+[[slot]]
+slot = 11
+source_cc = 70
+source_mode = "MOMENT"
+act_lo = 64
+act_hi = 127
+target = "T FX A"
+target_min = "OFF"
+target_max = "ON"
+
+[[slot]]
+slot = 12
+source_cc = 71
+source_mode = "MOMENT"
+act_lo = 64
+act_hi = 127
+target = "T FX B"
+target_min = "OFF"
+target_max = "ON"
+
+[[slot]]
+slot = 13
+source_cc = 72
+source_mode = "MOMENT"
+act_lo = 64
+act_hi = 127
+target = "T FX C"
+target_min = "OFF"
+target_max = "ON"
+
+[[slot]]
+slot = 14
+source_cc = 73
+source_mode = "MOMENT"
+act_lo = 64
+act_hi = 127
+target = "T FX D"
+target_min = "OFF"
+target_max = "ON"

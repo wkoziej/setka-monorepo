@@ -19,6 +19,7 @@ sprzętem live.
 | [`packages/medusa/`](packages/medusa/) | Automatyzacja uploadu mediów (YouTube/Vimeo) i publikacji w social media |
 | [`packages/fermata/`](packages/fermata/) | Desktopowe GUI (Tauri) do zarządzania nagraniami i operacjami wsadowymi |
 | [`packages/paternologia/`](packages/paternologia/) | Aplikacja web (FastAPI/HTMX) do konfiguracji MIDI live-rigu (Pacer + RC-600 + Model:Samples + MicroFreak) |
+| [`packages/launchpad-rc600/`](packages/launchpad-rc600/) | Translator Launchpad Mini → Boss RC-600 (poziomy pętli, Track FX) i wirtualny RC-600 do testów |
 
 ## Szybki start
 
