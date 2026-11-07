@@ -222,7 +222,7 @@ Mapowanie akcji na wpis M CFG (kierunkowe):
 
 ### Faza B — implementacja w Paternologii (tylko po GO / GO z ograniczeniami)
 
-- [ ] **Unit 3: Builder SysEx wpisu M CFG + round-trip na sprzęcie**
+- [x] **Unit 3: Builder SysEx wpisu M CFG + round-trip na sprzęcie**
 
 **Goal:** Generować poprawną ramkę jednego wpisu M CFG i potwierdzić ją na presecie testowym.
 

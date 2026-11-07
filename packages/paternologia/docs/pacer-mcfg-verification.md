@@ -204,3 +204,11 @@ Uwagi do Fazy B:
 - Na czas eksportu z read-backiem trzeba odłączyć subskrybenta ALSA seq od portu Pacera (bridge).
 - Kilka akcji `PRESET` w `on_load` daje kilka zdarzeń live view na jedno załadowanie — wynik ten sam, gdy wszystkie wskazują ten sam utwór.
 - M CFG nie wysyła się po włączeniu zasilania.
+
+## Unit 3 — builder M CFG i round-trip
+
+- `PacerSysExBuilder.build_midi_config_entry` / `build_empty_midi_config_entry` odtwarzają bajt w bajt ramki z dumpu (A5 wpis 1 i 16, A1 pusty wpis 1, D5 wpis 3 z round-tripu) — testy w `tests/test_pacer_sysex.py`.
+- Round-trip ramek z tego samego układu: Unit 1 krok 4 (4 ramki D5, bajt w bajt).
+- **(f) zapis SysEx a wysyłka M CFG:** monitor działał w czasie pierwszego zapisu do D5 (16:39:14, monitor do 16:39:38) — brak zdarzeń. Zapis do presetu, który nie jest aktywny, nie wyzwala M CFG. Zapis do aktywnego presetu nie był testowany.
+- **Checksum:** Paternologia liczyła checksum od Manufacturer ID (przesunięcie o 9 względem Pacera). Pacer nie sprawdza checksumy, więc eksport działał. Poprawione w osobnym commicie: checksum od bajtu CMD; round-trip eksportu „Zimy” na D5 — 78/78 ramek (poza nazwą) bajt w bajt, potem restore D5 z read-backiem.
+- Ramka nazwy presetu w dumpie ma inny układ niż wysyłana przez Paternologię (Pacer zwraca element `0x01` z długością; Paternologia wysyła element `0x00`). Nazwa zapisuje się poprawnie — poza zakresem.
