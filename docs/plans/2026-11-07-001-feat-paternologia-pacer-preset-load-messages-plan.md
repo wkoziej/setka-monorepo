@@ -1,7 +1,7 @@
 ---
 title: "feat: Wiadomości MIDI przy załadowaniu presetu Pacera (M CFG) w Paternologii"
 type: feat
-status: active
+status: completed
 date: 2026-11-07
 deepened: 2026-11-07
 ---
