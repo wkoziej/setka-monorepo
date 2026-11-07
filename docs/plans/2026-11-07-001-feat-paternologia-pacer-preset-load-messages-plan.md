@@ -289,7 +289,7 @@ Mapowanie akcji na wpis M CFG (kierunkowe):
 
 **Verification:** Testy modelu i mapowań zielone. Wszystkie istniejące `data/songs/*.yaml` ładują się bez zmian.
 
-- [ ] **Unit 5: Eksport 16 wpisów M CFG do `.syx` + indeks live view**
+- [x] **Unit 5: Eksport 16 wpisów M CFG do `.syx` + indeks live view**
 
 **Goal:** `export_song_to_syx` zapisuje M CFG razem z przyciskami. Live view rozpoznaje utwór po PC z `on_load`.
 

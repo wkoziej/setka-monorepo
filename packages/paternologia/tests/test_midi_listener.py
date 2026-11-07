@@ -295,3 +295,51 @@ class TestMidiListenerWithVirtualPorts:
             del midi_out
         finally:
             listener.stop()
+
+
+class TestPausedForReadBack:
+    """paused(): porty Pacera zamknięte na czas dumpu (amidi -r), potem otwarte."""
+
+    def _listener(self) -> MidiListener:
+        listener = MidiListener(
+            song_index=SongMidiIndex.build([], []), event_bus=EventBus()
+        )
+        listener._device_name = "PACER"
+        return listener
+
+    def test_stops_and_restarts_ports(self, monkeypatch):
+        listener = self._listener()
+        events = []
+        monkeypatch.setattr(listener, "stop", lambda: events.append("stop"))
+        monkeypatch.setattr(
+            listener, "start", lambda name: events.append(f"start:{name}") or True
+        )
+
+        with listener.paused():
+            events.append("dump")
+
+        assert events == ["stop", "dump", "start:PACER"]
+
+    def test_reconnect_does_not_reopen_while_paused(self, monkeypatch):
+        listener = self._listener()
+        monkeypatch.setattr(listener_mod, "find_rtmidi_ports", lambda name: [0, 1])
+        starts = []
+        monkeypatch.setattr(listener, "stop", lambda: None)
+        monkeypatch.setattr(listener, "start", lambda name: starts.append(name))
+
+        with listener.paused():
+            listener.poll_reconnect()
+            assert starts == []
+
+        assert starts == ["PACER"]
+
+    def test_restarts_even_when_body_fails(self, monkeypatch):
+        listener = self._listener()
+        starts = []
+        monkeypatch.setattr(listener, "stop", lambda: None)
+        monkeypatch.setattr(listener, "start", lambda name: starts.append(name))
+
+        with pytest.raises(RuntimeError), listener.paused():
+            raise RuntimeError("amidi failed")
+
+        assert starts == ["PACER"]

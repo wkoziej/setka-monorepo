@@ -339,6 +339,73 @@ class TestSongPacerExport:
 class TestPacerSendEndpoint:
     """Tests for POST /pacer/send/{song_id} endpoint."""
 
+    @pytest.fixture(autouse=True)
+    def pacer_read_back(self):
+        """Read-back bez sprzętu: dump nieistotny, Pacer zapisał wszystkie ramki."""
+        with (
+            patch(
+                "paternologia.routers.pacer.read_back_preset", return_value=b""
+            ) as read_back,
+            patch("paternologia.routers.pacer.missing_frames", return_value=[]),
+        ):
+            yield read_back
+
+    def _send_ok(self, client, test_storage, **post):
+        from paternologia.models import Song, SongMetadata
+
+        test_storage.save_song(Song(song=SongMetadata(id="test", name="Test Song")))
+        test_storage.save_pacer_config(PacerConfig(device_name="PACER"))
+        mock_result = MagicMock(returncode=0, stderr="")
+        with (
+            patch(
+                "paternologia.routers.pacer.find_amidi_port", return_value="hw:8,0,0"
+            ),
+            patch("subprocess.run", return_value=mock_result),
+        ):
+            return client.post("/pacer/send/test", **post)
+
+    def test_send_verifies_preset_by_read_back(
+        self, client, sample_devices, test_storage, pacer_read_back
+    ):
+        response = self._send_ok(client, test_storage, data={"preset": "D5"})
+
+        assert response.status_code == 200
+        assert response.json()["verified"] is True
+        port, preset_index = pacer_read_back.call_args[0][:2]
+        assert (port, preset_index) == ("hw:8,0,0", 0x17)
+
+    def test_send_reports_frames_not_stored(self, client, sample_devices, test_storage):
+        lost = [b"\xf0lost\xf7", b"\xf0lost2\xf7"]
+        with patch("paternologia.routers.pacer.missing_frames", return_value=lost):
+            response = self._send_ok(client, test_storage)
+
+        assert response.status_code == 500
+        assert "nie zapisał 2" in response.json()["detail"]
+
+    def test_send_reports_frames_not_stored_htmx(
+        self, client, sample_devices, test_storage
+    ):
+        with patch(
+            "paternologia.routers.pacer.missing_frames", return_value=[b"\xf0x\xf7"]
+        ):
+            response = self._send_ok(
+                client, test_storage, headers={"HX-Request": "true"}
+            )
+
+        assert response.status_code == 200
+        assert "nie zapisał 1" in response.text
+        assert "text-red-600" in response.text
+
+    def test_send_reports_read_back_failure(
+        self, client, sample_devices, test_storage, pacer_read_back
+    ):
+        pacer_read_back.side_effect = RuntimeError("amidi dump failed: busy")
+
+        response = self._send_ok(client, test_storage)
+
+        assert response.status_code == 500
+        assert "zweryfikować" in response.json()["detail"]
+
     def test_send_to_pacer_success(self, client, sample_devices, test_storage):
         """Successfully sends .syx to Pacer via amidi."""
         from paternologia.models import Song, SongMetadata

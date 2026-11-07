@@ -166,6 +166,17 @@ class PacerSysExBuilder:
             entry_index, msg_type=c.MSG_CTRL_OFF, channel=0, data1=0
         )
 
+    def build_preset_dump_request(self) -> bytes:
+        """Żądanie dumpu całego presetu (wszystkie obiekty, CONTROL_ALL)."""
+        body = bytes([c.CMD_GET, c.TARGET_PRESET, self.preset_index, c.CONTROL_ALL])
+        return (
+            bytes([c.SYSEX_START])
+            + c.MANUFACTURER_ID
+            + bytes([c.DEVICE_ID])
+            + body
+            + bytes([checksum(body), c.SYSEX_END])
+        )
+
     def _build_elements_frame(
         self, object_id: int, elements: list[tuple[int, int]]
     ) -> bytes:

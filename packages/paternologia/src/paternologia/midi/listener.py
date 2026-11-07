@@ -2,7 +2,9 @@
 # ABOUTME: Listens for Program Change messages and publishes events via EventBus.
 
 import logging
-from collections.abc import Callable
+import threading
+from collections.abc import Callable, Iterator
+from contextlib import contextmanager
 
 import rtmidi
 
@@ -42,6 +44,9 @@ class MidiListener:
         self._stop_note: int | None = None
         self._trigger_port: str | None = None
         self._unsubscribed_strikes = 0
+        # paused(): porty zwolnione na czas dumpu SysEx; poll_reconnect ich nie otwiera.
+        self._paused = False
+        self._reconnect_lock = threading.Lock()
 
     def configure_record_trigger(
         self,
@@ -151,7 +156,33 @@ class MidiListener:
         self._midi_ins.clear()
         logger.info("MIDI listener stopped")
 
+    @contextmanager
+    def paused(self) -> Iterator[None]:
+        """Zwolnij wejścia PACER na czas bloku (np. dump przez `amidi -r`).
+
+        Subskrybent ALSA seq blokuje rawmidi input Pacera. W tym czasie nie
+        działają live view, trigger nagrywania ani bridge. Po bloku (także
+        po wyjątku) wejścia są otwierane ponownie.
+        """
+        with self._reconnect_lock:
+            self._paused = True
+            self.stop()
+        try:
+            yield
+        finally:
+            with self._reconnect_lock:
+                self._paused = False
+                if self._device_name is not None:
+                    self.start(self._device_name)
+
     def poll_reconnect(self) -> None:
+        """Reopen the PACER inputs; skipped while paused() holds them released."""
+        with self._reconnect_lock:
+            if self._paused:
+                return
+            self._poll_reconnect()
+
+    def _poll_reconnect(self) -> None:
         """Reopen the PACER inputs after replug/re-enumeration, or release them.
 
         ALSA port indices shift on replug, so we re-match by name. The bridge

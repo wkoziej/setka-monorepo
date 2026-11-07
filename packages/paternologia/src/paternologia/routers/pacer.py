@@ -14,6 +14,7 @@ from ..midi.ports import find_amidi_port
 from ..models import VALID_PRESETS
 from ..storage import Storage
 from ..pacer.export import export_song_to_syx
+from ..pacer.readback import missing_frames, read_back_preset
 from ..pacer import constants as c
 
 logger = logging.getLogger(__name__)
@@ -158,12 +159,42 @@ def send_to_pacer(
                 )
             raise HTTPException(500, f"amidi failed: {error_msg}")
 
+        # Read-back: Pacer potrafi zignorować zapis bez błędu (np. gdy jest w menu)
+        listener = getattr(request.app.state, "midi_listener", None)
+        try:
+            dump = read_back_preset(
+                port,
+                c.PRESET_INDICES[target],
+                listener.paused() if listener is not None else None,
+            )
+        except RuntimeError as e:
+            error_msg = html.escape(f"Wysłano, ale nie udało się zweryfikować: {e}")
+            logger.error(f"read-back failed for {song_id} to {target}: {e}")
+            if is_htmx:
+                return HTMLResponse(
+                    f'<span class="text-red-600 font-semibold">❌ {error_msg}</span>'
+                )
+            raise HTTPException(500, error_msg)
+
+        lost = missing_frames(syx_data, dump)
+        if lost:
+            error_msg = (
+                f"Pacer nie zapisał {len(lost)} ramek presetu {target}. "
+                "Wyjdź z menu Pacera i wyślij ponownie."
+            )
+            logger.error(f"read-back mismatch for {song_id} to {target}: {error_msg}")
+            if is_htmx:
+                return HTMLResponse(
+                    f'<span class="text-red-600 font-semibold">❌ {error_msg}</span>'
+                )
+            raise HTTPException(500, error_msg)
+
         # Success
         if is_htmx:
             return HTMLResponse(
-                f'<span class="text-green-600">✓ Wysłano do preset {target} na port {port}</span>'
+                f'<span class="text-green-600">✓ Wysłano i zweryfikowano preset {target} na port {port}</span>'
             )
-        return {"status": "ok", "preset": target, "port": port}
+        return {"status": "ok", "preset": target, "port": port, "verified": True}
 
     except HTTPException:
         raise

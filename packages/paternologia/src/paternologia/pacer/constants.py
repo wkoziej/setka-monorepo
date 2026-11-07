@@ -18,6 +18,7 @@ STOMPSWITCHES = {i: 0x0D + i for i in range(6)}  # SW1-SW6
 # Special Object IDs
 CONTROL_NAME = 0x01  # Object ID dla nazwy presetu
 CONTROL_MIDI = 0x7E  # Object ID dla M CFG (Preset Recall MIDI Configuration)
+CONTROL_ALL = 0x7F  # Wszystkie obiekty presetu (żądanie dumpu)
 
 # M CFG: wiadomości wysyłane przez Pacer przy załadowaniu presetu
 MIDI_CONFIG_ENTRIES = 16  # Liczba wpisów M CFG w presecie

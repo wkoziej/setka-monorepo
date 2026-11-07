@@ -217,3 +217,8 @@ Uwagi do Fazy B:
 
 „Zima” z `on_load` = stan SW1 (RC-600 PC 3, M:S d01, MicroFreak PC 67), eksport na D5: 95 ramek (16 × `0x7E`), wszystkie `TARGET_PRESET` idx `0x17`.
 Dump D5: 94/94 ramki poza nazwą bajt w bajt. Restore D5 z backupu, read-back zgodny.
+
+## Unit 5 — read-back po wysyłce
+
+`POST /pacer/send/{song_id}` po `amidi -s` robi dump presetu i porównuje ramki (bez nazwy). Na czas dumpu listener zwalnia wejścia Pacera (`MidiListener.paused()`), a `poll_reconnect` ich nie otwiera.
+Test w działającej usłudze (18:59): „Zima” → D5, odpowiedź `verified: true`, listener wstrzymany 2,3 s (18:59:33,4–18:59:35,7), całe żądanie 5,2 s. Restore D5 z read-backiem zgodny.
