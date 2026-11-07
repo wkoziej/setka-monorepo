@@ -1241,3 +1241,50 @@ class TestSongOnLoadForm:
 
         assert 'name="button_0_action_0_cc"' in response.text
         assert "każdej zmianie presetu" not in response.text
+
+
+class TestSongOnLoadPlacement:
+    """Sekcja on_load jest na górze: nad przyciskami PACER (widok i edycja)."""
+
+    def _song_with_on_load(self, test_storage):
+        from paternologia.models import Action, Song, SongMetadata
+
+        test_storage.save_song(
+            Song(
+                song=SongMetadata(id="zima", name="Zima"),
+                on_load=[
+                    Action(device="ms", type=ActionType.PATTERN, value="D01"),
+                    Action(device="boss", type=ActionType.CC, cc=40, value=99),
+                ],
+            )
+        )
+
+    def test_song_view_shows_on_load_above_buttons(
+        self, client, sample_devices, test_storage
+    ):
+        self._song_with_on_load(test_storage)
+
+        html = client.get("/songs/zima").text
+
+        assert "Przy załadowaniu presetu" in html
+        assert "pattern D01" in html
+        assert "CC40" in html
+        assert html.index("Przy załadowaniu presetu") < html.index("PACER (")
+
+    def test_song_view_without_on_load_has_no_section(
+        self, client, sample_devices, test_storage
+    ):
+        from paternologia.models import Song, SongMetadata
+
+        test_storage.save_song(Song(song=SongMetadata(id="pusty", name="Pusty")))
+
+        assert "Przy załadowaniu presetu" not in client.get("/songs/pusty").text
+
+    def test_edit_form_on_load_section_above_buttons(
+        self, client, sample_devices, test_storage
+    ):
+        self._song_with_on_load(test_storage)
+
+        html = client.get("/songs/zima/edit").text
+
+        assert html.index("Przy załadowaniu presetu") < html.index("Przyciski PACER")

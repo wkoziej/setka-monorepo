@@ -25,6 +25,19 @@
 <p class="text-gray-600 mb-6 italic">{{ song.song.notes }}</p>
 {% endif %}
 
+{% if song.on_load %}
+<!-- On load (M CFG) -->
+<section class="mb-6">
+    <h2 class="text-lg font-semibold text-gray-700 mb-1">Przy załadowaniu presetu</h2>
+    <p class="text-xs text-gray-500 mb-3">Pacer wysyła te wiadomości przy każdym wejściu na preset (nie po włączeniu zasilania).</p>
+    <div class="bg-white rounded-lg shadow p-3 flex flex-wrap gap-4">
+        {% for action in song.on_load %}
+        {% include "partials/action_summary.html" %}
+        {% endfor %}
+    </div>
+</section>
+{% endif %}
+
 <!-- PACER Buttons -->
 <section>
     <h2 class="text-lg font-semibold text-gray-700 mb-4">
@@ -85,26 +98,7 @@
             </div>
             <div class="p-3 action-list space-y-3">
                 {% for action in button.actions %}
-                {% set device = devices_map.get(action.device) %}
-                <div class="border-l-4 pl-2 device-{{ action.device }}">
-                    <div class="text-xs text-gray-500">
-                        {% if action.label %}{{ action.label }}{% else %}&nbsp;{% endif %}
-                    </div>
-                    <div class="font-semibold text-sm text-gray-800">
-                        {{ device.name if device else action.device }}
-                    </div>
-                    <div class="text-sm text-gray-700">
-                        {% if action.type.value == 'preset' %}
-                        preset {{ action.value }}
-                        {% elif action.type.value == 'pattern' %}
-                        pattern {{ action.value }}
-                        {% elif action.type.value == 'cc' %}
-                        CC{{ action.cc }}
-                        {% elif action.type.value == 'note' %}
-                        note {{ action.note }} vel={{ action.velocity or 100 }}
-                        {% endif %}
-                    </div>
-                </div>
+                {% include "partials/action_summary.html" %}
                 {% endfor %}
                 {% if not button.actions %}
                 <p class="text-gray-400 italic text-sm">Brak akcji</p>

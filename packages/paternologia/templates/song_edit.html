@@ -73,34 +73,6 @@
         </div>
     </section>
 
-    <!-- PACER Buttons -->
-    <section class="bg-white rounded-lg shadow p-6">
-        <div class="flex justify-between items-center mb-4">
-            <h2 class="text-lg font-semibold text-gray-700">Przyciski PACER</h2>
-            <div class="flex items-center gap-2">
-                <button type="button"
-                        hx-get="/partials/pacer-button"
-                        hx-target="#pacer-buttons"
-                        hx-swap="beforeend"
-                        hx-vals="js:{button_idx: document.querySelectorAll('#pacer-buttons .pacer-button-card').length}"
-                        hx-indicator="#loading-indicator"
-                        class="text-indigo-600 hover:text-indigo-800 text-sm font-medium">
-                    + Dodaj przycisk
-                </button>
-                <span id="loading-indicator" class="htmx-indicator">⏳</span>
-            </div>
-        </div>
-
-        <div id="pacer-buttons" class="space-y-6">
-            {% if song and song.pacer %}
-                {% for button in song.pacer %}
-                {% set button_idx = loop.index0 %}
-                {% include "partials/pacer_button.html" with context %}
-                {% endfor %}
-            {% endif %}
-        </div>
-    </section>
-
     <!-- On load (M CFG) -->
     <section class="bg-white rounded-lg shadow p-6">
         <div class="flex justify-between items-center mb-1">
@@ -127,6 +99,34 @@
                 {% include "partials/action_row.html" %}
                 {% endfor %}
                 {% endwith %}
+            {% endif %}
+        </div>
+    </section>
+
+    <!-- PACER Buttons -->
+    <section class="bg-white rounded-lg shadow p-6">
+        <div class="flex justify-between items-center mb-4">
+            <h2 class="text-lg font-semibold text-gray-700">Przyciski PACER</h2>
+            <div class="flex items-center gap-2">
+                <button type="button"
+                        hx-get="/partials/pacer-button"
+                        hx-target="#pacer-buttons"
+                        hx-swap="beforeend"
+                        hx-vals="js:{button_idx: document.querySelectorAll('#pacer-buttons .pacer-button-card').length}"
+                        hx-indicator="#loading-indicator"
+                        class="text-indigo-600 hover:text-indigo-800 text-sm font-medium">
+                    + Dodaj przycisk
+                </button>
+                <span id="loading-indicator" class="htmx-indicator">⏳</span>
+            </div>
+        </div>
+
+        <div id="pacer-buttons" class="space-y-6">
+            {% if song and song.pacer %}
+                {% for button in song.pacer %}
+                {% set button_idx = loop.index0 %}
+                {% include "partials/pacer_button.html" with context %}
+                {% endfor %}
             {% endif %}
         </div>
     </section>
