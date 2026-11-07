@@ -10,25 +10,7 @@ song:
     target_preset: B5
 pacer:
 - name: init — nastukaj rytm na gitarze (track 1)
-  actions:
-  - device: boss
-    type: preset
-    value: 4
-    cc: null
-    label: None
-    bank_lsb: 0
-    bank_msb: 0
-    note: null
-    velocity: null
-  - device: ms
-    type: pattern
-    value: F03
-    cc: null
-    label: cisza
-    bank_lsb: 0
-    bank_msb: 0
-    note: null
-    velocity: null
+  actions: []
 - name: d-moll na petli 2 + ARP ptaki
   actions:
   - device: freak
@@ -107,3 +89,22 @@ pacer:
     bank_msb: 0
     note: null
     velocity: null
+on_load:
+- device: boss
+  type: preset
+  value: 4
+  cc: null
+  label: None
+  bank_lsb: 0
+  bank_msb: 0
+  note: null
+  velocity: null
+- device: ms
+  type: pattern
+  value: F03
+  cc: null
+  label: cisza
+  bank_lsb: 0
+  bank_msb: 0
+  note: null
+  velocity: null

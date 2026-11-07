@@ -10,26 +10,14 @@ pacer:
 - name: zwrotka
   actions:
   - device: boss
-    type: preset
-    value: 7
-    cc: null
-    label: null
-    bank_lsb: 0
-    bank_msb: 0
-  - device: ms
-    type: pattern
-    value: D9
-    cc: null
-    label: None
-    bank_lsb: 0
-    bank_msb: 0
-  - device: boss
     type: cc
     value: 127
     cc: 20
     label: null
     bank_lsb: 0
     bank_msb: 0
+    note: null
+    velocity: null
 - name: refren
   actions:
   - device: boss
@@ -39,6 +27,8 @@ pacer:
     label: None
     bank_lsb: 0
     bank_msb: 0
+    note: null
+    velocity: null
   - device: ms
     type: pattern
     value: d10
@@ -46,6 +36,8 @@ pacer:
     label: None
     bank_lsb: 0
     bank_msb: 0
+    note: null
+    velocity: null
 - name: zwrotka na 2
   actions:
   - device: boss
@@ -55,6 +47,8 @@ pacer:
     label: None
     bank_lsb: 0
     bank_msb: 0
+    note: null
+    velocity: null
   - device: ms
     type: pattern
     value: d11
@@ -62,6 +56,8 @@ pacer:
     label: None
     bank_lsb: 0
     bank_msb: 0
+    note: null
+    velocity: null
   - device: boss
     type: cc
     value: 127
@@ -69,6 +65,8 @@ pacer:
     label: None
     bank_lsb: 0
     bank_msb: 0
+    note: null
+    velocity: null
 - name: refren na 2
   actions:
   - device: boss
@@ -78,6 +76,8 @@ pacer:
     label: None
     bank_lsb: 0
     bank_msb: 0
+    note: null
+    velocity: null
   - device: ms
     type: pattern
     value: d12
@@ -85,6 +85,8 @@ pacer:
     label: None
     bank_lsb: 0
     bank_msb: 0
+    note: null
+    velocity: null
   - device: boss
     type: cc
     value: 127
@@ -92,3 +94,24 @@ pacer:
     label: None
     bank_lsb: 0
     bank_msb: 0
+    note: null
+    velocity: null
+on_load:
+- device: boss
+  type: preset
+  value: 7
+  cc: null
+  label: null
+  bank_lsb: 0
+  bank_msb: 0
+  note: null
+  velocity: null
+- device: ms
+  type: pattern
+  value: D9
+  cc: null
+  label: None
+  bank_lsb: 0
+  bank_msb: 0
+  note: null
+  velocity: null

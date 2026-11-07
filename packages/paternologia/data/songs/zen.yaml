@@ -10,33 +10,6 @@ pacer:
 - name: Uruchomienie beatów i gotowości nagrywania. M:S gra na Freaku
   actions:
   - device: boss
-    type: preset
-    value: 2
-    cc: null
-    label: W ciszy
-    bank_lsb: 0
-    bank_msb: 0
-    note: null
-    velocity: null
-  - device: freak
-    type: preset
-    value: 66
-    cc: null
-    label: None
-    bank_lsb: 0
-    bank_msb: 0
-    note: null
-    velocity: null
-  - device: ms
-    type: pattern
-    value: C01
-    cc: null
-    label: nabij
-    bank_lsb: 0
-    bank_msb: 0
-    note: null
-    velocity: null
-  - device: boss
     type: cc
     value: 1
     cc: 1
@@ -136,3 +109,31 @@ pacer:
     bank_msb: 0
     note: null
     velocity: null
+on_load:
+- device: boss
+  type: preset
+  value: 2
+  cc: null
+  label: W ciszy
+  bank_lsb: 0
+  bank_msb: 0
+  note: null
+  velocity: null
+- device: freak
+  type: preset
+  value: 66
+  cc: null
+  label: None
+  bank_lsb: 0
+  bank_msb: 0
+  note: null
+  velocity: null
+- device: ms
+  type: pattern
+  value: C01
+  cc: null
+  label: nabij
+  bank_lsb: 0
+  bank_msb: 0
+  note: null
+  velocity: null

@@ -9,16 +9,7 @@ song:
     target_preset: D6
 pacer:
 - name: RC-600 07
-  actions:
-  - device: boss
-    type: preset
-    value: 6
-    cc: null
-    label: '07'
-    bank_lsb: 0
-    bank_msb: 0
-    note: null
-    velocity: null
+  actions: []
 - name: M:S A01
   actions:
   - device: ms
@@ -69,8 +60,18 @@ pacer:
     type: pattern
     value: 2
     cc: null
-    label: '3 (czysty PC)'
+    label: 3 (czysty PC)
     bank_lsb: 0
     bank_msb: 0
     note: null
     velocity: null
+on_load:
+- device: boss
+  type: preset
+  value: 6
+  cc: null
+  label: '07'
+  bank_lsb: 0
+  bank_msb: 0
+  note: null
+  velocity: null

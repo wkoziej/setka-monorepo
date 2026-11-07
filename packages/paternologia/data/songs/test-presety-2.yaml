@@ -9,16 +9,7 @@ song:
     target_preset: D6
 pacer:
 - name: ModRex 05 PC
-  actions:
-  - device: modrex
-    type: pattern
-    value: 4
-    cc: null
-    label: 05 czysty PC
-    bank_lsb: 0
-    bank_msb: 0
-    note: null
-    velocity: null
+  actions: []
 - name: ModRex CC93
   actions:
   - device: modrex
@@ -74,3 +65,13 @@ pacer:
     bank_msb: 0
     note: null
     velocity: null
+on_load:
+- device: modrex
+  type: pattern
+  value: 4
+  cc: null
+  label: 05 czysty PC
+  bank_lsb: 0
+  bank_msb: 0
+  note: null
+  velocity: null
