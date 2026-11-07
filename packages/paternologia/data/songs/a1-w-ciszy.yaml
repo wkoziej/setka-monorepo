@@ -27,15 +27,6 @@ pacer:
     bank_msb: 0
     note: null
     velocity: null
-  - device: gp50
-    type: cc
-    value: 1
-    cc: 0
-    label: None
-    bank_lsb: 0
-    bank_msb: 0
-    note: null
-    velocity: null
 - name: Zakończ nagranie gitary
   actions:
   - device: boss
