@@ -1,14 +1,15 @@
 {# ABOUTME: HTMX partial for action input fields. #}
-{# ABOUTME: Rendered when action type changes (cascade). #}
+{# ABOUTME: Rendered when action type changes (cascade); context=on_load → pola on_load_{idx}_*. #}
+{% if field_prefix is not defined %}{% set field_prefix = 'on_load_' ~ action_idx if action_context == 'on_load' else 'button_' ~ button_idx ~ '_action_' ~ action_idx %}{% endif %}
 {% if action_type == 'preset' %}
-<input type="number" name="button_{{ button_idx }}_action_{{ action_idx }}_value"
+<input type="number" name="{{ field_prefix }}_value"
        value="{{ to_display(action.value, device) if action else '' }}" placeholder="Preset #" required
        class="border border-gray-300 rounded px-2 py-1 text-sm w-20"
        hx-get="/partials/preset-usage"
        hx-target="next .preset-usage"
        hx-trigger="change, keyup changed delay:400ms"
        hx-vals="js:{device_id: (event.target || event).closest('.action-row').querySelector('select[name$=_device]').value, action_type: 'preset', value: (event.target || event).value, song_id: ((event.target || event).closest('form').dataset.songId || '')}">
-<input type="text" name="button_{{ button_idx }}_action_{{ action_idx }}_label"
+<input type="text" name="{{ field_prefix }}_label"
        value="{{ action.label if action else '' }}" placeholder="Label"
        class="border border-gray-300 rounded px-2 py-1 text-sm w-24">
 <div class="preset-usage basis-full text-xs mt-1">
@@ -17,14 +18,14 @@
 {%- endif -%}
 </div>
 {% elif action_type == 'pattern' %}
-<input type="text" name="button_{{ button_idx }}_action_{{ action_idx }}_value"
+<input type="text" name="{{ field_prefix }}_value"
        value="{{ action.value if action else '' }}" placeholder="Pattern" required
        class="border border-gray-300 rounded px-2 py-1 text-sm w-20"
        hx-get="/partials/preset-usage"
        hx-target="next .preset-usage"
        hx-trigger="change, keyup changed delay:400ms"
        hx-vals="js:{device_id: (event.target || event).closest('.action-row').querySelector('select[name$=_device]').value, action_type: 'pattern', value: (event.target || event).value, song_id: ((event.target || event).closest('form').dataset.songId || '')}">
-<input type="text" name="button_{{ button_idx }}_action_{{ action_idx }}_label"
+<input type="text" name="{{ field_prefix }}_label"
        value="{{ action.label if action else '' }}" placeholder="Label"
        class="border border-gray-300 rounded px-2 py-1 text-sm w-24">
 <div class="preset-usage basis-full text-xs mt-1">
@@ -33,23 +34,26 @@
 {%- endif -%}
 </div>
 {% elif action_type == 'cc' %}
-<input type="number" name="button_{{ button_idx }}_action_{{ action_idx }}_cc"
+<input type="number" name="{{ field_prefix }}_cc"
        value="{{ action.cc if action else '' }}" placeholder="CC #" required
        class="border border-gray-300 rounded px-2 py-1 text-sm w-16">
-<input type="number" name="button_{{ button_idx }}_action_{{ action_idx }}_value"
+<input type="number" name="{{ field_prefix }}_value"
        value="{{ action.value if action else '' }}" placeholder="Value" required min="0" max="127"
        class="border border-gray-300 rounded px-2 py-1 text-sm w-16">
-<input type="text" name="button_{{ button_idx }}_action_{{ action_idx }}_label"
+<input type="text" name="{{ field_prefix }}_label"
        value="{{ action.label if action else '' }}" placeholder="Label"
        class="border border-gray-300 rounded px-2 py-1 text-sm w-24">
+{% if action_context == 'on_load' %}
+<p class="basis-full text-xs text-amber-700 mt-1">⚠ CC przy załadowaniu trafia do urządzenia przy każdej zmianie presetu — na RC-600 może zmienić stan pętli w trakcie grania.</p>
+{% endif %}
 {% elif action_type == 'note' %}
-<input type="text" name="button_{{ button_idx }}_action_{{ action_idx }}_note"
+<input type="text" name="{{ field_prefix }}_note"
        value="{{ action.note if action else '' }}" placeholder="C4, F#3..." required
        class="border border-gray-300 rounded px-2 py-1 text-sm w-20">
-<input type="number" name="button_{{ button_idx }}_action_{{ action_idx }}_velocity"
+<input type="number" name="{{ field_prefix }}_velocity"
        value="{{ action.velocity if action else 100 }}" placeholder="Velocity" min="1" max="127"
        class="border border-gray-300 rounded px-2 py-1 text-sm w-16">
-<input type="text" name="button_{{ button_idx }}_action_{{ action_idx }}_label"
+<input type="text" name="{{ field_prefix }}_label"
        value="{{ action.label if action else '' }}" placeholder="Label"
        class="border border-gray-300 rounded px-2 py-1 text-sm w-24">
 {% endif %}

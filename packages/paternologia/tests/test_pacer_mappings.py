@@ -3,9 +3,10 @@
 
 import pytest
 
-from paternologia.models import Action, ActionType, Device
+from paternologia.models import Action, ActionType, Device, PacerConfig
 from paternologia.pacer.mappings import (
     action_to_midi,
+    action_to_midi_config,
     build_device_channel_map,
     get_device_channel,
     note_to_midi,
@@ -164,6 +165,32 @@ class TestActionToMidiCC:
         assert data2 == 64  # down (naciśnięcie)
         assert data3 == 0  # up (puszczenie)
 
+    def test_cc_release_same_device_sends_down_value_on_release(self):
+        """Urządzenie z cc_release_same: puszczenie wysyła tę samą wartość.
+
+        GP-50 wybiera patch przez CC0 — up=0 cofałby patch na 00.
+        """
+        action = Action(device="gp50", type=ActionType.CC, cc=0, value=12)
+        msg_type, channel, data1, data2, data3 = action_to_midi(
+            action, {"gp50": 5}, cc_release_same_devices={"gp50"}
+        )
+
+        assert msg_type == c.MSG_SW_MIDI_CC
+        assert channel == 5
+        assert data1 == 0
+        assert data2 == 12  # down
+        assert data3 == 12  # up = down
+
+    def test_cc_release_same_other_device_keeps_up_zero(self):
+        """Urządzenie spoza cc_release_same dalej wysyła up=0 (RC-600 MOMENT)."""
+        action = Action(device="boss", type=ActionType.CC, cc=1, value=127)
+        _, _, _, data2, data3 = action_to_midi(
+            action, {"boss": 13, "gp50": 5}, cc_release_same_devices={"gp50"}
+        )
+
+        assert data2 == 127
+        assert data3 == 0
+
 
 class TestActionToMidiUnknownDevice:
     """Tests for unknown device handling."""
@@ -275,3 +302,103 @@ class TestActionToMidiNote:
 
         assert data1 == 69  # A4
         assert data2 == 100  # default velocity
+
+
+RIG_CHANNELS = {"boss": 13, "ms": 14, "freak": 1}
+
+
+class TestActionToMidiConfig:
+    """Mapowanie akcji on_load na wpis M CFG (typ, kanał, data1-3)."""
+
+    def _map(self, action: Action, config: PacerConfig | None = None):
+        return action_to_midi_config(action, RIG_CHANNELS, config or PacerConfig())
+
+    def test_cc_maps_to_load_cc(self):
+        action = Action(device="boss", type=ActionType.CC, cc=40, value=99)
+        assert self._map(action) == (c.MSG_LOAD_CC, 13, 40, 99, 0)
+
+    def test_preset_maps_to_prg_bank_without_display_offset(self):
+        """Wartość surowa z YAML, bez preset_display_offset."""
+        action = Action(device="freak", type=ActionType.PRESET, value=67)
+        assert self._map(action) == (c.MSG_SW_PRG_BANK, 1, 67, 0, 0)
+
+    def test_preset_above_127_uses_same_split_as_buttons(self):
+        """Ten sam PC co z przycisku (action_to_midi): prog % 128, MSB = // 128."""
+        action = Action(device="freak", type=ActionType.PRESET, value=200)
+        _, ch, prog, lsb, msb = action_to_midi(action, RIG_CHANNELS)
+        assert self._map(action) == (c.MSG_SW_PRG_BANK, ch, prog, lsb, msb)
+        assert (prog, msb) == (72, 1)
+
+    def test_pattern_maps_to_prg_bank(self):
+        """M CFG nie ma PRG_STEP — pattern idzie jako Program Change."""
+        action = Action(device="ms", type=ActionType.PATTERN, value="D01")
+        assert self._map(action) == (c.MSG_SW_PRG_BANK, 14, 48, 0, 0)
+
+    def test_note_maps_to_note(self):
+        action = Action(device="freak", type=ActionType.NOTE, note="C4", velocity=90)
+        assert self._map(action) == (c.MSG_SW_NOTE, 1, 60, 90, 0)
+
+    def test_note_default_velocity(self):
+        action = Action(device="freak", type=ActionType.NOTE, note=62)
+        assert self._map(action) == (c.MSG_SW_NOTE, 1, 62, 100, 0)
+
+    def test_unknown_device_fails_fast(self):
+        action = Action(device="nope", type=ActionType.PRESET, value=1)
+        with pytest.raises(ValueError, match="nope"):
+            self._map(action)
+
+    @pytest.mark.parametrize("note", [94, 93])
+    def test_note_equal_to_obs_trigger_is_rejected(self, note):
+        """Nuta triggera OBS w on_load uruchomiłaby nagranie przy zmianie presetu."""
+        config = PacerConfig(
+            record_trigger_channel=0, record_start_note=94, record_stop_note=93
+        )
+        action = Action(device="freak", type=ActionType.NOTE, note=note)
+        with pytest.raises(ValueError, match="OBS"):
+            self._map(action, config)
+
+    def test_note_on_other_channel_than_obs_trigger_is_allowed(self):
+        config = PacerConfig(
+            record_trigger_channel=0, record_start_note=94, record_stop_note=93
+        )
+        action = Action(device="ms", type=ActionType.NOTE, note=94)
+        assert self._map(action, config) == (c.MSG_SW_NOTE, 14, 94, 100, 0)
+
+
+class TestActionToMidiConfigFailFast:
+    """Wpis on_load wysyła się przy każdym załadowaniu — błędna akcja to błąd, nie PC/CC 0."""
+
+    def _map(self, action, channels=None, config=None):
+        return action_to_midi_config(
+            action, channels or RIG_CHANNELS, config or PacerConfig()
+        )
+
+    def test_cc_without_controller_is_rejected(self):
+        action = Action(device="boss", type=ActionType.CC, value=99)
+        with pytest.raises(ValueError, match="CC"):
+            self._map(action)
+
+    @pytest.mark.parametrize("value", ["G01", "A17", "A00", "xyz", None])
+    def test_invalid_pattern_is_rejected(self, value):
+        action = Action(device="ms", type=ActionType.PATTERN, value=value)
+        with pytest.raises(ValueError, match="pattern"):
+            self._map(action)
+
+    @pytest.mark.parametrize("value", ["A01", "a1", "0", 0])
+    def test_pattern_a01_is_program_zero(self, value):
+        action = Action(device="ms", type=ActionType.PATTERN, value=value)
+        assert self._map(action)[2] == 0
+
+    def test_preset_without_number_is_rejected(self):
+        action = Action(device="freak", type=ActionType.PRESET, value=None)
+        with pytest.raises(ValueError, match="preset"):
+            self._map(action)
+
+    def test_obs_trigger_note_on_global_channel_is_rejected(self):
+        """Kanał 0 = Global Pacera — może być kanałem triggera OBS."""
+        config = PacerConfig(
+            record_trigger_channel=0, record_start_note=94, record_stop_note=93
+        )
+        action = Action(device="glob", type=ActionType.NOTE, note=94)
+        with pytest.raises(ValueError, match="OBS"):
+            self._map(action, {"glob": 0}, config)

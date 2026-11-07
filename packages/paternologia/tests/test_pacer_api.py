@@ -14,6 +14,7 @@ from paternologia.models import (
     ActionType,
     Device,
     PacerButton,
+    PacerConfig,
     Song,
     SongMetadata,
 )
@@ -236,3 +237,57 @@ class TestExportPresetRange:
         response = client.get(f"/pacer/export/test-song.syx?preset={preset}")
 
         assert response.status_code == 200
+
+
+class TestExportOnLoad:
+    """Eksport .syx z wiadomościami on_load (M CFG)."""
+
+    def test_export_contains_sixteen_midi_config_frames(
+        self, client, sample_devices, test_storage
+    ):
+        song = Song(
+            song=SongMetadata(id="onload", name="OnLoad"),
+            on_load=[Action(device="ms", type=ActionType.PATTERN, value="D01")],
+        )
+        test_storage.save_song(song)
+
+        response = client.get("/pacer/export/onload.syx?preset=D5")
+
+        assert response.status_code == 200
+        frames = response.content.split(bytes([c.SYSEX_START]))[1:]
+        midi_config = [f for f in frames if f[7] == c.CONTROL_MIDI]
+        assert len(midi_config) == 16
+
+    def test_export_on_load_unknown_device_is_400(
+        self, client, sample_devices, test_storage
+    ):
+        song = Song(
+            song=SongMetadata(id="bad-onload", name="Bad"),
+            on_load=[Action(device="nope", type=ActionType.PRESET, value=1)],
+        )
+        test_storage.save_song(song)
+
+        response = client.get("/pacer/export/bad-onload.syx")
+
+        assert response.status_code == 400
+        assert "nope" in response.json()["detail"]
+
+    def test_export_on_load_obs_trigger_note_is_400(
+        self, client, sample_devices, test_storage
+    ):
+        """Nuta triggera OBS z data/pacer.yaml jest odrzucana przy eksporcie."""
+        test_storage.save_pacer_config(
+            PacerConfig(
+                record_trigger_channel=1, record_start_note=94, record_stop_note=93
+            )
+        )
+        song = Song(
+            song=SongMetadata(id="obs-onload", name="Obs"),
+            on_load=[Action(device="freak", type=ActionType.NOTE, note=93)],
+        )
+        test_storage.save_song(song)
+
+        response = client.get("/pacer/export/obs-onload.syx")
+
+        assert response.status_code == 400
+        assert "OBS" in response.json()["detail"]

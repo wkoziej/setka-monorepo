@@ -1,3 +1,5 @@
+{# ABOUTME: Song edit form: metadata, on_load (preset recall MIDI) and PACER buttons. #}
+{# ABOUTME: Action rows come from HTMX partials (action_row, action_fields). #}
 {% extends "base.html" %}
 
 {% block title %}{% if is_new %}Nowy utwór{% else %}Edycja: {{ song.song.name }}{% endif %} - Paternologia{% endblock %}
@@ -73,6 +75,36 @@
         </div>
     </section>
 
+    <!-- On load (M CFG) -->
+    <section class="bg-white rounded-lg shadow p-6">
+        <div class="flex justify-between items-center mb-1">
+            <h2 class="text-lg font-semibold text-gray-700">Przy załadowaniu presetu</h2>
+            <button type="button"
+                    hx-get="/partials/action-row"
+                    hx-target="#on-load-actions"
+                    hx-swap="beforeend"
+                    hx-vals="js:{context: 'on_load', button_idx: 0, action_idx: nextOnLoadIdx()}"
+                    hx-indicator="#loading-indicator"
+                    class="text-indigo-600 hover:text-indigo-800 text-sm font-medium">
+                + Dodaj wiadomość
+            </button>
+        </div>
+        <p class="text-xs text-gray-500 mb-4">
+            Pacer wysyła te wiadomości (max 16) przy każdym wejściu na preset — ustawia stan startowy urządzeń.
+            Nie działa po włączeniu zasilania. Eksport nadpisuje M CFG presetu.
+        </p>
+        <div id="on-load-actions" class="space-y-2">
+            {% if song and song.on_load %}
+                {% with action_context = 'on_load', button_idx = 0 %}
+                {% for action in song.on_load %}
+                {% set action_idx = loop.index0 %}
+                {% include "partials/action_row.html" %}
+                {% endfor %}
+                {% endwith %}
+            {% endif %}
+        </div>
+    </section>
+
     <!-- PACER Buttons -->
     <section class="bg-white rounded-lg shadow p-6">
         <div class="flex justify-between items-center mb-4">
@@ -117,6 +149,14 @@
 
 {% block scripts %}
 <script>
+// Indeks nowego wiersza on_load: większy niż wszystkie istniejące (po usunięciu
+// wiersza zostaje luka, więc liczba wierszy mogłaby zdublować indeks).
+function nextOnLoadIdx() {
+    const used = [...document.querySelectorAll('#on-load-actions select[name$="_device"]')]
+        .map(el => parseInt(el.name.match(/^on_load_(\d+)_device$/)[1], 10));
+    return used.length ? Math.max(...used) + 1 : 0;
+}
+
 function moveButtonUp(btn) {
     const card = btn.closest('.pacer-button-card');
     const prev = card.previousElementSibling;

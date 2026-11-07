@@ -168,3 +168,35 @@ class TestSongMidiIndex:
         index = SongMidiIndex.build(songs, devices)
         assert index.lookup(channel=12, program=2) == "zen"
         assert index.lookup(channel=0, program=66) == "zen"
+
+
+class TestSongMidiIndexOnLoad:
+    """Akcje PRESET z on_load (M CFG) identyfikują utwór jak przyciski."""
+
+    def test_lookup_finds_song_by_on_load_preset(self):
+        devices = [_make_device("freak", midi_channel=1)]
+        songs = [
+            Song(
+                song=SongMetadata(id="zima", name="Zima"),
+                on_load=[Action(device="freak", type=ActionType.PRESET, value=67)],
+            )
+        ]
+
+        index = SongMidiIndex.build(songs, devices)
+        assert index.lookup(channel=0, program=67) == "zima"
+
+    def test_on_load_conflict_first_match_wins(self, caplog):
+        devices = [_make_device("freak", midi_channel=1)]
+        songs = [
+            _make_song(
+                "zen", [Action(device="freak", type=ActionType.PRESET, value=5)]
+            ),
+            Song(
+                song=SongMetadata(id="zima", name="Zima"),
+                on_load=[Action(device="freak", type=ActionType.PRESET, value=5)],
+            ),
+        ]
+
+        index = SongMidiIndex.build(songs, devices)
+        assert index.lookup(channel=0, program=5) == "zen"
+        assert "MIDI conflict" in caplog.text

@@ -17,6 +17,11 @@ STOMPSWITCHES = {i: 0x0D + i for i in range(6)}  # SW1-SW6
 
 # Special Object IDs
 CONTROL_NAME = 0x01  # Object ID dla nazwy presetu
+CONTROL_MIDI = 0x7E  # Object ID dla M CFG (Preset Recall MIDI Configuration)
+CONTROL_ALL = 0x7F  # Wszystkie obiekty presetu (żądanie dumpu)
+
+# M CFG: wiadomości wysyłane przez Pacer przy załadowaniu presetu
+MIDI_CONFIG_ENTRIES = 16  # Liczba wpisów M CFG w presecie
 
 # Element IDs
 CONTROL_MODE_ELEMENT = 0x60  # Element dla trybu kontrolki
@@ -39,6 +44,7 @@ MSG_SW_MIDI_CC_STEP = (
     0x48  # CC Step dla stompswitch: data1=controller, data2=start, data3=end
 )
 MSG_SW_NOTE = 0x43  # Note: data1=note, data2=velocity, data3=unused
+MSG_LOAD_CC = 0x65  # M CFG: CC przy załadowaniu presetu: data1=controller, data2=value
 # MSG_AD_MIDI_CC = 0x00 - NIE UŻYWAĆ dla stompswitch! To jest dla Expression Pedals
 
 # LED colors (from pacer-editor dump_format.md)

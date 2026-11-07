@@ -1,7 +1,8 @@
 {# ABOUTME: HTMX partial for single action row in PACER button. #}
-{# ABOUTME: Uses HTMX cascades for device → types → fields. #}
+{# ABOUTME: Uses HTMX cascades for device → types → fields; context=on_load → pola on_load_{idx}_*. #}
+{% set field_prefix = 'on_load_' ~ action_idx if action_context == 'on_load' else 'button_' ~ button_idx ~ '_action_' ~ action_idx %}
 <div class="action-row grid grid-cols-[1fr_auto_1fr_auto] gap-2 items-center">
-    <select name="button_{{ button_idx }}_action_{{ action_idx }}_device" required
+    <select name="{{ field_prefix }}_device" required
             class="border border-gray-300 rounded px-2 py-1 text-sm w-full"
             hx-get="/partials/action-types"
             hx-target="next .action-type-select"
@@ -17,14 +18,14 @@
         {% endfor %}
     </select>
 
-    <select name="button_{{ button_idx }}_action_{{ action_idx }}_type" required
+    <select name="{{ field_prefix }}_type" required
             class="border border-gray-300 rounded px-2 py-1 text-sm action-type-select"
             hx-get="/partials/action-fields"
             hx-target="next .action-fields"
             hx-swap="innerHTML"
             hx-trigger="change"
             hx-indicator="#loading-indicator"
-            hx-vals="js:{action_type: event.target.value, button_idx: {{ button_idx }}, action_idx: {{ action_idx }}}">
+            hx-vals="js:{action_type: event.target.value, button_idx: {{ button_idx }}, action_idx: {{ action_idx }}, context: '{{ action_context if action_context is defined else '' }}'}">
         <option value="">Typ...</option>
         {% if action %}
             {% for device in devices %}

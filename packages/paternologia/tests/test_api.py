@@ -339,6 +339,124 @@ class TestSongPacerExport:
 class TestPacerSendEndpoint:
     """Tests for POST /pacer/send/{song_id} endpoint."""
 
+    @pytest.fixture(autouse=True)
+    def pacer_read_back(self):
+        """Read-back bez sprzętu: dump nieistotny, Pacer zapisał wszystkie ramki."""
+        with (
+            patch(
+                "paternologia.routers.pacer.read_back_preset", return_value=b""
+            ) as read_back,
+            patch("paternologia.routers.pacer.missing_frames", return_value=[]),
+        ):
+            yield read_back
+
+    def _send_ok(self, client, test_storage, **post):
+        from paternologia.models import Song, SongMetadata
+
+        test_storage.save_song(Song(song=SongMetadata(id="test", name="Test Song")))
+        test_storage.save_pacer_config(PacerConfig(device_name="PACER"))
+        mock_result = MagicMock(returncode=0, stderr="")
+        with (
+            patch(
+                "paternologia.routers.pacer.find_amidi_port", return_value="hw:8,0,0"
+            ),
+            patch("subprocess.run", return_value=mock_result),
+        ):
+            return client.post("/pacer/send/test", **post)
+
+    def test_send_verifies_preset_by_read_back(
+        self, client, sample_devices, test_storage, pacer_read_back
+    ):
+        response = self._send_ok(client, test_storage, data={"preset": "D5"})
+
+        assert response.status_code == 200
+        assert response.json()["verified"] is True
+        port, preset_index = pacer_read_back.call_args[0][:2]
+        assert (port, preset_index) == ("hw:8,0,0", 0x17)
+
+    def test_send_reports_frames_not_stored(self, client, sample_devices, test_storage):
+        lost = [b"\xf0lost\xf7", b"\xf0lost2\xf7"]
+        with patch("paternologia.routers.pacer.missing_frames", return_value=lost):
+            response = self._send_ok(client, test_storage)
+
+        assert response.status_code == 500
+        assert "nie zapisał 2" in response.json()["detail"]
+
+    def test_send_reports_frames_not_stored_htmx(
+        self, client, sample_devices, test_storage
+    ):
+        with patch(
+            "paternologia.routers.pacer.missing_frames", return_value=[b"\xf0x\xf7"]
+        ):
+            response = self._send_ok(
+                client, test_storage, headers={"HX-Request": "true"}
+            )
+
+        assert response.status_code == 200
+        assert "nie zapisał 1" in response.text
+        assert "text-red-600" in response.text
+
+    def test_send_bad_on_load_is_400_and_does_not_call_amidi(
+        self, client, sample_devices, test_storage
+    ):
+        from paternologia.models import Action, Song, SongMetadata
+
+        test_storage.save_song(
+            Song(
+                song=SongMetadata(id="test", name="Test"),
+                on_load=[Action(device="nope", type=ActionType.PRESET, value=1)],
+            )
+        )
+        test_storage.save_pacer_config(PacerConfig(device_name="PACER"))
+        with (
+            patch(
+                "paternologia.routers.pacer.find_amidi_port", return_value="hw:8,0,0"
+            ),
+            patch("subprocess.run") as run,
+        ):
+            response = client.post("/pacer/send/test")
+
+        assert response.status_code == 400
+        assert "nope" in response.json()["detail"]
+        run.assert_not_called()
+
+    def test_send_passes_listener_pause_to_read_back(
+        self, client, sample_devices, test_storage, pacer_read_back
+    ):
+        sentinel = object()
+
+        class _Listener:
+            def paused(self):
+                return sentinel
+
+        original = client.app.state.midi_listener
+        client.app.state.midi_listener = _Listener()
+        try:
+            self._send_ok(client, test_storage)
+        finally:
+            client.app.state.midi_listener = original
+
+        assert pacer_read_back.call_args[0][2] is sentinel
+
+    def test_concurrent_send_is_rejected(self, client, sample_devices, test_storage):
+        """Druga wysyłka w trakcie pierwszej zdublowałaby porty listenera."""
+        from paternologia.routers import pacer as pacer_router
+
+        with pacer_router._send_lock:
+            response = self._send_ok(client, test_storage)
+
+        assert response.status_code == 409
+
+    def test_send_reports_read_back_failure(
+        self, client, sample_devices, test_storage, pacer_read_back
+    ):
+        pacer_read_back.side_effect = RuntimeError("amidi dump failed: busy")
+
+        response = self._send_ok(client, test_storage)
+
+        assert response.status_code == 500
+        assert "zweryfikować" in response.json()["detail"]
+
     def test_send_to_pacer_success(self, client, sample_devices, test_storage):
         """Successfully sends .syx to Pacer via amidi."""
         from paternologia.models import Song, SongMetadata
@@ -1019,3 +1137,234 @@ class TestPresetEditorWiring:
             "/partials/action-fields?action_type=preset&button_idx=0&action_idx=0"
         )
         assert "/partials/preset-usage" in preset.text
+
+
+class TestSongOnLoadForm:
+    """Formularz utworu: sekcja on_load (wiadomości przy załadowaniu presetu)."""
+
+    def _base(self, **extra):
+        return {
+            "song_name": "OnLoad",
+            "song_author": "",
+            "song_notes": "",
+            **extra,
+        }
+
+    def test_create_song_with_on_load(self, client, sample_devices, test_storage):
+        response = client.post(
+            "/songs",
+            data=self._base(
+                song_id="onload",
+                on_load_0_device="ms",
+                on_load_0_type="pattern",
+                on_load_0_value="D01",
+                on_load_1_device="boss",
+                on_load_1_type="cc",
+                on_load_1_cc="40",
+                on_load_1_value="99",
+            ),
+            follow_redirects=False,
+        )
+
+        assert response.status_code == 303
+        song = test_storage.get_song("onload")
+        assert [(a.device, a.type, a.value) for a in song.on_load] == [
+            ("ms", ActionType.PATTERN, "D01"),
+            ("boss", ActionType.CC, 99),
+        ]
+        assert song.on_load[1].cc == 40
+
+    def test_on_load_keeps_order_with_index_gaps(
+        self, client, sample_devices, test_storage
+    ):
+        """Usunięty wiersz zostawia lukę w indeksach — kolejność wg indeksu."""
+        client.post(
+            "/songs",
+            data=self._base(
+                song_id="gaps",
+                on_load_3_device="ms",
+                on_load_3_type="pattern",
+                on_load_3_value="D02",
+                on_load_1_device="ms",
+                on_load_1_type="pattern",
+                on_load_1_value="D01",
+            ),
+            follow_redirects=False,
+        )
+
+        song = test_storage.get_song("gaps")
+        assert [a.value for a in song.on_load] == ["D01", "D02"]
+
+    def test_preset_on_load_stores_raw_value(self, client, test_storage):
+        """UI pokazuje numer z ekranu urządzenia; zapis bez preset_display_offset."""
+        test_storage.save_devices(
+            [
+                Device(
+                    id="freak",
+                    name="MicroFreak",
+                    midi_channel=1,
+                    preset_display_offset=1,
+                    action_types=[ActionType.PRESET],
+                )
+            ]
+        )
+        client.post(
+            "/songs",
+            data=self._base(
+                song_id="raw",
+                on_load_0_device="freak",
+                on_load_0_type="preset",
+                on_load_0_value="68",
+            ),
+            follow_redirects=False,
+        )
+
+        assert test_storage.get_song("raw").on_load[0].value == 67
+
+    def test_edit_form_renders_on_load_rows(self, client, sample_devices, test_storage):
+        """Formularz edycji zawiera pola on_load, więc zapis ich nie kasuje."""
+        client.post(
+            "/songs",
+            data=self._base(
+                song_id="render",
+                on_load_0_device="ms",
+                on_load_0_type="pattern",
+                on_load_0_value="D01",
+            ),
+            follow_redirects=False,
+        )
+
+        response = client.get("/songs/render/edit")
+
+        assert response.status_code == 200
+        assert 'name="on_load_0_device"' in response.text
+        assert 'name="on_load_0_value"' in response.text
+        assert 'value="D01"' in response.text
+
+    def test_seventeen_on_load_actions_is_400(self, client, sample_devices):
+        rows = {}
+        for i in range(17):
+            rows[f"on_load_{i}_device"] = "ms"
+            rows[f"on_load_{i}_type"] = "pattern"
+            rows[f"on_load_{i}_value"] = "D01"
+
+        response = client.post(
+            "/songs",
+            data=self._base(song_id="too-many", **rows),
+            follow_redirects=False,
+        )
+
+        assert response.status_code == 400
+        assert "on_load" in response.json()["detail"]
+
+    def test_action_row_partial_on_load_context(self, client, sample_devices):
+        response = client.get(
+            "/partials/action-row?context=on_load&button_idx=0&action_idx=3"
+        )
+
+        assert response.status_code == 200
+        assert 'name="on_load_3_device"' in response.text
+        assert 'name="on_load_3_type"' in response.text
+        assert "button_0_action_3" not in response.text
+
+    def test_action_fields_partial_on_load_context(self, client, sample_devices):
+        response = client.get(
+            "/partials/action-fields?context=on_load&action_type=pattern"
+            "&button_idx=0&action_idx=2"
+        )
+
+        assert 'name="on_load_2_value"' in response.text
+
+    def test_cc_on_load_shows_warning(self, client, sample_devices):
+        """CC przy załadowaniu trafia do urządzenia przy każdej zmianie presetu."""
+        response = client.get(
+            "/partials/action-fields?context=on_load&action_type=cc"
+            "&button_idx=0&action_idx=0"
+        )
+
+        assert 'name="on_load_0_cc"' in response.text
+        assert "każdej zmianie presetu" in response.text
+
+    def test_cc_button_has_no_on_load_warning(self, client, sample_devices):
+        response = client.get(
+            "/partials/action-fields?action_type=cc&button_idx=0&action_idx=0"
+        )
+
+        assert 'name="button_0_action_0_cc"' in response.text
+        assert "każdej zmianie presetu" not in response.text
+
+
+class TestSongOnLoadPlacement:
+    """Sekcja on_load jest na górze: nad przyciskami PACER (widok i edycja)."""
+
+    def _song_with_on_load(self, test_storage):
+        from paternologia.models import Action, Song, SongMetadata
+
+        test_storage.save_song(
+            Song(
+                song=SongMetadata(id="zima", name="Zima"),
+                on_load=[
+                    Action(device="ms", type=ActionType.PATTERN, value="D01"),
+                    Action(device="boss", type=ActionType.CC, cc=40, value=99),
+                ],
+            )
+        )
+
+    def test_song_view_shows_on_load_above_buttons(
+        self, client, sample_devices, test_storage
+    ):
+        self._song_with_on_load(test_storage)
+
+        html = client.get("/songs/zima").text
+
+        assert "Przy załadowaniu presetu" in html
+        assert "pattern D01" in html
+        assert "CC40" in html
+        assert html.index("Przy załadowaniu presetu") < html.index("PACER (")
+
+    def test_song_view_without_on_load_has_no_section(
+        self, client, sample_devices, test_storage
+    ):
+        from paternologia.models import Song, SongMetadata
+
+        test_storage.save_song(Song(song=SongMetadata(id="pusty", name="Pusty")))
+
+        assert "Przy załadowaniu presetu" not in client.get("/songs/pusty").text
+
+    def test_edit_form_on_load_section_above_buttons(
+        self, client, sample_devices, test_storage
+    ):
+        self._song_with_on_load(test_storage)
+
+        html = client.get("/songs/zima/edit").text
+
+        assert html.index("Przy załadowaniu presetu") < html.index("Przyciski PACER")
+
+
+class TestActionPartialContextValidation:
+    def test_unknown_context_is_rejected(self, client, sample_devices):
+        """context trafia do wyrażenia JS w hx-vals — tylko znane wartości."""
+        response = client.get(
+            "/partials/action-row?context=%27;alert(1);%27&button_idx=0&action_idx=0"
+        )
+        assert response.status_code == 422
+
+    def test_unknown_context_rejected_in_fields(self, client, sample_devices):
+        response = client.get(
+            "/partials/action-fields?context=x&action_type=cc&button_idx=0&action_idx=0"
+        )
+        assert response.status_code == 422
+
+    def test_non_numeric_on_load_value_is_400(self, client, sample_devices):
+        response = client.post(
+            "/songs",
+            data={
+                "song_id": "bad-num",
+                "song_name": "Bad",
+                "on_load_0_device": "boss",
+                "on_load_0_type": "preset",
+                "on_load_0_value": "abc",
+            },
+            follow_redirects=False,
+        )
+        assert response.status_code == 400

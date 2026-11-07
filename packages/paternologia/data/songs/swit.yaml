@@ -1,0 +1,109 @@
+song:
+  id: swit
+  name: Świt
+  author: Wojtas
+  created: '2026-06-07'
+  notes: D-moll; gitara akustyczna (track 1) ustala tempo; akord d-moll na petli 2;
+    ARP ptaki na Freaku (preset 101); M:S F02-F04; Ampero, A34-1->A35-1 per przycisk
+    (PC prowizoryczny, do weryfikacji)
+  pacer_export:
+    target_preset: B5
+pacer:
+- name: init — nastukaj rytm na gitarze (track 1)
+  actions:
+  - device: boss
+    type: preset
+    value: 4
+    cc: null
+    label: None
+    bank_lsb: 0
+    bank_msb: 0
+    note: null
+    velocity: null
+  - device: ms
+    type: pattern
+    value: F03
+    cc: null
+    label: cisza
+    bank_lsb: 0
+    bank_msb: 0
+    note: null
+    velocity: null
+- name: d-moll na petli 2 + ARP ptaki
+  actions:
+  - device: freak
+    type: preset
+    value: 100
+    cc: null
+    label: ARP ptaki
+    bank_lsb: 0
+    bank_msb: 0
+    note: null
+    velocity: null
+  - device: boss
+    type: cc
+    value: 1
+    cc: 31
+    label: track 2 REC (d-moll)
+    bank_lsb: 0
+    bank_msb: 0
+    note: null
+    velocity: null
+  - device: ms
+    type: pattern
+    value: F02
+    cc: null
+    label: lup
+    bank_lsb: 0
+    bank_msb: 0
+    note: null
+    velocity: null
+- name: zmiana patternu M:S
+  actions:
+  - device: ms
+    type: pattern
+    value: F04
+    cc: null
+    label: None
+    bank_lsb: 0
+    bank_msb: 0
+    note: null
+    velocity: null
+  - device: freak
+    type: preset
+    value: 101
+    cc: null
+    label: null
+    bank_lsb: 0
+    bank_msb: 0
+    note: null
+    velocity: null
+- name: nagrywanie track 3
+  actions:
+  - device: boss
+    type: cc
+    value: 1
+    cc: 2
+    label: track 2 STOP
+    bank_lsb: 0
+    bank_msb: 0
+    note: null
+    velocity: null
+  - device: ms
+    type: pattern
+    value: F04
+    cc: null
+    label: None
+    bank_lsb: 0
+    bank_msb: 0
+    note: null
+    velocity: null
+  - device: boss
+    type: cc
+    value: 1
+    cc: 3
+    label: track 3 REC
+    bank_lsb: 0
+    bank_msb: 0
+    note: null
+    velocity: null

@@ -21,17 +21,17 @@ devices:
     action_types:
       - preset
       - note
-  # - id: valeton
-  #   name: ValetonGP200
-  #   description: Multieffect
-  #   midi_channel: 5
-  #   action_types:
-  #     - preset
-  #     - cc
-  - id: ampero
-    name: Ampero II Stomp
-    description: Multieffect (gitara)
+  - id: gp50
+    name: Valeton GP-50
+    description: Multieffect (gitara) — patch przez CC0 (0-99), brak Program Change
     midi_channel: 5
+    cc_release_same: true
+    action_types:
+      - cc
+  - id: modrex
+    name: EHX Mod Rex
+    description: Modulator (gitara) — presety przez Program Change (1-100)
+    midi_channel: 6
     action_types:
       - preset
       - cc

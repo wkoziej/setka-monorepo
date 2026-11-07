@@ -233,6 +233,29 @@ class TestSong:
             )
 
 
+class TestSongOnLoad:
+    """Wiadomości wysyłane przez Pacer przy załadowaniu presetu (M CFG)."""
+
+    def test_on_load_defaults_to_empty(self):
+        """Utwór bez on_load (stary YAML) ma pustą listę."""
+        song = Song(song=SongMetadata(id="test", name="Test"))
+        assert song.on_load == []
+
+    def test_on_load_accepts_sixteen_actions(self):
+        actions = [
+            Action(device="ms", type=ActionType.PATTERN, value="D01") for _ in range(16)
+        ]
+        song = Song(song=SongMetadata(id="test", name="Test"), on_load=actions)
+        assert len(song.on_load) == 16
+
+    def test_on_load_rejects_seventeen_actions(self):
+        actions = [
+            Action(device="ms", type=ActionType.PATTERN, value="D01") for _ in range(17)
+        ]
+        with pytest.raises(ValidationError):
+            Song(song=SongMetadata(id="test", name="Test"), on_load=actions)
+
+
 class TestPacerExportSettings:
     """Tests for PacerExportSettings model."""
 

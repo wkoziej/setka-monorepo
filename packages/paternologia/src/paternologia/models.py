@@ -38,6 +38,14 @@ class Device(BaseModel):
             "applied transparently in the editor. 0 = no shift."
         ),
     )
+    cc_release_same: bool = Field(
+        default=False,
+        description=(
+            "CC trigger sends the press value also on release (up = down) "
+            "instead of 0. For devices where CC selects a state, e.g. GP-50 "
+            "patch via CC0 — up=0 would jump back to patch 00."
+        ),
+    )
 
 
 class DevicesConfig(BaseModel):
@@ -216,4 +224,11 @@ class Song(BaseModel):
     song: SongMetadata = Field(..., description="Song metadata")
     pacer: Annotated[list[PacerButton], Field(max_length=6)] = Field(
         default_factory=list, description="PACER button configurations (max 6)"
+    )
+    on_load: Annotated[list[Action], Field(max_length=16)] = Field(
+        default_factory=list,
+        description=(
+            "Actions the PACER sends when this preset is loaded "
+            "(M CFG / Preset Recall MIDI, max 16)"
+        ),
     )
