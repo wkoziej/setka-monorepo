@@ -182,3 +182,44 @@ class TestControlStep:
         params = syx[9:-2]
         # Last parameter: [6, 0x01, 0]
         assert params[-3:] == bytes([6, 0x01, 0])
+
+
+class TestChecksumMatchesDevice:
+    """Checksum liczony od bajtu CMD (po nagłówku F0 00 01 77 7F), jak w Pacerze.
+
+    Ramki referencyjne: dump prawdziwego Pacera, preset B5 (wyeksportowany
+    z Paternologii, docs/pacer-mcfg-verification.md).
+    """
+
+    def test_control_step_matches_device_dump(self):
+        syx = PacerSysExBuilder(0x0B).build_control_step(
+            control_id=c.STOMPSWITCHES[0],
+            step_index=1,
+            msg_type=c.MSG_SW_PRG_BANK,
+            channel=13,
+            data1=4,
+        )
+        assert syx == bytes.fromhex(
+            "F0 00 01 77 7F 01 01 0B 0D 01 01 0D 00 02 01 45 00 03 01 04 00"
+            " 04 01 00 00 05 01 00 00 06 01 01 74 F7"
+        )
+
+    def test_control_mode_matches_device_dump(self):
+        syx = PacerSysExBuilder(0x0B).build_control_mode(c.STOMPSWITCHES[0], 0)
+        assert syx == bytes.fromhex("F0 00 01 77 7F 01 01 0B 0D 60 01 00 05 F7")
+
+    def test_control_led_matches_device_dump(self):
+        syx = PacerSysExBuilder(0x0B).build_control_led(
+            c.STOMPSWITCHES[0],
+            step_index=1,
+            active_color=c.LED_BLUE,
+            inactive_color=c.LED_AMBER,
+        )
+        assert syx == bytes.fromhex(
+            "F0 00 01 77 7F 01 01 0B 0D 40 01 00 00 41 01 11 00 42 01 07 00"
+            " 43 01 00 44 F7"
+        )
+
+    def test_preset_name_checksum_from_cmd_byte(self):
+        syx = PacerSysExBuilder(0x0B).build_preset_name("Swit")
+        assert syx[-2] == checksum(syx[5:-2])

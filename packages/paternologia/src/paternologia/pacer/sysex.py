@@ -4,8 +4,13 @@
 from . import constants as c
 
 
+# Checksum obejmuje bajty od CMD do końca danych — bez nagłówka
+# F0 + Manufacturer ID + Device ID (tak liczy Pacer w dumpie i pacer-editor).
+_CHECKSUM_START = len(c.MANUFACTURER_ID) + 1
+
+
 def checksum(data: bytes) -> int:
-    """Suma bajtów od Manufacturer ID do końca danych (bez F0/F7)."""
+    """Checksum Pacera: (128 - suma % 128) % 128 dla bajtów od CMD do końca danych."""
     return (128 - (sum(data) % 128)) % 128
 
 
@@ -28,7 +33,7 @@ class PacerSysExBuilder:
             ]
         )
         payload = c.MANUFACTURER_ID + header + data
-        cs = checksum(payload)
+        cs = checksum(payload[_CHECKSUM_START:])
         return bytes([c.SYSEX_START]) + payload + bytes([cs, c.SYSEX_END])
 
     def build_preset_name(self, name: str) -> bytes:
@@ -70,7 +75,7 @@ class PacerSysExBuilder:
             [c.DEVICE_ID, c.CMD_SET, c.TARGET_PRESET, self.preset_index, control_id]
         )
         payload = c.MANUFACTURER_ID + header + bytes(params)
-        cs = checksum(payload)
+        cs = checksum(payload[_CHECKSUM_START:])
         return bytes([c.SYSEX_START]) + payload + bytes([cs, c.SYSEX_END])
 
     def build_control_mode(self, control_id: int, mode: int = 0) -> bytes:
@@ -86,7 +91,7 @@ class PacerSysExBuilder:
             [c.DEVICE_ID, c.CMD_SET, c.TARGET_PRESET, self.preset_index, control_id]
         )
         payload = c.MANUFACTURER_ID + header + bytes(params)
-        cs = checksum(payload)
+        cs = checksum(payload[_CHECKSUM_START:])
         return bytes([c.SYSEX_START]) + payload + bytes([cs, c.SYSEX_END])
 
     def build_control_led(
@@ -121,5 +126,5 @@ class PacerSysExBuilder:
             [c.DEVICE_ID, c.CMD_SET, c.TARGET_PRESET, self.preset_index, control_id]
         )
         payload = c.MANUFACTURER_ID + header + bytes(params)
-        cs = checksum(payload)
+        cs = checksum(payload[_CHECKSUM_START:])
         return bytes([c.SYSEX_START]) + payload + bytes([cs, c.SYSEX_END])
