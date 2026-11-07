@@ -537,3 +537,68 @@ class TestButtonReordering:
         assert updated_song.pacer[0].actions[0].device == "ms"
         assert updated_song.pacer[1].actions[0].device == "boss"
         assert updated_song.pacer[1].actions[0].value == 1
+
+
+class TestOnLoadWorkflow:
+    """Utwór z on_load: utworzenie, podgląd edycji, zmiana, eksport .syx."""
+
+    def test_create_edit_export_song_with_on_load(
+        self, client, setup_devices, test_storage
+    ):
+        response = client.post(
+            "/songs",
+            data={
+                "song_id": "zima-e2e",
+                "song_name": "Zima",
+                "song_author": "",
+                "song_notes": "",
+                "button_0_name": "Start",
+                "button_0_action_0_device": "boss",
+                "button_0_action_0_type": "cc",
+                "button_0_action_0_cc": "1",
+                "button_0_action_0_value": "127",
+                "on_load_0_device": "boss",
+                "on_load_0_type": "preset",
+                "on_load_0_value": "3",
+                "on_load_1_device": "ms",
+                "on_load_1_type": "pattern",
+                "on_load_1_value": "d01",
+            },
+            follow_redirects=False,
+        )
+        assert response.status_code == 303
+
+        edit = client.get("/songs/zima-e2e/edit")
+        assert 'name="on_load_1_value"' in edit.text
+        assert 'value="d01"' in edit.text
+
+        response = client.put(
+            "/songs/zima-e2e",
+            data={
+                "song_name": "Zima",
+                "song_author": "",
+                "song_notes": "",
+                "button_0_name": "Start",
+                "button_0_action_0_device": "boss",
+                "button_0_action_0_type": "cc",
+                "button_0_action_0_cc": "1",
+                "button_0_action_0_value": "127",
+                "on_load_0_device": "boss",
+                "on_load_0_type": "preset",
+                "on_load_0_value": "3",
+                "on_load_1_device": "ms",
+                "on_load_1_type": "pattern",
+                "on_load_1_value": "d02",
+            },
+            follow_redirects=False,
+        )
+        assert response.status_code == 303
+        song = test_storage.get_song("zima-e2e")
+        assert [a.value for a in song.on_load] == [3, "d02"]
+
+        syx = client.get("/pacer/export/zima-e2e.syx?preset=D5").content
+        frames = [f for f in syx.split(b"\xf0")[1:] if f[7] == 0x7E]
+        assert len(frames) == 16
+        # wpis 2: PRG_BANK, data1 = d02 -> 49
+        entry2 = next(f for f in frames if f[8] == 0x07)
+        assert entry2[8:-2][2::4] == bytes([0, 0x45, 49, 0, 0])

@@ -1086,3 +1086,158 @@ class TestPresetEditorWiring:
             "/partials/action-fields?action_type=preset&button_idx=0&action_idx=0"
         )
         assert "/partials/preset-usage" in preset.text
+
+
+class TestSongOnLoadForm:
+    """Formularz utworu: sekcja on_load (wiadomości przy załadowaniu presetu)."""
+
+    def _base(self, **extra):
+        return {
+            "song_name": "OnLoad",
+            "song_author": "",
+            "song_notes": "",
+            **extra,
+        }
+
+    def test_create_song_with_on_load(self, client, sample_devices, test_storage):
+        response = client.post(
+            "/songs",
+            data=self._base(
+                song_id="onload",
+                on_load_0_device="ms",
+                on_load_0_type="pattern",
+                on_load_0_value="D01",
+                on_load_1_device="boss",
+                on_load_1_type="cc",
+                on_load_1_cc="40",
+                on_load_1_value="99",
+            ),
+            follow_redirects=False,
+        )
+
+        assert response.status_code == 303
+        song = test_storage.get_song("onload")
+        assert [(a.device, a.type, a.value) for a in song.on_load] == [
+            ("ms", ActionType.PATTERN, "D01"),
+            ("boss", ActionType.CC, 99),
+        ]
+        assert song.on_load[1].cc == 40
+
+    def test_on_load_keeps_order_with_index_gaps(
+        self, client, sample_devices, test_storage
+    ):
+        """Usunięty wiersz zostawia lukę w indeksach — kolejność wg indeksu."""
+        client.post(
+            "/songs",
+            data=self._base(
+                song_id="gaps",
+                on_load_3_device="ms",
+                on_load_3_type="pattern",
+                on_load_3_value="D02",
+                on_load_1_device="ms",
+                on_load_1_type="pattern",
+                on_load_1_value="D01",
+            ),
+            follow_redirects=False,
+        )
+
+        song = test_storage.get_song("gaps")
+        assert [a.value for a in song.on_load] == ["D01", "D02"]
+
+    def test_preset_on_load_stores_raw_value(self, client, test_storage):
+        """UI pokazuje numer z ekranu urządzenia; zapis bez preset_display_offset."""
+        test_storage.save_devices(
+            [
+                Device(
+                    id="freak",
+                    name="MicroFreak",
+                    midi_channel=1,
+                    preset_display_offset=1,
+                    action_types=[ActionType.PRESET],
+                )
+            ]
+        )
+        client.post(
+            "/songs",
+            data=self._base(
+                song_id="raw",
+                on_load_0_device="freak",
+                on_load_0_type="preset",
+                on_load_0_value="68",
+            ),
+            follow_redirects=False,
+        )
+
+        assert test_storage.get_song("raw").on_load[0].value == 67
+
+    def test_edit_form_renders_on_load_rows(self, client, sample_devices, test_storage):
+        """Formularz edycji zawiera pola on_load, więc zapis ich nie kasuje."""
+        client.post(
+            "/songs",
+            data=self._base(
+                song_id="render",
+                on_load_0_device="ms",
+                on_load_0_type="pattern",
+                on_load_0_value="D01",
+            ),
+            follow_redirects=False,
+        )
+
+        response = client.get("/songs/render/edit")
+
+        assert response.status_code == 200
+        assert 'name="on_load_0_device"' in response.text
+        assert 'name="on_load_0_value"' in response.text
+        assert 'value="D01"' in response.text
+
+    def test_seventeen_on_load_actions_is_400(self, client, sample_devices):
+        rows = {}
+        for i in range(17):
+            rows[f"on_load_{i}_device"] = "ms"
+            rows[f"on_load_{i}_type"] = "pattern"
+            rows[f"on_load_{i}_value"] = "D01"
+
+        response = client.post(
+            "/songs",
+            data=self._base(song_id="too-many", **rows),
+            follow_redirects=False,
+        )
+
+        assert response.status_code == 400
+        assert "on_load" in response.json()["detail"]
+
+    def test_action_row_partial_on_load_context(self, client, sample_devices):
+        response = client.get(
+            "/partials/action-row?context=on_load&button_idx=0&action_idx=3"
+        )
+
+        assert response.status_code == 200
+        assert 'name="on_load_3_device"' in response.text
+        assert 'name="on_load_3_type"' in response.text
+        assert "button_0_action_3" not in response.text
+
+    def test_action_fields_partial_on_load_context(self, client, sample_devices):
+        response = client.get(
+            "/partials/action-fields?context=on_load&action_type=pattern"
+            "&button_idx=0&action_idx=2"
+        )
+
+        assert 'name="on_load_2_value"' in response.text
+
+    def test_cc_on_load_shows_warning(self, client, sample_devices):
+        """CC przy załadowaniu trafia do urządzenia przy każdej zmianie presetu."""
+        response = client.get(
+            "/partials/action-fields?context=on_load&action_type=cc"
+            "&button_idx=0&action_idx=0"
+        )
+
+        assert 'name="on_load_0_cc"' in response.text
+        assert "każdej zmianie presetu" in response.text
+
+    def test_cc_button_has_no_on_load_warning(self, client, sample_devices):
+        response = client.get(
+            "/partials/action-fields?action_type=cc&button_idx=0&action_idx=0"
+        )
+
+        assert 'name="button_0_action_0_cc"' in response.text
+        assert "każdej zmianie presetu" not in response.text

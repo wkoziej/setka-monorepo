@@ -82,7 +82,29 @@ pacer:
         type: cc
         cc: 1
         label: "Play/Rec"
+
+# Wiadomości wysyłane przez Pacer przy załadowaniu presetu (M CFG, max 16).
+# Ten sam słownik akcji co przyciski. Opcjonalne — brak pola = pusta lista.
+on_load:
+  - device: boss
+    type: preset
+    value: 3
+  - device: ms
+    type: pattern
+    value: "D01"
+  - device: freak
+    type: preset
+    value: 67
 ```
+
+#### on_load (M CFG — Preset Recall MIDI)
+
+- Pacer wysyła wiadomości `on_load` przy każdym wejściu na preset (strzałki, `[Preset]`+bank+numer), przez USB i DIN. **Nie** wysyła ich po włączeniu zasilania.
+- Mapowanie na M CFG: `cc` → MIDI CC, `preset` i `pattern` → Program Change z Bank Select (Pacer zawsze wysyła CC0/CC32 przed PC), `note` → Note On.
+- Eksport zawsze zapisuje 16 wpisów M CFG; nieużywane czyści. M CFG ustawione ręcznie z panelu na presecie docelowym zostanie nadpisane.
+- Nuta triggera nagrywania OBS (`record_trigger_channel` + `record_start_note`/`record_stop_note` z `pacer.yaml`) jest w `on_load` odrzucana.
+- Akcje `preset` z `on_load` identyfikują utwór w widoku live (jak akcje przycisków).
+- Weryfikacja na sprzęcie: `docs/pacer-mcfg-verification.md`.
 
 ### 2.3 Typy Akcji
 

@@ -321,7 +321,7 @@ Mapowanie akcji na wpis M CFG (kierunkowe):
 
 **Verification:** Eksport dla utworu testowego wgrany na preset testowy daje dump zgodny z YAML.
 
-- [ ] **Unit 6: UI edycji `on_load` i testy API/e2e**
+- [x] **Unit 6: UI edycji `on_load` i testy API/e2e**
 
 **Goal:** Użytkownik edytuje „wiadomości przy załadowaniu” w formularzu utworu.
 

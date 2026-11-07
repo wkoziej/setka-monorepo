@@ -2,6 +2,7 @@
 # ABOUTME: Provides CRUD endpoints for song configurations with HTMX support.
 
 import logging
+import re
 from datetime import date
 
 from fastapi import APIRouter, HTTPException, Request
@@ -234,56 +235,10 @@ def _build_song_from_form(
 
             # Collect actions regardless of index gaps (handles deletion of early actions)
             for action_idx in range(6):
-                action_device = form_data.get(
-                    f"button_{button_idx}_action_{action_idx}_device", ""
-                ).strip()
-                if not action_device:
-                    continue  # Skip missing actions instead of breaking
-
-                action_type_str = form_data.get(
-                    f"button_{button_idx}_action_{action_idx}_type", ""
-                ).strip()
-                action_value = form_data.get(
-                    f"button_{button_idx}_action_{action_idx}_value", ""
-                ).strip()
-                action_cc = form_data.get(
-                    f"button_{button_idx}_action_{action_idx}_cc", ""
-                ).strip()
-                action_note = form_data.get(
-                    f"button_{button_idx}_action_{action_idx}_note", ""
-                ).strip()
-                action_velocity = form_data.get(
-                    f"button_{button_idx}_action_{action_idx}_velocity", ""
-                ).strip()
-                action_label = form_data.get(
-                    f"button_{button_idx}_action_{action_idx}_label", ""
-                ).strip()
-
-                if action_type_str:
-                    action_type = ActionType(action_type_str)
-
-                    value = None
-                    if action_value:
-                        if action_type == ActionType.PATTERN:
-                            value = action_value
-                        elif action_type == ActionType.PRESET:
-                            # UI shows the device-screen number; strip the hidden
-                            # display offset back to the raw MIDI value to store.
-                            device = device_map.get(action_device)
-                            raw = int(action_value)
-                            value = to_stored(raw, device) if device else raw
-                        else:
-                            value = int(action_value)
-
-                    action = Action(
-                        device=action_device,
-                        type=action_type,
-                        value=value,
-                        cc=int(action_cc) if action_cc else None,
-                        note=action_note or None,
-                        velocity=int(action_velocity) if action_velocity else None,
-                        label=action_label or None,
-                    )
+                action = _parse_action(
+                    form_data, f"button_{button_idx}_action_{action_idx}", device_map
+                )
+                if action is not None:
                     actions.append(action)
 
             pacer_buttons.append(PacerButton(name=button_name, actions=actions))
@@ -291,6 +246,19 @@ def _build_song_from_form(
         button_idx += 1
         if button_idx > 6:
             break
+
+    # on_load: indeksy wierszy mogą mieć luki po usunięciu — kolejność wg indeksu
+    on_load_indices = sorted(
+        int(m.group(1))
+        for key in form_data
+        if (m := _ON_LOAD_DEVICE_FIELD.fullmatch(key))
+    )
+    on_load = [
+        action
+        for idx in on_load_indices
+        if (action := _parse_action(form_data, f"on_load_{idx}", device_map))
+        is not None
+    ]
 
     return Song(
         song=SongMetadata(
@@ -302,6 +270,53 @@ def _build_song_from_form(
             pacer_export=pacer_export,
         ),
         pacer=pacer_buttons,
+        on_load=on_load,
+    )
+
+
+_ON_LOAD_DEVICE_FIELD = re.compile(r"on_load_(\d+)_device")
+
+
+def _parse_action(form_data, prefix: str, device_map) -> Action | None:
+    """Zbuduj Action z pól formularza `{prefix}_device`, `{prefix}_type` itd.
+
+    Zwraca None, gdy wiersz nie ma urządzenia albo typu (wiersz niekompletny).
+    """
+
+    def field(name: str) -> str:
+        return form_data.get(f"{prefix}_{name}", "").strip()
+
+    action_device = field("device")
+    action_type_str = field("type")
+    if not action_device or not action_type_str:
+        return None
+
+    action_type = ActionType(action_type_str)
+    action_value = field("value")
+    action_cc = field("cc")
+    action_velocity = field("velocity")
+
+    value = None
+    if action_value:
+        if action_type == ActionType.PATTERN:
+            value = action_value
+        elif action_type == ActionType.PRESET:
+            # UI shows the device-screen number; strip the hidden
+            # display offset back to the raw MIDI value to store.
+            device = device_map.get(action_device)
+            raw = int(action_value)
+            value = to_stored(raw, device) if device else raw
+        else:
+            value = int(action_value)
+
+    return Action(
+        device=action_device,
+        type=action_type,
+        value=value,
+        cc=int(action_cc) if action_cc else None,
+        note=field("note") or None,
+        velocity=int(action_velocity) if action_velocity else None,
+        label=field("label") or None,
     )
 
 
@@ -318,8 +333,13 @@ def _format_validation_error(exc: ValidationError) -> str:
 
 
 @router.get("/partials/action-row", response_class=HTMLResponse)
-async def get_action_row(request: Request, button_idx: int, action_idx: int):
-    """Return a new action row partial for HTMX."""
+async def get_action_row(
+    request: Request, button_idx: int, action_idx: int, context: str = ""
+):
+    """Return a new action row partial for HTMX.
+
+    context=on_load → wiersz sekcji on_load (pola `on_load_{action_idx}_*`).
+    """
     storage = get_storage()
     templates = get_templates()
     devices = storage.get_devices()
@@ -332,6 +352,7 @@ async def get_action_row(request: Request, button_idx: int, action_idx: int):
             "action_idx": action_idx,
             "action": None,
             "devices": devices,
+            "action_context": context,
         },
     )
 
@@ -430,7 +451,11 @@ async def get_preset_usage(
 
 @router.get("/partials/action-fields", response_class=HTMLResponse)
 async def get_action_fields(
-    request: Request, action_type: str, button_idx: int, action_idx: int
+    request: Request,
+    action_type: str,
+    button_idx: int,
+    action_idx: int,
+    context: str = "",
 ):
     """Return input fields for selected action type (HTMX cascade)."""
     templates = get_templates()
@@ -443,5 +468,6 @@ async def get_action_fields(
             "action_idx": action_idx,
             "action_type": action_type,
             "action": None,
+            "action_context": context,
         },
     )

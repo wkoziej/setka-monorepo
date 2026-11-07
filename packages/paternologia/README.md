@@ -145,7 +145,8 @@ tests/               # pytest (modele, storage, API, E2E, MIDI, bridge, health, 
 - **Edytor utworów** - definiowanie przycisków Pacera i akcji MIDI (preset / pattern / CC / note)
 - **Drag-and-drop** kolejności utworów (`data/songs_order.yaml`)
 - **Eksport `.syx`** - generowanie plików dla Pacera (`pacer/export.py`)
-- **Bezpośrednia wysyłka** - integracja z `amidi` (z wymaganym `--sysex-interval=20`)
+- **Przy załadowaniu presetu (`on_load`)** - do 16 wiadomości MIDI, które Pacer wysyła przy wejściu na preset (M CFG): stan startowy RC-600, M:S i MicroFreaka bez komputera. Nie działa po włączeniu zasilania; eksport nadpisuje M CFG presetu (`SPEC.md` § 2.2)
+- **Bezpośrednia wysyłka** - integracja z `amidi` (z wymaganym `--sysex-interval=20`) i weryfikacją zapisu (dump presetu po wysyłce; na ~2 s listener zwalnia porty Pacera, więc nie wysyłaj w trakcie grania)
 - **Widok live** - nasłuch MIDI z Pacera + SSE → automatyczne podświetlanie aktualnego utworu/przycisku
 
 ## Format danych
