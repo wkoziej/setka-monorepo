@@ -3,7 +3,7 @@
 
 import re
 
-from ..models import Action, ActionType, Device
+from ..models import Action, ActionType, Device, PacerConfig
 from . import constants as c
 
 # Mapping note names to semitone offsets (C=0, C#=1, D=2, etc.)
@@ -113,6 +113,16 @@ def pattern_to_program(value: int | str | None) -> int:
     return 0  # fallback
 
 
+def preset_program_bank(action: Action) -> tuple[int, int, int]:
+    """Program i bank dla akcji PRESET: (program 0-127, bank LSB, bank MSB).
+
+    Format MSG_SW_PRG_BANK: data1=program, data2=bank LSB, data3=bank MSB.
+    Wartość > 127 przechodzi do MSB (program // 128).
+    """
+    program = action.value if isinstance(action.value, int) else 0
+    return (program % 128, 0, program // 128)
+
+
 def action_to_midi(
     action: Action,
     device_channel_map: dict[str, int],
@@ -135,20 +145,9 @@ def action_to_midi(
     channel = get_device_channel(action.device, device_channel_map)
 
     if action.type == ActionType.PRESET:
-        program = action.value if isinstance(action.value, int) else 0
-
         # MSG_SW_PRG_BANK wysyła Program Change + Bank Select
         # MSG_SW_PRG_STEP jest do stepowania przez zakresy (nie do pojedynczych PC!)
-        # Format: data1=program (0-127), data2=bank LSB, data3=bank MSB
-        bank_msb = program // 128
-        prog = program % 128
-        return (
-            c.MSG_SW_PRG_BANK,
-            channel,
-            prog,  # data1 = program (0-127)
-            0,  # data2 = bank LSB
-            bank_msb,  # data3 = bank MSB
-        )
+        return (c.MSG_SW_PRG_BANK, channel, *preset_program_bank(action))
 
     elif action.type == ActionType.PATTERN:
         # Pattern na Model:Samples = Program Step
@@ -173,3 +172,47 @@ def action_to_midi(
 
     else:
         raise ValueError(f"Nieobsługiwany typ akcji: {action.type}")
+
+
+def action_to_midi_config(
+    action: Action,
+    device_channel_map: dict[str, int],
+    pacer_config: PacerConfig,
+) -> tuple[int, int, int, int, int]:
+    """Konwertuj akcję on_load na wpis M CFG (msg_type, channel, data1-3).
+
+    M CFG ma własne typy wiadomości: CC to MSG_LOAD_CC (bez down/up),
+    a pattern M:S idzie jako Program Change (MSG_SW_PRG_BANK), bo M CFG
+    nie ma PRG_STEP.
+
+    Raises:
+        ValueError: nieznane urządzenie, nieobsługiwany typ albo nuta
+            triggera nagrywania OBS (zmiana presetu uruchomiłaby nagranie).
+    """
+    if action.device not in device_channel_map:
+        raise ValueError(f"Nieznane urządzenie w on_load: '{action.device}'")
+    channel = device_channel_map[action.device]
+
+    if action.type == ActionType.PRESET:
+        return (c.MSG_SW_PRG_BANK, channel, *preset_program_bank(action))
+
+    if action.type == ActionType.PATTERN:
+        return (c.MSG_SW_PRG_BANK, channel, pattern_to_program(action.value), 0, 0)
+
+    if action.type == ActionType.CC:
+        return (c.MSG_LOAD_CC, channel, action.cc or 0, action.value, 0)
+
+    if action.type == ActionType.NOTE:
+        midi_note = note_to_midi(action.note)
+        is_obs_trigger = channel - 1 == pacer_config.record_trigger_channel and (
+            midi_note in (pacer_config.record_start_note, pacer_config.record_stop_note)
+        )
+        if is_obs_trigger:
+            raise ValueError(
+                f"Nuta {midi_note} na kanale {channel} w on_load to trigger "
+                "nagrywania OBS — zmiana presetu uruchomiłaby nagranie"
+            )
+        velocity = action.velocity if action.velocity else 100
+        return (c.MSG_SW_NOTE, channel, midi_note, velocity, 0)
+
+    raise ValueError(f"Typ akcji nieobsługiwany w on_load: {action.type.value}")

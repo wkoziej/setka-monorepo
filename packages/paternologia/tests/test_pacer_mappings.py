@@ -3,9 +3,10 @@
 
 import pytest
 
-from paternologia.models import Action, ActionType, Device
+from paternologia.models import Action, ActionType, Device, PacerConfig
 from paternologia.pacer.mappings import (
     action_to_midi,
+    action_to_midi_config,
     build_device_channel_map,
     get_device_channel,
     note_to_midi,
@@ -301,3 +302,64 @@ class TestActionToMidiNote:
 
         assert data1 == 69  # A4
         assert data2 == 100  # default velocity
+
+
+RIG_CHANNELS = {"boss": 13, "ms": 14, "freak": 1}
+
+
+class TestActionToMidiConfig:
+    """Mapowanie akcji on_load na wpis M CFG (typ, kanał, data1-3)."""
+
+    def _map(self, action: Action, config: PacerConfig | None = None):
+        return action_to_midi_config(action, RIG_CHANNELS, config or PacerConfig())
+
+    def test_cc_maps_to_load_cc(self):
+        action = Action(device="boss", type=ActionType.CC, cc=40, value=99)
+        assert self._map(action) == (c.MSG_LOAD_CC, 13, 40, 99, 0)
+
+    def test_preset_maps_to_prg_bank_without_display_offset(self):
+        """Wartość surowa z YAML, bez preset_display_offset."""
+        action = Action(device="freak", type=ActionType.PRESET, value=67)
+        assert self._map(action) == (c.MSG_SW_PRG_BANK, 1, 67, 0, 0)
+
+    def test_preset_above_127_uses_same_split_as_buttons(self):
+        """Ten sam PC co z przycisku (action_to_midi): prog % 128, MSB = // 128."""
+        action = Action(device="freak", type=ActionType.PRESET, value=200)
+        _, ch, prog, lsb, msb = action_to_midi(action, RIG_CHANNELS)
+        assert self._map(action) == (c.MSG_SW_PRG_BANK, ch, prog, lsb, msb)
+        assert (prog, msb) == (72, 1)
+
+    def test_pattern_maps_to_prg_bank(self):
+        """M CFG nie ma PRG_STEP — pattern idzie jako Program Change."""
+        action = Action(device="ms", type=ActionType.PATTERN, value="D01")
+        assert self._map(action) == (c.MSG_SW_PRG_BANK, 14, 48, 0, 0)
+
+    def test_note_maps_to_note(self):
+        action = Action(device="freak", type=ActionType.NOTE, note="C4", velocity=90)
+        assert self._map(action) == (c.MSG_SW_NOTE, 1, 60, 90, 0)
+
+    def test_note_default_velocity(self):
+        action = Action(device="freak", type=ActionType.NOTE, note=62)
+        assert self._map(action) == (c.MSG_SW_NOTE, 1, 62, 100, 0)
+
+    def test_unknown_device_fails_fast(self):
+        action = Action(device="nope", type=ActionType.PRESET, value=1)
+        with pytest.raises(ValueError, match="nope"):
+            self._map(action)
+
+    @pytest.mark.parametrize("note", [94, 93])
+    def test_note_equal_to_obs_trigger_is_rejected(self, note):
+        """Nuta triggera OBS w on_load uruchomiłaby nagranie przy zmianie presetu."""
+        config = PacerConfig(
+            record_trigger_channel=0, record_start_note=94, record_stop_note=93
+        )
+        action = Action(device="freak", type=ActionType.NOTE, note=note)
+        with pytest.raises(ValueError, match="OBS"):
+            self._map(action, config)
+
+    def test_note_on_other_channel_than_obs_trigger_is_allowed(self):
+        config = PacerConfig(
+            record_trigger_channel=0, record_start_note=94, record_stop_note=93
+        )
+        action = Action(device="ms", type=ActionType.NOTE, note=94)
+        assert self._map(action, config) == (c.MSG_SW_NOTE, 14, 94, 100, 0)

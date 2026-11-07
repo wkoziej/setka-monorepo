@@ -225,3 +225,10 @@ class Song(BaseModel):
     pacer: Annotated[list[PacerButton], Field(max_length=6)] = Field(
         default_factory=list, description="PACER button configurations (max 6)"
     )
+    on_load: Annotated[list[Action], Field(max_length=16)] = Field(
+        default_factory=list,
+        description=(
+            "Actions the PACER sends when this preset is loaded "
+            "(M CFG / Preset Recall MIDI, max 16)"
+        ),
+    )

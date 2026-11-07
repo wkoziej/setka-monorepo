@@ -255,7 +255,7 @@ Mapowanie akcji na wpis M CFG (kierunkowe):
 
 **Verification:** Testy sysex zielone. Round-trip na presecie testowym: dump zwraca wysłane wartości. Wynik (f) zapisany.
 
-- [ ] **Unit 4: Model `on_load` i mapowanie akcji na M CFG**
+- [x] **Unit 4: Model `on_load` i mapowanie akcji na M CFG**
 
 **Goal:** Utwór może zapisać do 16 akcji „przy załadowaniu presetu”.
 
