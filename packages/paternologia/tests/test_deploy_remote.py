@@ -11,13 +11,14 @@ REMOTE_DIR = Path(__file__).resolve().parent.parent / "deploy" / "remote"
 SYNC_DATA = REMOTE_DIR / "sync-data.sh"
 AUTOUPDATE = REMOTE_DIR / "autoupdate.sh"
 
-# Fixture install.sh: counts invocations; fails when FAIL_INSTALL file exists in $APP.
+# Fixture install.sh per package: logs its package name; fails when FAIL_INSTALL exists in $APP.
 FIXTURE_INSTALL = """#!/usr/bin/env bash
 set -euo pipefail
 APP=$HOME/paternologia
 if [ -e "$APP/FAIL_INSTALL" ]; then exit 1; fi
-echo run >> "$APP/install-runs"
+echo {pkg} >> "$APP/install-runs"
 """
+DEPLOYED_PACKAGES = ("paternologia", "launchpad-rc600")
 
 
 def write(path: Path, text: str) -> None:
@@ -102,10 +103,9 @@ class Origin:
         write(path / "pyproject.toml", "[project]\nname = 'x'\n")
         write(path / "packages" / "common" / "common.txt", "common\n")
         write(path / "packages" / "other" / "other.txt", "not needed on host\n")
-        install = (
-            path / "packages" / "paternologia" / "deploy" / "remote" / "install.sh"
-        )
-        write(install, FIXTURE_INSTALL)
+        for pkg in DEPLOYED_PACKAGES:
+            install = path / "packages" / pkg / "deploy" / "remote" / "install.sh"
+            write(install, FIXTURE_INSTALL.format(pkg=pkg))
         self.commit("packages/paternologia/data/songs/a.yaml", "v1\n")
 
     def git(self, *args: str) -> str:
@@ -137,9 +137,9 @@ def autoupdate(env: dict) -> subprocess.CompletedProcess:
     return run(["bash", str(AUTOUPDATE)], env=env)
 
 
-def install_runs(app: Path) -> int:
+def install_runs(app: Path) -> list[str]:
     runs = app / "install-runs"
-    return len(runs.read_text().splitlines()) if runs.exists() else 0
+    return runs.read_text().splitlines() if runs.exists() else []
 
 
 def test_autoupdate_first_run_clones_sparse_and_installs(host):
@@ -151,8 +151,9 @@ def test_autoupdate_first_run_clones_sparse_and_installs(host):
         src / "packages" / "paternologia" / "data" / "songs" / "a.yaml"
     ).read_text() == "v1\n"
     assert (src / "packages" / "common" / "common.txt").exists()
+    assert (src / "packages" / "launchpad-rc600").is_dir()
     assert not (src / "packages" / "other").exists()
-    assert install_runs(app) == 1
+    assert install_runs(app) == list(DEPLOYED_PACKAGES)
     assert (app / "deployed-commit").read_text().strip() == origin.git(
         "rev-parse", "HEAD"
     )
@@ -164,7 +165,7 @@ def test_autoupdate_without_changes_does_not_reinstall(host):
     result = autoupdate(env)
     assert result.returncode == 0, result.stderr
     assert result.stdout == ""
-    assert install_runs(app) == 1
+    assert install_runs(app) == list(DEPLOYED_PACKAGES)
 
 
 def test_autoupdate_deploys_new_master_commit(host):
@@ -176,7 +177,7 @@ def test_autoupdate_deploys_new_master_commit(host):
     assert (
         app / "src" / "packages" / "paternologia" / "data" / "songs" / "a.yaml"
     ).read_text() == "v2\n"
-    assert install_runs(app) == 2
+    assert install_runs(app) == [*DEPLOYED_PACKAGES, "paternologia"]
     assert (app / "deployed-commit").read_text().strip() == head
 
 
@@ -193,7 +194,7 @@ def test_autoupdate_retries_after_failed_install(host):
     (app / "FAIL_INSTALL").unlink()
     result = autoupdate(env)
     assert result.returncode == 0, result.stderr
-    assert install_runs(app) == 2
+    assert install_runs(app) == [*DEPLOYED_PACKAGES, "paternologia"]
     assert (app / "deployed-commit").read_text().strip() == origin.git(
         "rev-parse", "HEAD"
     )
@@ -206,3 +207,36 @@ def test_autoupdate_replaces_existing_non_git_src(host):
     assert result.returncode == 0, result.stderr
     assert (app / "src" / ".git").is_dir()
     assert not (app / "src" / "packages" / "stale.txt").exists()
+
+
+def test_autoupdate_installs_only_changed_packages(host):
+    app, origin, env = host
+    autoupdate(env)
+    origin.commit("packages/launchpad-rc600/assign.toml", "x = 1\n")
+    assert autoupdate(env).returncode == 0
+    origin.commit("packages/common/common.txt", "common v2\n")
+    assert autoupdate(env).returncode == 0
+    origin.commit("packages/other/other.txt", "v2\n")
+    result = autoupdate(env)
+    assert result.returncode == 0, result.stderr
+    assert install_runs(app) == [
+        *DEPLOYED_PACKAGES,
+        "launchpad-rc600",
+        "paternologia",
+    ]
+    assert (app / "deployed-commit").read_text().strip() == origin.git(
+        "rev-parse", "HEAD"
+    )
+
+
+def test_autoupdate_extends_sparse_checkout_of_existing_clone(host):
+    app, _, env = host
+    autoupdate(env)
+    src = app / "src"
+    run(["git", "-C", str(src), "sparse-checkout", "set", "packages/paternologia"])
+    assert not (src / "packages" / "launchpad-rc600").exists()
+    (app / "deployed-commit").unlink()
+    result = autoupdate(env)
+    assert result.returncode == 0, result.stderr
+    assert (src / "packages" / "launchpad-rc600" / "deploy").is_dir()
+    assert (src / "packages" / "common" / "common.txt").exists()

@@ -52,6 +52,16 @@ Options: `--config PATH` (default `assign.toml`) for both programs; `--launchpad
 - A port that disappears while `lp-rc600` runs is not handled. Restart `lp-rc600` after a simulator restart or a Launchpad reconnect.
 - For the real RC-600: `uv run lp-rc600 --out "RC-600 MIDI"` (port `RC-600 MIDI 1`; the name part "RC-600" alone also matches "RC-600 SIM").
 
+## Run on the live host (auto-deploy)
+
+On the host that runs the paternologia auto-deploy (lubudu), `lp-rc600 --out "RC-600 MIDI"` starts at boot and restarts when it exits.
+
+- The paternologia cron job `autoupdate.sh` checks `master` every 2 minutes. It runs `deploy/remote/install.sh` only when a commit changes `packages/launchpad-rc600`.
+- `install.sh` installs the package into `~/launchpad-rc600/venv` (system Python, because no i686 Python 3.12+ build is available from uv), adds an `@reboot` cron entry for `run.sh`, and restarts `lp-rc600`.
+- **Each restart sends the startup state (levels 71, FX off) to the RC-600.** Thus, do not push changes to this package to `master` while you play.
+- `run.sh` restarts `lp-rc600` 5 s after it exits. If the Launchpad or the RC-600 is not connected, it tries again every 5 s.
+- Log: `~/launchpad-rc600/lp-rc600.log`.
+
 ## ASSIGN sheet for the real RC-600
 
 Set `SYSTEM → MIDI → RX CH CTL = 13`. Slots 1–4 are Pacer (CC 1–4), do not change them. Slots 15–16 are free.

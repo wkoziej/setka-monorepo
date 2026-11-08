@@ -115,6 +115,8 @@ trzyma w `~/paternologia/src` sparse clone repo z GitHuba (`packages/common` +
 Commit zapisuje się dopiero po udanej instalacji, więc nieudany deploy powtarza się
 w kolejnym cyklu. Log: `~/paternologia/autoupdate.log`. Ręczny `deploy.sh` nadal działa
 (np. do testu niewypchniętego kodu); następna zmiana na `master` nadpisze ten kod.
+Ten sam cron wdraża `launchpad-rc600` (`packages/launchpad-rc600/deploy/remote/`);
+każdy pakiet instaluje się tylko wtedy, gdy commit zmienia jego kod (paternologia: także `common`).
 
 ### Zdrowie i replug
 
