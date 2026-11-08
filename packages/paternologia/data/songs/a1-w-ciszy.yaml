@@ -9,15 +9,6 @@ song:
 pacer:
 - name: Uruchomienie beatów i gotowości nagrywania. M:S gra na Freaku. Nagrywamy akustyka
   actions:
-  - device: boss
-    type: cc
-    value: 127
-    cc: 1
-    label: Track 1 Rec/Play
-    bank_lsb: 0
-    bank_msb: 0
-    note: null
-    velocity: null
   - device: start_stop
     type: cc
     value: 127
@@ -29,15 +20,6 @@ pacer:
     velocity: null
 - name: Zakończ nagranie gitary
   actions:
-  - device: boss
-    type: cc
-    value: 127
-    cc: 1
-    label: null
-    bank_lsb: 0
-    bank_msb: 0
-    note: null
-    velocity: null
   - device: ms
     type: pattern
     value: a02
@@ -67,15 +49,6 @@ pacer:
     bank_msb: 0
     note: null
     velocity: null
-  - device: boss
-    type: cc
-    value: 127
-    cc: 2
-    label: Track 2 Rec/Play
-    bank_lsb: 0
-    bank_msb: 0
-    note: null
-    velocity: null
   - device: start_stop
     type: cc
     value: 127
@@ -87,15 +60,6 @@ pacer:
     velocity: null
 - name: zakoncz nagrywanie basu
   actions:
-  - device: boss
-    type: cc
-    value: 127
-    cc: 2
-    label: null
-    bank_lsb: 0
-    bank_msb: 0
-    note: null
-    velocity: null
   - device: ms
     type: pattern
     value: a04
