@@ -1,15 +1,18 @@
 # ABOUTME: Unit tests for YAML storage layer.
 # ABOUTME: Tests reading/writing devices and songs to YAML files.
 
+import os
 import tempfile
 from datetime import date
 
 import pytest
+import yaml
 
 from paternologia.models import (
     Action,
     ActionType,
     Device,
+    ObsConfig,
     PacerButton,
     PacerConfig,
     Song,
@@ -320,3 +323,170 @@ class TestPacerConfigStorage:
 
         loaded = temp_storage.get_pacer_config()
         assert loaded.amidi_timeout_seconds == 5
+
+
+@pytest.fixture
+def parse_calls(monkeypatch):
+    """Counts real YAML parser calls made by Storage (wraps, does not replace, safe_load)."""
+    from paternologia import storage as storage_module
+
+    calls: list[object] = []
+    real_safe_load = storage_module.yaml.safe_load
+
+    def counting_safe_load(stream):
+        calls.append(stream)
+        return real_safe_load(stream)
+
+    monkeypatch.setattr(storage_module.yaml, "safe_load", counting_safe_load)
+    return calls
+
+
+def _write_externally(path, text: str) -> None:
+    """Simulates an external editor: rewrites the file and moves its mtime forward."""
+    before = path.stat().st_mtime_ns
+    path.write_text(text, encoding="utf-8")
+    os.utime(path, ns=(before + 1_000_000_000, before + 1_000_000_000))
+
+
+class TestYamlCache:
+    """Parsed YAML is reused until the file changes on disk or is written by Storage."""
+
+    def test_get_songs_parses_each_file_once(
+        self, temp_storage, sample_song, parse_calls
+    ):
+        temp_storage.save_song(sample_song)
+        temp_storage.save_songs_order(["w-ciszy"])
+
+        first = temp_storage.get_songs()
+        calls_after_first = len(parse_calls)
+        second = temp_storage.get_songs()
+
+        assert calls_after_first == 2  # song file + songs_order.yaml
+        assert len(parse_calls) == calls_after_first
+        assert second == first
+
+    def test_config_files_parsed_once(self, temp_storage, sample_devices, parse_calls):
+        temp_storage.save_devices(sample_devices)
+        temp_storage.save_pacer_config(PacerConfig(device_name="PACER"))
+        (temp_storage.data_dir / "obs.yaml").write_text(
+            "enabled: false\n", encoding="utf-8"
+        )
+
+        for _ in range(2):
+            temp_storage.get_devices()
+            temp_storage.get_pacer_config()
+            temp_storage.get_obs_config()
+
+        assert len(parse_calls) == 3
+
+    def test_external_change_is_visible(self, temp_storage, sample_song):
+        temp_storage.save_song(sample_song)
+        assert temp_storage.get_song("w-ciszy").song.name == "W ciszy"
+
+        song_file = temp_storage.songs_dir / "w-ciszy.yaml"
+        text = song_file.read_text(encoding="utf-8")
+        _write_externally(song_file, text.replace("name: W ciszy", "name: Po burzy"))
+
+        assert temp_storage.get_song("w-ciszy").song.name == "Po burzy"
+
+    def test_save_song_invalidates_even_with_same_mtime_and_size(
+        self, temp_storage, sample_song
+    ):
+        temp_storage.save_song(sample_song)
+        song_file = temp_storage.songs_dir / "w-ciszy.yaml"
+        before = song_file.stat()
+        assert temp_storage.get_song("w-ciszy").song.name == "W ciszy"
+
+        sample_song.song.name = "W cisza"  # same length -> same file size
+        temp_storage.save_song(sample_song)
+        os.utime(song_file, ns=(before.st_atime_ns, before.st_mtime_ns))
+        assert song_file.stat().st_size == before.st_size
+
+        assert temp_storage.get_song("w-ciszy").song.name == "W cisza"
+
+    def test_save_devices_invalidates(self, temp_storage, sample_devices):
+        temp_storage.save_devices(sample_devices)
+        assert len(temp_storage.get_devices()) == 3
+
+        temp_storage.save_devices(sample_devices[:1])
+
+        assert [d.id for d in temp_storage.get_devices()] == ["boss"]
+
+    def test_save_songs_order_invalidates(self, temp_storage):
+        temp_storage.save_songs_order(["a", "b"])
+        assert temp_storage.get_songs_order() == ["a", "b"]
+
+        temp_storage.save_songs_order(["b", "a"])
+
+        assert temp_storage.get_songs_order() == ["b", "a"]
+
+    def test_save_pacer_config_invalidates(self, temp_storage):
+        temp_storage.save_pacer_config(PacerConfig(device_name="PACER"))
+        assert temp_storage.get_pacer_config().device_name == "PACER"
+
+        temp_storage.save_pacer_config(PacerConfig(device_name="RC-600"))
+
+        assert temp_storage.get_pacer_config().device_name == "RC-600"
+
+    def test_delete_song_is_not_served_from_cache(self, temp_storage, sample_song):
+        temp_storage.save_song(sample_song)
+        assert temp_storage.get_song("w-ciszy") is not None
+
+        temp_storage.delete_song("w-ciszy")
+
+        assert temp_storage.get_song("w-ciszy") is None
+        assert temp_storage.get_songs() == []
+
+    def test_externally_removed_song_is_not_served(self, temp_storage, sample_song):
+        temp_storage.save_song(sample_song)
+        assert len(temp_storage.get_songs()) == 1
+
+        (temp_storage.songs_dir / "w-ciszy.yaml").unlink()
+
+        assert temp_storage.get_song("w-ciszy") is None
+        assert temp_storage.get_songs() == []
+
+    def test_mutating_returned_song_does_not_change_cache(
+        self, temp_storage, sample_song
+    ):
+        temp_storage.save_song(sample_song)
+        button_count = len(sample_song.pacer)
+        song = temp_storage.get_song("w-ciszy")
+        song.song.name = "Zmienione"
+        song.pacer.clear()
+
+        fresh = temp_storage.get_song("w-ciszy")
+
+        assert fresh.song.name == "W ciszy"
+        assert len(fresh.pacer) == button_count
+
+    def test_mutating_returned_order_does_not_change_cache(self, temp_storage):
+        temp_storage.save_songs_order(["a"])
+        temp_storage.get_songs_order().append("b")
+
+        assert temp_storage.get_songs_order() == ["a"]
+
+    def test_empty_files_keep_defaults(self, temp_storage):
+        temp_storage._ensure_dirs()
+        for name in ("devices.yaml", "pacer.yaml", "obs.yaml", "songs_order.yaml"):
+            (temp_storage.data_dir / name).write_text("{}\n", encoding="utf-8")
+        (temp_storage.songs_dir / "pusty.yaml").write_text("{}\n", encoding="utf-8")
+
+        for _ in range(2):
+            assert temp_storage.get_devices() == []
+            assert temp_storage.get_pacer_config() is None
+            assert temp_storage.get_obs_config() == ObsConfig()
+            assert temp_storage.get_songs_order() == []
+            assert temp_storage.get_song("pusty") is None
+
+    def test_invalid_yaml_is_not_cached(self, temp_storage, sample_devices):
+        temp_storage.save_devices(sample_devices)
+        devices_file = temp_storage.devices_file
+        good = devices_file.read_text(encoding="utf-8")
+        _write_externally(devices_file, "devices: [\n")
+
+        with pytest.raises(yaml.YAMLError):
+            temp_storage.get_devices()
+
+        _write_externally(devices_file, good)
+        assert len(temp_storage.get_devices()) == 3
