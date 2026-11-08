@@ -99,12 +99,22 @@ Dla starszych maszyn (np. 32-bitowy laptop z Ubuntu 14.04/upstart) — z checkou
 packages/paternologia/deploy/remote/deploy.sh <ssh-host>
 ```
 
-Skrypt synchronizuje kod do `~/paternologia/src`, przy pierwszym wdrożeniu kopiuje
-`data/` do `~/paternologia/data` (kolejne wdrożenia **nie** nadpisują danych na hoście),
-instaluje `uv` + Python 3.11 (`python-build-standalone` nie ma nowszego dla i686)
-i (re)startuje aplikację. Start po reboocie: wpis `@reboot` w crontabie; `run.sh`
-podnosi uvicorn po crashu (~2 s). Nasłuch: `0.0.0.0:8000` (zmiana przez
-`PATERNOLOGIA_HOST` / `PATERNOLOGIA_PORT`), log: `~/paternologia/paternologia.log`.
+Skrypt synchronizuje kod do `~/paternologia/src`, instaluje `uv` + Python 3.11
+(`python-build-standalone` nie ma nowszego dla i686) i (re)startuje aplikację.
+Dane: **repo jest źródłem prawdy** — każde wdrożenie nadpisuje `~/paternologia/data`
+zawartością `data/` z repo (`sync-data.sh`; edycje utworów zrobione na hoście giną).
+Wyjątek: `obs.yaml` i `pacer.yaml` są specyficzne dla hosta — kopiowane tylko, gdy ich brak.
+Start po reboocie: wpis `@reboot` w crontabie; `run.sh` podnosi uvicorn po crashu (~2 s).
+Nasłuch: `0.0.0.0:8000` (zmiana przez `PATERNOLOGIA_HOST` / `PATERNOLOGIA_PORT`),
+log: `~/paternologia/paternologia.log`.
+
+**Auto-deploy z `master`:** `install.sh` dodaje cron `*/2 * * * * autoupdate.sh`. Skrypt
+trzyma w `~/paternologia/src` sparse clone repo z GitHuba (`packages/common` +
+`packages/paternologia`), robi `git fetch` i gdy `origin/master` różni się od
+`~/paternologia/deployed-commit`, resetuje kod i uruchamia `install.sh` (dane + restart).
+Commit zapisuje się dopiero po udanej instalacji, więc nieudany deploy powtarza się
+w kolejnym cyklu. Log: `~/paternologia/autoupdate.log`. Ręczny `deploy.sh` nadal działa
+(np. do testu niewypchniętego kodu); następna zmiana na `master` nadpisze ten kod.
 
 ### Zdrowie i replug
 

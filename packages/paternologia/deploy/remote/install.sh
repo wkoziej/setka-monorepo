@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ABOUTME: Runs on the target host: installs uv, Python 3.11 and paternologia into ~/paternologia.
-# ABOUTME: Registers an @reboot cron entry and (re)starts the app via run.sh; safe to re-run.
+# ABOUTME: Syncs data from the repo, registers cron entries (run.sh, autoupdate.sh), (re)starts the app.
 set -euo pipefail
 
 APP=$HOME/paternologia
@@ -39,13 +39,19 @@ CFLAGS=-std=gnu99 "$UV" pip install -q -p "$APP/venv" \
     --override "$HERE/overrides.txt" \
     -e "$SRC/common" -e "$SRC/paternologia"
 
-install -m 755 "$HERE/run.sh" "$APP/bin/run.sh"
+bash "$HERE/sync-data.sh" "$SRC/paternologia/data" "$APP/data"
 
-CRON_LINE="@reboot $APP/bin/run.sh"
-if ! crontab -l 2>/dev/null | grep -qxF "$CRON_LINE"; then
-    (crontab -l 2>/dev/null || true; echo "$CRON_LINE") | crontab -
-    echo "Cron: added '$CRON_LINE'"
-fi
+install -m 755 "$HERE/run.sh" "$APP/bin/run.sh"
+install -m 755 "$HERE/autoupdate.sh" "$APP/bin/autoupdate.sh"
+
+for CRON_LINE in \
+    "@reboot $APP/bin/run.sh" \
+    "*/2 * * * * $APP/bin/autoupdate.sh >> $APP/autoupdate.log 2>&1"; do
+    if ! crontab -l 2>/dev/null | grep -qxF "$CRON_LINE"; then
+        (crontab -l 2>/dev/null || true; echo "$CRON_LINE") | crontab -
+        echo "Cron: added '$CRON_LINE'"
+    fi
+done
 
 # run.sh restarts uvicorn when it exits, so killing it reloads the new code.
 if pgrep -f "$APP/venv/bin/python -m uvicorn" >/dev/null; then
