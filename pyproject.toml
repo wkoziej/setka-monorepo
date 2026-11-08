@@ -65,4 +65,5 @@ markers = [
     "audio: marks tests that require audio processing",
     "manual: marks tests that require manual intervention",
     "asyncio: marks tests that use asyncio",
+    "slow: marks slow-running tests",
 ]
