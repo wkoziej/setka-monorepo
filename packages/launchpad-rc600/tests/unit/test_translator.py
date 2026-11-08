@@ -83,13 +83,13 @@ def test_cc_for_level_maps_back_to_level_with_config_rule(config, level):
 
 
 def test_start_state(translator):
-    assert translator.levels == [71] * 6
+    assert translator.levels == [57] * 6
     assert translator.fx == [False] * 4
 
 
 def test_startup_sends_start_state_and_full_led_frame(translator):
     out = translator.startup()
-    assert out.rc600 == [cc(64 + n, 90) for n in range(6)] + [
+    assert out.rc600 == [cc(64 + n, 73) for n in range(6)] + [
         cc(70 + n, 0) for n in range(4)
     ]
     assert all(m.channel == 12 for m in out.rc600)
@@ -97,8 +97,8 @@ def test_startup_sends_start_state_and_full_led_frame(translator):
     by_pad = leds_by_pad(out.leds)
     for col in range(6):
         assert (
-            column(out.leds, col) == [OFF] * 2 + [FADER_ON] * 6
-        )  # start level 71 = row 2
+            column(out.leds, col) == [OFF] * 3 + [FADER_ON] * 5
+        )  # start level 57 = row 3
     for pad in [(0, 6), (0, 7), (1, 6), (1, 7)]:
         assert by_pad[pad] == FX_OFF
     unused = [(r, c) for r in range(2, 8) for c in (6, 7)]
@@ -190,7 +190,7 @@ def test_note_off_is_ignored(translator):
         mido.Message("note_off", channel=0, note=pad_to_note(4, 2), velocity=0)
     )
     assert_ignored(out, "note off")
-    assert translator.levels == [71] * 6
+    assert translator.levels == [57] * 6
 
 
 def test_note_on_velocity_0_is_note_off(translator):
@@ -198,7 +198,7 @@ def test_note_on_velocity_0_is_note_off(translator):
         mido.Message("note_on", channel=0, note=pad_to_note(4, 2), velocity=0)
     )
     assert_ignored(out, "note off")
-    assert translator.levels == [71] * 6
+    assert translator.levels == [57] * 6
 
 
 @pytest.mark.parametrize("note", [8, 120])
@@ -231,7 +231,7 @@ def test_wrong_channel_is_ignored(translator):
         mido.Message("note_on", channel=1, note=pad_to_note(4, 2), velocity=127)
     )
     assert_ignored(out, "channel 2, expected 1")
-    assert translator.levels == [71] * 6
+    assert translator.levels == [57] * 6
 
 
 def test_message_without_channel_is_ignored(translator):

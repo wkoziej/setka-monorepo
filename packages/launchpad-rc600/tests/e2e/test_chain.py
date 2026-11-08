@@ -62,7 +62,7 @@ def chain(start_app):
 def test_startup_brings_unknown_simulator_to_start_state(chain):
     sim, _, _ = chain
     for target in TRACKS:
-        sim.wait_for(f"{target} ? → 71")
+        sim.wait_for(f"{target} ? → 57")
     for target in FX:
         sim.wait_for(f"{target} ? → off")
 
@@ -71,11 +71,11 @@ def test_fader_presses_set_exact_levels(chain):
     sim, _, pads = chain
     sim.wait_for("T FX D ? → off")
     press(pads, 7, 0)
-    sim.wait_for("TRK1 LEVEL 71 → 0")
+    sim.wait_for("TRK1 LEVEL 57 → 0")
     press(pads, 4, 2)
-    sim.wait_for("TRK3 LEVEL 71 → 43")
+    sim.wait_for("TRK3 LEVEL 57 → 43")
     press(pads, 0, 5)
-    sim.wait_for("TRK6 LEVEL 71 → 100")
+    sim.wait_for("TRK6 LEVEL 57 → 100")
 
 
 def test_fx_pad_twice_turns_fx_on_then_off(chain):
@@ -94,4 +94,4 @@ def test_unused_pad_changes_nothing(chain):
     translator.wait_for("ignored: pad (5,6)")
     press(pads, 7, 0)  # a marker press: the next simulator line must be this one
     line = sim.wait_for("BC")
-    assert "TRK1 LEVEL 71 → 0" in line
+    assert "TRK1 LEVEL 57 → 0" in line
