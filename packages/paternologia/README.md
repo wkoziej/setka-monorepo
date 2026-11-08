@@ -153,6 +153,8 @@ tests/               # pytest (modele, storage, API, E2E, MIDI, bridge, health, 
 
 Patrz `CLAUDE.md` (sekcja "Data Format") oraz `SPEC.md`.
 
+`Storage` trzyma w pamięci sparsowane pliki YAML i parsuje plik ponownie dopiero, gdy zmieni się jego czas modyfikacji lub rozmiar. Ręczna edycja plików w `data/` jest więc widoczna przy następnym żądaniu, bez restartu serwera.
+
 ## Specyfikacje
 
 - `SPEC.md` - ogólna specyfikacja produktu

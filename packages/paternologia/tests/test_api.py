@@ -1,6 +1,7 @@
 # ABOUTME: Integration tests for Paternologia API endpoints.
 # ABOUTME: Tests songs CRUD and devices endpoints using FastAPI TestClient.
 
+import os
 import tempfile
 from pathlib import Path
 
@@ -91,6 +92,27 @@ class TestIndexPage:
         response = client.get("/")
         assert response.status_code == 200
         assert "Test Song" in response.text
+
+    def test_index_shows_external_file_edit(self, client, sample_devices, test_storage):
+        """A song file edited on disk by hand is shown without restarting the server."""
+        from paternologia.models import Song, SongMetadata
+
+        test_storage.save_song(Song(song=SongMetadata(id="test", name="Test Song")))
+        assert "Test Song" in client.get("/").text
+
+        song_file = test_storage.songs_dir / "test.yaml"
+        before = song_file.stat().st_mtime_ns
+        song_file.write_text(
+            song_file.read_text(encoding="utf-8").replace(
+                "name: Test Song", "name: Edited By Hand"
+            ),
+            encoding="utf-8",
+        )
+        os.utime(song_file, ns=(before + 1_000_000_000, before + 1_000_000_000))
+
+        response = client.get("/")
+        assert "Edited By Hand" in response.text
+        assert "Test Song" not in response.text
 
 
 class TestDevicesEndpoints:
@@ -184,6 +206,31 @@ class TestSongCRUD:
         song = test_storage.get_song("new-song")
         assert song is not None
         assert song.song.name == "New Song"
+
+    def test_update_song_rebuilds_midi_index_from_saved_data(
+        self, client, sample_devices, test_storage
+    ):
+        """After PUT, the live MIDI index sees the preset just saved (not a cached copy)."""
+        from paternologia.models import Song, SongMetadata
+
+        test_storage.save_song(Song(song=SongMetadata(id="idx", name="Index")))
+        client.get("/")  # warm the YAML cache with the preset-less version
+        boss = test_storage.get_device("boss")
+
+        response = client.put(
+            "/songs/idx",
+            data={
+                "song_name": "Index",
+                "button_0_name": "Start",
+                "button_0_action_0_device": "boss",
+                "button_0_action_0_type": "preset",
+                "button_0_action_0_value": "7",
+            },
+            follow_redirects=False,
+        )
+
+        assert response.status_code == 303
+        assert client.app.state.midi_index.lookup(boss.midi_channel - 1, 7) == "idx"
 
     def test_create_song_missing_fields(self, client, sample_devices):
         """Create fails without required fields."""
