@@ -13,6 +13,7 @@ devices:
     midi_channel: 14
     action_types:
       - pattern
+      - note
   - id: freak
     name: MicroFreak
     description: Synthesizer
