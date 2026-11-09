@@ -22,7 +22,7 @@ pacer:
   actions:
   - device: ms
     type: pattern
-    value: e10
+    value: E10
     cc: null
     label: null
     bank_lsb: 0
@@ -51,7 +51,7 @@ pacer:
   actions:
   - device: ms
     type: pattern
-    value: e11
+    value: E11
     cc: null
     label: null
     bank_lsb: 0
@@ -76,6 +76,15 @@ pacer:
     bank_msb: 0
     note: null
     velocity: null
+  - device: gp50
+    type: preset
+    value: 56
+    cc: null
+    label: null
+    bank_lsb: 0
+    bank_msb: 0
+    note: null
+    velocity: null
 - name: zakoncz nagrywanie gitary
   actions:
   - device: boss
@@ -89,7 +98,16 @@ pacer:
     velocity: null
   - device: ms
     type: pattern
-    value: e12
+    value: E12
+    cc: null
+    label: null
+    bank_lsb: 0
+    bank_msb: 0
+    note: null
+    velocity: null
+  - device: modrex
+    type: preset
+    value: 99
     cc: null
     label: null
     bank_lsb: 0
@@ -130,7 +148,7 @@ on_load:
   velocity: null
 - device: ms
   type: pattern
-  value: e9
+  value: E09
   cc: null
   label: null
   bank_lsb: 0

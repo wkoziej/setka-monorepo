@@ -38,3 +38,21 @@ on_load:
   bank_msb: 0
   note: null
   velocity: null
+- device: gp50
+  type: preset
+  value: 56
+  cc: null
+  label: null
+  bank_lsb: 0
+  bank_msb: 0
+  note: null
+  velocity: null
+- device: modrex
+  type: preset
+  value: 7
+  cc: null
+  label: null
+  bank_lsb: 0
+  bank_msb: 0
+  note: null
+  velocity: null

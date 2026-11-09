@@ -58,6 +58,15 @@ pacer:
     bank_msb: 0
     note: null
     velocity: null
+  - device: gp50
+    type: preset
+    value: 55
+    cc: null
+    label: null
+    bank_lsb: 0
+    bank_msb: 0
+    note: null
+    velocity: null
 - name: Zmień drum i zakoncz nagrywanie
   actions:
   - device: boss
@@ -72,6 +81,15 @@ pacer:
   - device: ms
     type: pattern
     value: C04
+    cc: null
+    label: null
+    bank_lsb: 0
+    bank_msb: 0
+    note: null
+    velocity: null
+  - device: gp50
+    type: preset
+    value: 56
     cc: null
     label: null
     bank_lsb: 0
@@ -133,6 +151,24 @@ on_load:
   value: C01
   cc: null
   label: nabij
+  bank_lsb: 0
+  bank_msb: 0
+  note: null
+  velocity: null
+- device: modrex
+  type: preset
+  value: 100
+  cc: null
+  label: null
+  bank_lsb: 0
+  bank_msb: 0
+  note: null
+  velocity: null
+- device: gp50
+  type: preset
+  value: 59
+  cc: null
+  label: null
   bank_lsb: 0
   bank_msb: 0
   note: null

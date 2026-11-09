@@ -18,11 +18,20 @@ pacer:
     bank_msb: 0
     note: null
     velocity: null
+  - device: boss
+    type: cc
+    value: 1
+    cc: 1
+    label: null
+    bank_lsb: 0
+    bank_msb: 0
+    note: null
+    velocity: null
 - name: Zakończ nagranie gitary
   actions:
   - device: ms
     type: pattern
-    value: a02
+    value: A02
     cc: null
     label: null
     bank_lsb: 0
@@ -32,6 +41,24 @@ pacer:
   - device: start_stop
     type: cc
     value: 127
+    cc: 2
+    label: null
+    bank_lsb: 0
+    bank_msb: 0
+    note: null
+    velocity: null
+  - device: modrex
+    type: preset
+    value: 100
+    cc: null
+    label: null
+    bank_lsb: 0
+    bank_msb: 0
+    note: null
+    velocity: null
+  - device: boss
+    type: cc
+    value: 1
     cc: 2
     label: null
     bank_lsb: 0
@@ -58,11 +85,20 @@ pacer:
     bank_msb: 0
     note: null
     velocity: null
+  - device: gp50
+    type: preset
+    value: 56
+    cc: null
+    label: null
+    bank_lsb: 0
+    bank_msb: 0
+    note: null
+    velocity: null
 - name: zakoncz nagrywanie basu
   actions:
   - device: ms
     type: pattern
-    value: a04
+    value: A04
     cc: null
     label: null
     bank_lsb: 0
@@ -73,6 +109,15 @@ pacer:
     type: cc
     value: 127
     cc: 4
+    label: null
+    bank_lsb: 0
+    bank_msb: 0
+    note: null
+    velocity: null
+  - device: gp50
+    type: preset
+    value: 59
+    cc: null
     label: null
     bank_lsb: 0
     bank_msb: 0
@@ -120,7 +165,7 @@ pacer:
     velocity: null
   - device: ms
     type: pattern
-    value: a03
+    value: A03
     cc: null
     label: null
     bank_lsb: 0

@@ -58,7 +58,16 @@ pacer:
     bank_msb: 0
     note: null
     velocity: null
-- name: zakoncz nagrywanie basu
+  - device: gp50
+    type: preset
+    value: 55
+    cc: null
+    label: null
+    bank_lsb: 0
+    bank_msb: 0
+    note: null
+    velocity: null
+- name: zakoncz nagrywanie gitary
   actions:
   - device: boss
     type: cc
@@ -72,6 +81,15 @@ pacer:
   - device: ms
     type: pattern
     value: B04
+    cc: null
+    label: null
+    bank_lsb: 0
+    bank_msb: 0
+    note: null
+    velocity: null
+  - device: gp50
+    type: preset
+    value: 56
     cc: null
     label: null
     bank_lsb: 0
@@ -157,7 +175,7 @@ on_load:
   velocity: null
 - device: gp50
   type: preset
-  value: 57
+  value: 59
   cc: null
   label: null
   bank_lsb: 0
