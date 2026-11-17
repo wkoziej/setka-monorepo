@@ -15,6 +15,7 @@ from paternologia.models import (
     Action,
     ActionType,
     Device,
+    Footswitch,
     PacerButton,
     Song,
     SongMetadata,
@@ -166,3 +167,42 @@ class TestLiveSongDisplay:
         assert "preset 1" in html
         assert "preset 0" not in html
         assert "pattern D01" in html
+
+
+class TestLiveFootswitches:
+    def _save(self, test_storage, footswitches):
+        test_storage.save_devices(
+            [Device(id="ms", name="M:S", action_types=[ActionType.PATTERN])]
+        )
+        test_storage.save_song(
+            Song(
+                song=SongMetadata(id="fs-live", name="FS Live"),
+                footswitches=footswitches,
+            )
+        )
+
+    def test_live_partial_shows_footswitch_with_actions(self, client, test_storage):
+        self._save(
+            test_storage,
+            [
+                Footswitch(
+                    fs=3,
+                    name="Zwrotka",
+                    actions=[Action(device="ms", type=ActionType.PATTERN, value="D07")],
+                )
+            ],
+        )
+
+        html = client.get("/live/song/fs-live").text
+
+        assert "FS3 Zwrotka" in html
+        assert "D07" in html
+
+    def test_live_partial_without_footswitches_has_no_fs_row(
+        self, client, test_storage
+    ):
+        self._save(test_storage, [])
+
+        html = client.get("/live/song/fs-live").text
+
+        assert "footswitch-row" not in html

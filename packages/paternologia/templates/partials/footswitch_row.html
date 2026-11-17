@@ -1,0 +1,21 @@
+{# ABOUTME: Rząd kart używanych footswitchy Pacera (FS1-FS4) z podsumowaniem akcji. #}
+{# ABOUTME: Wspólny dla widoku utworu i widoku live; brak footswitchy = brak rzędu. #}
+{% if song.footswitches %}
+<div class="footswitch-row mt-2" style="display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 0.5rem; width: 100%;">
+    {% for footswitch in song.footswitches | sort(attribute='fs') %}
+    <div class="bg-white rounded-lg shadow overflow-hidden pacer-btn">
+        <div class="bg-teal-600 text-white px-3 py-2 font-bold text-center text-sm">
+            FS{{ footswitch.fs }} {{ footswitch.name }}
+        </div>
+        <div class="p-3 action-list space-y-3">
+            {% for action in footswitch.actions %}
+            {% include "partials/action_summary.html" %}
+            {% endfor %}
+            {% if not footswitch.actions %}
+            <p class="text-gray-400 italic text-sm">Brak akcji</p>
+            {% endif %}
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}

@@ -93,6 +93,20 @@ class TestIndexPage:
         assert response.status_code == 200
         assert "Test Song" in response.text
 
+    def test_index_card_counts_footswitches(self, client, sample_devices, test_storage):
+        from paternologia.models import Footswitch, Song, SongMetadata
+
+        test_storage.save_song(
+            Song(
+                song=SongMetadata(id="fs-card", name="FS Card"),
+                footswitches=[Footswitch(fs=1, name="A"), Footswitch(fs=3, name="C")],
+            )
+        )
+
+        response = client.get("/")
+
+        assert "2 FS" in response.text
+
     def test_index_shows_external_file_edit(self, client, sample_devices, test_storage):
         """A song file edited on disk by hand is shown without restarting the server."""
         from paternologia.models import Song, SongMetadata
@@ -157,6 +171,31 @@ class TestSongView:
         assert response.status_code == 200
         assert "Test Song" in response.text
         assert "Test notes" in response.text
+
+    def test_view_song_shows_footswitches(self, client, sample_devices, test_storage):
+        from paternologia.models import Footswitch, Song, SongMetadata
+
+        test_storage.save_song(
+            Song(
+                song=SongMetadata(id="fs-view", name="FS View"),
+                footswitches=[Footswitch(fs=1, name="Rec")],
+            )
+        )
+
+        response = client.get("/songs/fs-view")
+
+        assert "FS1 Rec" in response.text
+
+    def test_view_song_without_footswitches_has_no_fs_row(
+        self, client, sample_devices, test_storage
+    ):
+        from paternologia.models import Song, SongMetadata
+
+        test_storage.save_song(Song(song=SongMetadata(id="plain", name="Plain")))
+
+        response = client.get("/songs/plain")
+
+        assert "footswitch-row" not in response.text
 
 
 class TestSongEdit:

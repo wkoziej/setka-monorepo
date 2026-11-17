@@ -1,4 +1,4 @@
-{# ABOUTME: Live view partial: current song with its PACER buttons and actions. #}
+{# ABOUTME: Live view partial: current song with its PACER buttons, footswitches and actions. #}
 {# ABOUTME: Action summaries come from the shared action_summary partial. #}
 <div class="mb-4">
     <h2 class="text-2xl font-bold text-gray-800 uppercase">{{ song.song.name }}</h2>
@@ -31,3 +31,4 @@
     <p>Brak skonfigurowanych przycisków PACER</p>
 </div>
 {% endif %}
+{% include "partials/footswitch_row.html" %}

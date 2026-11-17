@@ -22,9 +22,10 @@
     {% if song.song.notes %}
     <p class="text-xs text-gray-500 mt-1 truncate" title="{{ song.song.notes }}">{{ song.song.notes }}</p>
     {% endif %}
-    {% if song.pacer %}
+    {% if song.pacer or song.footswitches %}
     <div class="mt-1 text-xs text-gray-400">
-        {{ song.pacer | length }} btn
+        {% if song.pacer %}{{ song.pacer | length }} btn{% endif %}
+        {% if song.footswitches %}{{ song.footswitches | length }} FS{% endif %}
     </div>
     {% endif %}
 </div>
