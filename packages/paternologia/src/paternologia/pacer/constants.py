@@ -14,6 +14,8 @@ TARGET_GLOBAL = 0x05
 
 # Control IDs (Object byte dla control steps/mode/LED)
 STOMPSWITCHES = {i: 0x0D + i for i in range(6)}  # SW1-SW6
+# Zewnętrzne footswitche FS1-FS4 (pacer-editor: CONTROL_FOOTSWITCH_1..4); bez LED
+FOOTSWITCHES = {n: 0x17 + n for n in range(1, 5)}
 
 # Special Object IDs
 CONTROL_NAME = 0x01  # Object ID dla nazwy presetu

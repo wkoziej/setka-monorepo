@@ -1,7 +1,7 @@
 # ABOUTME: Main export function for generating Pacer .syx files from songs.
-# ABOUTME: Concatenates SysEx messages for preset name, control steps and M CFG.
+# ABOUTME: Concatenates SysEx messages for preset name, SW/FS control steps and M CFG.
 
-from ..models import Device, PacerConfig, Song
+from ..models import Action, Device, PacerConfig, Song
 from . import constants as c
 from .mappings import (
     action_to_midi,
@@ -47,46 +47,16 @@ def export_song_to_syx(
         control_id = c.STOMPSWITCHES[btn_idx]
         button = song.pacer[btn_idx] if btn_idx < len(song.pacer) else None
 
-        # 2a. Control Mode (musi być przed steps!) - mode=0 = "all steps in one shot"
-        messages.append(builder.build_control_mode(control_id, mode=0))
-
-        # 2b. Zawsze konfiguruj wszystkie 6 kroków (czyszczenie niewykorzystanych)
-        for step_idx in range(1, 7):
-            if button and step_idx <= len(button.actions):
-                # Akcja istnieje - konfiguruj normalnie
-                action = button.actions[step_idx - 1]
-                msg_type, channel, data1, data2, data3 = action_to_midi(
-                    action,
-                    device_channel_map,
-                    cc_release_same_devices,
-                    preset_cc_devices,
-                )
-                messages.append(
-                    builder.build_control_step(
-                        control_id=control_id,
-                        step_index=step_idx,
-                        msg_type=msg_type,
-                        channel=channel,
-                        data1=data1,
-                        data2=data2,
-                        data3=data3,
-                        active=True,
-                    )
-                )
-            else:
-                # Brak akcji - wyczyść krok (MSG_CTRL_OFF, active=False)
-                messages.append(
-                    builder.build_control_step(
-                        control_id=control_id,
-                        step_index=step_idx,
-                        msg_type=c.MSG_CTRL_OFF,
-                        channel=0,
-                        data1=0,
-                        data2=0,
-                        data3=0,
-                        active=False,
-                    )
-                )
+        messages.extend(
+            _build_control_steps(
+                builder,
+                control_id,
+                button.actions if button else [],
+                device_channel_map,
+                cc_release_same_devices,
+                preset_cc_devices,
+            )
+        )
 
         # 2c. Konfiguracja LED dla WSZYSTKICH 6 stepów (pacer wymaga LED dla każdego stepu)
         has_actions = button and len(button.actions) > 0
@@ -111,7 +81,22 @@ def export_song_to_syx(
                     )
                 )
 
-    # 3. M CFG: wiadomości przy załadowaniu presetu. Zawsze wszystkie 16 wpisów,
+    # 3. Zewnętrzne footswitche FS1-FS4 (nieużywane wyczyszczone, bez LED)
+    footswitches = {f.fs: f for f in song.footswitches}
+    for fs_num, control_id in c.FOOTSWITCHES.items():
+        footswitch = footswitches.get(fs_num)
+        messages.extend(
+            _build_control_steps(
+                builder,
+                control_id,
+                footswitch.actions if footswitch else [],
+                device_channel_map,
+                cc_release_same_devices,
+                preset_cc_devices,
+            )
+        )
+
+    # 4. M CFG: wiadomości przy załadowaniu presetu. Zawsze wszystkie 16 wpisów,
     # nieużywane wyczyszczone — stan presetu w pełni określa YAML.
     config = pacer_config or PacerConfig()
     for entry_idx in range(1, c.MIDI_CONFIG_ENTRIES + 1):
@@ -131,3 +116,48 @@ def export_song_to_syx(
             messages.append(builder.build_empty_midi_config_entry(entry_idx))
 
     return b"".join(messages)
+
+
+def _build_control_steps(
+    builder: PacerSysExBuilder,
+    control_id: int,
+    actions: list[Action],
+    device_channel_map: dict[str, int],
+    cc_release_same_devices: set[str],
+    preset_cc_devices: dict[str, int],
+) -> list[bytes]:
+    """Ramki trybu i wszystkich 6 kroków kontrolki (SW lub FS).
+
+    Kroki bez akcji są czyszczone (MSG_CTRL_OFF, active=False), żeby stan
+    kontrolki w presecie w pełni określał YAML.
+    """
+    # Control Mode (musi być przed steps!) - mode=0 = "all steps in one shot"
+    messages = [builder.build_control_mode(control_id, mode=0)]
+
+    for step_idx in range(1, 7):
+        if step_idx <= len(actions):
+            # Akcja istnieje - konfiguruj normalnie
+            msg_type, channel, data1, data2, data3 = action_to_midi(
+                actions[step_idx - 1],
+                device_channel_map,
+                cc_release_same_devices,
+                preset_cc_devices,
+            )
+            active = True
+        else:
+            # Brak akcji - wyczyść krok
+            msg_type, channel, data1, data2, data3 = c.MSG_CTRL_OFF, 0, 0, 0, 0
+            active = False
+        messages.append(
+            builder.build_control_step(
+                control_id=control_id,
+                step_index=step_idx,
+                msg_type=msg_type,
+                channel=channel,
+                data1=data1,
+                data2=data2,
+                data3=data3,
+                active=active,
+            )
+        )
+    return messages

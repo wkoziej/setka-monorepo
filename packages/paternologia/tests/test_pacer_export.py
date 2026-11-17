@@ -7,6 +7,7 @@ from paternologia.models import (
     Action,
     ActionType,
     Device,
+    Footswitch,
     PacerButton,
     PacerConfig,
     Song,
@@ -73,9 +74,10 @@ class TestExportWithButtons:
         )
         syx = export_song_to_syx(song, devices, "A1")
 
-        # Message count: 1 name + 6 × (1 mode + 6 steps + 6 LED) + 16 M CFG = 95
+        # Message count: 1 name + 6 × (1 mode + 6 steps + 6 LED)
+        # + 4 FS × (1 mode + 6 steps) + 16 M CFG = 123
         f0_count = syx.count(bytes([c.SYSEX_START]))
-        assert f0_count == 95
+        assert f0_count == 123
 
     def test_export_multiple_actions(self, devices):
         """Export button with multiple actions."""
@@ -268,8 +270,9 @@ class TestExportLed:
 
         # Count F0 (message starts)
         f0_count = syx.count(bytes([c.SYSEX_START]))
-        # 1 name + 6 × (1 mode + 6 steps + 6 LED) + 16 M CFG = 95
-        assert f0_count == 95
+        # 1 name + 6 × (1 mode + 6 steps + 6 LED) + 4 FS × (1 mode + 6 steps)
+        # + 16 M CFG = 123
+        assert f0_count == 123
 
 
 def _frames(syx: bytes) -> list[bytes]:
@@ -363,3 +366,96 @@ class TestExportPresetViaCc:
         )
         assert expected_step in syx
         assert _midi_config_entries(syx)[1] == (5, c.MSG_LOAD_CC, 0, 12, 0)
+
+
+FOOTSWITCH_IDS = (0x18, 0x19, 0x1A, 0x1B)
+
+
+def _control_frames(syx: bytes, control_id: int) -> list[bytes]:
+    return [f for f in _frames(syx) if f[8] == control_id]
+
+
+def _step_values(frame: bytes) -> tuple[int, ...]:
+    """(channel, typ, d1, d2, d3, active) z ramki kroku."""
+    return tuple(frame[9:-2][2::4])
+
+
+class TestExportFootswitches:
+    """Eksport zewnętrznych footswitchy FS1-FS4 (kontrolki 0x18-0x1B)."""
+
+    def test_footswitch_ids_from_pacer_protocol(self):
+        assert c.FOOTSWITCHES == {1: 0x18, 2: 0x19, 3: 0x1A, 4: 0x1B}
+
+    def test_fs1_cc_action_programs_step_one(self, devices):
+        song = Song(
+            song=SongMetadata(id="test", name="T"),
+            footswitches=[
+                Footswitch(
+                    fs=1,
+                    name="Rec",
+                    actions=[Action(device="boss", type=ActionType.CC, cc=31, value=1)],
+                )
+            ],
+        )
+        frames = _control_frames(export_song_to_syx(song, devices, "A1"), 0x18)
+
+        mode, steps = frames[0], frames[1:]
+        assert mode[9] == c.CONTROL_MODE_ELEMENT and mode[11] == 0
+        assert len(steps) == 6
+        assert _step_values(steps[0]) == (0, c.MSG_SW_MIDI_CC, 31, 1, 0, 1)
+        for step in steps[1:]:
+            assert _step_values(step) == (0, c.MSG_CTRL_OFF, 0, 0, 0, 0)
+
+    def test_fs3_preset_on_preset_cc_device_is_cc(self):
+        devices = [Device(id="gp50", name="GP-50", midi_channel=5, preset_cc=0)]
+        song = Song(
+            song=SongMetadata(id="test", name="T"),
+            footswitches=[
+                Footswitch(
+                    fs=3,
+                    name="Patch",
+                    actions=[Action(device="gp50", type=ActionType.PRESET, value=10)],
+                )
+            ],
+        )
+        steps = _control_frames(export_song_to_syx(song, devices, "A1"), 0x1A)[1:]
+
+        channel, msg_type, data1, data2 = _step_values(steps[0])[:4]
+        assert (channel, msg_type, data1, data2) == (5, c.MSG_SW_MIDI_CC, 0, 10)
+
+    def test_song_without_footswitches_clears_all_four(self, devices):
+        song = Song(song=SongMetadata(id="test", name="T"))
+        syx = export_song_to_syx(song, devices, "A1")
+
+        for control_id in FOOTSWITCH_IDS:
+            frames = _control_frames(syx, control_id)
+            assert len(frames) == 7  # 1 mode + 6 kroków, bez LED
+            for step in frames[1:]:
+                assert _step_values(step) == (0, c.MSG_CTRL_OFF, 0, 0, 0, 0)
+
+    def test_footswitches_have_no_led_frames(self, devices):
+        song = Song(
+            song=SongMetadata(id="test", name="T"),
+            footswitches=[
+                Footswitch(
+                    fs=1,
+                    name="Rec",
+                    actions=[Action(device="boss", type=ActionType.CC, cc=31, value=1)],
+                )
+            ],
+        )
+        syx = export_song_to_syx(song, devices, "A1")
+
+        for control_id in FOOTSWITCH_IDS:
+            for f in _control_frames(syx, control_id):
+                assert not 0x40 <= f[9] <= 0x57
+
+    def test_footswitch_frames_between_buttons_and_midi_config(self, devices):
+        song = Song(song=SongMetadata(id="test", name="T"))
+        objects = [f[8] for f in _frames(export_song_to_syx(song, devices, "A1"))]
+
+        fs_positions = [i for i, o in enumerate(objects) if o in FOOTSWITCH_IDS]
+        last_sw = max(i for i, o in enumerate(objects) if o in c.STOMPSWITCHES.values())
+        first_cfg = objects.index(c.CONTROL_MIDI)
+        assert last_sw < min(fs_positions)
+        assert max(fs_positions) < first_cfg
