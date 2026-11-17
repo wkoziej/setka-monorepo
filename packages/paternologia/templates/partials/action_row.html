@@ -1,6 +1,6 @@
 {# ABOUTME: HTMX partial for single action row in PACER button. #}
-{# ABOUTME: Uses HTMX cascades for device → types → fields; context=on_load → pola on_load_{idx}_*. #}
-{% set field_prefix = 'on_load_' ~ action_idx if action_context == 'on_load' else 'button_' ~ button_idx ~ '_action_' ~ action_idx %}
+{# ABOUTME: Uses HTMX cascades for device → types → fields; context=on_load → pola on_load_{idx}_*; context=footswitch → fs_{n}_action_{idx}_*. #}
+{% set field_prefix = 'on_load_' ~ action_idx if action_context == 'on_load' else 'fs_' ~ button_idx ~ '_action_' ~ action_idx if action_context == 'footswitch' else 'button_' ~ button_idx ~ '_action_' ~ action_idx %}
 <div class="action-row grid grid-cols-[1fr_auto_1fr_auto] gap-2 items-center">
     <select name="{{ field_prefix }}_device" required
             class="border border-gray-300 rounded px-2 py-1 text-sm w-full"

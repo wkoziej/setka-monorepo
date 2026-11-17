@@ -1,0 +1,30 @@
+{# ABOUTME: Karta stałego slotu footswitcha Pacera (FS1-FS4) w formularzu utworu. #}
+{# ABOUTME: fs_num i footswitch (lub None) muszą być ustawione przed include. #}
+<div class="footswitch-card border border-gray-200 rounded-lg p-4">
+    <div class="flex items-center gap-3 mb-2">
+        <span class="bg-teal-600 text-white px-2 py-1 rounded text-sm font-bold">FS{{ fs_num }}</span>
+        <input type="text" name="fs_{{ fs_num }}_name"
+               value="{{ footswitch.name if footswitch else '' }}"
+               placeholder="Nazwa (pusta = nieużywany)"
+               class="flex-1 border border-gray-300 rounded px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500">
+    </div>
+
+    <div id="fs-actions-{{ fs_num }}" class="actions-container space-y-2">
+        {% if footswitch and footswitch.actions %}
+            {% with action_context = 'footswitch', button_idx = fs_num %}
+            {% for action in footswitch.actions %}
+            {% set action_idx = loop.index0 %}
+            {% include "partials/action_row.html" %}
+            {% endfor %}
+            {% endwith %}
+        {% endif %}
+    </div>
+
+    <button type="button"
+            hx-get="/partials/action-row"
+            hx-target="#fs-actions-{{ fs_num }}"
+            hx-swap="beforeend"
+            hx-vals="js:{context: 'footswitch', button_idx: {{ fs_num }}, action_idx: nextRowIdx('#fs-actions-{{ fs_num }}', /^fs_{{ fs_num }}_action_(\d+)_device$/)}"
+            hx-indicator="#loading-indicator"
+            class="mt-2 text-sm text-indigo-600 hover:text-indigo-800">+ Dodaj akcję</button>
+</div>

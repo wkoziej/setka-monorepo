@@ -1,6 +1,6 @@
 {# ABOUTME: HTMX partial for action input fields. #}
-{# ABOUTME: Rendered when action type changes (cascade); context=on_load → pola on_load_{idx}_*. #}
-{% if field_prefix is not defined %}{% set field_prefix = 'on_load_' ~ action_idx if action_context == 'on_load' else 'button_' ~ button_idx ~ '_action_' ~ action_idx %}{% endif %}
+{# ABOUTME: Rendered when action type changes (cascade); context=on_load → pola on_load_{idx}_*; context=footswitch → fs_{n}_action_{idx}_*. #}
+{% if field_prefix is not defined %}{% set field_prefix = 'on_load_' ~ action_idx if action_context == 'on_load' else 'fs_' ~ button_idx ~ '_action_' ~ action_idx if action_context == 'footswitch' else 'button_' ~ button_idx ~ '_action_' ~ action_idx %}{% endif %}
 {% if action_type == 'preset' %}
 <input type="number" name="{{ field_prefix }}_value"
        value="{{ to_display(action.value, device) if action else '' }}" placeholder="Preset #" required

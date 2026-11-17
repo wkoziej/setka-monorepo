@@ -1520,3 +1520,128 @@ class TestSongSavePreservesData:
 
         assert response.status_code == 303
         assert test_storage.get_song("old").song.created == date(2026, 3, 7)
+
+
+class TestSongFootswitchForm:
+    """Formularz utworu: stałe sloty footswitchy FS1-FS4 (pola fs_{n}_*)."""
+
+    def _base(self, **extra):
+        return {"song_name": "FS", "song_author": "", "song_notes": "", **extra}
+
+    def test_create_song_with_fs1_action(self, client, sample_devices, test_storage):
+        response = client.post(
+            "/songs",
+            data=self._base(
+                song_id="fs-one",
+                fs_1_name="Rec",
+                fs_1_action_0_device="boss",
+                fs_1_action_0_type="cc",
+                fs_1_action_0_cc="31",
+                fs_1_action_0_value="1",
+            ),
+            follow_redirects=False,
+        )
+
+        assert response.status_code == 303
+        song = test_storage.get_song("fs-one")
+        assert [(f.fs, f.name) for f in song.footswitches] == [(1, "Rec")]
+        action = song.footswitches[0].actions[0]
+        assert (action.device, action.type, action.cc, action.value) == (
+            "boss",
+            ActionType.CC,
+            31,
+            1,
+        )
+
+    def test_fs1_and_fs3_without_fs2(self, client, sample_devices, test_storage):
+        client.post(
+            "/songs",
+            data=self._base(song_id="fs-gap", fs_1_name="A", fs_3_name="C"),
+            follow_redirects=False,
+        )
+
+        song = test_storage.get_song("fs-gap")
+        assert [(f.fs, f.name) for f in song.footswitches] == [(1, "A"), (3, "C")]
+
+    def test_slot_without_name_is_skipped(self, client, sample_devices, test_storage):
+        client.post(
+            "/songs",
+            data=self._base(
+                song_id="fs-noname",
+                fs_2_action_0_device="ms",
+                fs_2_action_0_type="pattern",
+                fs_2_action_0_value="D01",
+            ),
+            follow_redirects=False,
+        )
+
+        assert test_storage.get_song("fs-noname").footswitches == []
+
+    def test_actions_keep_order_with_index_gaps(
+        self, client, sample_devices, test_storage
+    ):
+        """Usunięty wiersz akcji zostawia lukę — kolejność wg indeksu."""
+        client.post(
+            "/songs",
+            data=self._base(
+                song_id="fs-actgap",
+                fs_3_name="C",
+                fs_3_action_7_device="ms",
+                fs_3_action_7_type="pattern",
+                fs_3_action_7_value="D02",
+                fs_3_action_2_device="ms",
+                fs_3_action_2_type="pattern",
+                fs_3_action_2_value="D01",
+            ),
+            follow_redirects=False,
+        )
+
+        actions = test_storage.get_song("fs-actgap").footswitches[0].actions
+        assert [a.value for a in actions] == ["D01", "D02"]
+
+    def test_edit_form_renders_all_slots_and_saved_fs3(
+        self, client, sample_devices, test_storage
+    ):
+        client.post(
+            "/songs",
+            data=self._base(
+                song_id="fs-edit",
+                fs_3_name="Stop",
+                fs_3_action_0_device="ms",
+                fs_3_action_0_type="pattern",
+                fs_3_action_0_value="D01",
+            ),
+            follow_redirects=False,
+        )
+
+        response = client.get("/songs/fs-edit/edit")
+
+        assert response.status_code == 200
+        for n in range(1, 5):
+            assert f'name="fs_{n}_name"' in response.text
+        assert 'value="Stop"' in response.text
+        assert 'name="fs_3_action_0_device"' in response.text
+
+    def test_new_song_form_has_footswitch_slots(self, client, sample_devices):
+        response = client.get("/songs/new")
+
+        assert 'name="fs_1_name"' in response.text
+        assert 'name="fs_4_name"' in response.text
+
+    def test_action_row_partial_footswitch_context(self, client, sample_devices):
+        response = client.get(
+            "/partials/action-row?context=footswitch&button_idx=3&action_idx=0"
+        )
+
+        assert response.status_code == 200
+        assert 'name="fs_3_action_0_device"' in response.text
+        assert 'name="fs_3_action_0_type"' in response.text
+
+    def test_action_fields_partial_footswitch_context(self, client, sample_devices):
+        response = client.get(
+            "/partials/action-fields?action_type=cc&context=footswitch"
+            "&button_idx=1&action_idx=2"
+        )
+
+        assert response.status_code == 200
+        assert 'name="fs_1_action_2_cc"' in response.text

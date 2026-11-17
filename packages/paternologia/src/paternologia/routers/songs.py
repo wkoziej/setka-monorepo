@@ -13,10 +13,12 @@ from pydantic import ValidationError
 
 from paternologia.dependencies import get_storage, get_templates
 from paternologia.display import to_stored
+from paternologia.pacer import constants as c
 from paternologia.models import (
     Action,
     ActionType,
     Device,
+    Footswitch,
     PacerButton,
     PacerExportSettings,
     Song,
@@ -227,10 +229,6 @@ async def update_songs_order(order: list[str]):
     return {"status": "ok"}
 
 
-# Pole urządzenia wiersza on_load: on_load_{idx}_device
-_ON_LOAD_DEVICE_FIELD = re.compile(r"on_load_(\d+)_device")
-
-
 def _build_song_from_form(
     form_data,
     song_id: str,
@@ -274,18 +272,22 @@ def _build_song_from_form(
         if button_idx > 6:
             break
 
-    # on_load: indeksy wierszy mogą mieć luki po usunięciu — kolejność wg indeksu
-    on_load_indices = sorted(
-        int(m.group(1))
-        for key in form_data
-        if (m := _ON_LOAD_DEVICE_FIELD.fullmatch(key))
-    )
-    on_load = [
-        action
-        for idx in on_load_indices
-        if (action := _parse_action(form_data, f"on_load_{idx}", device_map))
-        is not None
-    ]
+    # Footswitche FS1-FS4: stałe sloty, pusta nazwa = slot nieużywany
+    footswitches = []
+    for fs_num in c.FOOTSWITCHES:
+        fs_name = form_data.get(f"fs_{fs_num}_name", "").strip()
+        if fs_name:
+            footswitches.append(
+                Footswitch(
+                    fs=fs_num,
+                    name=fs_name,
+                    actions=_parse_indexed_actions(
+                        form_data, f"fs_{fs_num}_action", device_map
+                    ),
+                )
+            )
+
+    on_load = _parse_indexed_actions(form_data, "on_load", device_map)
 
     return Song(
         song=SongMetadata(
@@ -297,8 +299,28 @@ def _build_song_from_form(
             pacer_export=pacer_export,
         ),
         pacer=pacer_buttons,
+        footswitches=footswitches,
         on_load=on_load,
     )
+
+
+def _parse_indexed_actions(
+    form_data: Mapping[str, str], prefix: str, device_map: dict[str, Device]
+) -> list[Action]:
+    """Akcje z wierszy `{prefix}_{idx}_*` w kolejności indeksów.
+
+    Indeksy wierszy mogą mieć luki po usunięciu wiersza w UI.
+    """
+    device_field = re.compile(rf"{re.escape(prefix)}_(\d+)_device")
+    indices = sorted(
+        int(m.group(1)) for key in form_data if (m := device_field.fullmatch(key))
+    )
+    return [
+        action
+        for idx in indices
+        if (action := _parse_action(form_data, f"{prefix}_{idx}", device_map))
+        is not None
+    ]
 
 
 def _parse_action(
@@ -363,11 +385,13 @@ async def get_action_row(
     request: Request,
     button_idx: int,
     action_idx: int,
-    context: Literal["", "on_load"] = "",
+    context: Literal["", "on_load", "footswitch"] = "",
 ):
     """Return a new action row partial for HTMX.
 
     context=on_load → wiersz sekcji on_load (pola `on_load_{action_idx}_*`).
+    context=footswitch → wiersz footswitcha FS{button_idx}
+    (pola `fs_{button_idx}_action_{action_idx}_*`).
     """
     storage = get_storage()
     templates = get_templates()
@@ -484,7 +508,7 @@ async def get_action_fields(
     action_type: str,
     button_idx: int,
     action_idx: int,
-    context: Literal["", "on_load"] = "",
+    context: Literal["", "on_load", "footswitch"] = "",
 ):
     """Return input fields for selected action type (HTMX cascade)."""
     templates = get_templates()
