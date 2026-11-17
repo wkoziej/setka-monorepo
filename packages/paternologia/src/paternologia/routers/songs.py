@@ -272,19 +272,17 @@ def _build_song_from_form(
         if button_idx > 6:
             break
 
-    # Footswitche FS1-FS4: stałe sloty, pusta nazwa = slot nieużywany
+    # Footswitche FS1-FS4: stałe sloty. Slot bez nazwy i bez akcji = nieużywany;
+    # slot z akcjami bez nazwy dostaje nazwę FS{n}, żeby akcje nie zniknęły.
     footswitches = []
     for fs_num in c.FOOTSWITCHES:
         fs_name = form_data.get(f"fs_{fs_num}_name", "").strip()
-        if fs_name:
+        fs_actions = _parse_indexed_actions(
+            form_data, f"fs_{fs_num}_action", device_map
+        )
+        if fs_name or fs_actions:
             footswitches.append(
-                Footswitch(
-                    fs=fs_num,
-                    name=fs_name,
-                    actions=_parse_indexed_actions(
-                        form_data, f"fs_{fs_num}_action", device_map
-                    ),
-                )
+                Footswitch(fs=fs_num, name=fs_name or f"FS{fs_num}", actions=fs_actions)
             )
 
     on_load = _parse_indexed_actions(form_data, "on_load", device_map)

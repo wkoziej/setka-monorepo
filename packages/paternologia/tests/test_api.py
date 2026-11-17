@@ -1602,7 +1602,10 @@ class TestSongFootswitchForm:
         song = test_storage.get_song("fs-gap")
         assert [(f.fs, f.name) for f in song.footswitches] == [(1, "A"), (3, "C")]
 
-    def test_slot_without_name_is_skipped(self, client, sample_devices, test_storage):
+    def test_slot_with_actions_but_no_name_gets_default_name(
+        self, client, sample_devices, test_storage
+    ):
+        """Akcje bez nazwy nie mogą zniknąć po cichu — slot dostaje nazwę FS{n}."""
         client.post(
             "/songs",
             data=self._base(
@@ -1614,7 +1617,20 @@ class TestSongFootswitchForm:
             follow_redirects=False,
         )
 
-        assert test_storage.get_song("fs-noname").footswitches == []
+        footswitches = test_storage.get_song("fs-noname").footswitches
+        assert [(f.fs, f.name) for f in footswitches] == [(2, "FS2")]
+        assert footswitches[0].actions[0].value == "D01"
+
+    def test_empty_slot_without_name_is_skipped(
+        self, client, sample_devices, test_storage
+    ):
+        client.post(
+            "/songs",
+            data=self._base(song_id="fs-empty", fs_2_name=""),
+            follow_redirects=False,
+        )
+
+        assert test_storage.get_song("fs-empty").footswitches == []
 
     def test_actions_keep_order_with_index_gaps(
         self, client, sample_devices, test_storage
