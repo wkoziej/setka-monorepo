@@ -9,7 +9,106 @@ song:
     target_preset: B4
 pacer:
 - name: Start - testowanie pomysłów
-  actions: []
+  actions:
+  - device: freak
+    type: note
+    value: null
+    cc: null
+    label: null
+    bank_lsb: 0
+    bank_msb: 0
+    note: a4
+    velocity: 100
+  - device: ms
+    type: pattern
+    value: F01
+    cc: null
+    label: null
+    bank_lsb: 0
+    bank_msb: 0
+    note: null
+    velocity: null
+  - device: modrex
+    type: preset
+    value: 100
+    cc: null
+    label: null
+    bank_lsb: 0
+    bank_msb: 0
+    note: null
+    velocity: null
+  - device: gp50
+    type: preset
+    value: 57
+    cc: null
+    label: null
+    bank_lsb: 0
+    bank_msb: 0
+    note: null
+    velocity: null
+- name: ss
+  actions:
+  - device: freak
+    type: note
+    value: null
+    cc: null
+    label: null
+    bank_lsb: 0
+    bank_msb: 0
+    note: d4
+    velocity: 100
+  - device: ms
+    type: pattern
+    value: F02
+    cc: null
+    label: null
+    bank_lsb: 0
+    bank_msb: 0
+    note: null
+    velocity: null
+  - device: modrex
+    type: preset
+    value: 13
+    cc: null
+    label: null
+    bank_lsb: 0
+    bank_msb: 0
+    note: null
+    velocity: null
+  - device: gp50
+    type: preset
+    value: 58
+    cc: null
+    label: null
+    bank_lsb: 0
+    bank_msb: 0
+    note: null
+    velocity: null
+footswitches:
+- name: Freak E4
+  actions:
+  - device: freak
+    type: note
+    value: null
+    cc: null
+    label: null
+    bank_lsb: 0
+    bank_msb: 0
+    note: E4
+    velocity: 100
+  fs: 1
+- name: Freak A4
+  actions:
+  - device: freak
+    type: note
+    value: null
+    cc: null
+    label: null
+    bank_lsb: 0
+    bank_msb: 0
+    note: A4
+    velocity: 100
+  fs: 3
 on_load:
 - device: boss
   type: preset
@@ -31,7 +130,7 @@ on_load:
   velocity: null
 - device: freak
   type: preset
-  value: 99
+  value: 134
   cc: null
   label: Sandbox
   bank_lsb: 0
@@ -40,7 +139,7 @@ on_load:
   velocity: null
 - device: gp50
   type: preset
-  value: 56
+  value: 57
   cc: null
   label: null
   bank_lsb: 0
