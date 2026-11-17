@@ -12,6 +12,7 @@ from paternologia.models import (
     Action,
     ActionType,
     Device,
+    Footswitch,
     ObsConfig,
     PacerButton,
     PacerConfig,
@@ -211,6 +212,24 @@ class TestSongStorage:
         songs = temp_storage.get_songs()
         ids = [s.song.id for s in songs]
         assert ids == ["alpha", "beta", "zebra"]
+
+
+class TestFootswitchStorage:
+    """Footswitche przechodzą round-trip przez YAML."""
+
+    def test_footswitches_round_trip(self, temp_storage, sample_song):
+        sample_song.footswitches = [
+            Footswitch(
+                fs=3,
+                name="Stop",
+                actions=[Action(device="boss", type=ActionType.CC, cc=2, value=1)],
+            )
+        ]
+        temp_storage.save_song(sample_song)
+
+        loaded = temp_storage.get_song(sample_song.song.id)
+
+        assert loaded.footswitches == sample_song.footswitches
 
 
 class TestSongsOrder:

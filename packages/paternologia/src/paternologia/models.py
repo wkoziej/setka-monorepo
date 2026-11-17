@@ -1,5 +1,5 @@
 # ABOUTME: Pydantic models for Paternologia - MIDI device configurations and songs.
-# ABOUTME: Defines Device, Action, PacerButton, DeviceSettings, and Song schemas.
+# ABOUTME: Defines Device, Action, PacerButton, Footswitch, DeviceSettings, and Song schemas.
 
 import re
 from datetime import date
@@ -110,6 +110,15 @@ class PacerButton(BaseModel):
     actions: Annotated[list[Action], Field(max_length=6)] = Field(
         default_factory=list, description="Actions to perform (max 6)"
     )
+
+
+class Footswitch(PacerButton):
+    """Zewnętrzny footswitch Pacera (gniazda FS) — stały numer FS1-FS4.
+
+    Podwójny przełącznik w gnieździe „FS 1/3” daje FS1 (tip) i FS3 (ring).
+    """
+
+    fs: int = Field(..., ge=1, le=4, description="Numer footswitcha Pacera (1-4)")
 
 
 VALID_PRESETS = {f"{row}{col}" for row in "ABCD" for col in range(1, 7)}
@@ -234,6 +243,10 @@ class Song(BaseModel):
     pacer: Annotated[list[PacerButton], Field(max_length=6)] = Field(
         default_factory=list, description="PACER button configurations (max 6)"
     )
+    footswitches: Annotated[list[Footswitch], Field(max_length=4)] = Field(
+        default_factory=list,
+        description="Zewnętrzne footswitche Pacera (FS1-FS4, max 4)",
+    )
     on_load: Annotated[list[Action], Field(max_length=16)] = Field(
         default_factory=list,
         description=(
@@ -241,3 +254,13 @@ class Song(BaseModel):
             "(M CFG / Preset Recall MIDI, max 16)"
         ),
     )
+
+    @model_validator(mode="after")
+    def validate_unique_footswitches(self) -> "Song":
+        """Każdy numer FS może wystąpić w utworze tylko raz."""
+        seen: set[int] = set()
+        for footswitch in self.footswitches:
+            if footswitch.fs in seen:
+                raise ValueError(f"FS{footswitch.fs} zdefiniowany więcej niż raz")
+            seen.add(footswitch.fs)
+        return self

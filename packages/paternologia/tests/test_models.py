@@ -11,6 +11,7 @@ from paternologia.models import (
     ActionType,
     Device,
     DevicesConfig,
+    Footswitch,
     PacerButton,
     PacerConfig,
     PacerExportSettings,
@@ -269,6 +270,45 @@ class TestSongOnLoad:
         ]
         with pytest.raises(ValidationError):
             Song(song=SongMetadata(id="test", name="Test"), on_load=actions)
+
+
+class TestSongFootswitches:
+    """Zewnętrzne footswitche Pacera (FS1-FS4) z jawnym numerem gniazda."""
+
+    def _song(self, footswitches):
+        return Song(
+            song=SongMetadata(id="test", name="Test"), footswitches=footswitches
+        )
+
+    def test_footswitches_default_to_empty(self):
+        """Utwór bez footswitches (stary YAML) ma pustą listę."""
+        song = Song(song=SongMetadata(id="test", name="Test"))
+        assert song.footswitches == []
+
+    def test_accepts_fs1_and_fs3(self):
+        action = Action(device="boss", type=ActionType.CC, cc=1, value=127)
+        song = self._song(
+            [
+                Footswitch(fs=1, name="Rec", actions=[action]),
+                Footswitch(fs=3, name="Stop", actions=[action]),
+            ]
+        )
+        assert [f.fs for f in song.footswitches] == [1, 3]
+        assert song.footswitches[0].actions == [action]
+
+    @pytest.mark.parametrize("bad", [0, 5])
+    def test_rejects_fs_out_of_range(self, bad):
+        with pytest.raises(ValidationError):
+            Footswitch(fs=bad, name="X")
+
+    def test_rejects_duplicate_fs(self):
+        with pytest.raises(ValidationError, match="FS1"):
+            self._song([Footswitch(fs=1, name="A"), Footswitch(fs=1, name="B")])
+
+    def test_rejects_seven_actions(self):
+        actions = [Action(device="boss", type=ActionType.CC, cc=1, value=1)] * 7
+        with pytest.raises(ValidationError):
+            Footswitch(fs=1, name="X", actions=actions)
 
 
 class TestPacerExportSettings:
