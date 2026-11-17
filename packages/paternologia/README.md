@@ -138,7 +138,7 @@ uv run pytest -k pacer             # filtr po nazwie
 ```
 src/paternologia/
   main.py            # punkt wejścia FastAPI + lifespan (MIDI listener)
-  models.py          # Pydantic: Device, Action, PacerButton, Song, PacerConfig
+  models.py          # Pydantic: Device, Action, PacerButton, Footswitch, Song, PacerConfig
   storage.py         # YAML I/O (devices, songs, pacer config, songs_order)
   dependencies.py    # współdzielone zależności (storage, templates)
   cli.py             # konsolowy entry point (uvicorn)
@@ -157,6 +157,7 @@ tests/               # pytest (modele, storage, API, E2E, MIDI, bridge, health, 
 - **Edytor utworów** - definiowanie przycisków Pacera i akcji MIDI (preset / pattern / CC / note)
 - **Drag-and-drop** kolejności utworów (`data/songs_order.yaml`)
 - **Eksport `.syx`** - generowanie plików dla Pacera (`pacer/export.py`)
+- **Footswitche (`footswitches`)** - akcje dla zewnętrznych footswitchy Pacera FS1-FS4 (np. podwójny Ampero momentary w gnieździe „FS 1/3” = FS1 i FS3); tryb gniazda ustaw ręcznie w ustawieniach globalnych Pacera (`SPEC.md` § 2.2)
 - **Przy załadowaniu presetu (`on_load`)** - do 16 wiadomości MIDI, które Pacer wysyła przy wejściu na preset (M CFG): stan startowy RC-600, M:S i MicroFreaka bez komputera. Nie działa po włączeniu zasilania; eksport nadpisuje M CFG presetu (`SPEC.md` § 2.2)
 - **Bezpośrednia wysyłka** - integracja z `amidi` (z wymaganym `--sysex-interval=20`) i weryfikacją zapisu (dump presetu po wysyłce; na ~2 s listener zwalnia porty Pacera, więc nie wysyłaj w trakcie grania)
 - **Widok live** - nasłuch MIDI z Pacera + SSE → automatyczne podświetlanie aktualnego utworu/przycisku

@@ -95,6 +95,23 @@ pacer:
         cc: 1
         label: "Play/Rec"
 
+# Zewnętrzne footswitche Pacera (gniazda FS), max 4. Stały numer `fs` (1-4),
+# ten sam słownik akcji co przyciski (max 6). Opcjonalne — brak pola = pusta lista.
+footswitches:
+  - fs: 1
+    name: "Rec tr3"
+    actions:
+      - device: boss
+        type: cc
+        cc: 3
+        value: 1
+  - fs: 3
+    name: "Zwrotka"
+    actions:
+      - device: ms
+        type: pattern
+        value: "F05"
+
 # Wiadomości wysyłane przez Pacer przy załadowaniu presetu (M CFG, max 16).
 # Ten sam słownik akcji co przyciski. Opcjonalne — brak pola = pusta lista.
 on_load:
@@ -108,6 +125,13 @@ on_load:
     type: preset
     value: 67
 ```
+
+#### footswitches (zewnętrzne FS1-FS4)
+
+- Kontrolki Pacera `0x18`-`0x1B` (FS1-FS4, wg pacer-editor). Podwójny przełącznik (np. Ampero momentary) w gnieździe „FS 1/3” daje FS1 i FS3.
+- Eksport zawsze programuje wszystkie 4 FS (tryb + 6 kroków); nieużywane czyści. FS nie mają LED — eksport nie wysyła dla nich ramek LED.
+- Tryb gniazda (footswitch vs expression) ustawia się ręcznie w ustawieniach globalnych Pacera — eksport nie dotyka `TARGET_GLOBAL`.
+- Akcje `preset` z footswitchy identyfikują utwór w widoku live (jak akcje przycisków).
 
 #### on_load (M CFG — Preset Recall MIDI)
 
