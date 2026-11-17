@@ -305,6 +305,14 @@ class TestSongFootswitches:
         with pytest.raises(ValidationError, match="FS1"):
             self._song([Footswitch(fs=1, name="A"), Footswitch(fs=1, name="B")])
 
+    def test_all_buttons_lists_sw_then_footswitches(self):
+        sw = PacerButton(name="SW")
+        fs = Footswitch(fs=3, name="FS")
+        song = Song(
+            song=SongMetadata(id="test", name="Test"), pacer=[sw], footswitches=[fs]
+        )
+        assert song.all_buttons() == [sw, fs]
+
     def test_rejects_seven_actions(self):
         actions = [Action(device="boss", type=ActionType.CC, cc=1, value=1)] * 7
         with pytest.raises(ValidationError):

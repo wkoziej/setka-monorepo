@@ -18,7 +18,7 @@ class SongMidiIndex:
     def build(cls, songs: list[Song], devices: list[Device]) -> "SongMidiIndex":
         """Build index from songs and devices.
 
-        Scans all songs for preset actions (PACER buttons and on_load / M CFG)
+        Scans all songs for preset actions (PACER buttons, footswitches and on_load / M CFG)
         and maps (device.midi_channel, action.value % 128) → song.song.id.
         First match wins on conflicts.
         """
@@ -26,7 +26,9 @@ class SongMidiIndex:
         mapping: dict[tuple[int, int], str] = {}
 
         for song in songs:
-            song_actions = [a for b in song.pacer for a in b.actions] + song.on_load
+            song_actions = [
+                a for b in song.all_buttons() for a in b.actions
+            ] + song.on_load
             for action in song_actions:
                 if action.type != ActionType.PRESET:
                     continue

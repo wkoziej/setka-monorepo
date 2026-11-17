@@ -7,6 +7,7 @@ from paternologia.models import (
     Action,
     ActionType,
     Device,
+    Footswitch,
     PacerButton,
     Song,
     SongMetadata,
@@ -219,3 +220,21 @@ class TestSongMidiIndexPresetViaCc:
         ]
 
         assert SongMidiIndex.build(songs, devices).lookup(channel=4, program=10) is None
+
+
+class TestSongMidiIndexFootswitches:
+    def test_preset_only_on_footswitch_is_indexed(self):
+        """Akcja PRESET tylko na FS1 też wskazuje utwór."""
+        song = Song(
+            song=SongMetadata(id="fs-only", name="FS"),
+            footswitches=[
+                Footswitch(
+                    fs=1,
+                    name="Preset",
+                    actions=[Action(device="boss", type=ActionType.PRESET, value=7)],
+                )
+            ],
+        )
+        index = SongMidiIndex.build([song], [_make_device("boss", 13)])
+
+        assert index.lookup(12, 7) == "fs-only"

@@ -255,6 +255,10 @@ class Song(BaseModel):
         ),
     )
 
+    def all_buttons(self) -> list[PacerButton]:
+        """Przyciski SW1-SW6, a po nich footswitche — wszystko, co wysyła akcje."""
+        return [*self.pacer, *self.footswitches]
+
     @model_validator(mode="after")
     def validate_unique_footswitches(self) -> "Song":
         """Każdy numer FS może wystąpić w utworze tylko raz."""

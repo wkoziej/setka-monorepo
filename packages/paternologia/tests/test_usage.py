@@ -2,6 +2,7 @@
 # ABOUTME: Keys on the raw stored value; offset is purely a presentation concern.
 
 from paternologia.models import (
+    Footswitch,
     Action,
     ActionType,
     PacerButton,
@@ -165,3 +166,33 @@ class TestPresetUsageIndex:
     def test_empty_songs(self):
         index = PresetUsageIndex.build([])
         assert index.lookup("boss", ActionType.PRESET, 1) == []
+
+
+class TestPresetUsageIndexFootswitches:
+    def test_preset_only_on_footswitch_is_tracked(self):
+        song = Song(
+            song=SongMetadata(id="fs", name="FS"),
+            footswitches=[
+                Footswitch(
+                    fs=3,
+                    name="P",
+                    actions=[Action(device="boss", type=ActionType.PRESET, value=9)],
+                )
+            ],
+        )
+        index = PresetUsageIndex.build([song])
+
+        assert [e.song_id for e in index.lookup("boss", ActionType.PRESET, 9)] == ["fs"]
+
+    def test_same_preset_on_button_and_footswitch_listed_once(self):
+        action = Action(device="boss", type=ActionType.PRESET, value=9)
+        song = Song(
+            song=SongMetadata(id="both", name="Both"),
+            pacer=[_btn(action)],
+            footswitches=[Footswitch(fs=1, name="P", actions=[action])],
+        )
+        index = PresetUsageIndex.build([song])
+
+        assert [e.song_id for e in index.lookup("boss", ActionType.PRESET, 9)] == [
+            "both"
+        ]

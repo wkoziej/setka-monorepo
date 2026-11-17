@@ -68,7 +68,7 @@ class PresetUsageIndex:
         mapping: dict[tuple[str, str, object], list[UsageEntry]] = {}
 
         for song in songs:
-            for button in song.pacer:
+            for button in song.all_buttons():
                 for action in button.actions:
                     if action.type not in _TRACKED_TYPES:
                         continue
