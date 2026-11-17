@@ -140,7 +140,7 @@
             Podwójny przełącznik w gnieździe „FS 1/3” Pacera to FS1 i FS3. Pusta nazwa = footswitch nieużywany
             (eksport wyczyści jego akcje w presecie).
         </p>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="space-y-4">
             {% for fs_num in range(1, 5) %}
             {% set footswitch = (song.footswitches | selectattr('fs', 'equalto', fs_num) | first) if song else None %}
             {% include "partials/footswitch_card.html" with context %}
